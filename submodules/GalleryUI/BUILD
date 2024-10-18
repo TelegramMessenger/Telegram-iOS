@@ -53,6 +53,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
         "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
         "//submodules/UrlHandling",
+        "//submodules/TelegramUI/Components/SaveProgressScreen",
     ],
     visibility = [
         "//visibility:public",

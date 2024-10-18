@@ -63,13 +63,6 @@ public enum ChunkMediaPlayerPlayOnceWithSoundActionAtEnd {
     case repeatIfNeeded
 }
 
-public enum ChunkMediaPlayerSeek {
-    case none
-    case start
-    case automatic
-    case timecode(Double)
-}
-
 public enum ChunkMediaPlayerStreaming {
     case none
     case conservative
@@ -165,9 +158,11 @@ private final class ChunkMediaPlayerContext {
     private var keepAudioSessionWhilePaused: Bool
     private var continuePlayingWithoutSoundOnLostAudioSession: Bool
     private let isAudioVideoMessage: Bool
+    private let onSeeked: () -> Void
     
     private var seekId: Int = 0
     private var initialSeekTimestamp: Double?
+    private var notifySeeked: Bool = false
     
     private let loadedState: ChunkMediaPlayerLoadedState
     private var isSeeking: Bool = false
@@ -206,7 +201,8 @@ private final class ChunkMediaPlayerContext {
         mixWithOthers: Bool,
         keepAudioSessionWhilePaused: Bool,
         continuePlayingWithoutSoundOnLostAudioSession: Bool,
-        isAudioVideoMessage: Bool
+        isAudioVideoMessage: Bool,
+        onSeeked: @escaping () -> Void
     ) {
         assert(queue.isCurrent())
         
@@ -225,6 +221,7 @@ private final class ChunkMediaPlayerContext {
         self.keepAudioSessionWhilePaused = keepAudioSessionWhilePaused
         self.continuePlayingWithoutSoundOnLostAudioSession = continuePlayingWithoutSoundOnLostAudioSession
         self.isAudioVideoMessage = isAudioVideoMessage
+        self.onSeeked = onSeeked
         
         self.videoRenderer = VideoPlayerProxy(queue: queue)
         
@@ -261,7 +258,7 @@ private final class ChunkMediaPlayerContext {
                             self.pause(lostAudioSession: true, faded: false)
                         }
                     } else {
-                        self.seek(timestamp: 0.0, action: .play)
+                        self.seek(timestamp: 0.0, action: .play, notify: true)
                     }
                 }
             }
@@ -354,7 +351,7 @@ private final class ChunkMediaPlayerContext {
         self.partsDisposable?.dispose()
     }
     
-    fileprivate func seek(timestamp: Double) {
+    fileprivate func seek(timestamp: Double, notify: Bool) {
         assert(self.queue.isCurrent())
         
         let action: ChunkMediaPlayerPlaybackAction
@@ -364,10 +361,10 @@ private final class ChunkMediaPlayerContext {
         case .playing:
             action = .play
         }
-        self.seek(timestamp: timestamp, action: action)
+        self.seek(timestamp: timestamp, action: action, notify: notify)
     }
     
-    fileprivate func seek(timestamp: Double, action: ChunkMediaPlayerPlaybackAction) {
+    fileprivate func seek(timestamp: Double, action: ChunkMediaPlayerPlaybackAction, notify: Bool) {
         assert(self.queue.isCurrent())
         
         self.isSeeking = true
@@ -375,6 +372,7 @@ private final class ChunkMediaPlayerContext {
         
         self.seekId += 1
         self.initialSeekTimestamp = timestamp
+        self.notifySeeked = true
         
         switch action {
         case .play:
@@ -421,11 +419,11 @@ private final class ChunkMediaPlayerContext {
                 timestamp = self.initialSeekTimestamp ?? 0.0
             }
             
-            self.seek(timestamp: timestamp, action: .play)
+            self.seek(timestamp: timestamp, action: .play, notify: false)
         }
     }
     
-    fileprivate func playOnceWithSound(playAndRecord: Bool, seek: ChunkMediaPlayerSeek = .start) {
+    fileprivate func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
         assert(self.queue.isCurrent())
         
         if !self.enableSound {
@@ -446,10 +444,10 @@ private final class ChunkMediaPlayerContext {
             } else {
                 timestamp = 0.0
             }
-            self.seek(timestamp: timestamp, action: .play)
+            self.seek(timestamp: timestamp, action: .play, notify: true)
         } else {
             if case let .timecode(time) = seek {
-                self.seek(timestamp: Double(time), action: .play)
+                self.seek(timestamp: Double(time), action: .play, notify: true)
             } else if case .playing = self.state {
             } else {
                 self.play()
@@ -471,7 +469,7 @@ private final class ChunkMediaPlayerContext {
         }
     }
     
-    fileprivate func continuePlayingWithoutSound(seek: ChunkMediaPlayerSeek) {
+    fileprivate func continuePlayingWithoutSound(seek: MediaPlayerSeek) {
         if self.enableSound {
             self.lastStatusUpdateTimestamp = nil
             
@@ -493,7 +491,7 @@ private final class ChunkMediaPlayerContext {
                     timestamp = 0.0
                 }
                 
-                self.seek(timestamp: timestamp, action: .play)
+                self.seek(timestamp: timestamp, action: .play, notify: true)
             }
         }
     }
@@ -632,6 +630,8 @@ private final class ChunkMediaPlayerContext {
                     return
                 }
             }
+        } else {
+            self.initialSeekTimestamp = nil
         }
         
         self.loadedState.partStates.removeAll(where: { partState in
@@ -733,11 +733,7 @@ private final class ChunkMediaPlayerContext {
             }
         }
         
-        //TODO
         var performActionAtEndNow = false
-        if !"".isEmpty {
-            performActionAtEndNow = true
-        }
         
         var worstStatus: MediaTrackFrameBufferStatus?
         for status in [videoStatus, audioStatus] {
@@ -800,12 +796,21 @@ private final class ChunkMediaPlayerContext {
             } else {
                 rate = 0.0
             }
+            
+            //print("finished timestamp: \(timestamp), finishedAt: \(finishedAt), duration: \(duration)")
+            if duration > 0.0 && timestamp >= finishedAt && finishedAt >= duration - 0.2 {
+                performActionAtEndNow = true
+            }
         } else if case .buffering = worstStatus {
             bufferingProgress = 0.0
             rate = 0.0
         } else {
             rate = 0.0
             bufferingProgress = 0.0
+        }
+        
+        if duration > 0.0 && timestamp >= duration {
+            performActionAtEndNow = true
         }
         
         var reportRate = rate
@@ -829,12 +834,10 @@ private final class ChunkMediaPlayerContext {
             }
         }
         
-        //TODO
         if let controlTimebase = self.loadedState.controlTimebase, let videoTrackFrameBuffer = self.loadedState.partStates.first?.mediaBuffers?.videoBuffer, videoTrackFrameBuffer.hasFrames {
             self.videoRenderer.state = (controlTimebase.timebase, true, videoTrackFrameBuffer.rotationAngle, videoTrackFrameBuffer.aspect)
         }
         
-        //TODO
         if let audioRenderer = self.audioRenderer {
             let queue = self.queue
             audioRenderer.requestedFrames = true
@@ -903,13 +906,18 @@ private final class ChunkMediaPlayerContext {
             self.playerStatus.set(.single(status))
             let _ = self.playerStatusValue.swap(status)
         }
+        
+        if self.notifySeeked {
+            self.notifySeeked = false
+            self.onSeeked()
+        }
 
         if performActionAtEndNow {
-            /*if !self.stoppedAtEnd {
+            if !self.stoppedAtEnd {
                 switch self.actionAtEnd {
                 case let .loop(f):
                     self.stoppedAtEnd = false
-                    self.seek(timestamp: 0.0, action: .play)
+                    self.seek(timestamp: 0.0, action: .play, notify: true)
                     f?()
                 case .stop:
                     self.stoppedAtEnd = true
@@ -921,10 +929,10 @@ private final class ChunkMediaPlayerContext {
                 case let .loopDisablingSound(f):
                     self.stoppedAtEnd = false
                     self.enableSound = false
-                    self.seek(timestamp: 0.0, action: .play)
+                    self.seek(timestamp: 0.0, action: .play, notify: true)
                     f()
                 }
-            }*/
+            }
         }
     }
 }
@@ -969,7 +977,8 @@ public final class ChunkMediaPlayer {
         mixWithOthers: Bool = false,
         keepAudioSessionWhilePaused: Bool = false,
         continuePlayingWithoutSoundOnLostAudioSession: Bool = false,
-        isAudioVideoMessage: Bool = false
+        isAudioVideoMessage: Bool = false,
+        onSeeked: (() -> Void)? = nil
     ) {
         let audioLevelPipe = self.audioLevelPipe
         self.queue.async {
@@ -990,7 +999,10 @@ public final class ChunkMediaPlayer {
                 mixWithOthers: mixWithOthers,
                 keepAudioSessionWhilePaused: keepAudioSessionWhilePaused,
                 continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession,
-                isAudioVideoMessage: isAudioVideoMessage
+                isAudioVideoMessage: isAudioVideoMessage,
+                onSeeked: {
+                    onSeeked?()
+                }
             )
             self.contextRef = Unmanaged.passRetained(context)
         }
@@ -1011,7 +1023,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func playOnceWithSound(playAndRecord: Bool, seek: ChunkMediaPlayerSeek = .start) {
+    public func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
@@ -1035,7 +1047,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func continuePlayingWithoutSound(seek: ChunkMediaPlayerSeek = .start) {
+    public func continuePlayingWithoutSound(seek: MediaPlayerSeek = .start) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.continuePlayingWithoutSound(seek: seek)
@@ -1086,10 +1098,10 @@ public final class ChunkMediaPlayer {
     public func seek(timestamp: Double, play: Bool? = nil) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                if let play = play {
-                    context.seek(timestamp: timestamp, action: play ? .play : .pause)
+                if let play {
+                    context.seek(timestamp: timestamp, action: play ? .play : .pause, notify: false)
                 } else {
-                    context.seek(timestamp: timestamp)
+                    context.seek(timestamp: timestamp, notify: false)
                 }
             }
         }

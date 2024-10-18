@@ -410,7 +410,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     chatPeerId: nil,
                     selectedItems: Set(),
                     backgroundIconColor: nil,
-                    hasSearch: false,
+                    hasSearch: true,
                     forceHasPremium: true
                 )
                 self.emojiContentDisposable = (emojiContent

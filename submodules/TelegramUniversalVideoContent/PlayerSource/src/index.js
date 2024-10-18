@@ -1,6 +1,7 @@
 import Hls from "hls.js";
 import { VideoElementStub } from "./VideoElementStub.js"
 import { MediaSourceStub, SourceBufferStub } from "./MediaSourceStub.js"
+import { XMLHttpRequestStub } from "./XMLHttpRequestStub.js"
 
 window.bridgeObjectMap = {};
 window.bridgeCallbackMap = {};
@@ -48,6 +49,8 @@ if (typeof window !== 'undefined') {
     window.MediaSource = MediaSourceStub;
     window.ManagedMediaSource = MediaSourceStub;
     window.SourceBuffer = SourceBufferStub;
+    window.XMLHttpRequest = XMLHttpRequestStub;
+    
     URL.createObjectURL = function(ms) {
         const url = "blob:mock-media-source:" + ms.internalId;
         window.mediaSourceMap[url] = ms;
@@ -66,6 +69,7 @@ export class HlsPlayerInstance {
         this.id = id;
         this.isManifestParsed = false;
         this.currentTimeUpdateTimeout = null;
+        this.notifySeekedOnNextStatusUpdate = false;
         this.video = new VideoElementStub(this.id);
     }
 
@@ -186,6 +190,15 @@ export class HlsPlayerInstance {
                 this.currentTimeUpdateTimeout = null;
             }
         }
+
+        if (this.notifySeekedOnNextStatusUpdate) {
+            this.notifySeekedOnNextStatusUpdate = false;
+            this.video.notifySeeked();
+        }
+    }
+
+    playerNotifySeekedOnNextStatusUpdate() {
+        this.notifySeekedOnNextStatusUpdate = true;
     }
 
     refreshPlayerCurrentTime() {

@@ -17,6 +17,21 @@ import ManagedFile
 import FFMpegBinding
 import RangeSet
 
+private func parseRange(from rangeString: String) -> Range<Int>? {
+    guard rangeString.hasPrefix("bytes=") else {
+        return nil
+    }
+    
+    let rangeValues = rangeString.dropFirst("bytes=".count).split(separator: "-")
+    
+    guard rangeValues.count == 2,
+          let start = Int(rangeValues[0]),
+          let end = Int(rangeValues[1]) else {
+        return nil
+    }
+    return start ..< end
+}
+
 final class HLSJSServerSource: SharedHLSServer.Source {
     let id: String
     let postbox: Postbox
@@ -253,59 +268,6 @@ final class HLSJSServerSource: SharedHLSServer.Source {
     }
 }
 
-final class HLSJSHTMLServerSource: SharedHLSServer.Source {
-    let id: String
-    
-    init() {
-        self.id = UUID().uuidString
-    }
-    
-    deinit {
-    }
-    
-    func arbitraryFileData(path: String) -> Signal<(data: Data, contentType: String)?, NoError> {
-        return Signal { subscriber in
-            let bundle = Bundle(for: HLSJSServerSource.self)
-            
-            let bundlePath = bundle.bundlePath + "/HlsBundle.bundle"
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: bundlePath + "/" + path)) {
-                let mimeType: String
-                let pathExtension = (path as NSString).pathExtension
-                if pathExtension == "html" {
-                    mimeType = "text/html"
-                } else if pathExtension == "html" {
-                    mimeType = "application/javascript"
-                } else {
-                    mimeType = "application/octet-stream"
-                }
-                subscriber.putNext((data, mimeType))
-            } else {
-                subscriber.putNext(nil)
-            }
-            
-            subscriber.putCompletion()
-            
-            return EmptyDisposable
-        }
-    }
-    
-    func masterPlaylistData() -> Signal<String, NoError> {
-        return .never()
-    }
-    
-    func playlistData(quality: Int) -> Signal<String, NoError> {
-        return .never()
-    }
-    
-    func partData(index: Int, quality: Int) -> Signal<Data?, NoError> {
-        return .never()
-    }
-    
-    func fileData(id: Int64, range: Range<Int>) -> Signal<(TempBoxFile, Range<Int>, Int)?, NoError> {
-        return .never()
-    }
-}
-
 private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
     
@@ -320,7 +282,7 @@ private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
-private final class SharedHLSVideoWebView {
+private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
     private final class ContextReference {
         weak var contentNode: HLSVideoJSNativeContentNode?
         
@@ -329,11 +291,27 @@ private final class SharedHLSVideoWebView {
         }
     }
     
+    private enum ResponseError {
+       case badRequest
+       case notFound
+       case internalServerError
+       
+       var httpStatus: (Int, String) {
+           switch self {
+           case .badRequest:
+               return (400, "Bad Request")
+           case .notFound:
+               return (404, "Not Found")
+           case .internalServerError:
+               return (500, "Internal Server Error")
+           }
+       }
+   }
+    
     static let shared: SharedHLSVideoWebView = SharedHLSVideoWebView()
     
     private var contextReferences: [Int: ContextReference] = [:]
     
-    let htmlSource: HLSJSHTMLServerSource
     let webView: WKWebView
     
     var videoElements: [Int: VideoElement] = [:]
@@ -343,11 +321,9 @@ private final class SharedHLSVideoWebView {
     private var isWebViewReady: Bool = false
     private var pendingInitializeInstanceIds: [(id: Int, urlPrefix: String)] = []
     
-    private var serverDisposable: Disposable?
+    private var tempTasks: [Int: URLSessionTask] = [:]
     
-    init() {
-        self.htmlSource = HLSJSHTMLServerSource()
-        
+    override init() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
@@ -380,6 +356,10 @@ private final class SharedHLSVideoWebView {
         if #available(iOS 16.4, *) {
             self.webView.isInspectable = isDebug
         }
+        
+        super.init()
+        
+        self.webView.navigationDelegate = self
         
         handleScriptMessage = { [weak self] message in
             Queue.mainQueue().async {
@@ -474,21 +454,12 @@ private final class SharedHLSVideoWebView {
             }
         }
         
-        let htmlSourceId = self.htmlSource.id
-        self.serverDisposable = SharedHLSServer.shared.registerPlayer(source: self.htmlSource, completion: { [weak self] in
-            Queue.mainQueue().async {
-                guard let self else {
-                    return
-                }
-                
-                let htmlUrl = "http://127.0.0.1:\(SharedHLSServer.shared.port)/\(htmlSourceId)/index.html"
-                self.webView.load(URLRequest(url: URL(string: htmlUrl)!))
-            }
-        })
+        let bundle = Bundle(for: SharedHLSVideoWebView.self)
+        let bundlePath = bundle.bundlePath + "/HlsBundle.bundle"
+        self.webView.loadFileURL(URL(fileURLWithPath: bundlePath + "/index.html"), allowingReadAccessTo: URL(fileURLWithPath: bundlePath))
     }
     
     deinit {
-        self.serverDisposable?.dispose()
     }
     
     private func bridgeInvoke(
@@ -532,6 +503,21 @@ private final class SharedHLSVideoWebView {
                 
                 if let instance = self.contextReferences[instanceId]?.contentNode {
                     instance.onSetCurrentTime(timestamp: currentTime)
+                }
+                
+                completion([:])
+            } else if (methodName == "setPlaybackRate") {
+                guard let instanceId = params["instanceId"] as? Int else {
+                    assertionFailure()
+                    return
+                }
+                guard let playbackRate = params["playbackRate"] as? Double else {
+                    assertionFailure()
+                    return
+                }
+                
+                if let instance = self.contextReferences[instanceId]?.contentNode {
+                    instance.onSetPlaybackRate(playbackRate: playbackRate)
                 }
                 
                 completion([:])
@@ -657,6 +643,215 @@ private final class SharedHLSVideoWebView {
                 sourceBuffer.abortOperation()
                 completion([:])
             }
+        } else if className == "XMLHttpRequest" {
+            if methodName == "load" {
+                guard let id = params["id"] as? Int else {
+                    assertionFailure()
+                    return
+                }
+                guard let url = params["url"] as? String else {
+                    assertionFailure()
+                    return
+                }
+                guard let requestHeaders = params["requestHeaders"] as? [String: String] else {
+                    assertionFailure()
+                    return
+                }
+                guard let parsedUrl = URL(string: url) else {
+                    assertionFailure()
+                    return
+                }
+                guard let host = parsedUrl.host, host == "server" else {
+                    completion(["error": 1])
+                    return
+                }
+                
+                var requestPath = parsedUrl.path
+                if requestPath.hasPrefix("/") {
+                    requestPath = String(requestPath[requestPath.index(after: requestPath.startIndex) ..< requestPath.endIndex])
+                }
+                
+                guard let firstSlash = requestPath.range(of: "/") else {
+                    completion(["error": 1])
+                    return
+                }
+                
+                var requestRange: Range<Int>?
+                if let rangeString = requestHeaders["Range"] {
+                    requestRange = parseRange(from: rangeString)
+                }
+                
+                let streamId = String(requestPath[requestPath.startIndex ..< firstSlash.lowerBound])
+                
+                var handlerFound = false
+                for (_, contextReference) in self.contextReferences {
+                    if let context = contextReference.contentNode, let source = context.playerSource, source.id == streamId {
+                        handlerFound = true
+                        
+                        let filePath = String(requestPath[firstSlash.upperBound...])
+                        if filePath == "master.m3u8" {
+                            let _ = (source.masterPlaylistData()
+                            |> deliverOn(.mainQueue())
+                            |> take(1)).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.sendResponseAndClose(id: id, data: result.data(using: .utf8)!, completion: completion)
+                            })
+                        } else if filePath.hasPrefix("hls_level_") && filePath.hasSuffix(".m3u8") {
+                            guard let levelIndex = Int(String(filePath[filePath.index(filePath.startIndex, offsetBy: "hls_level_".count) ..< filePath.index(filePath.endIndex, offsetBy: -".m3u8".count)])) else {
+                                self.sendErrorAndClose(id: id, error: .notFound, completion: completion)
+                                return
+                            }
+                            
+                            let _ = (source.playlistData(quality: levelIndex)
+                            |> deliverOn(.mainQueue())
+                            |> take(1)).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                self.sendResponseAndClose(id: id, data: result.data(using: .utf8)!, completion: completion)
+                            })
+                        } else if filePath.hasPrefix("partfile") && filePath.hasSuffix(".mp4") {
+                            let fileId = String(filePath[filePath.index(filePath.startIndex, offsetBy: "partfile".count) ..< filePath.index(filePath.endIndex, offsetBy: -".mp4".count)])
+                            guard let fileIdValue = Int64(fileId) else {
+                                self.sendErrorAndClose(id: id, error: .notFound, completion: completion)
+                                return
+                            }
+                            guard let requestRange else {
+                                self.sendErrorAndClose(id: id, error: .badRequest, completion: completion)
+                                return
+                            }
+                            let _ = (source.fileData(id: fileIdValue, range: requestRange.lowerBound ..< requestRange.upperBound + 1)
+                            |> deliverOn(.mainQueue())
+                            //|> timeout(5.0, queue: self.queue, alternate: .single(nil))
+                            |> take(1)).start(next: { [weak self] result in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if let (tempFile, tempFileRange, totalSize) = result {
+                                    self.sendResponseFileAndClose(id: id, file: tempFile, fileRange: tempFileRange, range: requestRange, totalSize: totalSize, completion: completion)
+                                } else {
+                                    self.sendErrorAndClose(id: id, error: .internalServerError, completion: completion)
+                                }
+                            })
+                        }
+                        
+                        break
+                    }
+                }
+                
+                if (!handlerFound) {
+                    completion(["error": 1])
+                }
+                
+                /*var request = URLRequest(url: URL(string: url)!)
+                for (key, value) in requestHeaders {
+                    request.setValue(value, forHTTPHeaderField: key)
+                }
+                
+                let isCompleted = Atomic<Bool>(value: false)
+                let task = URLSession.shared.dataTask(with: request, completionHandler: { [weak self] data, response, error in
+                    Queue.mainQueue().async {
+                        guard let self else {
+                            return
+                        }
+                        if isCompleted.swap(true) {
+                            return
+                        }
+                        
+                        self.tempTasks.removeValue(forKey: id)
+                        
+                        if let _ = error {
+                            completion([
+                                "error": 1
+                            ])
+                        } else {
+                            if let response = response as? HTTPURLResponse {
+                                completion([
+                                    "status": response.statusCode,
+                                    "statusText": "OK",
+                                    "responseData": data?.base64EncodedString() ?? "",
+                                    "responseHeaders": response.allHeaderFields as? [String: String] ?? [:]
+                                ])
+                                
+                                let _ = response
+                                /*if let response = response as? HTTPURLResponse, let requestUrl {
+                                    if let updatedResponse = HTTPURLResponse(
+                                        url: requestUrl,
+                                        statusCode: response.statusCode,
+                                        httpVersion: "HTTP/1.1",
+                                        headerFields: response.allHeaderFields as? [String: String] ?? [:]
+                                    ) {
+                                        sourceTask.didReceive(updatedResponse)
+                                    } else {
+                                        sourceTask.didReceive(response)
+                                    }
+                                } else {
+                                    sourceTask.didReceive(response)
+                                }*/
+                            }
+                        }
+                    }
+                })
+                self.tempTasks[id] = task
+                task.resume()*/
+            } else if methodName == "abort" {
+                guard let id = params["id"] as? Int else {
+                    assertionFailure()
+                    return
+                }
+                
+                if let task = self.tempTasks.removeValue(forKey: id) {
+                    task.cancel()
+                }
+                
+                completion([:])
+            }
+        }
+    }
+    
+    private func sendErrorAndClose(id: Int, error: ResponseError, completion: @escaping ([String: Any]) -> Void) {
+        let (code, status) = error.httpStatus
+        completion([
+            "status": code,
+            "statusText": status,
+            "responseData": "",
+            "responseHeaders": [
+                "Content-Type": "text/html"
+            ] as [String: String]
+        ])
+    }
+    
+    private func sendResponseAndClose(id: Int, data: Data, contentType: String = "application/octet-stream", completion: @escaping ([String: Any]) -> Void) {
+        completion([
+            "status": 200,
+            "statusText": "OK",
+            "responseData": data.base64EncodedString(),
+            "responseHeaders": [
+                "Content-Type": contentType,
+                "Content-Length": "\(data.count)"
+            ] as [String: String]
+        ])
+    }
+    
+    private func sendResponseFileAndClose(id: Int, file: TempBoxFile, fileRange: Range<Int>, range: Range<Int>, totalSize: Int, completion: @escaping ([String: Any]) -> Void) {
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: file.path), options: .mappedIfSafe).subdata(in: fileRange) {
+            completion([
+                "status": 200,
+                "statusText": "OK",
+                "responseData": data.base64EncodedString(),
+                "responseHeaders": [
+                    "Content-Type": "application/octet-stream",
+                    "Content-Range": "bytes \(range.lowerBound)-\(range.upperBound)/\(totalSize)",
+                    "Content-Length": "\(fileRange.upperBound - fileRange.lowerBound)"
+                ] as [String: String]
+            ])
+        } else {
+            self.sendErrorAndClose(id: id, error: .internalServerError, completion: completion)
         }
     }
     
@@ -754,7 +949,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private let audioSessionDisposable = MetaDisposable()
     private var hasAudioSession = false
     
-    private let playerSource: HLSJSServerSource?
+    fileprivate let playerSource: HLSJSServerSource?
     private var serverDisposable: Disposable?
     
     private let playbackCompletedListeners = Bag<() -> Void>()
@@ -816,7 +1011,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     private var hasRequestedPlayerLoad: Bool = false
     
-    private var requestedPlaying: Bool = false
     private var requestedBaseRate: Double = 1.0
     private var requestedLevelIndex: Int?
     
@@ -870,13 +1064,17 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         intrinsicDimensions.height = floor(intrinsicDimensions.height / UIScreenScale)
         self.intrinsicDimensions = intrinsicDimensions
         
+        var onSeeked: (() -> Void)?
         self.player = ChunkMediaPlayer(
             postbox: postbox,
             audioSessionManager: audioSessionManager,
             partsState: self.chunkPlayerPartsState.get(),
             video: true,
             enableSound: true,
-            baseRate: baseRate
+            baseRate: baseRate,
+            onSeeked: {
+                onSeeked?()
+            }
         )
         
         self.playerNode = MediaPlayerNode()
@@ -912,19 +1110,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         self._bufferingStatus.set(.single(nil))
         
-        if let playerSource = self.playerSource {
-            let playerSourceId = playerSource.id
-            self.serverDisposable = SharedHLSServer.shared.registerPlayer(source: playerSource, completion: { [weak self] in
-                Queue.mainQueue().async {
-                    guard let self else {
-                        return
-                    }
-                    
-                    SharedHLSVideoWebView.shared.initializeWhenReady(context: self, urlPrefix: "/\(playerSourceId)/")
-                }
-            })
-        }
-        
         self.didBecomeActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
             let _ = self
         })
@@ -946,6 +1131,19 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             self.updateStatus()
         })
+        
+        onSeeked = { [weak self] in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerNotifySeekedOnNextStatusUpdate();", completionHandler: nil)
+            }
+        }
+        
+        if let playerSource {
+            SharedHLSVideoWebView.shared.initializeWhenReady(context: self, urlPrefix: "http://server/\(playerSource.id)/")
+        }
     }
     
     deinit {
@@ -1049,12 +1247,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             
             SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));", completionHandler: nil)
-            
-            if self.requestedPlaying {
-                self.requestPlay()
-            } else {
-                self.requestPause()
-            }
         }
         
         self.updateStatus()
@@ -1068,6 +1260,10 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     fileprivate func onSetCurrentTime(timestamp: Double) {
         self.player.seek(timestamp: timestamp)
+    }
+    
+    fileprivate func onSetPlaybackRate(playbackRate: Double) {
+        self.player.setBaseRate(playbackRate)
     }
     
     fileprivate func onPlay() {
@@ -1161,13 +1357,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         let bufferedRanges = sourceBuffer.ranges
         
-        if let (bridgeId, videoElement) = SharedHLSVideoWebView.shared.videoElements.first(where: { $0.value.instanceId == self.instanceId }) {
-            let result = serializeRanges(bufferedRanges)
-            
-            let jsonResult = try! JSONSerialization.data(withJSONObject: result)
-            let jsonResultString = String(data: jsonResult, encoding: .utf8)!
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateBuffered(\(jsonResultString));", completionHandler: nil)
-            
+        if let (_, videoElement) = SharedHLSVideoWebView.shared.videoElements.first(where: { $0.value.instanceId == self.instanceId }) {
             if let mediaSourceId = videoElement.mediaSourceId, let mediaSource = SharedHLSVideoWebView.shared.mediaSources[mediaSourceId] {
                 if let duration = mediaSource.duration {
                     var mappedRanges = RangeSet<Int64>()
@@ -1208,82 +1398,26 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         if !self.initializedStatus {
             self._status.set(MediaPlayerStatus(generationTimestamp: 0.0, duration: Double(self.approximateDuration), dimensions: CGSize(), timestamp: 0.0, baseRate: self.requestedBaseRate, seekId: self.seekId, status: .buffering(initial: true, whilePlaying: true, progress: 0.0, display: true), soundEnabled: true))
         }
-        /*if !self.hasAudioSession {
-            self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play(mixWithOthers: false), activate: { [weak self] _ in
-                Queue.mainQueue().async {
-                    guard let self else {
-                        return
-                    }
-                    self.hasAudioSession = true
-                    self.requestPlay()
-                }
-            }, deactivate: { [weak self] _ in
-                return Signal { subscriber in
-                    if let self {
-                        self.hasAudioSession = false
-                        self.requestPause()
-                    }
-                    
-                    subscriber.putCompletion()
-                    
-                    return EmptyDisposable
-                }
-                |> runOn(.mainQueue())
-            }))
-        } else*/ do {
-            self.requestPlay()
-        }
-    }
-    
-    private func requestPlay() {
-        self.requestedPlaying = true
-        if self.playerIsReady {
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerPlay();", completionHandler: nil)
-        }
-        self.updateStatus()
-    }
-
-    private func requestPause() {
-        self.requestedPlaying = false
-        if self.playerIsReady {
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerPause();", completionHandler: nil)
-        }
-        self.updateStatus()
+        self.player.play()
     }
     
     func pause() {
         assert(Queue.mainQueue().isCurrent())
-        self.requestPause()
+        self.player.pause()
     }
     
     func togglePlayPause() {
         assert(Queue.mainQueue().isCurrent())
-        
-        if self.requestedPlaying {
-            self.pause()
-        } else {
-            self.play()
-        }
+        self.player.togglePlayPause()
     }
     
     func setSoundEnabled(_ value: Bool) {
         assert(Queue.mainQueue().isCurrent())
-        /*if value {
-            if !self.hasAudioSession {
-                self.audioSessionDisposable.set(self.audioSessionManager.push(audioSessionType: .play(mixWithOthers: false), activate: { [weak self] _ in
-                    self?.hasAudioSession = true
-                    self?.player?.volume = 1.0
-                }, deactivate: { [weak self] _ in
-                    self?.hasAudioSession = false
-                    self?.player?.pause()
-                    return .complete()
-                }))
-            }
+        if value {
+            self.player.playOnceWithSound(playAndRecord: false, seek: .none)
         } else {
-            self.player?.volume = 0.0
-            self.hasAudioSession = false
-            self.audioSessionDisposable.set(nil)
-        }*/
+            self.player.continuePlayingWithoutSound(seek: .none)
+        }
     }
     
     func seek(_ timestamp: Double) {
@@ -1294,28 +1428,75 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
-        SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetIsMuted(false);", completionHandler: nil)
+        assert(Queue.mainQueue().isCurrent())
+        let action = { [weak self] in
+            Queue.mainQueue().async {
+                self?.performActionAtEnd()
+            }
+        }
+        switch actionAtEnd {
+        case .loop:
+            self.player.actionAtEnd = .loop({})
+        case .loopDisablingSound:
+            self.player.actionAtEnd = .loopDisablingSound(action)
+        case .stop:
+            self.player.actionAtEnd = .action(action)
+        case .repeatIfNeeded:
+            let _ = (self.player.status
+            |> deliverOnMainQueue
+            |> take(1)).start(next: { [weak self] status in
+                guard let strongSelf = self else {
+                    return
+                }
+                if status.timestamp > status.duration * 0.1 {
+                    strongSelf.player.actionAtEnd = .loop({ [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                    })
+                } else {
+                    strongSelf.player.actionAtEnd = .loopDisablingSound(action)
+                }
+            })
+        }
         
-        self.play()
+        self.player.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
     }
     
     func setSoundMuted(soundMuted: Bool) {
-        SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetIsMuted(\(soundMuted));", completionHandler: nil)
+        self.player.setSoundMuted(soundMuted: soundMuted)
     }
     
     func continueWithOverridingAmbientMode(isAmbient: Bool) {
+        self.player.continueWithOverridingAmbientMode(isAmbient: isAmbient)
     }
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
+        assert(Queue.mainQueue().isCurrent())
+        self.player.setForceAudioToSpeaker(forceAudioToSpeaker)
     }
     
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
-        SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetIsMuted(true);", completionHandler: nil)
-        self.hasAudioSession = false
-        self.audioSessionDisposable.set(nil)
+        assert(Queue.mainQueue().isCurrent())
+        let action = { [weak self] in
+            Queue.mainQueue().async {
+                self?.performActionAtEnd()
+            }
+        }
+        switch actionAtEnd {
+            case .loop:
+                self.player.actionAtEnd = .loop({})
+            case .loopDisablingSound, .repeatIfNeeded:
+                self.player.actionAtEnd = .loopDisablingSound(action)
+            case .stop:
+                self.player.actionAtEnd = .action(action)
+        }
+        self.player.continuePlayingWithoutSound()
     }
     
     func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
+        self.player.setContinuePlayingWithoutSoundOnLostAudioSession(value)
     }
     
     func setBaseRate(_ baseRate: Double) {

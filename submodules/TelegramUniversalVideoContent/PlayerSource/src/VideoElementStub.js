@@ -14,7 +14,7 @@ export class VideoElementStub extends EventTarget {
         this._currentTime = 0.0;
         this.duration = NaN;
         this.paused = true;
-        this.playbackRate = 1.0;
+        this._playbackRate = 1.0;
         this.volume = 1.0;
         this.muted = false;
         this.readyState = 0;
@@ -30,6 +30,7 @@ export class VideoElementStub extends EventTarget {
         this.videoHeight = 0;
         this.textTracks = new TextTrackListStub();
         this.isWaiting = false;
+        this.currentMedia = null;
 
         window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "constructor", {
             "instanceId": this.instanceId
@@ -63,14 +64,36 @@ export class VideoElementStub extends EventTarget {
         }
     }
 
+    get playbackRate() {
+        return this._playbackRate;
+    }
+
+    set playbackRate(value) {
+        this._playbackRate = value;
+
+        window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "setPlaybackRate", {
+            "instanceId": this.instanceId,
+            "playbackRate": value
+        }).then((result) => {
+        })
+    }
+
     get src() {
         return this._src;
     }
 
     set src(value) {
+        if (this.currentMedia) {
+            this.currentMedia.removeEventListener("bufferChanged", false);
+        }
+
         this._src = value;
         var media = window.mediaSourceMap[this._src];
+        this.currentMedia = media;
         if (media) {
+            media.addEventListener("bufferChanged", () => {
+                this.updateBufferedFromMediaSource();
+            }, false);
             window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "setMediaSource", {
                 "instanceId": this.instanceId,
                 "mediaSourceId": media.bridgeId
@@ -90,16 +113,13 @@ export class VideoElementStub extends EventTarget {
         return fragment.querySelectorAll('*');
     }
 
-    bridgeUpdateBuffered(value) {
-        const updatedRanges = value;
-        var ranges = [];
-        for (var i = 0; i < updatedRanges.length; i += 2) {
-            ranges.push({
-                start: updatedRanges[i],
-                end: updatedRanges[i + 1]
-            });
+    updateBufferedFromMediaSource() {
+        var currentMedia = this.currentMedia;
+        if (currentMedia) {
+            this.buffered._ranges = currentMedia.getBufferedRanges();
+        } else {
+            this.buffered._ranges = [];
         }
-        this.buffered._ranges = ranges;
     }
     
     bridgeUpdateStatus(dict) {
@@ -160,10 +180,6 @@ export class VideoElementStub extends EventTarget {
         return 'probably';
     }
 
-    _getMedia() {
-        return window.mediaSourceMap[this.src];
-    }
-
     addTextTrack(kind, label, language) {
         const textTrack = new TextTrackStub(kind, label, language);
         this.textTracks._add(textTrack);
@@ -171,5 +187,9 @@ export class VideoElementStub extends EventTarget {
     }
 
     load() {
+    }
+
+    notifySeeked() {
+        this.dispatchEvent(new Event('seeked'));
     }
 }
