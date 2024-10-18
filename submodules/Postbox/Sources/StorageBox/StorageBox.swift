@@ -315,7 +315,6 @@ public final class StorageBox {
                 value.read(&currentSize, offset: 0, length: 8)
             }
             
-            let previousSize = currentSize
             currentSize += delta
             
             if currentSize < 0 {
