@@ -179,8 +179,7 @@ final class ChatAdPanelNode: ASDisplayNode {
             self.theme = interfaceState.theme
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
             self.removeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 15.0, color: interfaceState.theme.chat.inputPanel.panelControlAccentColor.withMultipliedAlpha(0.1))
-            //TODO:localize
-            self.removeTextNode.attributedText = NSAttributedString(string: "remove", font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+            self.removeTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_BotAd_Remove, font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
         }
                 
         self.contextContainer.isGestureEnabled = false
@@ -331,8 +330,7 @@ final class ChatAdPanelNode: ASDisplayNode {
         
         let textConstrainedSize = CGSize(width: width - contentLeftInset - contentRightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
                 
-        //TODO:localize
-        let (adLayout, adApply) = makeAdLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Ad", font: Font.semibold(14.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: .zero))
+        let (adLayout, adApply) = makeAdLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: strings.Chat_BotAd_Title, font: Font.semibold(14.0), textColor: theme.chat.inputPanel.panelControlAccentColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: .zero))
         
         var titleText: String = ""
         if let author = message.author {

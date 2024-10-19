@@ -813,7 +813,7 @@ public enum CollectibleItemInfoScreenSubject {
 
 
 public enum StorySearchControllerScope {
-    case query(String)
+    case query(EnginePeer?, String)
     case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
 }
 

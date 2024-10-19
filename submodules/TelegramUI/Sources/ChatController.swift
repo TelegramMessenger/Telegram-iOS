@@ -9577,7 +9577,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else if case let .customChatContents(contents) = self.subject, case let .hashTagSearch(publicPostsValue) = contents.kind {
                         publicPosts = publicPostsValue
                     }
-                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, mode: .chatOnly, publicPosts: publicPosts)
+                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, mode: peerName != nil ? .chatOnly : .generic, publicPosts: publicPosts)
                     self.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))

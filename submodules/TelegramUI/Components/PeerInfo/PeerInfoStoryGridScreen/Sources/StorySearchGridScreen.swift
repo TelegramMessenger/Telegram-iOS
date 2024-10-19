@@ -98,8 +98,8 @@ final class StorySearchGridScreenComponent: Component {
             } else {
                 let paneNodeScope: PeerInfoStoryPaneNode.Scope
                 switch component.scope {
-                case let .query(query):
-                    paneNodeScope = .search(query: query)
+                case let .query(peer, query):
+                    paneNodeScope = .search(peerId: peer?.id, query: query)
                 case let .location(coordinates, venue):
                     paneNodeScope = .location(coordinates: coordinates, venue: venue)
                 }
@@ -273,8 +273,12 @@ public final class StorySearchGridScreen: ViewControllerComponentContainer {
             title = nil
         }
         switch self.scope {
-        case let .query(query):
-            self.titleView?.titleContent = .custom("\(query)", title, false)
+        case let .query(peer, query):
+            if let peer, let addressName = peer.addressName {
+                self.titleView?.titleContent = .custom("\(query)@\(addressName)", title, false)
+            } else {
+                self.titleView?.titleContent = .custom("\(query)", title, false)
+            }
         case .location:
             self.titleView?.titleContent = .custom(presentationData.strings.StoryGridScreen_TitleLocationSearch, nil, false)
         }

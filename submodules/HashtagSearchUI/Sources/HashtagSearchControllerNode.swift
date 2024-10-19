@@ -13,6 +13,7 @@ import ChatListSearchItemHeader
 final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let context: AccountContext
     private weak var controller: HashtagSearchController?
+    private let peer: EnginePeer?
     private var query: String
     private var isCashtag = false
     private var presentationData: PresentationData
@@ -51,6 +52,7 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
     init(context: AccountContext, controller: HashtagSearchController, peer: EnginePeer?, query: String, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.context = context
         self.controller = controller
+        self.peer = peer
         self.query = query
         self.navigationBar = navigationBar
         self.isCashtag = query.hasPrefix("$")
@@ -84,12 +86,17 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.currentController = nil
         }
                 
-        let myChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: false)
-        self.myChatContents = myChatContents
-        self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default), params: nil)
-        self.myController?.alwaysShowSearchResultsAsList = true
-        self.myController?.showListEmptyResults = true
-        self.myController?.customNavigationController = navigationController
+        if let _ = peer, controller.mode != .chatOnly {
+            let myChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: false)
+            self.myChatContents = myChatContents
+            self.myController = context.sharedContext.makeChatController(context: context, chatLocation: .customChatContents, subject: .customChatContents(contents: myChatContents), botStart: nil, mode: .standard(.default), params: nil)
+            self.myController?.alwaysShowSearchResultsAsList = true
+            self.myController?.showListEmptyResults = true
+            self.myController?.customNavigationController = navigationController
+        } else {
+            self.myChatContents = nil
+            self.myController = nil
+        }
         
         let globalChatContents = HashtagSearchGlobalChatContents(context: context, query: query, publicPosts: true)
         self.globalChatContents = globalChatContents
@@ -371,7 +378,11 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
         self.globalStorySearchContext = nil
         
         if !self.query.isEmpty {
-            let globalStorySearchContext = SearchStoryListContext(account: self.context.account, source: .hashtag(self.query))
+            var peerId: EnginePeer.Id?
+            if self.controller?.mode == .chatOnly {
+                peerId = self.peer?.id
+            }
+            let globalStorySearchContext = SearchStoryListContext(account: self.context.account, source: .hashtag(peerId, self.query))
             self.globalStorySearchDisposable.set((globalStorySearchContext.state
             |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                 guard let self else {
@@ -429,9 +440,75 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
             self.insertSubnode(self.clippingNode, at: 0)
         }
         
+        var currentTopInset: CGFloat = 0.0
+        var globalTopInset: CGFloat = 0.0
+        if let state = self.globalStorySearchState {
+            var parentController: ViewController?
+            if self.controller?.mode == .chatOnly {
+                parentController = self.currentController
+            } else {
+                parentController = self.globalController
+            }
+            if let parentController {
+                let componentView: ComponentView<Empty>
+                var panelTransition = ComponentTransition(transition)
+                if let current = self.globalStorySearchComponentView {
+                    componentView = current
+                } else {
+                    panelTransition = .immediate
+                    componentView = ComponentView()
+                    self.globalStorySearchComponentView = componentView
+                }
+                let panelSize = componentView.update(
+                    transition: .immediate,
+                    component: AnyComponent(StoryResultsPanelComponent(
+                        context: self.context,
+                        theme: self.presentationData.theme,
+                        strings: self.presentationData.strings,
+                        query: self.query,
+                        peer: self.controller?.mode == .chatOnly ? self.peer : nil,
+                        state: state,
+                        sideInset: layout.safeInsets.left,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            var peer: EnginePeer?
+                            if self.controller?.mode == .chatOnly {
+                                peer = self.peer
+                            }
+                            let searchController = self.context.sharedContext.makeStorySearchController(context: self.context, scope: .query(peer, self.query), listContext: self.globalStorySearchContext)
+                            self.controller?.push(searchController)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: layout.size
+                )
+                let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top - 36.0), size: panelSize)
+                if let view = componentView.view {
+                    if view.superview == nil {
+                        parentController.view.addSubview(view)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: -panelSize.height), to: .zero, duration: 0.25, additive: true)
+                    }
+                    panelTransition.setFrame(view: view, frame: panelFrame)
+                }
+                if self.controller?.mode == .chatOnly {
+                    currentTopInset += panelSize.height
+                } else {
+                    globalTopInset += panelSize.height
+                }
+            }
+        } else if let globalStorySearchComponentView = self.globalStorySearchComponentView {
+            globalStorySearchComponentView.view?.removeFromSuperview()
+            self.globalStorySearchComponentView = nil
+        }
+        
         if let controller = self.currentController {
+            var topInset: CGFloat = insets.top - 79.0
+            topInset += currentTopInset
+            
             transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size))
-            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top - 79.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+            controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
             
             if controller.displayNode.supernode == nil {
                 controller.viewWillAppear(false)
@@ -454,52 +531,10 @@ final class HashtagSearchControllerNode: ASDisplayNode, ASGestureRecognizerDeleg
                 controller.beginMessageSearch(self.query)
             }
         }
-        
+         
         if let controller = self.globalController {
             var topInset: CGFloat = insets.top - 89.0
-            if let state = self.globalStorySearchState {
-                let componentView: ComponentView<Empty>
-                var panelTransition = ComponentTransition(transition)
-                if let current = self.globalStorySearchComponentView {
-                    componentView = current
-                } else {
-                    panelTransition = .immediate
-                    componentView = ComponentView()
-                    self.globalStorySearchComponentView = componentView
-                }
-                let panelSize = componentView.update(
-                    transition: .immediate,
-                    component: AnyComponent(StoryResultsPanelComponent(
-                        context: self.context,
-                        theme: self.presentationData.theme,
-                        strings: self.presentationData.strings,
-                        query: self.query,
-                        state: state,
-                        sideInset: layout.safeInsets.left,
-                        action: { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            let searchController = self.context.sharedContext.makeStorySearchController(context: self.context, scope: .query(self.query), listContext: self.globalStorySearchContext)
-                            self.controller?.push(searchController)
-                        }
-                    )),
-                    environment: {},
-                    containerSize: layout.size
-                )
-                let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top - 36.0), size: panelSize)
-                if let view = componentView.view {
-                    if view.superview == nil {
-                        controller.view.addSubview(view)
-                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: -panelSize.height), to: .zero, duration: 0.25, additive: true)
-                    }
-                    panelTransition.setFrame(view: view, frame: panelFrame)
-                }
-                topInset += panelSize.height
-            } else if let globalStorySearchComponentView = self.globalStorySearchComponentView {
-                globalStorySearchComponentView.view?.removeFromSuperview()
-                self.globalStorySearchComponentView = nil
-            }
+            topInset += globalTopInset
             
             transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(x: layout.size.width * 2.0, y: 0.0), size: layout.size))
             controller.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right), safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)

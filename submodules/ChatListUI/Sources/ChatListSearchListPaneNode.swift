@@ -35,6 +35,7 @@ import AvatarNode
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
     case peerId(EnginePeer.Id, ChatListRecentEntry.Section)
+    case footer
 }
 
 private enum ChatListRecentEntry: Comparable, Identifiable {
@@ -46,13 +47,16 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
     
     case topPeers([EnginePeer], PresentationTheme, PresentationStrings)
     case peer(index: Int, peer: RecentlySearchedPeer, Section, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, EngineGlobalNotificationSettings, PeerStoryStats?, Bool)
+    case footer(PresentationTheme, String)
     
     var stableId: ChatListRecentEntryStableId {
         switch self {
-            case .topPeers:
-                return .topPeers
-            case let .peer(_, peer, section, _, _, _, _, _, _, _, _):
-                return .peerId(peer.peer.peerId, section)
+        case .topPeers:
+            return .topPeers
+        case let .peer(_, peer, section, _, _, _, _, _, _, _, _):
+            return .peerId(peer.peer.peerId, section)
+        case .footer:
+            return .footer
         }
     }
     
@@ -79,6 +83,12 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
+            case let .footer(lhsTheme, lhsText):
+                if case let .footer(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -88,11 +98,15 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 return true
             case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _):
                 switch rhs {
-                    case .topPeers:
-                        return false
+                case .topPeers:
+                    return false
                 case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _):
-                        return lhsIndex <= rhsIndex
+                    return lhsIndex <= rhsIndex
+                case .footer:
+                    return true
                 }
+            case .footer:
+                return false
         }
     }
     
@@ -110,7 +124,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         animationRenderer: MultiAnimationRenderer,
         openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void,
         isChannelsTabExpanded: Bool?,
-        toggleChannelsTabExpanded: @escaping () -> Void
+        toggleChannelsTabExpanded: @escaping () -> Void,
+        openTopAppsInfo: @escaping () -> Void
     ) -> ListViewItem {
         switch self {
             case let .topPeers(peers, theme, strings):
@@ -273,9 +288,8 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
             
                 var buttonAction: ContactsPeerItemButtonAction?
                 if case .chats = key, case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
-                    //TODO:localize
                     buttonAction = ContactsPeerItemButtonAction(
-                        title: "OPEN",
+                        title: presentationData.strings.ChatList_Search_Open,
                         action: { peer, _, _ in
                             peerSelected(primaryPeer, nil, true)
                         }
@@ -344,6 +358,10 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         }
                     }
                 )
+        case let .footer(_, text):
+            return ItemListTextItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat), text: .markdown(text), sectionId: 0, linkAction: { _ in
+                openTopAppsInfo()
+            }, style: .plain, textSize: .larger, textAlignment: .center, trimBottomInset: true, additionalInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
         }
     }
 }
@@ -911,8 +929,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         if case .publicPosts = key {
                             header = ChatListSearchItemHeader(type: .publicPosts, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
                         } else {
-                            //TODO:localize
-                            header = ChatListSearchItemHeader(type: .publicPosts, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Show More >", action: {
+                            header = ChatListSearchItemHeader(type: .publicPosts, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "\(presentationData.strings.ChatList_Search_ShowMore) >", action: {
                                 openPublicPosts()
                             })
                         }
@@ -1045,6 +1062,7 @@ private func chatListSearchContainerPreparedRecentTransition(
     animationCache: AnimationCache,
     animationRenderer: MultiAnimationRenderer,
     openStories: @escaping (EnginePeer.Id, AvatarNode) -> Void,
+    openTopAppsInfo: @escaping () -> Void,
     isChannelsTabExpanded: Bool?,
     toggleChannelsTabExpanded: @escaping () -> Void,
     isEmpty: Bool
@@ -1052,8 +1070,8 @@ private func chatListSearchContainerPreparedRecentTransition(
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdateAll)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded, openTopAppsInfo: openTopAppsInfo), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, filter: filter, key: key, peerSelected: peerSelected, disabledPeerSelected: disabledPeerSelected, peerContextAction: peerContextAction, clearRecentlySearchedPeers: clearRecentlySearchedPeers, deletePeer: deletePeer, animationCache: animationCache, animationRenderer: animationRenderer, openStories: openStories, isChannelsTabExpanded: isChannelsTabExpanded, toggleChannelsTabExpanded: toggleChannelsTabExpanded, openTopAppsInfo: openTopAppsInfo), directionHint: nil) }
     
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates, isEmpty: isEmpty)
 }
@@ -3677,6 +3695,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 false
                             ))
                         }
+                        
+                        result.append(.footer(presentationData.theme, presentationData.strings.ChatList_Search_TopAppsInfo))
                     }
                     
                     var isEmpty = false
@@ -3811,6 +3831,15 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     let _ = context.engine.peers.removeRecentlySearchedPeer(peerId: peerId).startStandalone()
                 }, animationCache: strongSelf.animationCache, animationRenderer: strongSelf.animationRenderer, openStories: { peerId, avatarNode in
                     interaction.openStories?(peerId, avatarNode)
+                }, openTopAppsInfo: {
+                    let alertController = textAlertController(
+                        context: context,
+                        title: presentationData.strings.TopApps_Info_Title,
+                        text: presentationData.strings.TopApps_Info_Text,
+                        actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.TopApps_Info_Done, action: {})],
+                        parseMarkdown: true
+                    )
+                    interaction.present(alertController, nil)
                 },
                 isChannelsTabExpanded: recentItems.isChannelsTabExpanded,
                 toggleChannelsTabExpanded: {

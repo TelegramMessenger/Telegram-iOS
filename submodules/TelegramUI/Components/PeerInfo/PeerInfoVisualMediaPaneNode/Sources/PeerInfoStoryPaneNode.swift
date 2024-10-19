@@ -1492,7 +1492,7 @@ private final class StorySearchHeaderComponent: Component {
 public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum Scope {
         case peer(id: EnginePeer.Id, isSaved: Bool, isArchived: Bool)
-        case search(query: String)
+        case search(peerId: EnginePeer.Id?, query: String)
         case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
         case botPreview(id: EnginePeer.Id)
     }
@@ -1749,8 +1749,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             switch self.scope {
             case let .peer(id, _, isArchived):
                 self.listSource = PeerStoryListContext(account: context.account, peerId: id, isArchived: isArchived)
-            case let .search(query):
-                self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(query))
+            case let .search(peerId, query):
+                self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(peerId, query))
             case let .location(coordinates, venue):
                 self.listSource = SearchStoryListContext(account: context.account, source: .mediaArea(.venue(coordinates: coordinates, venue: venue)))
             case let .botPreview(id):

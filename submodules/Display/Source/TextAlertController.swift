@@ -458,7 +458,10 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
         let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
         let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
         let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
-        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+        let link = MarkdownAttributeSet(font: font, textColor: theme.accentColor)
+        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { url in
+            return ("URL", url)
+        }), textAlignment: .center)
     } else {
         attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0)), textColor: theme.primaryColor, paragraphAlignment: .center)
     }

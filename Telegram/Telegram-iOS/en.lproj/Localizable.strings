@@ -12393,6 +12393,10 @@ Sorry for the inconvenience.";
 "HashtagSearch.StoriesFound_any" = "%@ Stories Found";
 "HashtagSearch.StoriesFoundInfo" = "View stories with %@";
 
+"HashtagSearch.Stories_1" = "%@ Story";
+"HashtagSearch.Stories_any" = "%@ Stories";
+"HashtagSearch.LocalStoriesFound" = "%1$@ in %2$@";
+
 "Stars.BotRevenue.Title" = "Stars Balance";
 "Stars.BotRevenue.Revenue.Title" = "Stars Received";
 "Stars.BotRevenue.Proceeds.Title" = "Rewards Overview";
@@ -13104,3 +13108,18 @@ Sorry for the inconvenience.";
 "Chat.PrivateMessageEditTimestamp.YesterdayAt" = "edited yesterday at %@";
 
 "Stars.Transaction.Gift.Title" = "Gift";
+
+"ChatList.Search.Open" = "OPEN";
+"ChatList.Search.ShowMore" = "Show More";
+
+"AttachmentMenu.AddPhotoOrVideo" = "Add Photo or Video";
+"AttachmentMenu.AddDocument" = "Add Document";
+
+"Chat.BotAd.Title" = "Ad";
+"Chat.BotAd.Remove" = "remove";
+
+"ChatList.Search.TopAppsInfo" = "Which apps are included here? [Learn >]()";
+
+"TopApps.Info.Title" = "Top Mini Apps";
+"TopApps.Info.Text" = "This catalogue ranks mini apps based on their daily revenue, measured in Stars. To be listed, developers must set their main mini app in [@botfather]() (as described [here]()), have over **1,000** daily users, and earn a daily revenue above **1,000** Stars, based on weekly average.";
+"TopApps.Info.Done" = "Understood";
