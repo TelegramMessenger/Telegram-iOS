@@ -17,9 +17,9 @@ private func alignUp(size: Int, align: Int) -> Int {
 private func fileSize(_ path: String, useTotalFileAllocatedSize: Bool = false) -> Int64? {
     if useTotalFileAllocatedSize {
         let url = URL(fileURLWithPath: path)
-        if let values = (try? url.resourceValues(forKeys: Set([.isRegularFileKey, .totalFileAllocatedSizeKey]))) {
+        if let values = (try? url.resourceValues(forKeys: Set([.isRegularFileKey, .fileAllocatedSizeKey]))) {
             if values.isRegularFile ?? false {
-                if let fileSize = values.totalFileAllocatedSize {
+                if let fileSize = values.fileAllocatedSize {
                     return Int64(fileSize)
                 }
             }

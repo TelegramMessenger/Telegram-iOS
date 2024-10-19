@@ -768,11 +768,16 @@ public final class AccountStateManager {
                 |> deliverOn(self.queue)
                 |> mapToSignal { [weak self] state, invalidatedChannels, disableParallelChannelReset -> Signal<(difference: Api.updates.Difference?, finalStatte: AccountReplayedFinalState?, skipBecauseOfError: Bool, resetState: Bool), NoError> in
                     if let state = state, let authorizedState = state.state {
-                        let flags: Int32
-                        let ptsTotalLimit: Int32?
+                        var flags: Int32 = 0
+                        var ptsTotalLimit: Int32?
                         
-                        flags = 1 << 0
-                        ptsTotalLimit = 1000
+                        if !"".isEmpty {
+                            flags |= 1 << 0
+                            ptsTotalLimit = 1000
+                        }
+                        
+                        flags = 0
+                        ptsTotalLimit = nil
                         
                         if let strongSelf = self {
                             if !invalidatedChannels.isEmpty {

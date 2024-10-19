@@ -2350,6 +2350,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?, file: TelegramMediaFile?, action: (() -> Void)?)
         case notificationTopicExceptions(text: String, action: (() -> Void)?)
         case starsReactions(topCount: Int)
+        case videoProcessing
         
         public static func ==(lhs: Tip, rhs: Tip) -> Bool {
             switch lhs {
@@ -2397,6 +2398,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
                 }
             case let .starsReactions(topCount):
                 if case .starsReactions(topCount) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .videoProcessing:
+                if case .videoProcessing = rhs {
                     return true
                 } else {
                     return false

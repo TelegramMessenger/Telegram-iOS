@@ -1120,9 +1120,16 @@ extension ChatControllerImpl {
         self.chatDisplayNode.setupSendActionOnViewUpdate = { [weak self] f, messageCorrelationId in
             //print("setup layoutActionOnViewTransition")
 
-            self?.chatDisplayNode.historyNode.layoutActionOnViewTransition = ({ [weak self] transition in
+            guard let self else {
+                return
+            }
+            self.layoutActionOnViewTransitionAction = f
+            
+            self.chatDisplayNode.historyNode.layoutActionOnViewTransition = ({ [weak self] transition in
                 f()
                 if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                    strongSelf.layoutActionOnViewTransitionAction = nil
+                    
                     var mappedTransition: (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?)?
                     
                     let isScheduledMessages: Bool
@@ -1262,35 +1269,127 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let signal: Signal<[MessageId?], NoError>
-                if forwardSourcePeerIds.count > 1 {
-                    var signals: [Signal<[MessageId?], NoError>] = []
-                    for messagesGroup in forwardedMessages {
-                        signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
-                    }
-                    signal = combineLatest(signals)
-                    |> map { results in
-                        var ids: [MessageId?] = []
-                        for result in results {
-                            ids.append(contentsOf: result)
+                let _ = (strongSelf.shouldDivertMessagesToScheduled(messages: transformedMessages)
+                |> deliverOnMainQueue).start(next: { shouldDivert in
+                    let signal: Signal<[MessageId?], NoError>
+                    var stayInThisChat = false
+                    var shouldOpenScheduledMessages = false
+                    if forwardSourcePeerIds.count > 1 {
+                        var forwardedMessages = forwardedMessages
+                        if shouldDivert {
+                            forwardedMessages = forwardedMessages.map { messageGroup -> [EnqueueMessage] in
+                                return messageGroup.map { message -> EnqueueMessage in
+                                    return message.withUpdatedAttributes { attributes in
+                                        var attributes = attributes
+                                        attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: Int32(Date().timeIntervalSince1970) + 10 * 24 * 60 * 60))
+                                        return attributes
+                                    }
+                                }
+                            }
+                            shouldOpenScheduledMessages = true
                         }
-                        return ids
+                        
+                        var signals: [Signal<[MessageId?], NoError>] = []
+                        for messagesGroup in forwardedMessages {
+                            signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
+                        }
+                        signal = combineLatest(signals)
+                        |> map { results in
+                            var ids: [MessageId?] = []
+                            for result in results {
+                                ids.append(contentsOf: result)
+                            }
+                            return ids
+                        }
+                        stayInThisChat = true
+                    } else {
+                        var transformedMessages = transformedMessages
+                        if shouldDivert {
+                            transformedMessages = transformedMessages.map { message -> EnqueueMessage in
+                                return message.withUpdatedAttributes { attributes in
+                                    var attributes = attributes
+                                    attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                                    attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: Int32(Date().timeIntervalSince1970) + 10 * 24 * 60 * 60))
+                                    return attributes
+                                }
+                            }
+                            shouldOpenScheduledMessages = true
+                        }
+                        
+                        signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                     }
-                } else {
-                    signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
-                }
-                
-                let _ = (signal
-                |> deliverOnMainQueue).startStandalone(next: { messageIds in
-                    if let strongSelf = self {
+                    
+                    let _ = (signal
+                    |> deliverOnMainQueue).startStandalone(next: { messageIds in
+                        guard let strongSelf = self else {
+                            return
+                        }
                         if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
                         } else {
                             strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                            
+                            if shouldOpenScheduledMessages {
+                                if let layoutActionOnViewTransitionAction = strongSelf.layoutActionOnViewTransitionAction {
+                                    strongSelf.layoutActionOnViewTransitionAction = nil
+                                    layoutActionOnViewTransitionAction()
+                                }
+                                
+                                if stayInThisChat {
+                                    strongSelf.dismissAllUndoControllers()
+                                    
+                                    //TODO:localize
+                                    strongSelf.present(
+                                        UndoOverlayController(
+                                            presentationData: strongSelf.presentationData,
+                                            content: .info(
+                                                title: "Improving video...",
+                                                text: "The video will be published after it's optimized for the bese viewing experience.",
+                                                timeout: 8.0,
+                                                customUndoText: nil
+                                            ),
+                                            elevatedLayout: false,
+                                            position: .top,
+                                            action: { _ in
+                                                return true
+                                            }
+                                        ),
+                                        in: .current
+                                    )
+                                } else {
+                                    strongSelf.openScheduledMessages(force: true, completion: { c in
+                                        guard let self else {
+                                            return
+                                        }
+                                        
+                                        c.dismissAllUndoControllers()
+                                        
+                                        //TODO:localize
+                                        c.present(
+                                            UndoOverlayController(
+                                                presentationData: self.presentationData,
+                                                content: .info(
+                                                    title: "Improving video...",
+                                                    text: "The video will be published after it's optimized for the bese viewing experience.",
+                                                    timeout: 8.0,
+                                                    customUndoText: nil
+                                                ),
+                                                elevatedLayout: false,
+                                                position: .top,
+                                                action: { _ in
+                                                    return true
+                                                }
+                                            ),
+                                            in: .current
+                                        )
+                                    })
+                                }
+                            }
                         }
-                    }
+                    })
+                    
+                    donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
                 })
-                
-                donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             } else if case let .customChatContents(customChatContents) = strongSelf.subject {
                 switch customChatContents.kind {
                 case .hashTagSearch:

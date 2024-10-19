@@ -2,8 +2,10 @@ import { TimeRangesStub } from "./TimeRangesStub.js"
 import { TextTrackStub, TextTrackListStub } from "./TextTrackStub.js"
 
 export class VideoElementStub extends EventTarget {
-    constructor() {
+    constructor(id) {
         super();
+
+        this.instanceId = id;
 
         this.bridgeId = window.nextInternalId;
         window.nextInternalId += 1;
@@ -12,7 +14,7 @@ export class VideoElementStub extends EventTarget {
         this._currentTime = 0.0;
         this.duration = NaN;
         this.paused = true;
-        this.playbackRate = 1.0;
+        this._playbackRate = 1.0;
         this.volume = 1.0;
         this.muted = false;
         this.readyState = 0;
@@ -23,13 +25,15 @@ export class VideoElementStub extends EventTarget {
         this.autoplay = false;
         this.controls = false;
         this.error = null;
-        this.src = '';
+        this._src = '';
         this.videoWidth = 0;
         this.videoHeight = 0;
         this.textTracks = new TextTrackListStub();
         this.isWaiting = false;
+        this.currentMedia = null;
 
         window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "constructor", {
+            "instanceId": this.instanceId
         });
 
         setTimeout(() => {
@@ -52,6 +56,7 @@ export class VideoElementStub extends EventTarget {
             this.dispatchEvent(new Event('seeking'));
 
             window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "setCurrentTime", {
+                "instanceId": this.instanceId,
                 "currentTime": value
             }).then((result) => {
                 this.dispatchEvent(new Event('seeked'));
@@ -59,16 +64,62 @@ export class VideoElementStub extends EventTarget {
         }
     }
 
-    bridgeUpdateBuffered(value) {
-        const updatedRanges = value;
-        var ranges = [];
-        for (var i = 0; i < updatedRanges.length; i += 2) {
-            ranges.push({
-                start: updatedRanges[i],
-                end: updatedRanges[i + 1]
-            });
+    get playbackRate() {
+        return this._playbackRate;
+    }
+
+    set playbackRate(value) {
+        this._playbackRate = value;
+
+        window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "setPlaybackRate", {
+            "instanceId": this.instanceId,
+            "playbackRate": value
+        }).then((result) => {
+        })
+    }
+
+    get src() {
+        return this._src;
+    }
+
+    set src(value) {
+        if (this.currentMedia) {
+            this.currentMedia.removeEventListener("bufferChanged", false);
         }
-        this.buffered._ranges = ranges;
+
+        this._src = value;
+        var media = window.mediaSourceMap[this._src];
+        this.currentMedia = media;
+        if (media) {
+            media.addEventListener("bufferChanged", () => {
+                this.updateBufferedFromMediaSource();
+            }, false);
+            window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "setMediaSource", {
+                "instanceId": this.instanceId,
+                "mediaSourceId": media.bridgeId
+            }).then((result) => {
+            })
+        }
+    }
+
+    removeAttribute(name) {
+        if (name === "src") {
+            this._src = "";
+        }
+    }
+
+    querySelectorAll(name) {
+        const fragment = document.createDocumentFragment();
+        return fragment.querySelectorAll('*');
+    }
+
+    updateBufferedFromMediaSource() {
+        var currentMedia = this.currentMedia;
+        if (currentMedia) {
+            this.buffered._ranges = currentMedia.getBufferedRanges();
+        } else {
+            this.buffered._ranges = [];
+        }
     }
     
     bridgeUpdateStatus(dict) {
@@ -103,6 +154,7 @@ export class VideoElementStub extends EventTarget {
     play() {
         if (this.paused) {
             return window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "play", {
+                "instanceId": this.instanceId,
             }).then((result) => {
                 this.dispatchEvent(new Event('play'));
                 this.dispatchEvent(new Event('playing'));
@@ -118,6 +170,7 @@ export class VideoElementStub extends EventTarget {
             this.dispatchEvent(new Event('pause'));
 
             return window.bridgeInvokeAsync(this.bridgeId, "VideoElement", "pause", {
+                "instanceId": this.instanceId,
             }).then((result) => {
             })
         }
@@ -127,47 +180,16 @@ export class VideoElementStub extends EventTarget {
         return 'probably';
     }
 
-    _getMedia() {
-        return window.mediaSourceMap[this.src];
-    }
-
-    /*_simulateTimeUpdate() {
-        if (this._isPlaying) {
-            // Simulate time progression
-            setTimeout(() => {
-                var bufferedEnd = 0.0;
-                
-                const media = this._getMedia();
-                if (media) {
-                    if (media.sourceBuffers.length != 0) {
-                        this.buffered = media.sourceBuffers._buffers[0].buffered;
-                        bufferedEnd = this.buffered.length == 0 ? 0 : this.buffered.end(this.buffered.length - 1);
-                    }
-                }
-
-                // Consume buffered data
-                if (this.currentTime < bufferedEnd) {
-                    // Advance currentTime
-                    this._currentTime += 0.1 * this.playbackRate; // Increment currentTime
-                    this.dispatchEvent(new Event('timeupdate'));
-
-                    // Continue simulation
-                    this._simulateTimeUpdate();
-                } else {
-                    console.log("Buffer underrun");
-                    // Buffer underrun
-                    this._isPlaying = false;
-                    this.paused = true;
-                    this.dispatchEvent(new Event('waiting'));
-                    // The player should react by buffering more data
-                }
-            }, 100);
-        }
-    }*/
-
     addTextTrack(kind, label, language) {
         const textTrack = new TextTrackStub(kind, label, language);
         this.textTracks._add(textTrack);
         return textTrack;
+    }
+
+    load() {
+    }
+
+    notifySeeked() {
+        this.dispatchEvent(new Event('seeked'));
     }
 }

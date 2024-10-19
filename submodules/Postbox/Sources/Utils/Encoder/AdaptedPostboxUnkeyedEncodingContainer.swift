@@ -119,7 +119,7 @@ extension _AdaptedPostboxEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
         } else if value is String {
             try self.encode(value as! String)
         } else if value is Data {
-            try self.encode(value as! Data)
+            try self.encodeData(value as! Data)
         } else if let value = value as? AdaptedPostboxEncoder.RawObjectData {
             let buffer = WriteBuffer()
 
@@ -174,7 +174,7 @@ extension _AdaptedPostboxEncoder.UnkeyedContainer: UnkeyedEncodingContainer {
 }
 
 private extension _AdaptedPostboxEncoder.UnkeyedContainer {
-    func encode(_ value: Data) throws {
+    func encodeData(_ value: Data) throws {
         self.items.append(.data(value))
     }
 }
