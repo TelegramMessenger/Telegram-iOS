@@ -19,7 +19,6 @@ import AccountContext
 import PresentationDataUtils
 import StarsImageComponent
 import ConfettiEffect
-import PremiumPeerShortcutComponent
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -264,8 +263,6 @@ private final class SheetContent: CombinedComponent {
         let star = Child(StarsImageComponent.self)
         let closeButton = Child(Button.self)
         let title = Child(Text.self)
-        let peerShortcut = Child(PremiumPeerShortcutComponent.self)
-        
         let text = Child(BalancedTextComponent.self)
         let button = Child(ButtonComponent.self)
         let balanceTitle = Child(MultilineTextComponent.self)
@@ -300,11 +297,7 @@ private final class SheetContent: CombinedComponent {
                 if let photo = component.invoice.photo {
                     subject = .photo(photo)
                 } else {
-                    if "".isEmpty {
-                        subject = .color(.lightGray)
-                    } else {
-                        subject = .transactionPeer(.peer(peer))
-                    }
+                    subject = .transactionPeer(.peer(peer))
                 }
             } else {
                 subject = .none
@@ -321,8 +314,7 @@ private final class SheetContent: CombinedComponent {
                     theme: theme,
                     diameter: 90.0,
                     backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
-                    icon: isSubscription && !"".isEmpty ? .star : nil,
-                    value: "".isEmpty ? component.invoice.totalAmount : nil
+                    icon: isSubscription ? .star : nil
                 ),
                 availableSize: CGSize(width: min(414.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
@@ -358,11 +350,7 @@ private final class SheetContent: CombinedComponent {
             
             let titleString: String
             if isSubscription {
-                if "".isEmpty {
-                    titleString = "Subscription Name"
-                } else {
-                    titleString = strings.Stars_Transfer_Subscribe_Channel_Title
-                }
+                titleString = strings.Stars_Transfer_Subscribe_Channel_Title
             } else {
                 titleString = strings.Stars_Transfer_Title
             }
@@ -377,25 +365,6 @@ private final class SheetContent: CombinedComponent {
             )
             contentSize.height += title.size.height
             contentSize.height += 13.0
-            
-            if "".isEmpty, let peer = state.botPeer {
-                contentSize.height -= 3.0
-                let peerShortcut = peerShortcut.update(
-                    component: PremiumPeerShortcutComponent(
-                        context: component.context,
-                        theme: theme,
-                        peer: peer
-                        
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.height),
-                    transition: .immediate
-                )
-                context.add(peerShortcut
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + peerShortcut.size.height / 2.0))
-                )
-                contentSize.height += peerShortcut.size.height
-                contentSize.height += 13.0
-            }
                         
             let textFont = Font.regular(15.0)
             let boldTextFont = Font.semibold(15.0)
@@ -408,11 +377,7 @@ private final class SheetContent: CombinedComponent {
             let amount = component.invoice.totalAmount
             let infoText: String
             if case .starsChatSubscription = context.component.source {
-                if "".isEmpty {
-                    infoText = "Do you want to subscribe to **Subscription Name** in **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
-                } else {
-                    infoText = strings.Stars_Transfer_SubscribeInfo(state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_Info_Stars(Int32(amount))).string
-                }
+                infoText = strings.Stars_Transfer_SubscribeInfo(state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_Info_Stars(Int32(amount))).string
             } else if !component.extendedMedia.isEmpty {
                 var description: String = ""
                 var photoCount: Int32 = 0
@@ -534,9 +499,7 @@ private final class SheetContent: CombinedComponent {
             let amountString = presentationStringsFormattedNumber(Int32(amount), presentationData.dateTimeFormat.groupingSeparator)
             let buttonAttributedString: NSMutableAttributedString
             if case .starsChatSubscription = component.source {
-                //TODO:localize
-                buttonAttributedString = NSMutableAttributedString(string: "Subscribe for   #  \(amountString) / month", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
-                //buttonAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Subscribe, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                buttonAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Subscribe, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             } else {
                 buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             }
