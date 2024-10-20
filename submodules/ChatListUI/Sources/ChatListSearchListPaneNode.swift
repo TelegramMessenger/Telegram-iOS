@@ -312,6 +312,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     buttonAction: buttonAction,
                     index: nil,
                     header: header,
+                    alwaysShowLastSeparator: key == .apps,
                     action: { _ in
                         if let chatPeer = peer.peer.peers[peer.peer.peerId] {
                             peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels || section == .popularApps)
@@ -3832,14 +3833,48 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, animationCache: strongSelf.animationCache, animationRenderer: strongSelf.animationRenderer, openStories: { peerId, avatarNode in
                     interaction.openStories?(peerId, avatarNode)
                 }, openTopAppsInfo: {
+                    var dismissImpl: (() -> Void)?
                     let alertController = textAlertController(
                         context: context,
                         title: presentationData.strings.TopApps_Info_Title,
                         text: presentationData.strings.TopApps_Info_Text,
                         actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.TopApps_Info_Done, action: {})],
-                        parseMarkdown: true
+                        parseMarkdown: true,
+                        linkAction: { attributes, _ in
+                            guard let self, let navigationController = self.navigationController else {
+                                return
+                            }
+                            dismissImpl?()
+                            if let value = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
+                                if !value.isEmpty {
+                                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: value, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
+                                } else {
+                                    let _ = (context.engine.peers.resolvePeerByName(name: "botfather")
+                                    |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                                        guard case let .result(result) = result else {
+                                            return .complete()
+                                        }
+                                        return .single(result)
+                                    }
+                                    |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
+                                        guard let navigationController, let peer else {
+                                            return
+                                        }
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                            navigationController: navigationController,
+                                            context: context,
+                                            chatLocation: .peer(peer),
+                                            keepStack: .always
+                                        ))
+                                    })
+                                }
+                            }
+                        }
                     )
                     interaction.present(alertController, nil)
+                    dismissImpl = { [weak alertController] in
+                        alertController?.dismissAnimated()
+                    }
                 },
                 isChannelsTabExpanded: recentItems.isChannelsTabExpanded,
                 toggleChannelsTabExpanded: {
