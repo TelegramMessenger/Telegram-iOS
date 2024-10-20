@@ -521,12 +521,10 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (bool)inFormSheet
 {
-    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
+    if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone) {
         return false;
-    else
-    {
-        if ([self.navigationController isKindOfClass:[TGNavigationController class]])
-        {
+    } else {
+        if ([self.navigationController isKindOfClass:[TGNavigationController class]]) {
             switch (((TGNavigationController *)self.navigationController).presentationStyle)
             {
                 case TGNavigationControllerPresentationStyleInFormSheet:
