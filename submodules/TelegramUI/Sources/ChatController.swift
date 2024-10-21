@@ -9117,7 +9117,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func shouldDivertMessagesToScheduled(targetPeer: EnginePeer? = nil, messages: [EnqueueMessage]) -> Signal<Bool, NoError> {
-        guard let peer = targetPeer?._asPeer() ?? self.presentationInterfaceState.renderedPeer?.peer else {
+        return .single(false)
+        /*guard let peer = targetPeer?._asPeer() ?? self.presentationInterfaceState.renderedPeer?.peer else {
             return .single(false)
         }
         
@@ -9162,7 +9163,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return false
             }
-        }
+        }*/
     }
     
     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {

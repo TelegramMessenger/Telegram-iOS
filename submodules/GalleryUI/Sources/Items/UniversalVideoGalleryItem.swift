@@ -2362,7 +2362,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if videoNode.hasAttachedContext {
                 if self.isPaused || !self.keepSoundOnDismiss {
-                    videoNode.continuePlayingWithoutSound()
+                    if let item = self.item, item.content is HLSVideoContent {
+                    } else {
+                        videoNode.continuePlayingWithoutSound()
+                    }
                 }
             }
         } else {
@@ -3482,7 +3485,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         for quality in qualityState.available {
-            //TODO:release
             let isSelected = qualityState.preferred == .quality(quality)
             items.append(.action(ContextMenuActionItem(text: "\(quality)p", icon: { _ in
                 if isSelected {

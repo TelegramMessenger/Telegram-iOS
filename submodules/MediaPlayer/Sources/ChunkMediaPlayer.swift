@@ -426,6 +426,13 @@ private final class ChunkMediaPlayerContext {
     fileprivate func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
         assert(self.queue.isCurrent())
         
+        /*#if DEBUG
+        var seek = seek
+        if case .timecode = seek {
+            seek = .timecode(830.83000000000004)
+        }
+        #endif*/
+        
         if !self.enableSound {
             self.lastStatusUpdateTimestamp = nil
             self.enableSound = true
@@ -585,14 +592,55 @@ private final class ChunkMediaPlayerContext {
         }
         timestamp = max(0.0, timestamp)
         
+        //print("Timestamp: \(timestamp)")
+        
         var duration: Double = 0.0
         if let partsStateDuration = self.partsState.duration {
             duration = partsStateDuration
         }
         
         var validParts: [ChunkMediaPlayerPart] = []
-        for part in self.partsState.parts {
+        
+        for i in 0 ..< self.partsState.parts.count {
+            let part = self.partsState.parts[i]
+            var partMatches = false
+            if timestamp >= part.startTime - 0.5 && timestamp < part.endTime + 0.5 {
+                partMatches = true
+            }
+            
+            if partMatches {
+                validParts.append(part)
+            }
+        }
+        if let lastValidPart = validParts.last {
+            for i in 0 ..< self.partsState.parts.count {
+                let part = self.partsState.parts[i]
+                if lastValidPart !== part && part.startTime > lastValidPart.startTime && part.startTime <= lastValidPart.endTime + 0.5 {
+                    validParts.append(part)
+                    break
+                }
+            }
+        }
+        
+        /*for i in 0 ..< self.partsState.parts.count {
+            let part = self.partsState.parts[i]
+            var partMatches = false
             if timestamp >= part.startTime - 0.001 && timestamp < part.endTime - 0.001 {
+                partMatches = true
+            } else if part.startTime < 0.2 && timestamp < part.endTime - 0.001 {
+                partMatches = true
+            }
+            
+            if !partMatches, i != self.partsState.parts.count - 1, part.startTime >= 0.001, timestamp >= part.startTime {
+                let nextPart = self.partsState.parts[i + 1]
+                if timestamp < nextPart.endTime - 0.001 {
+                    if part.endTime >= nextPart.startTime - 0.1 {
+                        partMatches = true
+                    }
+                }
+            }
+            
+            if partMatches {
                 validParts.append(part)
                 
                 inner: for lookaheadPart in self.partsState.parts {
@@ -604,7 +652,7 @@ private final class ChunkMediaPlayerContext {
                 
                 break
             }
-        }
+        }*/
         
         if validParts.isEmpty, let initialSeekTimestamp = self.initialSeekTimestamp {
             for part in self.partsState.parts {
@@ -650,6 +698,7 @@ private final class ChunkMediaPlayerContext {
                     userContentType: .other,
                     resourceReference: .standalone(resource: LocalFileReferenceMediaResource(localFilePath: "", randomId: 0)),
                     tempFilePath: part.file.path,
+                    limitedFileRange: nil,
                     streamable: false,
                     isSeekable: true,
                     video: self.video,
@@ -807,6 +856,10 @@ private final class ChunkMediaPlayerContext {
         } else {
             rate = 0.0
             bufferingProgress = 0.0
+        }
+        
+        if rate != 0.0 && self.initialSeekTimestamp != nil {
+            self.initialSeekTimestamp = nil
         }
         
         if duration > 0.0 && timestamp >= duration {

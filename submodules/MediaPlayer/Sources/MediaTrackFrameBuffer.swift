@@ -41,7 +41,7 @@ public final class MediaTrackFrameBuffer {
     
     private var frameSourceSinkIndex: Int?
     
-    private var frames: [MediaTrackDecodableFrame] = []
+    private(set) var frames: [MediaTrackDecodableFrame] = []
     private var maxFrameTime: Double?
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
@@ -194,8 +194,10 @@ public final class MediaTrackFrameBuffer {
             if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
                 return .frame(decodedFrame)
             } else {
-                if let bufferedUntilTime = self.bufferedUntilTime {
-                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                if self.endOfStream {
+                    return .finished
+                } else if let bufferedUntilTime = self.bufferedUntilTime {
+                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 {
                         return .finished
                     }
                 }

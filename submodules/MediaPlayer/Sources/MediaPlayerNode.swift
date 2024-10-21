@@ -179,7 +179,8 @@ public final class MediaPlayerNode: ASDisplayNode {
         var state = state
         
         takeFrameQueue.async { [weak node] in
-            switch takeFrame() {
+            let takeFrameResult = takeFrame()
+            switch takeFrameResult {
             case let .restoreState(frames, atTime, soft):
                 if !soft {
                     Queue.mainQueue().async {

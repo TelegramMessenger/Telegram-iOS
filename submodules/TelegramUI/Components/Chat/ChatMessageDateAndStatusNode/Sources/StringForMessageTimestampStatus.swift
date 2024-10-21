@@ -95,9 +95,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         dateText = "         "
     }
     
-    //TODO:release
-    //TODO:localize
-    if "".isEmpty, let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+    /*if "".isEmpty, let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
         for media in message.media {
             if let file = media as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, !file.isAnimated {
                 if message.id.namespace == Namespaces.Message.ScheduledCloud {
@@ -107,7 +105,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
                 }
             }
         }
-    }
+    }*/
     
     if displayFullDate {
         let dayText: String

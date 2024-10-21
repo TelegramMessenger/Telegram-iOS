@@ -190,6 +190,7 @@ export class VideoElementStub extends EventTarget {
     }
 
     notifySeeked() {
+        this.dispatchEvent(new Event('seeking'));
         this.dispatchEvent(new Event('seeked'));
     }
 }

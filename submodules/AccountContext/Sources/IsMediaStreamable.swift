@@ -19,7 +19,7 @@ public func isMediaStreamable(message: Message, media: TelegramMediaFile) -> Boo
     }
     for attribute in media.attributes {
         if case let .Video(_, _, flags, _, _, _) = attribute {
-            if flags.contains(.supportsStreaming) {
+            if flags.contains(.supportsStreaming) || !media.alternativeRepresentations.isEmpty {
                 return true
             }
             break

@@ -89,6 +89,12 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             strongSelf.item?.controllerInteraction.playMessageEffect(message)
         }
+        self.interactiveImageNode.requestInlineUpdate = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.requestInlineUpdate?()
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {

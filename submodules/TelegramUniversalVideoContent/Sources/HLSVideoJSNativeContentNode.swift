@@ -1362,7 +1362,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 if let duration = mediaSource.duration {
                     var mappedRanges = RangeSet<Int64>()
                     for range in bufferedRanges.ranges {
-                        mappedRanges.formUnion(RangeSet<Int64>(Int64(range.lowerBound * 1000.0) ..< Int64(range.upperBound * 1000.0)))
+                        let rangeLower = max(0.0, range.lowerBound - 0.2)
+                        let rangeUpper = min(duration, range.upperBound + 0.2)
+                        mappedRanges.formUnion(RangeSet<Int64>(Int64(rangeLower * 1000.0) ..< Int64(rangeUpper * 1000.0)))
                     }
                     self._bufferingStatus.set(.single((mappedRanges, Int64(duration * 1000.0))))
                 }
@@ -1492,7 +1494,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             case .stop:
                 self.player.actionAtEnd = .action(action)
         }
-        self.player.continuePlayingWithoutSound()
+        self.player.continuePlayingWithoutSound(seek: .none)
     }
     
     func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
