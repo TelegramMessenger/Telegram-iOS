@@ -306,13 +306,13 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
                return (500, "Internal Server Error")
            }
        }
-   }
+    }
     
     static let shared: SharedHLSVideoWebView = SharedHLSVideoWebView()
     
     private var contextReferences: [Int: ContextReference] = [:]
     
-    let webView: WKWebView
+    var webView: WKWebView?
     
     var videoElements: [Int: VideoElement] = [:]
     var mediaSources: [Int: MediaSource] = [:]
@@ -323,7 +323,17 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
     
     private var tempTasks: [Int: URLSessionTask] = [:]
     
+    private var emptyTimer: Foundation.Timer?
+    
     override init() {
+        super.init()
+    }
+    
+    deinit {
+        self.emptyTimer?.invalidate()
+    }
+    
+    private func createWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
@@ -345,21 +355,21 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
         
         config.userContentController = userController
         
-        self.webView = WKWebView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 100.0)), configuration: config)
-        self.webView.scrollView.isScrollEnabled = false
-        self.webView.allowsLinkPreview = false
-        self.webView.allowsBackForwardNavigationGestures = false
-        self.webView.accessibilityIgnoresInvertColors = true
-        self.webView.scrollView.contentInsetAdjustmentBehavior = .never
-        self.webView.alpha = 0.0
+        let webView = WKWebView(frame: CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 100.0)), configuration: config)
+        self.webView = webView
+        
+        webView.scrollView.isScrollEnabled = false
+        webView.allowsLinkPreview = false
+        webView.allowsBackForwardNavigationGestures = false
+        webView.accessibilityIgnoresInvertColors = true
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.alpha = 0.0
         
         if #available(iOS 16.4, *) {
-            self.webView.isInspectable = isDebug
+            webView.isInspectable = isDebug
         }
         
-        super.init()
-        
-        self.webView.navigationDelegate = self
+        webView.navigationDelegate = self
         
         handleScriptMessage = { [weak self] message in
             Queue.mainQueue().async {
@@ -409,7 +419,7 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
                             }
                             let jsonResult = try! JSONSerialization.data(withJSONObject: result)
                             let jsonResultString = String(data: jsonResult, encoding: .utf8)!
-                            self.webView.evaluateJavaScript("bridgeInvokeCallback(\(callbackId), \(jsonResultString));", completionHandler: nil)
+                            self.webView?.evaluateJavaScript("bridgeInvokeCallback(\(callbackId), \(jsonResultString));", completionHandler: nil)
                         }
                     )
                 case "playerStatus":
@@ -454,12 +464,18 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
             }
         }
         
+        self.isWebViewReady = false
+        
         let bundle = Bundle(for: SharedHLSVideoWebView.self)
         let bundlePath = bundle.bundlePath + "/HlsBundle.bundle"
-        self.webView.loadFileURL(URL(fileURLWithPath: bundlePath + "/index.html"), allowingReadAccessTo: URL(fileURLWithPath: bundlePath))
+        webView.loadFileURL(URL(fileURLWithPath: bundlePath + "/index.html"), allowingReadAccessTo: URL(fileURLWithPath: bundlePath))
     }
     
-    deinit {
+    private func disposeWebView() {
+        if let _ = self.webView {
+            self.webView = nil
+        }
+        self.isWebViewReady = false
     }
     
     private func bridgeInvoke(
@@ -859,6 +875,15 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
         let contextInstanceId = context.instanceId
         self.contextReferences[contextInstanceId] = ContextReference(contentNode: context)
         
+        if self.webView == nil {
+            self.createWebView()
+        }
+        
+        if let emptyTimer = self.emptyTimer {
+            self.emptyTimer = nil
+            emptyTimer.invalidate()
+        }
+        
         return ActionDisposable { [weak self, weak context] in
             Queue.mainQueue().async {
                 guard let self else {
@@ -876,7 +901,23 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
                     }
                 }
                 
-                self.webView.evaluateJavaScript("window.hlsPlayer_destroyInstance(\(contextInstanceId));")
+                self.webView?.evaluateJavaScript("window.hlsPlayer_destroyInstance(\(contextInstanceId));")
+                
+                if self.contextReferences.isEmpty {
+                    if self.emptyTimer == nil {
+                        self.emptyTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false, block: { [weak self] timer in
+                            guard let self else {
+                                return
+                            }
+                            if self.emptyTimer === timer {
+                                self.emptyTimer = nil
+                            }
+                            if self.contextReferences.isEmpty {
+                                self.disposeWebView()
+                            }
+                        })
+                    }
+                }
             }
         }
     }
@@ -920,7 +961,7 @@ private final class SharedHLSVideoWebView: NSObject, WKNavigationDelegate {
             """)
         }
         
-        self.webView.evaluateJavaScript(userScriptJs)
+        self.webView?.evaluateJavaScript(userScriptJs)
     }
 }
 
@@ -1137,7 +1178,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 guard let self else {
                     return
                 }
-                SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerNotifySeekedOnNextStatusUpdate();", completionHandler: nil)
+                SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerNotifySeekedOnNextStatusUpdate();", completionHandler: nil)
             }
         }
         
@@ -1241,12 +1282,12 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     }
                     if let selectedLevelIndex {
                         self.hasRequestedPlayerLoad = true
-                        SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerLoad(\(selectedLevelIndex));", completionHandler: nil)
+                        SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerLoad(\(selectedLevelIndex));", completionHandler: nil)
                     }
                 }
             }
             
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));", completionHandler: nil)
+            SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));", completionHandler: nil)
         }
         
         self.updateStatus()
@@ -1340,7 +1381,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             
             let jsonResult = try! JSONSerialization.data(withJSONObject: result)
             let jsonResultString = String(data: jsonResult, encoding: .utf8)!
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateStatus(\(jsonResultString));", completionHandler: nil)
+            SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.bridgeObjectMap[\(bridgeId)].bridgeUpdateStatus(\(jsonResultString));", completionHandler: nil)
         }
     }
     
@@ -1426,7 +1467,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         assert(Queue.mainQueue().isCurrent())
         self.seekId += 1
         
-        SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSeek(\(timestamp));", completionHandler: nil)
+        SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSeek(\(timestamp));", completionHandler: nil)
     }
     
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
@@ -1504,7 +1545,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     func setBaseRate(_ baseRate: Double) {
         self.requestedBaseRate = baseRate
         if self.playerIsReady {
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));", completionHandler: nil)
+            SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetBaseRate(\(self.requestedBaseRate));", completionHandler: nil)
         }
         self.updateStatus()
     }
@@ -1524,7 +1565,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         }
         
         if self.playerIsReady {
-            SharedHLSVideoWebView.shared.webView.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetLevel(\(self.requestedLevelIndex ?? -1));", completionHandler: nil)
+            SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetLevel(\(self.requestedLevelIndex ?? -1));", completionHandler: nil)
         }
     }
     

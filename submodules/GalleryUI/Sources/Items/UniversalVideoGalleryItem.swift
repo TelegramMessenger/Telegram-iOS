@@ -2621,6 +2621,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if isAd {
             useNative = false
         }
+        if let content = item.content as? NativeVideoContent {
+            if content.fileReference.media.isAnimated {
+                useNative = false
+            }
+        }
         if !useNative {
             return
         }
