@@ -187,6 +187,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let actionIcon: ContactsPeerItemActionIcon
     let buttonAction: ContactsPeerItemButtonAction?
     let searchQuery: String?
+    let alwaysShowLastSeparator: Bool
     let action: ((ContactsPeerItemPeer) -> Void)?
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
     let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
@@ -229,6 +230,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         index: SortIndex?,
         header: ListViewItemHeader?,
         searchQuery: String? = nil,
+        alwaysShowLastSeparator: Bool = false,
         action: ((ContactsPeerItemPeer) -> Void)?,
         disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil,
         setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil,
@@ -261,6 +263,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.actionIcon = actionIcon
         self.buttonAction = buttonAction
         self.searchQuery = searchQuery
+        self.alwaysShowLastSeparator = alwaysShowLastSeparator
         self.action = action
         self.disabledAction = disabledAction
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -1675,7 +1678,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                             strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(nodeLayout.insets.top, separatorHeight)), size: CGSize(width: nodeLayout.contentSize.width, height: separatorHeight))
                             strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - leftInset), height: separatorHeight))
-                            strongSelf.separatorNode.isHidden = last
+                            if !item.alwaysShowLastSeparator {
+                                strongSelf.separatorNode.isHidden = last
+                            }
                             
                             if let userPresence = userPresence {
                                 strongSelf.peerPresenceManager?.reset(presence: userPresence)

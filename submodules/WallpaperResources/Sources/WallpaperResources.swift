@@ -697,23 +697,6 @@ public func patternColor(for color: UIColor, intensity: CGFloat, prominent: Bool
     return .black
 }
 
-public func solidColorImage(_ color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return .single({ arguments in
-        guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
-            return nil
-        }
-        
-        context.withFlippedContext { c in
-            c.setFillColor(color.withAlphaComponent(1.0).cgColor)
-            c.fill(arguments.drawingRect)
-        }
-        
-        addCorners(context, arguments: arguments)
-        
-        return context
-    })
-}
-
 public func drawWallpaperGradientImage(_ colors: [UIColor], rotation: Int32? = nil, context: CGContext, size: CGSize) {
     guard !colors.isEmpty else {
         return

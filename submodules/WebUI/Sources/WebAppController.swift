@@ -604,7 +604,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     scrollInset.bottom = 0.0
                 }
                 
-                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
+                let frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
                 
                 var bottomInset = layout.intrinsicInsets.bottom + layout.additionalInsets.bottom
                 if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
@@ -642,6 +642,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 } else {
                     webView.customBottomInset = layout.intrinsicInsets.bottom
                 }
+                webView.customSideInset = layout.safeInsets.left
             }
             
             if let placeholderNode = self.placeholderNode {

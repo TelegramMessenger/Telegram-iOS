@@ -14,10 +14,38 @@ public enum ItemListTextItemText {
     case large(String)
     case markdown(String)
     case custom(context: AccountContext, string: NSAttributedString)
+    
+    var text: String {
+        switch self {
+        case let .plain(text), let .large(text), let .markdown(text):
+            return text
+        case let .custom(_, string):
+            return string.string
+        }
+    }
 }
 
 public enum ItemListTextItemLinkAction {
     case tap(String)
+}
+
+public enum ItemListTextItemTextAlignment {
+    case natural
+    case center
+    
+    var textAlignment: NSTextAlignment {
+        switch self {
+        case .natural:
+            return .natural
+        case .center:
+            return .center
+        }
+    }
+}
+
+public enum ItemListTextItemTextSize {
+    case generic
+    case larger
 }
 
 public class ItemListTextItem: ListViewItem, ItemListItem {
@@ -26,17 +54,23 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
+    let textSize: ItemListTextItemTextSize
+    let textAlignment: ItemListTextItemTextAlignment
     let trimBottomInset: Bool
+    let additionalInsets: UIEdgeInsets
     public let isAlwaysPlain: Bool = true
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil, trimBottomInset: Bool = false) {
+    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, textSize: ItemListTextItemTextSize = .generic, textAlignment: ItemListTextItemTextAlignment = .natural, tag: ItemListItemTag? = nil, trimBottomInset: Bool = false, additionalInsets: UIEdgeInsets = .zero) {
         self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
         self.style = style
+        self.textSize = textSize
+        self.textAlignment = textAlignment
         self.trimBottomInset = trimBottomInset
+        self.additionalInsets = additionalInsets
         self.tag = tag
     }
     
@@ -127,13 +161,19 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         
         return { [weak self] item, params, neighbors in
             let leftInset: CGFloat = 15.0
-            let topInset: CGFloat = 7.0
+            var topInset: CGFloat = 7.0
             var bottomInset: CGFloat = 7.0
             
-            let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            let largeTitleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize))
+            var titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
+            var textColor: UIColor = item.presentationData.theme.list.freeTextColor
+            if case .large = item.text {
+                titleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize))
+            } else if case .larger = item.textSize {
+                titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize / 17.0 * 15.0))
+                textColor = item.presentationData.theme.list.itemSecondaryTextColor
+            }
             let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            
+                        
             var themeUpdated = false
             var chevronImage = currentChevronImage
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -145,14 +185,19 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             case let .plain(text):
                 attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.list.freeTextColor)
             case let .large(text):
-                attributedText = NSAttributedString(string: text, font: largeTitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
+                attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             case let .markdown(text):
-                let mutableAttributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.presentationData.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+                let mutableAttributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: textColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: textColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
-                })).mutableCopy() as! NSMutableAttributedString
+                }), textAlignment: item.textAlignment.textAlignment).mutableCopy() as! NSMutableAttributedString
                 if let _ = text.range(of: ">]"), let range = mutableAttributedText.string.range(of: ">") {
                     if themeUpdated || currentChevronImage == nil {
-                        chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: item.presentationData.theme.list.itemAccentColor)
+                        switch item.textSize {
+                        case .generic:
+                            chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: item.presentationData.theme.list.itemAccentColor)
+                        case .larger:
+                            chevronImage = generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: item.presentationData.theme.list.itemAccentColor)
+                        }
                     }
                     if let chevronImage {
                         mutableAttributedText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: mutableAttributedText.string))
@@ -162,7 +207,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             case let .custom(_, string):
                 attributedText = string
             }
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: item.textAlignment.textAlignment, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
@@ -174,6 +219,10 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
             default:
                 break
             }
+            
+            topInset += item.additionalInsets.top
+            bottomInset += item.additionalInsets.bottom
+            
             contentSize = CGSize(width: params.width, height: titleLayout.size.height + topInset + bottomInset)
             
             if item.trimBottomInset {
@@ -202,7 +251,15 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     let _ = titleApply(textArguments)
                     
-                    strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
+                    let titleOrigin: CGFloat
+                    switch item.textAlignment {
+                    case .natural:
+                        titleOrigin = leftInset + params.leftInset
+                    case .center:
+                        titleOrigin = floorToScreenPixels((contentSize.width - titleLayout.size.width) / 2.0)
+                    }
+
+                    strongSelf.textNode.textNode.frame = CGRect(origin: CGPoint(x: titleOrigin, y: topInset), size: titleLayout.size)
                 }
             })
         }
@@ -261,7 +318,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 }
             }
             
-            if let rects = rects {
+            if var rects {
                 let linkHighlightingNode: LinkHighlightingNode
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
@@ -269,6 +326,10 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     linkHighlightingNode = LinkHighlightingNode(color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.2))
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode.textNode)
+                }
+                if item.text.text.contains(">]"), var lastRect = rects.last {
+                    lastRect.size.width += 8.0
+                    rects[rects.count - 1] = lastRect
                 }
                 linkHighlightingNode.frame = self.textNode.textNode.frame
                 linkHighlightingNode.updateRects(rects)

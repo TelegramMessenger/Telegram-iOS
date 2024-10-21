@@ -2919,7 +2919,7 @@ final class StoryItemSetContainerSendMessage {
             }
             if !hashtag.isEmpty {
                 if peerName == nil {
-                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(hashtag), listContext: nil)
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(nil, hashtag), listContext: nil)
                     navigationController.pushViewController(searchController)
                 } else {
                     let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)

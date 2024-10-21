@@ -2337,10 +2337,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions)
                 giftController.navigationPresentation = .modal
                 controller?.push(giftController)
-                
-                if case .chatList = source, let _ = currentBirthdays {
-                    let _ = context.engine.notices.dismissServerProvidedSuggestion(suggestion: .todayBirthdays).startStandalone()
-                }
             }
         })
         

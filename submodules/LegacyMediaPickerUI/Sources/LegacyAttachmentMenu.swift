@@ -415,8 +415,7 @@ public func legacyAttachmentMenu(
         
         let galleryTitle: String
         if addingMedia {
-            //TODO:localize
-            galleryTitle = "Add Photo or Video"
+            galleryTitle = presentationData.strings.AttachmentMenu_AddPhotoOrVideo
         } else {
             galleryTitle = editing ? presentationData.strings.Conversation_EditingMessageMediaChange : presentationData.strings.AttachmentMenu_PhotoOrVideo
         }
@@ -436,8 +435,7 @@ public func legacyAttachmentMenu(
         underlyingViews.append(galleryItem)
         
         if addingMedia {
-            //TODO:localize
-            let fileItem = TGMenuSheetButtonItemView(title: "Add Document", type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
+            let fileItem = TGMenuSheetButtonItemView(title: presentationData.strings.AttachmentMenu_AddDocument, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openFileGallery()
             })!

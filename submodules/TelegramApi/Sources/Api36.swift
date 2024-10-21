@@ -10809,15 +10809,16 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func searchPosts(flags: Int32, hashtag: String?, area: Api.MediaArea?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.FoundStories>) {
+                static func searchPosts(flags: Int32, hashtag: String?, area: Api.MediaArea?, peer: Api.InputPeer?, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.FoundStories>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1827279210)
+                    buffer.appendInt32(-780072697)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(hashtag!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {area!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {peer!.serialize(buffer, true)}
                     serializeString(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.searchPosts", parameters: [("flags", String(describing: flags)), ("hashtag", String(describing: hashtag)), ("area", String(describing: area)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.FoundStories? in
+                    return (FunctionDescription(name: "stories.searchPosts", parameters: [("flags", String(describing: flags)), ("hashtag", String(describing: hashtag)), ("area", String(describing: area)), ("peer", String(describing: peer)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.FoundStories? in
                         let reader = BufferReader(buffer)
                         var result: Api.stories.FoundStories?
                         if let signature = reader.readInt32() {

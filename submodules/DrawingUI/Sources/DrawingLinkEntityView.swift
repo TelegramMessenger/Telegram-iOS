@@ -209,7 +209,7 @@ public final class DrawingLinkEntityView: DrawingEntityView, UITextViewDelegate 
         if !self.linkEntity.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             string = self.linkEntity.name.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         } else {
-            string = self.linkEntity.url.uppercased().replacingOccurrences(of: "http://", with: "").replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "tonsite://", with: "")
+            string = self.linkEntity.url.uppercased().replacingOccurrences(of: "HTTP://", with: "").replacingOccurrences(of: "HTTPS://", with: "").replacingOccurrences(of: "TONSITE://", with: "")
         }
         let text = NSMutableAttributedString(string: string)
         let range = NSMakeRange(0, text.length)

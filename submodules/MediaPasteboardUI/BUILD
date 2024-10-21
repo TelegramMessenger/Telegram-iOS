@@ -19,6 +19,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/MediaPickerUI:MediaPickerUI",
+        "//submodules/AttachmentTextInputPanelNode",
     ],
     visibility = [
         "//visibility:public",

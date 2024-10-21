@@ -1545,11 +1545,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info {
-                if info.flags.contains(.messagesShouldHaveProfiles) {
+                if info.flags.contains(.messagesShouldHaveProfiles) && !item.presentationData.isPreview {
                     var allowAuthor = incoming
                     overrideEffectiveAuthor = true
                     
-                    if let author = firstMessage.author, author is TelegramChannel, !incoming || item.presentationData.isPreview {
+                    if let author = firstMessage.author, author is TelegramChannel, !incoming {
                         allowAuthor = true
                         ignoreNameHiding = true
                     }

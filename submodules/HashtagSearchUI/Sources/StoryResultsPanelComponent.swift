@@ -13,6 +13,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let query: String
+    let peer: EnginePeer?
     let state: StoryListContext.State
     let sideInset: CGFloat
     let action: () -> Void
@@ -22,6 +23,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
         theme: PresentationTheme,
         strings: PresentationStrings,
         query: String,
+        peer: EnginePeer?,
         state: StoryListContext.State,
         sideInset: CGFloat,
         action: @escaping () -> Void
@@ -30,6 +32,7 @@ final class StoryResultsPanelComponent: CombinedComponent {
         self.theme = theme
         self.strings = strings
         self.query = query
+        self.peer = peer
         self.state = state
         self.sideInset = sideInset
         self.action = action
@@ -43,6 +46,9 @@ final class StoryResultsPanelComponent: CombinedComponent {
             return false
         }
         if lhs.query != rhs.query {
+            return false
+        }
+        if lhs.peer != rhs.peer {
             return false
         }
         if lhs.state != rhs.state {
@@ -97,14 +103,31 @@ final class StoryResultsPanelComponent: CombinedComponent {
                 transition: .immediate
             )
             
+            let titleString: NSAttributedString
+            if let peer = component.peer, let username = peer.addressName {
+                let storiesString = component.strings.HashtagSearch_Stories(Int32(component.state.totalCount))
+                let fullString = component.strings.HashtagSearch_LocalStoriesFound(storiesString, "@\(username)")
+                titleString = NSMutableAttributedString(
+                    string: fullString.string,
+                    font: Font.semibold(15.0),
+                    textColor: component.theme.rootController.navigationBar.primaryTextColor,
+                    paragraphAlignment: .natural
+                )
+                if let lastRange = fullString.ranges.last?.range {
+                    (titleString as? NSMutableAttributedString)?.addAttribute(NSAttributedString.Key.foregroundColor, value: component.theme.rootController.navigationBar.accentTextColor, range: lastRange)
+                }
+            } else {
+                titleString = NSAttributedString(
+                    string: component.strings.HashtagSearch_StoriesFound(Int32(component.state.totalCount)),
+                    font: Font.semibold(15.0),
+                    textColor: component.theme.rootController.navigationBar.primaryTextColor,
+                    paragraphAlignment: .natural
+                )
+            }
+            
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: component.strings.HashtagSearch_StoriesFound(Int32(component.state.totalCount)),
-                        font: Font.semibold(15.0),
-                        textColor: component.theme.rootController.navigationBar.primaryTextColor,
-                        paragraphAlignment: .natural
-                    )),
+                    text: .plain(titleString),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 1
                 ),

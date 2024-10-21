@@ -86,8 +86,10 @@ final class ItemListControllerTabsContentNode: NavigationBarContentNode {
                 ),
                 customLayout: TabSelectorComponent.CustomLayout(
                     font: Font.medium(14.0),
-                    spacing: 24.0,
-                    lineSelection: true
+                    spacing: 48.0,
+                    innerSpacing: 0.0,
+                    lineSelection: true,
+                    allowScroll: false
                 ),
                 items: mappedItems,
                 selectedId: AnyHashable(self.index),

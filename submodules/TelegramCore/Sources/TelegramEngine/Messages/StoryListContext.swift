@@ -1297,7 +1297,7 @@ public final class PeerStoryListContext: StoryListContext {
 
 public final class SearchStoryListContext: StoryListContext {
     public enum Source {
-        case hashtag(String)
+        case hashtag(EnginePeer.Id?, String)
         case mediaArea(MediaArea)
     }
     
@@ -1368,21 +1368,33 @@ public final class SearchStoryListContext: StoryListContext {
             var searchHashtag: String? = nil
             var area: Api.MediaArea? = nil
             
+            var peer: Signal<Api.InputPeer?, NoError> = .single(nil)
             var flags: Int32 = 0
             switch source {
-            case let .hashtag(query):
+            case let .hashtag(peerId, query):
                 if query.hasPrefix("#") {
                     searchHashtag = String(query[query.index(after: query.startIndex)...])
                 } else {
                     searchHashtag = query
                 }
                 flags |= (1 << 0)
+                
+                if let peerId {
+                    peer = account.postbox.transaction { transaction in
+                        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+                    }
+                    flags |= (1 << 2)
+                }
             case let .mediaArea(mediaArea):
                 area = apiMediaAreasFromMediaAreas([mediaArea], transaction: nil).first
                 flags |= (1 << 1)
             }
             
-            self.requestDisposable = (account.network.request(Api.functions.stories.searchPosts(flags: flags, hashtag: searchHashtag, area: area, offset: loadMoreToken, limit:  Int32(limit)))
+            self.requestDisposable = (peer
+            |> castError(MTRpcError.self)
+            |> mapToSignal { inputPeer in
+                return account.network.request(Api.functions.stories.searchPosts(flags: flags, hashtag: searchHashtag, area: area, peer: inputPeer, offset: loadMoreToken, limit: Int32(limit)))
+            }
             |> map { result -> Api.stories.FoundStories? in
                 return result
             }
