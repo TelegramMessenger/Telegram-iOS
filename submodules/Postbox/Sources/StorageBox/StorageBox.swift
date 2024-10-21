@@ -348,9 +348,11 @@ public final class StorageBox {
                 currentSize = 0
             }
             
-            withUnsafeMutablePointer(to: &currentSize, { pointer in
-                self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
-            })
+            withExtendedLifetime(key, {
+                withUnsafeMutablePointer(to: &currentSize, { pointer in
+                    self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
+                })
+            }
         }
         
         func internalAdd(reference: Reference, to id: Data, contentType: UInt8, size: Int64?) {
