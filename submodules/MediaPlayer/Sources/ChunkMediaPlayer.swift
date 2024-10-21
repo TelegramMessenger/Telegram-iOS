@@ -395,6 +395,10 @@ private final class ChunkMediaPlayerContext {
                 }
             })
         } else {
+            if let controlTimebase = self.loadedState.controlTimebase, !controlTimebase.isAudio {
+                CMTimebaseSetTime(controlTimebase.timebase, time: CMTimeMakeWithSeconds(timestamp, preferredTimescale: 44000))
+            }
+            
             self.isSeeking = false
             self.tick()
         }
@@ -591,6 +595,21 @@ private final class ChunkMediaPlayerContext {
             timestamp = self.initialSeekTimestamp ?? 0.0
         }
         timestamp = max(0.0, timestamp)
+        
+        if let firstPart = self.loadedState.partStates.first, let mediaBuffers = firstPart.mediaBuffers, mediaBuffers.videoBuffer != nil, mediaBuffers.audioBuffer == nil {
+            // No audio
+            if self.audioRenderer != nil {
+                self.audioRenderer?.renderer.stop()
+                self.audioRenderer = nil
+                
+                var timebase: CMTimebase?
+                CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+                let controlTimebase = ChunkMediaPlayerControlTimebase(timebase: timebase!, isAudio: false)
+                CMTimebaseSetTime(timebase!, time: CMTimeMakeWithSeconds(timestamp, preferredTimescale: 44000))
+                
+                self.loadedState.controlTimebase = controlTimebase
+            }
+        }
         
         //print("Timestamp: \(timestamp)")
         
