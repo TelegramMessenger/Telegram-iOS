@@ -26,7 +26,7 @@ public final class HLSQualitySet {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
                         if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec) {
-                            let key = Int(size.height)
+                            let key = Int(min(size.width, size.height))
                             if let currentFile = qualityFiles[key] {
                                 var currentCodec: String?
                                 for attribute in currentFile.media.attributes {

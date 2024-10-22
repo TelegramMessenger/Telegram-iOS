@@ -627,7 +627,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     }
     
     public func isAvailableForGalleryTransition() -> Bool {
-        return self.automaticPlayback ?? false
+        if let automaticPlayback = self.automaticPlayback, automaticPlayback, self.decoration != nil {
+            return true
+        } else {
+            return false
+        }
     }
     
     public func isAvailableForInstantPageTransition() -> Bool {
@@ -1094,9 +1098,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     } else {
                         mediaUpdated = true
                     }
-                    if hlsInlinePlaybackRange != appliedHlsInlinePlaybackRange {
-                        mediaUpdated = true
-                    }
+                    let inlinePlaybackRangeUpdated = hlsInlinePlaybackRange != appliedHlsInlinePlaybackRange
                     
                     var isSendingUpdated = false
                     if let currentMessage = currentMessage {
@@ -1154,7 +1156,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         }
                     }
                     
-                    if mediaUpdated || isSendingUpdated || automaticPlaybackUpdated {
+                    let reloadMedia = mediaUpdated || isSendingUpdated || automaticPlaybackUpdated
+                    if mediaUpdated || isSendingUpdated || automaticPlaybackUpdated || inlinePlaybackRangeUpdated {
                         var media = media
                         
                         var extendedMedia: TelegramExtendedMedia?
@@ -1381,31 +1384,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 chatMessageWebFileCancelInteractiveFetch(account: context.account, image: image)
                             })
                         } else if var file = media as? TelegramMediaFile {
-                            if isSecretMedia {
-                                updateImageSignal = { synchronousLoad, _ in
-                                    return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
-                                }
-                            } else {
-                                if file.isAnimatedSticker {
-                                    let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                                    updateImageSignal = { synchronousLoad, _ in
-                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
-                                    }
-                                } else if file.isSticker || file.isVideoSticker {
-                                    updateImageSignal = { synchronousLoad, _ in
-                                        return chatMessageSticker(account: context.account, userLocation: .peer(message.id.peerId), file: file, small: false)
-                                    }
-                                } else {
-                                    onlyFullSizeVideoThumbnail = isSendingUpdated
-                                    updateImageSignal = { synchronousLoad, _ in
-                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
-                                    }
-                                    updateBlurredImageSignal = { synchronousLoad, _ in
-                                        return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
-                                    }
-                                }
-                            }
-                            
                             var uploading = false
                             if file.resource is VideoLibraryMediaResource {
                                 uploading = true
@@ -1459,6 +1437,31 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         }
                                     } else {
                                         replaceAnimatedStickerNode = true
+                                    }
+                                }
+                            }
+                            
+                            if isSecretMedia {
+                                updateImageSignal = { synchronousLoad, _ in
+                                    return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
+                                }
+                            } else {
+                                if file.isAnimatedSticker {
+                                    let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                                    updateImageSignal = { synchronousLoad, _ in
+                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
+                                    }
+                                } else if file.isSticker || file.isVideoSticker {
+                                    updateImageSignal = { synchronousLoad, _ in
+                                        return chatMessageSticker(account: context.account, userLocation: .peer(message.id.peerId), file: file, small: false)
+                                    }
+                                } else {
+                                    onlyFullSizeVideoThumbnail = isSendingUpdated
+                                    updateImageSignal = { synchronousLoad, _ in
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                    }
+                                    updateBlurredImageSignal = { synchronousLoad, _ in
+                                        return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
                                     }
                                 }
                             }
@@ -1530,6 +1533,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 boundingSize = CGSize(width: boundingSize.width, height: boundingSize.width)
                             }
                         }
+                    }
+                    if !reloadMedia {
+                        updateImageSignal = nil
                     }
                     
                     var isExtendedMedia = false
@@ -1988,18 +1994,17 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         guard let strongSelf else {
                                             return
                                         }
+                                        let hlsInlinePlaybackRange: Range<Int64>?
                                         if let preloadData {
-                                            strongSelf.hlsInlinePlaybackRange = preloadData.1
+                                            hlsInlinePlaybackRange = preloadData.1
                                         } else {
-                                            strongSelf.hlsInlinePlaybackRange = nil
+                                            hlsInlinePlaybackRange = nil
                                         }
-                                        strongSelf.requestInlineUpdate?()
+                                        if strongSelf.hlsInlinePlaybackRange != hlsInlinePlaybackRange {
+                                            strongSelf.hlsInlinePlaybackRange = hlsInlinePlaybackRange
+                                            strongSelf.requestInlineUpdate?()
+                                        }
                                     })
-                                }
-                            } else {
-                                if let hlsInlinePlaybackRangeDisposable = strongSelf.hlsInlinePlaybackRangeDisposable {
-                                    strongSelf.hlsInlinePlaybackRangeDisposable = nil
-                                    hlsInlinePlaybackRangeDisposable.dispose()
                                 }
                             }
                         }

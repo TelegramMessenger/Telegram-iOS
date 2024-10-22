@@ -1127,7 +1127,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
 
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: fileReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true) |> map { [weak self] getSize, getData in
+        let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
+        
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: thumbnailVideoReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -1557,7 +1559,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         case .auto:
             self.requestedLevelIndex = nil
         case let .quality(quality):
-            if let level = self.playerAvailableLevels.first(where: { $0.value.height == quality }) {
+            if let level = self.playerAvailableLevels.first(where: { min($0.value.width, $0.value.height) == quality }) {
                 self.requestedLevelIndex = level.key
             } else {
                 self.requestedLevelIndex = nil
@@ -1577,10 +1579,10 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             return nil
         }
         
-        var available = self.playerAvailableLevels.values.map(\.height)
+        var available = self.playerAvailableLevels.values.map { min($0.width, $0.height) }
         available.sort(by: { $0 > $1 })
         
-        return (currentLevel.height, self.preferredVideoQuality, available)
+        return (min(currentLevel.width, currentLevel.height), self.preferredVideoQuality, available)
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

@@ -104,8 +104,9 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     }
                 }
             case let .custom(item, _):
-                itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1 {
+                let itemNode = item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)
+                itemNodes.append(.custom(itemNode))
+                if i != items.count - 1 && itemNode.needsSeparator {
                     switch items[i + 1] {
                     case .action, .custom:
                         let separatorNode = ASDisplayNode()

@@ -629,7 +629,7 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
     private let requestDismiss: (ContextMenuActionResult) -> Void
     
     private var presentationData: PresentationData?
-    private var itemNode: ContextMenuCustomNode?
+    private(set) var itemNode: ContextMenuCustomNode?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -862,18 +862,28 @@ public final class ContextControllerActionsListStackItem: ContextControllerActio
                 
                 if let separatorNode = item.separatorNode {
                     itemTransition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.maxY), size: CGSize(width: itemFrame.width, height: UIScreenPixel)), beginWithCurrentState: true)
+                    
+                    var separatorHidden = false
                     if i != self.itemNodes.count - 1 {
                         switch self.items[i + 1] {
                         case .separator:
-                            separatorNode.isHidden = true
+                            separatorHidden = true
                         case .action:
-                            separatorNode.isHidden = false
+                            separatorHidden = false
                         case .custom:
-                            separatorNode.isHidden = false
+                            separatorHidden = false
                         }
                     } else {
-                        separatorNode.isHidden = true
+                        separatorHidden = true
                     }
+                    
+                    if let itemContainerNode = item.node as? ContextControllerActionsListCustomItemNode, let itemNode = itemContainerNode.itemNode {
+                        if !itemNode.needsSeparator {
+                            separatorHidden = true
+                        }
+                    }
+                    
+                    separatorNode.isHidden = separatorHidden
                 }
                 
                 itemNodeLayout.apply(itemSize, itemTransition)

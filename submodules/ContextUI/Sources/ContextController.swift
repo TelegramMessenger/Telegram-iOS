@@ -226,6 +226,14 @@ public protocol ContextMenuCustomNode: ASDisplayNode {
     func canBeHighlighted() -> Bool
     func updateIsHighlighted(isHighlighted: Bool)
     func performAction()
+    
+    var needsSeparator: Bool { get }
+}
+
+public extension ContextMenuCustomNode {
+    var needsSeparator: Bool {
+        return true
+    }
 }
 
 public protocol ContextMenuCustomItem {
