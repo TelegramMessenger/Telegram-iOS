@@ -1025,7 +1025,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let premiumGiftOptions: Signal<[PremiumGiftCodeOption], NoError>
             let profileGiftsContext: ProfileGiftsContext?
             if case .user = kind {
-                profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: userPeerId)
+                if isMyProfile || userPeerId != context.account.peerId {
+                    profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: userPeerId)
+                } else {
+                    profileGiftsContext = nil
+                }
                 premiumGiftOptions = .single([])
                 |> then(
                     context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
@@ -1314,7 +1318,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         availablePanes?.insert(.stories, at: 0)
                     }
                     
-                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData {
+                    if availablePanes != nil, profileGiftsContext != nil, let cachedData = peerView.cachedData as? CachedUserData, peerView.peerId != context.account.peerId {
                         if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
                             availablePanes?.insert(.gifts, at: hasStories ? 1 : 0)
                         }

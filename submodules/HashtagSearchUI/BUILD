@@ -28,6 +28,10 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/Stories/StorySetIndicatorComponent",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoVisualMediaPaneNode",
+        "//submodules/TelegramUI/Components/AnimatedTextComponent",
+        "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

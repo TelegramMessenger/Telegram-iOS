@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import TelegramPresentationData
 
 public final class AnimatedTextComponent: Component {
     public struct Item: Equatable {
@@ -24,15 +25,18 @@ public final class AnimatedTextComponent: Component {
     public let font: UIFont
     public let color: UIColor
     public let items: [Item]
+    public let noDelay: Bool
     
     public init(
         font: UIFont,
         color: UIColor,
-        items: [Item]
+        items: [Item],
+        noDelay: Bool = false
     ) {
         self.font = font
         self.color = color
         self.items = items
+        self.noDelay = noDelay
     }
 
     public static func ==(lhs: AnimatedTextComponent, rhs: AnimatedTextComponent) -> Bool {
@@ -43,6 +47,9 @@ public final class AnimatedTextComponent: Component {
             return false
         }
         if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.noDelay != rhs.noDelay {
             return false
         }
         return true
@@ -157,10 +164,12 @@ public final class AnimatedTextComponent: Component {
                         
                         if animateIn, !transition.animation.isImmediate {
                             var delayWidth: Double = 0.0
-                            if let firstDelayWidth {
-                                delayWidth = size.width - firstDelayWidth
-                            } else {
-                                firstDelayWidth = size.width
+                            if !component.noDelay {
+                                if let firstDelayWidth {
+                                    delayWidth = size.width - firstDelayWidth
+                                } else {
+                                    firstDelayWidth = size.width
+                                }
                             }
                             
                             characterComponentView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring)
@@ -218,5 +227,35 @@ public final class AnimatedTextComponent: Component {
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public extension AnimatedTextComponent {
+    static func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
+        var textItems: [AnimatedTextComponent.Item] = []
+        
+        var previousIndex = 0
+        let nsString = string.string as NSString
+        for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
+            if range.range.lowerBound > previousIndex {
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
+            }
+            if let value = mapping[range.index] {
+                let isUnbreakable: Bool
+                switch value {
+                case .text:
+                    isUnbreakable = true
+                case .number:
+                    isUnbreakable = false
+                }
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
+            }
+            previousIndex = range.range.upperBound
+        }
+        if nsString.length > previousIndex {
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
+        }
+        
+        return textItems
     }
 }

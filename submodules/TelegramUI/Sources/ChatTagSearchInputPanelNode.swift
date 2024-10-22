@@ -19,34 +19,6 @@ import AnimatedTextComponent
 
 private let labelFont = Font.regular(15.0)
 
-private func extractAnimatedTextString(string: PresentationStrings.FormattedString, id: String, mapping: [Int: AnimatedTextComponent.Item.Content]) -> [AnimatedTextComponent.Item] {
-    var textItems: [AnimatedTextComponent.Item] = []
-    
-    var previousIndex = 0
-    let nsString = string.string as NSString
-    for range in string.ranges.sorted(by: { $0.range.lowerBound < $1.range.lowerBound }) {
-        if range.range.lowerBound > previousIndex {
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_before_\(range.index)"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: range.range.lowerBound - previousIndex)))))
-        }
-        if let value = mapping[range.index] {
-            let isUnbreakable: Bool
-            switch value {
-            case .text:
-                isUnbreakable = true
-            case .number:
-                isUnbreakable = false
-            }
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_item_\(range.index)"), isUnbreakable: isUnbreakable, content: value))
-        }
-        previousIndex = range.range.upperBound
-    }
-    if nsString.length > previousIndex {
-        textItems.append(AnimatedTextComponent.Item(id: AnyHashable("\(id)_text_end"), isUnbreakable: true, content: .text(nsString.substring(with: NSRange(location: previousIndex, length: nsString.length - previousIndex)))))
-    }
-    
-    return textItems
-}
-
 final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     private struct Params: Equatable {
         var width: CGFloat
@@ -99,6 +71,14 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
     
     private var totalMessageCount: Int?
     private var totalMessageCountDisposable: Disposable?
+    
+    public var externalSearchResultsCount: Int32? {
+        didSet {
+            if let params = self.currentLayout?.params {
+                let _ = self.update(params: params, transition: .spring(duration: 0.4))
+            }
+        }
+    }
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -223,7 +203,15 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         var canChangeListMode = false
         
         var resultsTextString: [AnimatedTextComponent.Item] = []
-        if let results = params.interfaceState.search?.resultsState {
+        if let externalSearchResultsCount = self.externalSearchResultsCount {
+            let value = presentationStringsFormattedNumber(externalSearchResultsCount, params.interfaceState.dateTimeFormat.groupingSeparator)
+            let suffix = params.interfaceState.strings.Chat_BottomSearchPanel_StoryCount(externalSearchResultsCount)
+            resultsTextString = [AnimatedTextComponent.Item(
+                id: "stories",
+                isUnbreakable: true,
+                content: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(value, suffix).string)
+            )]
+        } else if let results = params.interfaceState.search?.resultsState {
             let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 canChangeListMode = true
@@ -237,7 +225,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                         content: .text(params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(value, suffix).string)
                     )]
                 } else if params.interfaceState.displayHistoryFilterAsList {
-                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+                    resultsTextString = AnimatedTextComponent.extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
                         ".",
                         "."
                     ), id: "total_count", mapping: [
@@ -247,7 +235,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
                 } else {
                     let adjustedIndex = results.messageIndices.count - 1 - index
                     
-                    resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Items_NOfM(
+                    resultsTextString = AnimatedTextComponent.extractAnimatedTextString(string: params.interfaceState.strings.Items_NOfM(
                         ".",
                         "."
                     ), id: "position", mapping: [
@@ -263,7 +251,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         } else if let count = self.tagMessageCount?.count ?? self.totalMessageCount {
             canChangeListMode = count != 0
             
-            resultsTextString = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
+            resultsTextString = AnimatedTextComponent.extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_MessageCountFormat(
                 ".",
                 "."
             ), id: "total_count", mapping: [
@@ -282,7 +270,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         }
         
         var modeButtonTitle: [AnimatedTextComponent.Item] = []
-        modeButtonTitle = extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeFormat("."), id: "mode", mapping: [
+        modeButtonTitle = AnimatedTextComponent.extractAnimatedTextString(string: params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeFormat("."), id: "mode", mapping: [
             0: params.interfaceState.displayHistoryFilterAsList ? .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeChat) : .text(params.interfaceState.strings.Chat_BottomSearchPanel_DisplayModeList)
         ])
 
@@ -346,7 +334,7 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
         
         var nextLeftX: CGFloat = 16.0
         
-        if !self.alwaysShowTotalMessagesCount {
+        if !self.alwaysShowTotalMessagesCount && self.externalSearchResultsCount == nil {
             nextLeftX = 12.0
             let calendarButtonSize = self.calendarButton.update(
                 transition: .immediate,
@@ -372,12 +360,28 @@ final class ChatTagSearchInputPanelNode: ChatInputPanelNode {
             if let calendarButtonView = self.calendarButton.view {
                 if calendarButtonView.superview == nil {
                     self.view.addSubview(calendarButtonView)
+                    
+                    if !transition.animation.isImmediate {
+                        calendarButtonView.alpha = 1.0
+                        transition.animateAlpha(view: calendarButtonView, from: 0.0, to: 1.0)
+                        transition.animateScale(view: calendarButtonView, from: 0.01, to: 1.0)
+                    }
                 }
                 transition.setFrame(view: calendarButtonView, frame: calendarButtonFrame)
             }
             nextLeftX += calendarButtonSize.width + 8.0
         } else if let calendarButtonView = self.calendarButton.view {
-            calendarButtonView.removeFromSuperview()
+            if transition.animation.isImmediate {
+                calendarButtonView.removeFromSuperview()
+            } else {
+                transition.setAlpha(view: calendarButtonView, alpha: 0.0, completion: { finished in
+                    if finished {
+                        calendarButtonView.removeFromSuperview()
+                    }
+                    calendarButtonView.alpha = 1.0
+                })
+                transition.animateScale(view: calendarButtonView, from: 1.0, to: 0.01)
+            }
         }
         
         if displaySearchMembers {

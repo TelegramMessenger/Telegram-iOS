@@ -11127,6 +11127,9 @@ Sorry for the inconvenience.";
 "Chat.BottomSearchPanel.MessageCount_1" = "message";
 "Chat.BottomSearchPanel.MessageCount_any" = "messages";
 
+"Chat.BottomSearchPanel.StoryCount_1" = "story";
+"Chat.BottomSearchPanel.StoryCount_any" = "stories";
+
 "Chat.BottomSearchPanel.DisplayModeFormat" = "Show as %@";
 "Chat.BottomSearchPanel.DisplayModeChat" = "Chat";
 "Chat.BottomSearchPanel.DisplayModeList" = "List";
@@ -12396,6 +12399,12 @@ Sorry for the inconvenience.";
 "HashtagSearch.Stories_1" = "%@ Story";
 "HashtagSearch.Stories_any" = "%@ Stories";
 "HashtagSearch.LocalStoriesFound" = "%1$@ in %2$@";
+
+"HashtagSearch.Posts_1" = "%@ Message";
+"HashtagSearch.Posts_any" = "%@ Messages";
+"HashtagSearch.FoundInfoFormat" = "View %1$@ with %2$@";
+"HashtagSearch.FoundStories" = "stories";
+"HashtagSearch.FoundPosts" = "posts";
 
 "Stars.BotRevenue.Title" = "Stars Balance";
 "Stars.BotRevenue.Revenue.Title" = "Stars Received";

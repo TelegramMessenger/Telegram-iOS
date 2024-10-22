@@ -1031,14 +1031,18 @@ public protocol ChatController: ViewController {
     
     var visibleContextController: ViewController? { get }
     
+    var contentContainerNode: ASDisplayNode { get }
+    
     var searching: ValuePromise<Bool> { get }
+    var searchResultsCount: ValuePromise<Int32> { get }
+    var externalSearchResultsCount: Int32? { get set }
     
     var alwaysShowSearchResultsAsList: Bool { get set }
     var includeSavedPeersInSearchResults: Bool { get set }
     var showListEmptyResults: Bool { get set }
+    func beginMessageSearch(_ query: String)
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
-    func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
     
     func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition)

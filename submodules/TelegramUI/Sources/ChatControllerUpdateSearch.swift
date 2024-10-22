@@ -77,6 +77,7 @@ extension ChatControllerImpl {
                     
                     if queryIsEmpty {
                         self.searching.set(false)
+                        self.searchResultsCount.set(0)
                         self.searchDisposable?.set(nil)
                         self.searchResult.set(.single(nil))
                         if let data = interfaceState.search {
@@ -104,6 +105,7 @@ extension ChatControllerImpl {
                             guard let strongSelf = self else {
                                 return
                             }
+                            strongSelf.searchResultsCount.set(results.totalCount)
                             var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
@@ -152,6 +154,7 @@ extension ChatControllerImpl {
                             guard let strongSelf = self else {
                                 return
                             }
+                            strongSelf.searchResultsCount.set(results.totalCount)
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()
@@ -167,11 +170,13 @@ extension ChatControllerImpl {
                         }))
                     } else {
                         self.searching.set(false)
+                        self.searchResultsCount.set(0)
                         self.searchDisposable?.set(nil)
                     }
                 }
             } else {
                 self.searching.set(false)
+                self.searchResultsCount.set(0)
                 self.searchDisposable?.set(nil)
                 
                 if let data = interfaceState.search {

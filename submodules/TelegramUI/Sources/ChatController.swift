@@ -330,6 +330,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
     let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
     public let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public let searchResultsCount = ValuePromise<Int32>(0, ignoreRepeated: true)
     let searchResult = Promise<(SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)?>()
     let loadingMessage = Promise<ChatLoadingMessageSubject?>(nil)
     let performingInlineSearch = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -626,6 +627,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
             self.chatDisplayNode.alwaysShowSearchResultsAsList = self.alwaysShowSearchResultsAsList
+        }
+    }
+    
+    public var externalSearchResultsCount: Int32? {
+        didSet {
+            if let panelNode = self.chatDisplayNode.inputPanelNode as? ChatTagSearchInputPanelNode {
+                panelNode.externalSearchResultsCount = self.externalSearchResultsCount
+            }
         }
     }
     
@@ -9697,7 +9706,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else if case let .customChatContents(contents) = self.subject, case let .hashTagSearch(publicPostsValue) = contents.kind {
                         publicPosts = publicPostsValue
                     }
-                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, mode: peerName != nil ? .chatOnly : .generic, publicPosts: publicPosts)
+                    let searchController = HashtagSearchController(context: self.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, mode: peerName != nil ? .chatOnly : .generic, publicPosts: peerName == nil && publicPosts)
                     self.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))
@@ -10971,5 +10980,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.scrollToEndOfHistory()
             return true
         }
+    }
+    
+    public var contentContainerNode: ASDisplayNode {
+        return self.chatDisplayNode.contentContainerNode
     }
 }
