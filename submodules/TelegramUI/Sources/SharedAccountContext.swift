@@ -1924,8 +1924,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return inputPanelNode
     }
     
-    public func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, all: Bool) -> ViewController {
-        return HashtagSearchController(context: context, peer: peer, query: query, mode: all ? .noChat : .generic)
+    public func makeHashtagSearchController(context: AccountContext, peer: EnginePeer?, query: String, stories: Bool, forceDark: Bool) -> ViewController {
+        return HashtagSearchController(context: context, peer: peer, query: query, mode: stories ? .chatOnly : .generic, stories: stories, forceDark: forceDark)
     }
     
     public func makeStorySearchController(context: AccountContext, scope: StorySearchControllerScope, listContext: SearchStoryListContext?) -> ViewController {

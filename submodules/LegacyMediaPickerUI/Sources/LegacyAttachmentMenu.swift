@@ -565,7 +565,7 @@ public func legacyAttachmentMenu(
     
     carouselItemView?.underlyingViews = underlyingViews
     
-    if editMediaOptions == nil {
+    if editMediaOptions == nil && !addingMedia {
         for i in 0 ..< min(20, recentlyUsedInlineBots.count) {
             let peer = recentlyUsedInlineBots[i]
             let addressName = peer.addressName

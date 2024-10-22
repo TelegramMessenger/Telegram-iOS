@@ -2922,7 +2922,7 @@ final class StoryItemSetContainerSendMessage {
                     let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(nil, hashtag), listContext: nil)
                     navigationController.pushViewController(searchController)
                 } else {
-                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
+                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, stories: true, forceDark: true)
                     navigationController.pushViewController(searchController)
                 }
             }

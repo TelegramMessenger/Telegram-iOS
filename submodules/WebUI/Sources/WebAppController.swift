@@ -587,6 +587,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
         }
+        
+        private var updateWebViewWhenStable = false
                 
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previousLayout = self.validLayout?.0
@@ -605,6 +607,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 let frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
+                if !webView.frame.width.isZero && webView.frame != frame {
+                    self.updateWebViewWhenStable = true
+                }
                 
                 var bottomInset = layout.intrinsicInsets.bottom + layout.additionalInsets.bottom
                 if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
@@ -635,6 +640,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 if let controller = self.controller {
                     webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
+                    if self.updateWebViewWhenStable && !controller.isContainerPanning() {
+                        self.updateWebViewWhenStable = false
+                        webView.setNeedsLayout()
+                    }
                 }
                 
                 if layout.intrinsicInsets.bottom > 44.0 {
