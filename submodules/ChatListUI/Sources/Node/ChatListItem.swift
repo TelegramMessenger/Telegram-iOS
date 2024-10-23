@@ -2495,7 +2495,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             let firstRangeOrigin = chatListSearchResult.text.distance(from: chatListSearchResult.text.startIndex, to: firstRange.lowerBound)
-                            if firstRangeOrigin > 24 {
+                            if firstRangeOrigin > 24 && !chatListSearchResult.searchQuery.hasPrefix("#") {
                                 var leftOrigin: Int = 0
                                 (composedString.string as NSString).enumerateSubstrings(in: NSMakeRange(0, firstRangeOrigin), options: [.byWords, .reverse]) { (str, range1, _, _) in
                                     let distanceFromEnd = firstRangeOrigin - range1.location

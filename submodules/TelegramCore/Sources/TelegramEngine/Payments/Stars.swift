@@ -490,7 +490,10 @@ private final class StarsContextImpl {
 private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
-        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, giveawayPostId, starGift):
+        case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, giveawayPostId, starGift, floodskipDate, floodskipNumber):
+            let _ = floodskipDate
+            let _ = floodskipNumber
+            
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             var giveawayMessageId: MessageId?
@@ -506,6 +509,8 @@ private extension StarsContext.State.Transaction {
                 parsedPeer = .premiumBot
             case .starsTransactionPeerAds:
                 parsedPeer = .ads
+            case .starsTransactionPeerAPI:
+                parsedPeer = .apiLimitExtension
             case .starsTransactionPeerUnsupported:
                 parsedPeer = .unsupported
             case let .starsTransactionPeer(apiPeer):
@@ -595,6 +600,7 @@ public final class StarsContext {
                 case fragment
                 case premiumBot
                 case ads
+                case apiLimitExtension
                 case unsupported
                 case peer(EnginePeer)
             }

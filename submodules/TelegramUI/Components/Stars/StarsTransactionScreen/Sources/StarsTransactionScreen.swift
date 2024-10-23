@@ -410,6 +410,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     case .ads:
                         titleText = strings.Stars_Transaction_TelegramAds_Title
                         via = strings.Stars_Transaction_TelegramAds_Subtitle
+                    case .apiLimitExtension:
+                        titleText = strings.Stars_Transaction_TelegramBotApi_Title
+                        via = strings.Stars_Transaction_TelegramBotApi_Subtitle
                     case .unsupported:
                         titleText = strings.Stars_Transaction_Unsupported_Title
                     }

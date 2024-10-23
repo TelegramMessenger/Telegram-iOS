@@ -870,7 +870,7 @@ public struct ChatInputQueryCommandsResult: Equatable {
 
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
-    case hashtags([String])
+    case hashtags([String], String)
     case mentions([EnginePeer])
     case commands(ChatInputQueryCommandsResult)
     case emojis([(String, TelegramMediaFile?, String)], NSRange)
@@ -884,9 +884,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
             } else {
                 return false
             }
-        case let .hashtags(lhsResults):
-            if case let .hashtags(rhsResults) = rhs {
-                return lhsResults == rhsResults
+        case let .hashtags(lhsResults, lhsQuery):
+            if case let .hashtags(rhsResults, rhsQuery) = rhs {
+                return lhsResults == rhsResults && lhsQuery == rhsQuery
             } else {
                 return false
             }

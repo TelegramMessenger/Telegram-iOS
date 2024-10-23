@@ -1,6 +1,7 @@
 public extension Api {
     enum StarsTransactionPeer: TypeConstructorDescription {
         case starsTransactionPeer(peer: Api.Peer)
+        case starsTransactionPeerAPI
         case starsTransactionPeerAds
         case starsTransactionPeerAppStore
         case starsTransactionPeerFragment
@@ -15,6 +16,12 @@ public extension Api {
                         buffer.appendInt32(-670195363)
                     }
                     peer.serialize(buffer, true)
+                    break
+                case .starsTransactionPeerAPI:
+                    if boxed {
+                        buffer.appendInt32(-110658899)
+                    }
+                    
                     break
                 case .starsTransactionPeerAds:
                     if boxed {
@@ -59,6 +66,8 @@ public extension Api {
         switch self {
                 case .starsTransactionPeer(let peer):
                 return ("starsTransactionPeer", [("peer", peer as Any)])
+                case .starsTransactionPeerAPI:
+                return ("starsTransactionPeerAPI", [])
                 case .starsTransactionPeerAds:
                 return ("starsTransactionPeerAds", [])
                 case .starsTransactionPeerAppStore:
@@ -86,6 +95,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_starsTransactionPeerAPI(_ reader: BufferReader) -> StarsTransactionPeer? {
+            return Api.StarsTransactionPeer.starsTransactionPeerAPI
         }
         public static func parse_starsTransactionPeerAds(_ reader: BufferReader) -> StarsTransactionPeer? {
             return Api.StarsTransactionPeer.starsTransactionPeerAds

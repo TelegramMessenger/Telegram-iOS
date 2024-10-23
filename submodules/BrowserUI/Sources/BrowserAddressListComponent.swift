@@ -352,7 +352,8 @@ final class BrowserAddressListComponent: Component {
                                     highlighting: .default,
                                     updateIsHighlighted: { view, _ in
                                         
-                                    })
+                                    }
+                                )
                             ),
                             environment: {},
                             containerSize: itemFrame.size
