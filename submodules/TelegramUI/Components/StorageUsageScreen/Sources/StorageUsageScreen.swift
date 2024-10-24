@@ -865,6 +865,28 @@ final class StorageUsageScreenComponent: Component {
             self.keepScreenActiveDisposable?.dispose()
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            var currentParent: UIView? = result
+            while true {
+                if currentParent == nil || currentParent === self {
+                    break
+                }
+                if let scrollView = currentParent as? UIScrollView {
+                    if scrollView === self.scrollView {
+                        break
+                    }
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.scrollView
+                    }
+                }
+                currentParent = currentParent?.superview
+            }
+            return result
+        }
+        
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.enableVelocityTracking = true
         }

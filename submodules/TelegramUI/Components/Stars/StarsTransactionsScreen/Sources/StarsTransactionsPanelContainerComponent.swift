@@ -610,6 +610,13 @@ final class StarsTransactionsPanelContainerComponent: Component {
             }
         }
         
+        func scrollToTop() -> Bool {
+            if let currentPanelView = self.currentPanelView as? StarsTransactionsListPanelComponent.View {
+                return currentPanelView.scrollToTop()
+            }
+            return false
+        }
+        
         func update(component: StarsTransactionsPanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelContainerEnvironment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[StarsTransactionsPanelContainerEnvironment.self].value
             

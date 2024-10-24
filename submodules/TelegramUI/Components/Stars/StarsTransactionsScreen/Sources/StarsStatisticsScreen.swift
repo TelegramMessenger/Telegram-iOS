@@ -181,8 +181,8 @@ final class StarsStatisticsScreenComponent: Component {
                                     
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = true
-            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = false
+//            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -215,6 +215,28 @@ final class StarsStatisticsScreenComponent: Component {
         
         deinit {
             self.stateDisposable?.dispose()
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            var currentParent: UIView? = result
+            while true {
+                if currentParent == nil || currentParent === self {
+                    break
+                }
+                if let scrollView = currentParent as? UIScrollView {
+                    if scrollView === self.scrollView {
+                        break
+                    }
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.scrollView
+                    }
+                }
+                currentParent = currentParent?.superview
+            }
+            return result
         }
         
         func scrollToTop() {

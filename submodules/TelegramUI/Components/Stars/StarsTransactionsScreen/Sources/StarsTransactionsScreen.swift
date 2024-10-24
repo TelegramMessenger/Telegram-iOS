@@ -152,8 +152,8 @@ final class StarsTransactionsScreenComponent: Component {
                                     
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = true
-            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = false
+//            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -185,21 +185,44 @@ final class StarsTransactionsScreenComponent: Component {
             self.stateDisposable?.dispose()
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            var currentParent: UIView? = result
+            while true {
+                if currentParent == nil || currentParent === self {
+                    break
+                }
+                if let scrollView = currentParent as? UIScrollView {
+                    if scrollView === self.scrollView {
+                        break
+                    }
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.scrollView
+                    }
+                }
+                currentParent = currentParent?.superview
+            }
+            return result
+        }
+        
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.enableVelocityTracking = true
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            if !self.ignoreScrolling {
-                if self.enableVelocityTracking {
-                    self.previousVelocityM1 = self.previousVelocity
-                    if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
-                        self.previousVelocity = CGFloat(value)
-                    }
-                }
-                
-                self.updateScrolling(transition: .immediate)
+            guard !self.ignoreScrolling else {
+                return
             }
+            if self.enableVelocityTracking {
+                self.previousVelocityM1 = self.previousVelocity
+                if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
+                    self.previousVelocity = CGFloat(value)
+                }
+            }
+            
+            self.updateScrolling(transition: .immediate)
         }
         
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -227,6 +250,12 @@ final class StarsTransactionsScreenComponent: Component {
                 self.enableVelocityTracking = false
                 self.previousVelocity = 0.0
                 self.previousVelocityM1 = 0.0
+            }
+        }
+        
+        func scrollToTop() {
+            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View, !panelContainerView.scrollToTop() {
+                self.scrollView.setContentOffset(.zero, animated: true)
             }
         }
                 
@@ -1124,6 +1153,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         
         self.starsContext.load(force: false)
         self.subscriptionsContext.loadMore()
+        
+        self.scrollToTop = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let componentView = self.node.hostView.componentView as? StarsTransactionsScreenComponent.View {
+                componentView.scrollToTop()
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
