@@ -344,6 +344,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     case .ads:
                         itemTitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Title
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
+                    case .apiLimitExtension:
+                        itemTitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Title
+                        itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Subtitle
                     case .unsupported:
                         itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil
