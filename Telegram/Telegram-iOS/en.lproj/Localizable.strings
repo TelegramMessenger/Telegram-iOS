@@ -13006,6 +13006,9 @@ Sorry for the inconvenience.";
 "Gift.View.Convert.Stars_1" = "%@ Star";
 "Gift.View.Convert.Stars_any" = "%@ Stars";
 
+"Gift.View.NameHidden" = "Only you can see the senders's name.";
+"Gift.View.NameAndMessageHidden" = "Only you can see the senders's name and message.";
+
 "Gift.View.DisplayedInfo" = "The gift is visible on your Page. [View >]()";
 "Gift.View.HiddenInfo" = "This gift is hidden. Only you can see it.";
 

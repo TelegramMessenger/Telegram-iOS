@@ -91,17 +91,16 @@ private final class GiftViewSheetContent: CombinedComponent {
             
             if let arguments = subject.arguments {
                 var peerIds: [EnginePeer.Id] = [arguments.peerId, context.account.peerId]
-                if let fromPeerId = arguments.fromPeerId {
+                if let fromPeerId = arguments.fromPeerId, !peerIds.contains(fromPeerId) {
                     peerIds.append(fromPeerId)
                 }
-                
                 self.disposable = combineLatest(queue: Queue.mainQueue(),
                     context.engine.data.get(EngineDataMap(
                         peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
                             return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                         }
                     )),
-                    context.engine.payments.cachedStarGifts()
+                    .single(nil) |> then(context.engine.payments.cachedStarGifts())
                 ).startStrict(next: { [weak self] peers, starGifts in
                     if let strongSelf = self {
                         var peersMap: [EnginePeer.Id: EnginePeer] = [:]
@@ -142,6 +141,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         let animation = Child(GiftAnimationComponent.self)
         let title = Child(MultilineTextComponent.self)
         let description = Child(MultilineTextComponent.self)
+        let hiddenText = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
         let additionalText = Child(MultilineTextComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
@@ -192,6 +192,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var giftId: Int64 = 0
             var date: Int32?
             var soldOut = false
+            var nameHidden = false
             if case let .soldOutGift(gift) = component.subject {
                 animationFile = gift.file
                 stars = gift.price
@@ -214,6 +215,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 giftId = arguments.gift.id
                 date = arguments.date
                 titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
+                nameHidden = arguments.nameHidden
             } else {
                 animationFile = nil
                 stars = 0
@@ -270,7 +272,101 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
             )
-                                    
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 177.0))
+            )
+            
+            var originY: CGFloat = 0.0
+            if let animationFile {
+                let animation = animation.update(
+                    component: GiftAnimationComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        file: animationFile
+                    ),
+                    availableSize: CGSize(width: 128.0, height: 128.0),
+                    transition: .immediate
+                )
+                context.add(animation
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animation.size.height / 2.0 + 25.0))
+                )
+                originY += animation.size.height
+            }
+            originY += 80.0
+            if soldOut {
+                originY -= 12.0
+            }
+            
+            let linkColor = theme.actionSheet.controlAccentColor
+            if !descriptionText.isEmpty {
+                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
+                }
+                
+                let textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
+                let textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
+                }
+                let description = description.update(
+                    component: MultilineTextComponent(
+                        text: .plain(attributedString),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 5,
+                        lineSpacing: 0.2,
+                        highlightColor: linkColor.withAlphaComponent(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { _, _ in
+                            component.openStarsIntro()
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(description
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
+                )
+                originY += description.size.height + 21.0
+                if soldOut {
+                    originY -= 7.0
+                }
+            } else {
+                originY += 21.0
+            }
+            
+            if nameHidden {
+                let textFont = Font.regular(13.0)
+                let textColor = theme.list.itemSecondaryTextColor
+                
+                let hiddenText = hiddenText.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden, font: textFont, textColor: textColor)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 2,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(hiddenText
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                )
+
+                originY += hiddenText.size.height
+                originY += 11.0
+            }
+            
             let tableFont = Font.regular(15.0)
             let tableBoldFont = Font.semibold(15.0)
             let tableItalicFont = Font.italic(15.0)
@@ -489,82 +585,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
                 transition: .immediate
             )
-            
-            let linkColor = theme.actionSheet.controlAccentColor
-        
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 177.0))
-            )
-            
-            var originY: CGFloat = 0.0
-            if let animationFile {
-                let animation = animation.update(
-                    component: GiftAnimationComponent(
-                        context: component.context,
-                        theme: environment.theme,
-                        file: animationFile
-                    ),
-                    availableSize: CGSize(width: 128.0, height: 128.0),
-                    transition: .immediate
-                )
-                context.add(animation
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animation.size.height / 2.0 + 25.0))
-                )
-                originY += animation.size.height
-            }
-            originY += 80.0
-            
-            if soldOut {
-                originY -= 12.0
-            }
-            
-            if !descriptionText.isEmpty {
-                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
-                }
-                
-                let textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
-                let textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
-                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
-                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
-                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
-                }
-                let description = description.update(
-                    component: MultilineTextComponent(
-                        text: .plain(attributedString),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 5,
-                        lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.1),
-                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
-                            }
-                        },
-                        tapAction: { _, _ in
-                            component.openStarsIntro()
-                        }
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
-                    transition: .immediate
-                )
-                context.add(description
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
-                )
-                originY += description.size.height + 21.0
-                if soldOut {
-                    originY -= 7.0
-                }
-            } else {
-                originY += 21.0
-            }
-          
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
             )
