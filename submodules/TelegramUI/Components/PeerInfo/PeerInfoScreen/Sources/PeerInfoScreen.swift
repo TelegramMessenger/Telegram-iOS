@@ -12709,7 +12709,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     self.controllerNode.resetHeaderExpansion()
                 }
             } else {
-                self.controllerNode.updateNavigation(transition: .immediate, additive: false, animateHeader: false)
+                self.controllerNode.updateNavigation(transition: .animated(duration: 0.15, curve: .easeInOut), additive: false, animateHeader: false)
             }
         }
     }
