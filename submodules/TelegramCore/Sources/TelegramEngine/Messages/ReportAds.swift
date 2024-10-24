@@ -21,10 +21,10 @@ public enum ReportAdMessageError {
 
 func _internal_reportAdMessage(account: Account, peerId: EnginePeer.Id, opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
     return account.postbox.transaction { transaction -> Signal<ReportAdMessageResult, ReportAdMessageError> in
-        guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
-        return account.network.request(Api.functions.channels.reportSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId), option: Buffer(data: option)))
+        return account.network.request(Api.functions.messages.reportSponsoredMessage(peer: inputPeer, randomId: Buffer(data: opaqueId), option: Buffer(data: option)))
         |> mapError { error -> ReportAdMessageError in
             if error.errorDescription == "PREMIUM_ACCOUNT_REQUIRED" {
                 return .premiumRequired

@@ -777,13 +777,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         var adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>
         if case .bubbles = mode, let peerId = displayAdPeer {
-            var effectivePeerId = peerId
-#if DEBUG
-            if peerId.namespace == Namespaces.Peer.CloudUser && peerId.id._internalGetInt64Value() == 784496 {
-                effectivePeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(8000911878))
-            }
-#endif
-            let adMessagesContext = context.engine.messages.adMessages(peerId: effectivePeerId)
+            let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
             if peerId.namespace == Namespaces.Peer.CloudUser {
                 adMessages = .single((nil, []))

@@ -281,6 +281,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let premiumRequired = (userFullFlags & (1 << 29)) != 0
                                         let translationsDisabled = (userFullFlags & (1 << 23)) != 0
                                         let adsEnabled = (userFullFlags2 & (1 << 7)) != 0
+                                        let canViewRevenue = (userFullFlags2 & (1 << 9)) != 0
 
                                         var flags: CachedUserFlags = previous.flags
                                         if premiumRequired {
@@ -302,6 +303,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             flags.insert(.adsEnabled)
                                         } else {
                                             flags.remove(.adsEnabled)
+                                        }
+                                        if canViewRevenue {
+                                            flags.insert(.canViewRevenue)
+                                        } else {
+                                            flags.remove(.canViewRevenue)
                                         }
                                     
                                         let callsPrivate = (userFullFlags & (1 << 5)) != 0
