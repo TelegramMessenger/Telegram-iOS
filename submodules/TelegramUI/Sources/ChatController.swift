@@ -4278,6 +4278,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         adOpaqueId = adAttribute.opaqueId
                     }
                 }
+                if adOpaqueId == nil, let panelMessage = self.chatDisplayNode.adPanelNode?.message, let adAttribute = panelMessage.adAttribute {
+                    adOpaqueId = adAttribute.opaqueId
+                }
                 let _ = self.context.engine.accountData.updateAdMessagesEnabled(enabled: false).start()
                 if let adOpaqueId {
                     self.removeAd(opaqueId: adOpaqueId)
@@ -5541,7 +5544,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     adMessage
                 ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage in
                     if let strongSelf = self {
-                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot {
+                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot && adMessage?.id == strongSelf.presentationInterfaceState.adMessage?.id {
                             return
                         }
                         
@@ -5827,9 +5830,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         var adMessage = adMessage
-                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
+                        if let peer = peerView.peers[peerView.peerId] as? TelegramUser, peer.botInfo != nil {
                         } else {
                             adMessage = nil
+                        }
+                        
+                        if strongSelf.presentationInterfaceState.adMessage?.id != adMessage?.id {
+                            animated = true
                         }
                         
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
