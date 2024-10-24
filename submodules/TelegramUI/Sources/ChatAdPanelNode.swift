@@ -124,19 +124,31 @@ final class ChatAdPanelNode: ASDisplayNode {
         self.tapButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
+                    strongSelf.adNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.adNode.alpha = 0.4
                     strongSelf.titleNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.titleNode.alpha = 0.4
                     strongSelf.textNode.textNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.textNode.textNode.alpha = 0.4
                     strongSelf.imageNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.imageNode.alpha = 0.4
+                    strongSelf.removeTextNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.removeTextNode.alpha = 0.4
+                    strongSelf.removeBackgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.removeBackgroundNode.alpha = 0.4
                 } else {
+                    strongSelf.adNode.alpha = 1.0
+                    strongSelf.adNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.titleNode.alpha = 1.0
                     strongSelf.titleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.textNode.textNode.alpha = 1.0
                     strongSelf.textNode.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     strongSelf.imageNode.alpha = 1.0
                     strongSelf.imageNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.removeTextNode.alpha = 1.0
+                    strongSelf.removeTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.removeBackgroundNode.alpha = 1.0
+                    strongSelf.removeBackgroundNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
