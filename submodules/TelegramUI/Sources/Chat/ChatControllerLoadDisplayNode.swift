@@ -4645,7 +4645,7 @@ extension ChatControllerImpl {
                                 
                                 c.dismissAllUndoControllers()
                                 
-                                Queue.mainQueue().after(1.0) { [weak c] in
+                                Queue.mainQueue().after(0.5) { [weak c] in
                                     c?.displayProcessingVideoTooltip(messageId: firstEvent.id)
                                 }
                                 

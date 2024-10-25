@@ -1536,6 +1536,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                     if !reloadMedia {
                         updateImageSignal = nil
+                    } else {
+                        print("reload media")
                     }
                     
                     var isExtendedMedia = false
@@ -1719,6 +1721,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         enableSound: false,
                                         fetchAutomatically: false,
                                         onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false),
+                                        autoFetchFullSizeThumbnail: true,
                                         continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo,
                                         placeholderColor: emptyColor,
                                         captureProtected: message.isCopyProtected() || isExtendedMedia,
@@ -1747,6 +1750,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         videoNode.isHidden = true
                                         strongSelf.pinchContainerNode.contentNode.insertSubnode(videoNode, aboveSubnode: strongSelf.imageNode)
                                     }
+                                    //videoNode.alpha = 0.5
                                     
                                     updatedVideoNodeReadySignal = videoNode.ready
                                     updatedPlayerStatusSignal = videoNode.status
@@ -1990,6 +1994,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         prefixSeconds: 10,
                                         autofetchPlaylist: false
                                     )
+                                    //|> delay(2.0, queue: .mainQueue())
                                     |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] preloadData in
                                         guard let strongSelf else {
                                             return
