@@ -748,11 +748,15 @@ public struct ComponentTransition {
     }
 
     public func animateScale(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animateScale(layer: view.layer, from: fromValue, to: toValue, delay: delay, additive: additive, completion: completion)
+    }
+    
+    public func animateScale(layer: CALayer, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             completion?(true)
         case let .curve(duration, curve):
-            view.layer.animate(
+            layer.animate(
                 from: fromValue as NSNumber,
                 to: toValue as NSNumber,
                 keyPath: "transform.scale",

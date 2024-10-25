@@ -218,4 +218,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     
     func exitNativePictureInPicture() {
     }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+    }
 }

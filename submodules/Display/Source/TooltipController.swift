@@ -66,15 +66,23 @@ public enum SourceAndRect {
     case node(() -> (ASDisplayNode, CGRect)?)
     case view(() -> (UIView, CGRect)?)
     
-    func globalRect() -> CGRect? {
+    func globalRect(isAlreadyGlobal: Bool) -> CGRect? {
         switch self {
             case let .node(node):
                 if let (sourceNode, sourceRect) = node() {
-                    return sourceNode.view.convert(sourceRect, to: nil)
+                    if isAlreadyGlobal {
+                        return sourceRect
+                    } else {
+                        return sourceNode.view.convert(sourceRect, to: nil)
+                    }
                 }
             case let .view(view):
                 if let (sourceView, sourceRect) = view() {
-                    return sourceView.convert(sourceRect, to: nil)
+                    if isAlreadyGlobal {
+                        return sourceRect
+                    } else {
+                        return sourceView.convert(sourceRect, to: nil)
+                    }
                 }
         }
         return nil
@@ -83,13 +91,16 @@ public enum SourceAndRect {
 
 public final class TooltipControllerPresentationArguments {
     public let sourceAndRect: SourceAndRect
+    public let sourceRectIsGlobal: Bool
     
-    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect)?) {
+    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect)?, sourceRectIsGlobal: Bool = false) {
         self.sourceAndRect = .node(sourceNodeAndRect)
+        self.sourceRectIsGlobal = sourceRectIsGlobal
     }
     
-    public init(sourceViewAndRect: @escaping () -> (UIView, CGRect)?) {
+    public init(sourceViewAndRect: @escaping () -> (UIView, CGRect)?, sourceRectIsGlobal: Bool = false) {
         self.sourceAndRect = .view(sourceViewAndRect)
+        self.sourceRectIsGlobal = sourceRectIsGlobal
     }
 }
 
@@ -194,7 +205,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
         } else {
             self.layout = layout
             
-            if let presentationArguments = self.presentationArguments as? TooltipControllerPresentationArguments, let sourceRect = presentationArguments.sourceAndRect.globalRect() {
+            if let presentationArguments = self.presentationArguments as? TooltipControllerPresentationArguments, let sourceRect = presentationArguments.sourceAndRect.globalRect(isAlreadyGlobal: presentationArguments.sourceRectIsGlobal) {
                 self.controllerNode.sourceRect = sourceRect
             } else {
                 self.controllerNode.sourceRect = nil

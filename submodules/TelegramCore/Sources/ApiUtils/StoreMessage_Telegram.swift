@@ -655,6 +655,12 @@ extension StoreMessage {
     convenience init?(apiMessage: Api.Message, accountPeerId: PeerId, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, flags2, id, fromId, boosts, chatPeerId, savedPeerId, fwdFrom, viaBotId, viaBusinessBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod, quickReplyShortcutId, messageEffectId, factCheck):
+                var attributes: [MessageAttribute] = []
+            
+                if (flags2 & (1 << 4)) != 0 {
+                    attributes.append(PendingProcessingMessageAttribute(approximateCompletionTime: date))
+                }
+            
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
             
                 var namespace = namespace
@@ -675,8 +681,6 @@ extension StoreMessage {
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                         authorId = resolvedFromId
                 }
-                
-                var attributes: [MessageAttribute] = []
                 
                 var threadId: Int64?
                 if let replyTo = replyTo {

@@ -95,17 +95,9 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         dateText = "         "
     }
     
-    /*if "".isEmpty, let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-        for media in message.media {
-            if let file = media as? TelegramMediaFile, file.isVideo, !file.isInstantVideo, !file.isAnimated {
-                if message.id.namespace == Namespaces.Message.ScheduledCloud {
-                    return "appx. \(dateText)"
-                } else if message.id.namespace == Namespaces.Message.ScheduledLocal {
-                    return "processing"
-                }
-            }
-        }
-    }*/
+    if message.id.namespace == Namespaces.Message.ScheduledCloud, let _ = message.pendingProcessingAttribute {
+        return "appx. \(dateText)"
+    }
     
     if displayFullDate {
         let dayText: String

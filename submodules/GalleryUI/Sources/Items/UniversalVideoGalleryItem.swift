@@ -29,6 +29,9 @@ import AdsInfoScreen
 import AdsReportScreen
 import SaveProgressScreen
 import SectionTitleContextItem
+import RasterizedCompositionComponent
+import BadgeComponent
+import ComponentFlow
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -507,8 +510,19 @@ final class MoreHeaderButton: HighlightableButtonNode {
 final class SettingsHeaderButton: HighlightableButtonNode {
     let referenceNode: ContextReferenceContentNode
     let containerNode: ContextControllerSourceNode
-    private let iconNode: ASImageNode
-    private let iconDotNode: ASImageNode
+    
+    private let iconLayer: RasterizedCompositionMonochromeLayer
+    
+    private let gearsLayer: RasterizedCompositionImageLayer
+    private let dotLayer: RasterizedCompositionImageLayer
+    
+    private var speedBadge: ComponentView<Empty>?
+    private var qualityBadge: ComponentView<Empty>?
+    
+    private var speedBadgeText: String?
+    private var qualityBadgeText: String?
+    
+    private let badgeFont: UIFont
     
     private var isMenuOpen: Bool = false
 
@@ -523,23 +537,24 @@ final class SettingsHeaderButton: HighlightableButtonNode {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.contentMode = .scaleToFill
+        self.iconLayer = RasterizedCompositionMonochromeLayer()
+        //self.iconLayer.backgroundColor = UIColor.green.cgColor
         
-        self.iconDotNode = ASImageNode()
-        self.iconDotNode.displaysAsynchronously = false
-        self.iconDotNode.displayWithoutProcessing = true
+        self.gearsLayer = RasterizedCompositionImageLayer()
+        self.gearsLayer.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsNoDot"), color: .white)
+        
+        self.dotLayer = RasterizedCompositionImageLayer()
+        self.dotLayer.image = generateFilledCircleImage(diameter: 4.0, color: .white)
+        
+        self.iconLayer.contentsLayer.addSublayer(self.gearsLayer)
+        self.iconLayer.contentsLayer.addSublayer(self.dotLayer)
+        
+        self.badgeFont = Font.with(size: 8.0, design: .round, weight: .bold)
 
         super.init()
-        
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsNoDot"), color: .white)
-        self.iconDotNode.image = generateFilledCircleImage(diameter: 4.0, color: .white)
 
         self.containerNode.addSubnode(self.referenceNode)
-        self.referenceNode.addSubnode(self.iconNode)
-        self.referenceNode.addSubnode(self.iconDotNode)
+        self.referenceNode.layer.addSublayer(self.iconLayer)
         self.addSubnode(self.containerNode)
 
         self.containerNode.shouldBegin = { [weak self] location in
@@ -560,17 +575,32 @@ final class SettingsHeaderButton: HighlightableButtonNode {
 
         self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -4.0, bottom: 0.0, right: -4.0)
         
-        if let image = self.iconNode.image {
-            let iconFrame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
-            self.iconNode.position = iconFrame.center
-            self.iconNode.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+        if let image = self.gearsLayer.image {
+            let iconInnerInsets = UIEdgeInsets(top: 4.0, left: 8.0, bottom: 4.0, right: 6.0)
+            let iconSize = CGSize(width: image.size.width + iconInnerInsets.left + iconInnerInsets.right, height: image.size.height + iconInnerInsets.top + iconInnerInsets.bottom)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - iconSize.width) / 2.0), y: floor((self.containerNode.bounds.height - iconSize.height) / 2.0)), size: iconSize)
+            self.iconLayer.position = iconFrame.center
+            self.iconLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
             
-            if let dotImage = self.iconDotNode.image {
-                let dotFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - dotImage.size.width) * 0.5), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - dotImage.size.height) * 0.5)), size: dotImage.size)
-                self.iconDotNode.position = dotFrame.center
-                self.iconDotNode.bounds = CGRect(origin: CGPoint(), size: dotFrame.size)
+            self.iconLayer.contentsLayer.position = CGRect(origin: CGPoint(), size: iconFrame.size).center
+            self.iconLayer.contentsLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            
+            self.iconLayer.maskedLayer.position = CGRect(origin: CGPoint(), size: iconFrame.size).center
+            self.iconLayer.maskedLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            self.iconLayer.maskedLayer.backgroundColor = UIColor.white.cgColor
+            
+            let gearsFrame = CGRect(origin: CGPoint(x: floor((iconSize.width - image.size.width) * 0.5), y: floor((iconSize.height - image.size.height) * 0.5)), size: image.size)
+            self.gearsLayer.position = gearsFrame.center
+            self.gearsLayer.bounds = CGRect(origin: CGPoint(), size: gearsFrame.size)
+            
+            if let dotImage = self.dotLayer.image {
+                let dotFrame = CGRect(origin: CGPoint(x: gearsFrame.minX + floorToScreenPixels((gearsFrame.width - dotImage.size.width) * 0.5), y: gearsFrame.minY + floorToScreenPixels((gearsFrame.height - dotImage.size.height) * 0.5)), size: dotImage.size)
+                self.dotLayer.position = dotFrame.center
+                self.dotLayer.bounds = CGRect(origin: CGPoint(), size: dotFrame.size)
             }
         }
+        
+        //self.setBadges(speed: "1.5x", quality: "HD", transition: .immediate)
     }
 
     override func didLoad() {
@@ -592,20 +622,110 @@ final class SettingsHeaderButton: HighlightableButtonNode {
         self.isMenuOpen = isMenuOpen
         
         let rotationTransition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
-        rotationTransition.updateTransform(node: self.iconNode, transform: CGAffineTransformMakeRotation(isMenuOpen ? (CGFloat.pi * 2.0 / 6.0) : 0.0))
-        self.iconNode.layer.animateScale(from: 1.0, to: 1.07, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
+        rotationTransition.updateTransform(layer: self.gearsLayer, transform: CGAffineTransformMakeRotation(isMenuOpen ? (CGFloat.pi * 2.0 / 6.0) : 0.0))
+        self.gearsLayer.animateScale(from: 1.0, to: 1.07, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
             guard let self, finished else {
                 return
             }
-            self.iconNode.layer.animateScale(from: 1.07, to: 1.0, duration: 0.1, removeOnCompletion: false)
+            self.gearsLayer.animateScale(from: 1.07, to: 1.0, duration: 0.1, removeOnCompletion: true)
         })
         
-        self.iconDotNode.layer.animateScale(from: 1.0, to: 0.8, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
+        self.dotLayer.animateScale(from: 1.0, to: 0.8, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
             guard let self, finished else {
                 return
             }
-            self.iconDotNode.layer.animateScale(from: 0.8, to: 1.0, duration: 0.1, removeOnCompletion: false)
+            self.dotLayer.animateScale(from: 0.8, to: 1.0, duration: 0.1, removeOnCompletion: true)
         })
+    }
+    
+    func setBadges(speed: String?, quality: String?, transition: ComponentTransition) {
+        if self.speedBadgeText == speed && self.qualityBadgeText == quality {
+            return
+        }
+        self.speedBadgeText = speed
+        self.qualityBadgeText = quality
+        
+        if let badgeText = speed {
+            var badgeTransition = transition
+            let speedBadge: ComponentView<Empty>
+            if let current = self.speedBadge {
+                speedBadge = current
+            } else {
+                speedBadge = ComponentView()
+                self.speedBadge = speedBadge
+                badgeTransition = badgeTransition.withAnimation(.none)
+            }
+            let badgeSize = speedBadge.update(
+                transition: badgeTransition,
+                component: AnyComponent(BadgeComponent(
+                    text: badgeText,
+                    font: self.badgeFont,
+                    cornerRadius: 3.0,
+                    insets: UIEdgeInsets(top: 1.33, left: 1.66, bottom: 1.33, right: 1.66),
+                    outerInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let speedBadgeView = speedBadge.view {
+                if speedBadgeView.layer.superlayer == nil {
+                    self.iconLayer.contentsLayer.addSublayer(speedBadgeView.layer)
+                    
+                    transition.animateAlpha(layer: speedBadgeView.layer, from: 0.0, to: 1.0)
+                    transition.animateScale(layer: speedBadgeView.layer, from: 0.001, to: 1.0)
+                }
+                badgeTransition.setFrame(layer: speedBadgeView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: badgeSize))
+            }
+        } else if let speedBadge = self.speedBadge {
+            self.speedBadge = nil
+            if let speedBadgeView = speedBadge.view {
+                transition.setAlpha(layer: speedBadgeView.layer, alpha: 0.0, completion: { [weak speedBadgeView] _ in
+                    speedBadgeView?.layer.removeFromSuperlayer()
+                })
+                transition.setScale(layer: speedBadgeView.layer, scale: 0.001)
+            }
+        }
+        
+        if let badgeText = quality {
+            var badgeTransition = transition
+            let qualityBadge: ComponentView<Empty>
+            if let current = self.qualityBadge {
+                qualityBadge = current
+            } else {
+                qualityBadge = ComponentView()
+                self.qualityBadge = qualityBadge
+                badgeTransition = badgeTransition.withAnimation(.none)
+            }
+            let badgeSize = qualityBadge.update(
+                transition: badgeTransition,
+                component: AnyComponent(BadgeComponent(
+                    text: badgeText,
+                    font: self.badgeFont,
+                    cornerRadius: 3.0,
+                    insets: UIEdgeInsets(top: 1.33, left: 1.66, bottom: 1.33, right: 1.66),
+                    outerInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let qualityBadgeView = qualityBadge.view {
+                if qualityBadgeView.layer.superlayer == nil {
+                    self.iconLayer.contentsLayer.addSublayer(qualityBadgeView.layer)
+                    
+                    transition.animateAlpha(layer: qualityBadgeView.layer, from: 0.0, to: 1.0)
+                    transition.animateScale(layer: qualityBadgeView.layer, from: 0.001, to: 1.0)
+                }
+                badgeTransition.setFrame(layer: qualityBadgeView.layer, frame: CGRect(origin: CGPoint(x: self.iconLayer.bounds.width - badgeSize.width, y: self.iconLayer.bounds.height - badgeSize.height), size: badgeSize))
+            }
+        } else if let qualityBadge = self.qualityBadge {
+            self.qualityBadge = nil
+            if let qualityBadgeView = qualityBadge.view {
+                transition.setAlpha(layer: qualityBadgeView.layer, alpha: 0.0, completion: { [weak qualityBadgeView] _ in
+                    qualityBadgeView?.layer.removeFromSuperlayer()
+                })
+                transition.setScale(layer: qualityBadgeView.layer, scale: 0.001)
+            }
+        }
     }
 }
 
@@ -1008,6 +1128,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     private let node: UniversalVideoNode
     private let willBegin: (NativePictureInPictureContentImpl) -> Void
     private let didBegin: (NativePictureInPictureContentImpl) -> Void
+    private let didEnd: (NativePictureInPictureContentImpl) -> Void
     private let expand: (@escaping () -> Void) -> Void
     private var pictureInPictureTimer: SwiftSignalKit.Timer?
     private var didExpand: Bool = false
@@ -1018,7 +1139,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     
     private var isNativePictureInPictureActiveDisposable: Disposable?
 
-    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
+    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didEnd: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
         self.context = context
         self.mediaManager = mediaManager
         self.accountId = accountId
@@ -1026,6 +1147,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
         self.node = videoNode
         self.willBegin = willBegin
         self.didBegin = didBegin
+        self.didEnd = didEnd
         self.expand = expand
 
         super.init()
@@ -1135,6 +1257,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
             self.hiddenMediaManagerIndex = nil
         }
+        self.didEnd(self)
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
@@ -1201,6 +1324,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var playbackRate: Double?
     private var videoQuality: UniversalVideoContentVideoQuality = .auto
     private let playbackRatePromise = ValuePromise<Double>()
+    private let videoQualityPromise = ValuePromise<UniversalVideoContentVideoQuality>()
     
     private let statusDisposable = MetaDisposable()
     private let moreButtonStateDisposable = MetaDisposable()
@@ -1562,8 +1686,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isAdaptive = true
             }
             
-            //TODO:release
-            //self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQAuto"), color: .white)))
             let _ = isAdaptive
             
             let dimensions = item.content.dimensions
@@ -1705,46 +1827,38 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            /*self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
+            self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
                 self.playbackRatePromise.get(),
-                self.isShowingContextMenuPromise.get()
-            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
-                guard let strongSelf = self else {
+                self.videoQualityPromise.get()
+            ).start(next: { [weak self] playbackRate, videoQuality in
+                guard let self else {
                     return
                 }
-
-                let effectiveBaseRate: Double
-                if isShowingContextMenu {
-                    effectiveBaseRate = 1.0
-                } else {
-                    effectiveBaseRate = playbackRate
+                
+                var rateString: String?
+                if abs(playbackRate - 1.0) > 0.1 {
+                    var stringValue = String(format: "%.1fx", playbackRate)
+                    if stringValue.hasSuffix(".0x") {
+                        stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
+                    }
+                    rateString = stringValue
+                }
+                
+                var qualityString: String?
+                if case let .quality(quality) = videoQuality {
+                    if quality <= 360 {
+                        qualityString = "LD"
+                    } else if quality <= 480 {
+                        qualityString = "SD"
+                    } else if quality <= 720 {
+                        qualityString = "HD"
+                    } else {
+                        qualityString = "UHD"
+                    }
                 }
 
-                if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
-                    strongSelf.moreBarButtonRate = effectiveBaseRate
-                    let animated: Bool
-                    if let moreBarButtonRateTimestamp = strongSelf.moreBarButtonRateTimestamp {
-                        animated = CFAbsoluteTimeGetCurrent() > (moreBarButtonRateTimestamp + 0.2)
-                    } else {
-                        animated = false
-                    }
-                    strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
-
-                    if abs(effectiveBaseRate - 1.0) > 0.01 {
-                        var stringValue = String(format: "%.1fx", effectiveBaseRate)
-                        if stringValue.hasSuffix(".0x") {
-                            stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
-                        }
-                        strongSelf.moreBarButton.setContent(.image(optionsRateImage(rate: stringValue, isLarge: true)), animated: animated)
-                    } else {
-                        strongSelf.moreBarButton.setContent(.more(optionsCircleImage(dark: false)), animated: animated)
-                    }
-                } else {
-                    if strongSelf.moreBarButtonRateTimestamp == nil {
-                        strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
-                    }
-                }
-            }))*/
+                self.settingsBarButton.setBadges(speed: rateString, quality: qualityString, transition: .spring(duration: 0.35))
+            }))
             
             self.settingsButtonStateDisposable.set((self.isShowingSettingsMenuPromise.get()
             |> deliverOnMainQueue).start(next: { [weak self] isShowingSettingsMenu in
@@ -1996,6 +2110,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
 
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
+        self.videoQualityPromise.set(self.videoQuality)
         
         var isAd = false
         if let contentInfo = item.contentInfo {
@@ -2587,6 +2702,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
+    override func maybePerformActionForSwipeDismiss() -> Bool {
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_swipe_pip"] {
+            return false
+        }
+        
+        if #available(iOS 15.0, *) {
+            if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                nativePictureInPictureContent.beginPictureInPicture()
+                return true
+            }
+        }
+        return false
+    }
+    
     override func title() -> Signal<String, NoError> {
         return self._title.get()
     }
@@ -2760,6 +2889,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if #available(iOS 15.0, *) {
+            var didExpand = false
             let content = NativePictureInPictureContentImpl(context: self.context, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: videoNode, canSkip: true, willBegin: { [weak self] content in
                 guard let self, let controller = self.galleryController(), let navigationController = self.baseNavigationController() else {
                     return
@@ -2771,12 +2901,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 controller.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
                     self?.completeCustomDismiss(true)
                 })
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                didExpand = false
             }, didBegin: { [weak self] _ in
                 guard let self else {
                     return
                 }
                 let _ = self
+            }, didEnd: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                
+                if !didExpand {
+                    self.activePictureInPictureController = nil
+                    self.activePictureInPictureNavigationController = nil
+                }
             }, expand: { [weak self] completion in
+                didExpand = true
+                
                 guard let self, let activePictureInPictureController = self.activePictureInPictureController, let activePictureInPictureNavigationController = self.activePictureInPictureNavigationController else {
                     completion()
                     return
@@ -2790,9 +2938,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 })
                 
                 activePictureInPictureController.view.alpha = 1.0
-                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
-                    completion()
+                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.35, completion: { _ in
                 })
+                
+                completion()
             })
             
             self.nativePictureInPictureContent = content
@@ -3333,8 +3482,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 return
                             }
                             videoNode.setVideoQuality(.auto)
-                            //TODO:release
-                            //self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQAuto"), color: .white)))
+                            self.videoQualityPromise.set(.auto)
 
                             /*if let controller = strongSelf.galleryController() as? GalleryController {
                                 controller.updateSharedPlaybackRate(rate)
@@ -3367,12 +3515,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 return
                             }
                             videoNode.setVideoQuality(.quality(quality))
-                            //TODO:release
-                            /*if quality >= 700 {
-                                self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQHD"), color: .white)))
-                            } else {
-                                self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQSD"), color: .white)))
-                            }*/
+                            self.videoQualityPromise.set(.quality(quality))
 
                             /*if let controller = strongSelf.galleryController() as? GalleryController {
                                 controller.updateSharedPlaybackRate(rate)
@@ -3407,15 +3550,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 c?.popItems()
                             })))
                             
-                            for quality in qualityState.available {
-                                guard let qualityFile = qualitySet.qualityFiles[quality] else {
-                                    continue
-                                }
+                            let addItem: (Int?, FileMediaReference) -> Void = { quality, qualityFile in
                                 guard let qualityFileSize = qualityFile.media.size else {
-                                    continue
+                                    return
                                 }
                                 let fileSizeString = dataSizeString(qualityFileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
-                                items.append(.action(ContextMenuActionItem(text: "Save in \(quality)p", textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
+                                let title: String
+                                if let quality {
+                                    title = "Save in \(quality)p"
+                                } else {
+                                    title = "Save Original"
+                                }
+                                items.append(.action(ContextMenuActionItem(text: title, textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
                                     return nil
                                 }, action: { [weak self] c, _ in
                                     c?.dismiss(result: .default, completion: nil)
@@ -3456,6 +3602,21 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                         disposable.dispose()
                                     }
                                 })))
+                            }
+                            
+                            if self.context.isPremium {
+                                addItem(nil, content.fileReference)
+                            } else {
+                                #if DEBUG
+                                addItem(nil, content.fileReference)
+                                #endif
+                            }
+                            
+                            for quality in qualityState.available {
+                                guard let qualityFile = qualitySet.qualityFiles[quality] else {
+                                    continue
+                                }
+                                addItem(quality, qualityFile)
                             }
                             
                             c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
@@ -3683,6 +3844,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func updateVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
         self.videoQuality = videoQuality
+        self.videoQualityPromise.set(videoQuality)
         
         self.videoNode?.setVideoQuality(videoQuality)
     }

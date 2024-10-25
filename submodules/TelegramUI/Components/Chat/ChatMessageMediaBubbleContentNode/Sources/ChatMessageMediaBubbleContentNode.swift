@@ -566,4 +566,11 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return nil
     }
+    
+    override public func getStatusNode() -> ASDisplayNode? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode
+        }
+        return nil
+    }
 }

@@ -234,4 +234,7 @@ final class WebEmbedPlayerNode: ASDisplayNode, WKNavigationDelegate {
     
     func exitNativePictureInPicture() {
     }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+    }
 }

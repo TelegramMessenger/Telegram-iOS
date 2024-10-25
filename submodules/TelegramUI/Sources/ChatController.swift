@@ -448,6 +448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     let checksTooltipDisposable = MetaDisposable()
     var shouldDisplayChecksTooltip = false
+    var shouldDisplayProcessingVideoTooltip: EngineMessage.Id?
     
     let peerSuggestionsDisposable = MetaDisposable()
     let peerSuggestionsDismissDisposable = MetaDisposable()
@@ -480,6 +481,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     weak var copyProtectionTooltipController: TooltipController?
     weak var emojiPackTooltipController: TooltipScreen?
     weak var birthdayTooltipController: TooltipScreen?
+    weak var scheduledVideoProcessingTooltipController: TooltipScreen?
     
     weak var slowmodeTooltipController: ChatSlowmodeHintController?
     
@@ -10357,6 +10359,61 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    func displayProcessingVideoTooltip(messageId: EngineMessage.Id) {
+        self.checksTooltipController?.dismiss()
+        
+        var latestNode: ChatMessageItemView?
+        self.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                var found = false
+                for (message, _) in item.content {
+                    if message.id == messageId {
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    return
+                }
+                latestNode = itemNode
+            }
+        }
+        
+        if let itemNode = latestNode, let statusNode = itemNode.getStatusNode() {
+            let bounds = statusNode.view.convert(statusNode.view.bounds, to: self.chatDisplayNode.view)
+            let location = CGPoint(x: bounds.midX, y: bounds.minY - 11.0)
+            
+            //TODO:localize
+            let tooltipController = TooltipController(content: .text("Processing video may take a few minutes."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+            self.checksTooltipController = tooltipController
+            tooltipController.dismissed = { [weak self, weak tooltipController] _ in
+                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {
+                    strongSelf.checksTooltipController = nil
+                }
+            }
+            
+            let _ = self.chatDisplayNode.messageTransitionNode.addCustomOffsetHandler(itemNode: itemNode, update: { [weak tooltipController] offset, transition in
+                guard let tooltipController, tooltipController.isNodeLoaded else {
+                    return false
+                }
+                guard let containerView = tooltipController.view else {
+                    return false
+                }
+                containerView.bounds = containerView.bounds.offsetBy(dx: 0.0, dy: -offset)
+                transition.animateOffsetAdditive(layer: containerView.layer, offset: offset)
+                
+                return true
+            })
+            
+            self.present(tooltipController, in: .current, with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                guard let self else {
+                    return nil
+                }
+                return (self.chatDisplayNode, CGRect(origin: location, size: CGSize()))
+            }, sourceRectIsGlobal: true))
+        }
+    }
+    
     func dismissAllTooltips() {
         self.emojiTooltipController?.dismiss()
         self.sendingOptionsTooltipController?.dismiss()
@@ -10537,10 +10594,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let controller = ChatControllerImpl(context: self.context, chatLocation: mappedChatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
         navigationController.pushViewController(controller, completion: { [weak controller] in
-            if let controller {
+            let _ = controller
+            /*if let controller {
                 completion(controller)
-            }
+            }*/
         })
+        completion(controller)
     }
     
     func openPinnedMessages(at messageId: MessageId?) {

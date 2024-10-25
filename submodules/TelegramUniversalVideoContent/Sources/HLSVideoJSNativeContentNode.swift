@@ -1600,6 +1600,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
 
     func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+        self.playerNode.setCanPlaybackWithoutHierarchy(canPlaybackWithoutHierarchy)
     }
     
     func enterNativePictureInPicture() -> Bool {
@@ -1607,6 +1608,10 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
     
     func exitNativePictureInPicture() {
+    }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+        self.imageNode.isHidden = !value
     }
 }
 

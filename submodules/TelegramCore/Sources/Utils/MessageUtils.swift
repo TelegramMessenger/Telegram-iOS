@@ -580,6 +580,17 @@ public extension Message {
 }
 
 public extension Message {
+    var pendingProcessingAttribute: PendingProcessingMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? PendingProcessingMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
+
+public extension Message {
     func areReactionsTags(accountPeerId: PeerId) -> Bool {
         if self.id.peerId == accountPeerId {
             if let reactionsAttribute = self.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
