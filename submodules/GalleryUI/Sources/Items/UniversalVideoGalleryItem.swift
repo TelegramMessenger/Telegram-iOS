@@ -1167,21 +1167,30 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
         }
 
         if let (messageId, _) = hiddenMedia {
+            var hadMessage: Bool?
             self.messageRemovedDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> map { message -> Bool in
                 if let _ = message {
-                    return false
-                } else {
                     return true
+                } else {
+                    return false
                 }
             }
-            |> filter { $0 }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
                     return
                 }
-                strongSelf.node.canAttachContent = false
+                if let hadMessage, hadMessage {
+                    if value {
+                    } else {
+                        if let pictureInPictureController = self.pictureInPictureController {
+                            pictureInPictureController.stopPictureInPicture()
+                        }
+                    }
+                    
+                    return
+                }
+                hadMessage = value
             })
         }
     }
@@ -1847,11 +1856,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var qualityString: String?
                 if case let .quality(quality) = videoQuality {
                     if quality <= 360 {
-                        qualityString = "LD"
+                        qualityString = "SD"
                     } else if quality <= 480 {
                         qualityString = "SD"
                     } else if quality <= 720 {
                         qualityString = "HD"
+                    } else if quality <= 1080 {
+                        qualityString = "FHD"
                     } else {
                         qualityString = "UHD"
                     }
@@ -3499,8 +3510,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             qualityTitle = "Medium"
                         } else if quality <= 720 {
                             qualityTitle = "High"
+                        } else if quality <= 1080 {
+                            qualityTitle = "Full HD"
                         } else {
-                            qualityTitle = "Ultra-High"
+                            qualityTitle = "Ultra HD"
                         }
                         items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
                             if isSelected {
