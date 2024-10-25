@@ -3286,6 +3286,8 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
                     result.append(.AddQuickReplyMessages(currentAddQuickReplyMessages.messages))
                 }
                 currentAddMessages = nil
+                currentAddScheduledMessages = nil
+                currentAddQuickReplyMessages = nil
                 result.append(operation)
             case let .UpdateState(state):
                 updatedState = state
