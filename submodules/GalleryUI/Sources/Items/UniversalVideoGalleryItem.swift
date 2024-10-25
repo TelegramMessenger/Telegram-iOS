@@ -1128,6 +1128,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     private let node: UniversalVideoNode
     private let willBegin: (NativePictureInPictureContentImpl) -> Void
     private let didBegin: (NativePictureInPictureContentImpl) -> Void
+    private let didEnd: (NativePictureInPictureContentImpl) -> Void
     private let expand: (@escaping () -> Void) -> Void
     private var pictureInPictureTimer: SwiftSignalKit.Timer?
     private var didExpand: Bool = false
@@ -1138,7 +1139,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     
     private var isNativePictureInPictureActiveDisposable: Disposable?
 
-    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
+    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didEnd: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
         self.context = context
         self.mediaManager = mediaManager
         self.accountId = accountId
@@ -1146,6 +1147,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
         self.node = videoNode
         self.willBegin = willBegin
         self.didBegin = didBegin
+        self.didEnd = didEnd
         self.expand = expand
 
         super.init()
@@ -1255,6 +1257,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
             self.hiddenMediaManagerIndex = nil
         }
+        self.didEnd(self)
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
@@ -1683,8 +1686,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isAdaptive = true
             }
             
-            //TODO:release
-            //self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQAuto"), color: .white)))
             let _ = isAdaptive
             
             let dimensions = item.content.dimensions
@@ -2701,6 +2702,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         })
     }
     
+    override func maybePerformActionForSwipeDismiss() -> Bool {
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_swipe_pip"] {
+            return false
+        }
+        
+        if #available(iOS 15.0, *) {
+            if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                nativePictureInPictureContent.beginPictureInPicture()
+                return true
+            }
+        }
+        return false
+    }
+    
     override func title() -> Signal<String, NoError> {
         return self._title.get()
     }
@@ -2874,6 +2889,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if #available(iOS 15.0, *) {
+            var didExpand = false
             let content = NativePictureInPictureContentImpl(context: self.context, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: videoNode, canSkip: true, willBegin: { [weak self] content in
                 guard let self, let controller = self.galleryController(), let navigationController = self.baseNavigationController() else {
                     return
@@ -2885,12 +2901,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 controller.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
                     self?.completeCustomDismiss(true)
                 })
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                didExpand = false
             }, didBegin: { [weak self] _ in
                 guard let self else {
                     return
                 }
                 let _ = self
+            }, didEnd: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                
+                if !didExpand {
+                    self.activePictureInPictureController = nil
+                    self.activePictureInPictureNavigationController = nil
+                }
             }, expand: { [weak self] completion in
+                didExpand = true
+                
                 guard let self, let activePictureInPictureController = self.activePictureInPictureController, let activePictureInPictureNavigationController = self.activePictureInPictureNavigationController else {
                     completion()
                     return
@@ -2904,9 +2938,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 })
                 
                 activePictureInPictureController.view.alpha = 1.0
-                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
-                    completion()
+                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.35, completion: { _ in
                 })
+                
+                completion()
             })
             
             self.nativePictureInPictureContent = content

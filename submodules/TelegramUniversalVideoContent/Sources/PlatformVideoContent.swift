@@ -482,4 +482,7 @@ private final class PlatformVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     func exitNativePictureInPicture() {
     }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+    }
 }

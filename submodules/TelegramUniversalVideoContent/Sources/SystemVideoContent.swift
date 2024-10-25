@@ -319,5 +319,8 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func exitNativePictureInPicture() {
     }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+    }
 }
 

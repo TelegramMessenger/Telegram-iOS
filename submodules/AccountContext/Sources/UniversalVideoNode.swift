@@ -44,6 +44,7 @@ public protocol UniversalVideoContentNode: AnyObject {
     func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool)
     func enterNativePictureInPicture() -> Bool
     func exitNativePictureInPicture()
+    func setNativePictureInPictureIsActive(_ value: Bool)
 }
 
 public protocol UniversalVideoContent {
@@ -442,6 +443,14 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
                 contentNode.exitNativePictureInPicture()
+            }
+        })
+    }
+    
+    public func setNativePictureInPictureIsActive(_ value: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setNativePictureInPictureIsActive(value)
             }
         })
     }

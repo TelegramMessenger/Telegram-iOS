@@ -716,4 +716,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
     
     func exitNativePictureInPicture() {
     }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
+        self.imageNode.isHidden = value
+    }
 }
