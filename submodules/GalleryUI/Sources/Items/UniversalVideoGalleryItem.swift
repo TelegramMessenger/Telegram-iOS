@@ -702,7 +702,7 @@ final class SettingsHeaderButton: HighlightableButtonNode {
                     text: badgeText,
                     font: self.badgeFont,
                     cornerRadius: 3.0,
-                    insets: UIEdgeInsets(top: 1.0, left: 1.66, bottom: 1.0, right: 1.0),
+                    insets: UIEdgeInsets(top: 1.33, left: 1.66, bottom: 1.33, right: 1.66),
                     outerInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
                 )),
                 environment: {},

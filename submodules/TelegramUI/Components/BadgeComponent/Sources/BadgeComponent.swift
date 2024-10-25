@@ -44,6 +44,16 @@ public final class BadgeComponent: Component {
         return true
     }
     
+    private struct TextLayout {
+        var size: CGSize
+        var opticalBounds: CGRect
+        
+        init(size: CGSize, opticalBounds: CGRect) {
+            self.size = size
+            self.opticalBounds = opticalBounds
+        }
+    }
+    
     public final class View: UIView {
         override public static var layerClass: AnyClass {
             return RasterizedCompositionLayer.self
@@ -53,6 +63,8 @@ public final class BadgeComponent: Component {
         private let backgroundInsetLayer: RasterizedCompositionImageLayer
         private let backgroundLayer: RasterizedCompositionImageLayer
         private let textContentsLayer: RasterizedCompositionImageLayer
+        
+        private var textLayout: TextLayout?
         
         private var component: BadgeComponent?
         
@@ -89,14 +101,47 @@ public final class BadgeComponent: Component {
                 var boundingRect = attributedText.boundingRect(with: availableSize, options: .usesLineFragmentOrigin, context: nil)
                 boundingRect.size.width = ceil(boundingRect.size.width)
                 boundingRect.size.height = ceil(boundingRect.size.height)
-
-                let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: boundingRect.size))
-                let textImage = renderer.image { context in
-                    UIGraphicsPushContext(context.cgContext)
-                    attributedText.draw(at: CGPoint())
-                    UIGraphicsPopContext()
+                
+                if let context = DrawingContext(size: boundingRect.size, scale: 0.0, opaque: false, clear: true) {
+                    context.withContext { c in
+                        UIGraphicsPushContext(c)
+                        defer {
+                            UIGraphicsPopContext()
+                        }
+                        
+                        attributedText.draw(at: CGPoint())
+                    }
+                    var minFilledLineY = Int(context.scaledSize.height) - 1
+                    var maxFilledLineY = 0
+                    var minFilledLineX = Int(context.scaledSize.width) - 1
+                    var maxFilledLineX = 0
+                    for y in 0 ..< Int(context.scaledSize.height) {
+                        let linePtr = context.bytes.advanced(by: max(0, y) * context.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                        
+                        for x in 0 ..< Int(context.scaledSize.width) {
+                            let pixelPtr = linePtr.advanced(by: x)
+                            if pixelPtr.pointee != 0 {
+                                minFilledLineY = min(y, minFilledLineY)
+                                maxFilledLineY = max(y, maxFilledLineY)
+                                minFilledLineX = min(x, minFilledLineX)
+                                maxFilledLineX = max(x, maxFilledLineX)
+                            }
+                        }
+                    }
+                    
+                    var opticalBounds = CGRect()
+                    if minFilledLineX <= maxFilledLineX && minFilledLineY <= maxFilledLineY {
+                        opticalBounds.origin.x = CGFloat(minFilledLineX) / context.scale
+                        opticalBounds.origin.y = CGFloat(minFilledLineY) / context.scale
+                        opticalBounds.size.width = CGFloat(maxFilledLineX - minFilledLineX) / context.scale
+                        opticalBounds.size.height = CGFloat(maxFilledLineY - minFilledLineY) / context.scale
+                    }
+                    
+                    self.textContentsLayer.image = context.generateImage()
+                    self.textLayout = TextLayout(size: boundingRect.size, opticalBounds: opticalBounds)
+                } else {
+                    self.textLayout = TextLayout(size: boundingRect.size, opticalBounds: CGRect(origin: CGPoint(), size: boundingRect.size))
                 }
-                self.textContentsLayer.image = textImage
             }
             
             if component.cornerRadius != previousComponent?.cornerRadius {
@@ -105,7 +150,7 @@ public final class BadgeComponent: Component {
                 self.backgroundInsetLayer.image = generateStretchableFilledCircleImage(diameter: component.cornerRadius * 2.0, color: .black)
             }
             
-            let textSize = self.textContentsLayer.image?.size ?? CGSize(width: 1.0, height: 1.0)
+            let textSize = self.textLayout?.size ?? CGSize(width: 1.0, height: 1.0)
             
             let size = CGSize(width: textSize.width + component.insets.left + component.insets.right, height: textSize.height + component.insets.top + component.insets.bottom)
             
@@ -116,10 +161,14 @@ public final class BadgeComponent: Component {
             let outerInsetsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX - component.outerInsets.left, y: backgroundFrame.minY - component.outerInsets.top), size: CGSize(width: backgroundFrame.width + component.outerInsets.left + component.outerInsets.right, height: backgroundFrame.height + component.outerInsets.top + component.outerInsets.bottom))
             transition.setFrame(layer: self.backgroundInsetLayer, frame: outerInsetsFrame)
             
-            let textFrame = CGRect(origin: CGPoint(x: component.insets.left, y: component.insets.top), size: textSize)
+            var textFrame = CGRect(origin: CGPoint(x: component.insets.left, y: component.insets.top), size: textSize)
+            if let textLayout = self.textLayout {
+                textFrame.origin.x = -textLayout.opticalBounds.minX + floorToScreenPixels((backgroundFrame.width - textLayout.opticalBounds.width) * 0.5)
+                textFrame.origin.y = -textLayout.opticalBounds.minY + floorToScreenPixels((backgroundFrame.height - textLayout.opticalBounds.height) * 0.5)
+            }
+            
             transition.setPosition(layer: self.textContentsLayer, position: textFrame.origin)
             self.textContentsLayer.bounds = CGRect(origin: CGPoint(), size: textFrame.size)
-            //self.textContentsLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.4).cgColor
             
             return size
         }
