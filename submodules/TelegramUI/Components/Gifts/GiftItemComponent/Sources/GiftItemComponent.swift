@@ -24,7 +24,7 @@ public final class GiftItemComponent: Component {
             case red
             case blue
             
-            var colors: [UIColor] {
+            func colors(theme: PresentationTheme) -> [UIColor] {
                 switch self {
                 case .red:
                     return [
@@ -33,10 +33,17 @@ public final class GiftItemComponent: Component {
                         
                     ]
                 case .blue:
-                    return [
-                        UIColor(rgb: 0x34a4fc),
-                        UIColor(rgb: 0x6fd3ff)
-                    ]
+                    if theme.overallDarkAppearance {
+                        return [
+                            UIColor(rgb: 0x025799),
+                            UIColor(rgb: 0x29a8e2)
+                        ]
+                    } else {
+                        return [
+                            UIColor(rgb: 0x34a4fc),
+                            UIColor(rgb: 0x6fd3ff)
+                        ]
+                    }
                 }
             }
         }
@@ -166,9 +173,14 @@ public final class GiftItemComponent: Component {
         
         func update(component: GiftItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
-            
+            let previousComponent = self.component
             self.component = component
             self.componentState = state
+            
+            var themeUpdated = false
+            if previousComponent?.theme !== component.theme {
+                themeUpdated = true
+            }
             
             let size = CGSize(width: availableSize.width, height: component.title != nil ? 178.0 : 154.0)
             
@@ -339,8 +351,8 @@ public final class GiftItemComponent: Component {
                     }
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
-                    if self.ribbon.image == nil {
-                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors, direction: .diagonal)
+                    if self.ribbon.image == nil || themeUpdated {
+                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors(theme: component.theme), direction: .diagonal)
                     }
                     if let ribbonImage = self.ribbon.image {
                         self.ribbon.frame = CGRect(origin: CGPoint(x: size.width - ribbonImage.size.width + 2.0, y: -2.0), size: ribbonImage.size)

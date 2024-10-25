@@ -2362,7 +2362,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 updatedPresentationData: nil,
                 peer: peer._asPeer(),
                 mode: .generic,
-                avatarInitiallyExpanded: true,
+                avatarInitiallyExpanded: peer.smallProfileImage != nil,
                 fromChat: false,
                 requestsContext: nil
             ) {

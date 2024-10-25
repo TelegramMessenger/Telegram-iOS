@@ -136,8 +136,8 @@ final class StarsTransactionsListPanelComponent: Component {
             
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = false
-//            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = true
+            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never

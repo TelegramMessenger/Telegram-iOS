@@ -556,6 +556,35 @@ private final class GiftViewSheetContent: CombinedComponent {
                     )
                 ))
             }
+            
+            if savedToProfile {
+                tableItems.append(.init(
+                    id: "visibility",
+                    title: strings.Gift_View_Visibility,
+                    component: AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Visibility_Visible, font: tableFont, textColor: tableTextColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: strings.Gift_View_Visibility_Hide,
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        component.updateSavedToProfile(false)
+                                    }
+                                ))
+                            )
+                        ], spacing: 4.0)
+                    ),
+                    insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
+                ))
+            }
 
             if let text {
                 let attributedText = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: tableTextColor, linkColor: tableLinkColor, baseFont: tableFont, linkFont: tableFont, boldFont: tableBoldFont, italicFont: tableItalicFont, boldItalicFont: tableBoldItalicFont, fixedFont: tableMonospaceFont, blockQuoteFont: tableFont, message: nil)
@@ -637,7 +666,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                 )
                 originY += additionalText.size.height
                 originY += 16.0
-                
+            }
+            
+            if incoming && !converted && !savedToProfile {
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
                         title: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display,

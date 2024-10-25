@@ -11753,9 +11753,11 @@ Sorry for the inconvenience.";
 "Monetization.TransactionInfo.ViewInExplorer" = "View in Blockchain Explorer";
 
 "Monetization.Intro.Title" = "Earn From Your Channel";
+"Monetization.Intro.Bot.Title" = "Earn From Your Bot";
 
 "Monetization.Intro.Ads.Title" = "Telegram Ads";
 "Monetization.Intro.Ads.Text" = "Telegram can display ads in your channel.";
+"Monetization.Intro.Bot.Ads.Text" = "Telegram can display ads in your bot.";
 
 "Monetization.Intro.Split.Title" = "50:50 Revenue Split";
 "Monetization.Intro.Split.Text" = "You receive 50% of the ad revenue in TON.";
@@ -13000,6 +13002,9 @@ Sorry for the inconvenience.";
 "Gift.View.Availability" = "Availability";
 "Gift.View.Availability.Of" = "%1$@ of %2$@";
 "Gift.View.Availability.NewOf" = "%1$@ of %2$@ left";
+"Gift.View.Visibility" = "Visibility";
+"Gift.View.Visibility.Visible" = "Visible on your page";
+"Gift.View.Visibility.Hide" = "hide";
 "Gift.View.Hide" = "Hide from My Page";
 "Gift.View.Display" = "Display on My Page";
 "Gift.View.Convert" = "Convert to %@";
@@ -13141,3 +13146,6 @@ Sorry for the inconvenience.";
 
 "Stars.Transaction.TelegramBotApi.Title" = "Paid Limit Extension";
 "Stars.Transaction.TelegramBotApi.Subtitle" = "Bot API";
+
+"Monetization.Bot.Header" = "Telegram shares 50% of the revenue from ads displayed in your bot. [Learn More >]()";
+"Monetization.Bot.BalanceTitle" = "AVAILABLE BALANCE";

@@ -93,11 +93,11 @@ final class HashtagChatInputPanelItem: ListViewItem {
         if self.revealed {
             self.setHashtagRevealed(nil)
         } else {
-            if self.isAdditionalRecent {
-                self.hashtagSelected(self.hashtag)
-            } else {
+//            if self.isAdditionalRecent {
+//                self.hashtagSelected(self.hashtag)
+//            } else {
                 self.hashtagSelected(self.hashtag + " ")
-            }
+//            }
         }
     }
 }
@@ -254,7 +254,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
                     strongSelf.separatorNode.isHidden = !mergedBottom
                     
                     let iconSize = CGSize(width: 30.0, height: 30.0)
-                    strongSelf.iconBackgroundLayer.frame = CGRect(origin: CGPoint(x: leftInset - 3.0, y: floor((nodeLayout.contentSize.height - 30.0) / 2.0)), size: iconSize)
+                    strongSelf.iconBackgroundLayer.frame = CGRect(origin: CGPoint(x: params.leftInset + 12.0, y: floor((nodeLayout.contentSize.height - 30.0) / 2.0)), size: iconSize)
                     strongSelf.iconLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 30.0, height: 30.0))
                     
                     if let peer = item.peer {
@@ -274,7 +274,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset + textLeftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - textLeftInset, height: UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                     

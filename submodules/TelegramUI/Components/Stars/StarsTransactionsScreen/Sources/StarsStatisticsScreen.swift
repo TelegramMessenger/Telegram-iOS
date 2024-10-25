@@ -104,7 +104,11 @@ final class StarsStatisticsScreenComponent: Component {
                 }
                 
                 if let view = gestureRecognizer.view?.hitTest(gestureRecognizer.location(in: gestureRecognizer.view), with: nil) as? UIControl {
-                    return !view.isTracking
+                    if view is UIButton {
+                        return true
+                    } else {
+                        return !view.isTracking
+                    }
                 }
                 
                 return true
@@ -181,8 +185,8 @@ final class StarsStatisticsScreenComponent: Component {
                                     
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = false
-//            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = true
+            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -677,7 +681,7 @@ final class StarsStatisticsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: allTransactionsContext,
-                        isAccount: true,
+                        isAccount: false,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -690,7 +694,7 @@ final class StarsStatisticsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: incomingTransactionsContext,
-                        isAccount: true,
+                        isAccount: false,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
@@ -703,7 +707,7 @@ final class StarsStatisticsScreenComponent: Component {
                     panel: AnyComponent(StarsTransactionsListPanelComponent(
                         context: component.context,
                         transactionsContext: outgoingTransactionsContext,
-                        isAccount: true,
+                        isAccount: false,
                         action: { transaction in
                             component.openTransaction(transaction)
                         }
