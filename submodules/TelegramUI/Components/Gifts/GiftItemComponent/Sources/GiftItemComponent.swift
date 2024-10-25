@@ -27,16 +27,24 @@ public final class GiftItemComponent: Component {
             func colors(theme: PresentationTheme) -> [UIColor] {
                 switch self {
                 case .red:
-                    return [
-                        UIColor(rgb: 0xed1c26),
-                        UIColor(rgb: 0xff5c55)
-                        
-                    ]
+                    if theme.overallDarkAppearance {
+                        return [
+                            UIColor(rgb: 0x522124),
+                            UIColor(rgb: 0x653634)
+                            
+                        ]
+                    } else {
+                        return [
+                            UIColor(rgb: 0xed1c26),
+                            UIColor(rgb: 0xff5c55)
+                            
+                        ]
+                    }
                 case .blue:
                     if theme.overallDarkAppearance {
                         return [
-                            UIColor(rgb: 0x025799),
-                            UIColor(rgb: 0x29a8e2)
+                            UIColor(rgb: 0x142e42),
+                            UIColor(rgb: 0x354f5b)
                         ]
                     } else {
                         return [

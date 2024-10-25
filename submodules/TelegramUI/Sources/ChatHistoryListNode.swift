@@ -653,6 +653,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     private var additionalLoadStateUpdated: [(ChatHistoryNodeLoadState, Bool) -> Void] = []
     
+    public private(set) var hasAtLeast3Messages: Bool = false
+    public var hasAtLeast3MessagesUpdated: ((Bool) -> Void)?
+    
     public private(set) var hasPlentyOfMessages: Bool = false
     public var hasPlentyOfMessagesUpdated: ((Bool) -> Void)?
     
@@ -3776,13 +3779,18 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 }
                 
+                var hasAtLeast3Messages = false
                 var hasPlentyOfMessages = false
                 var hasLotsOfMessages = false
                 if let historyView = strongSelf.historyView {
                     if historyView.originalView.holeEarlier || historyView.originalView.holeLater {
+                        hasAtLeast3Messages = true
                         hasPlentyOfMessages = true
                         hasLotsOfMessages = true
                     } else if !historyView.originalView.holeEarlier && !historyView.originalView.holeLater {
+                        if historyView.filteredEntries.count >= 3 {
+                            hasAtLeast3Messages = true
+                        }
                         if historyView.filteredEntries.count >= 10 {
                             hasPlentyOfMessages = true
                         }
@@ -3792,6 +3800,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 }
                 
+                if strongSelf.hasAtLeast3Messages != hasAtLeast3Messages {
+                    strongSelf.hasAtLeast3Messages = hasAtLeast3Messages
+                    strongSelf.hasAtLeast3MessagesUpdated?(hasAtLeast3Messages)
+                }
                 if strongSelf.hasPlentyOfMessages != hasPlentyOfMessages {
                     strongSelf.hasPlentyOfMessages = hasPlentyOfMessages
                     strongSelf.hasPlentyOfMessagesUpdated?(hasPlentyOfMessages)

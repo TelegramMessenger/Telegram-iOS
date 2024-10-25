@@ -344,8 +344,13 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                             }
                         } else {
-                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
-                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                            if item.count > 0 && !item.flags.contains(.isRefund) {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            } else {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                            }
                         }
                     case .premiumBot:
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title

@@ -2183,7 +2183,7 @@ public func channelStatsController(
         var boostsOnly = false
         if existingRevenueContext != nil {
             //TODO:localize
-            title = .text("Toncoin Balance")
+            title = .text("TON Balance")
             canViewRevenue = true
         } else if section == .boosts {
             title = .text("")

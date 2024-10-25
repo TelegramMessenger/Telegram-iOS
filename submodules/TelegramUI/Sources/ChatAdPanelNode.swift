@@ -176,6 +176,13 @@ final class ChatAdPanelNode: ASDisplayNode {
                 }
             }
         }
+        
+        self.contextContainer.activated = { [weak self] gesture, _ in
+            guard let self, let message = self.message else {
+                return
+            }
+            self.controllerInteraction?.adContextAction(message, self.contextContainer, gesture)
+        }
     }
     
     deinit {
@@ -194,7 +201,7 @@ final class ChatAdPanelNode: ASDisplayNode {
             self.removeTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_BotAd_Remove, font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
         }
                 
-        self.contextContainer.isGestureEnabled = false
+        self.contextContainer.isGestureEnabled = true
         
         let panelHeight: CGFloat
         if let message = interfaceState.adMessage {
@@ -479,6 +486,9 @@ final class ChatAdPanelNode: ASDisplayNode {
     }
     
     @objc func removePressed() {
-        self.controllerInteraction?.openNoAdsDemo()
+        guard let message = self.message else {
+            return
+        }
+        self.controllerInteraction?.adContextAction(message, self.contextContainer, nil)
     }
 }

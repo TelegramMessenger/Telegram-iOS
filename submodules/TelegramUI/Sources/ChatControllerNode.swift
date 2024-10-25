@@ -1431,7 +1431,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         var dismissedAdPanelNode: ChatAdPanelNode?
         var adPanelHeight: CGFloat?
+        
+        var displayAdPanel = false
         if let _ = self.chatPresentationInterfaceState.adMessage {
+            if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil && !self.chatPresentationInterfaceState.peerIsBlocked && self.chatPresentationInterfaceState.hasAtLeast3Messages {
+                    displayAdPanel = true
+                }
+            }
+        }
+        
+        if displayAdPanel {
             var animateAppearance = false
             let adPanelNode: ChatAdPanelNode
             if let current = self.adPanelNode {
