@@ -288,6 +288,8 @@ func _internal_updateStarGiftAddedToProfile(account: Account, messageId: EngineM
     }
 }
 
+private var cachedAccountGifts: [EnginePeer.Id: [ProfileGiftsContext.State.StarGift]] = [:]
+
 private final class ProfileGiftsContextImpl {
     private let queue: Queue
     private let account: Account
@@ -320,7 +322,11 @@ private final class ProfileGiftsContextImpl {
     }
     
     func loadMore() {
-        if case let .ready(true, nextOffset) = self.dataState {
+        if case let .ready(true, initialNextOffset) = self.dataState {
+            if self.gifts.isEmpty, self.peerId == self.account.peerId, let cachedGifts = cachedAccountGifts[self.peerId] {
+                self.gifts = cachedGifts
+            }
+            
             self.dataState = .loading
             self.pushState()
             
@@ -335,7 +341,7 @@ private final class ProfileGiftsContextImpl {
                 guard let inputUser else {
                     return .single(([], 0, nil))
                 }
-                return network.request(Api.functions.payments.getUserStarGifts(userId: inputUser, offset: nextOffset ?? "", limit: 32))
+                return network.request(Api.functions.payments.getUserStarGifts(userId: inputUser, offset: initialNextOffset ?? "", limit: 32))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.payments.UserStarGifts?, NoError> in
                     return .single(nil)
@@ -362,8 +368,13 @@ private final class ProfileGiftsContextImpl {
                 guard let strongSelf = self else {
                     return
                 }
-                for gift in gifts {
-                    strongSelf.gifts.append(gift)
+                if initialNextOffset == nil, strongSelf.peerId == strongSelf.account.peerId {
+                    cachedAccountGifts[strongSelf.peerId] = gifts
+                    strongSelf.gifts = gifts
+                } else {   
+                    for gift in gifts {
+                        strongSelf.gifts.append(gift)
+                    }
                 }
                 
                 let updatedCount = max(Int32(strongSelf.gifts.count), count)

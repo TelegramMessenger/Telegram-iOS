@@ -1432,21 +1432,32 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var dismissedAdPanelNode: ChatAdPanelNode?
         var adPanelHeight: CGFloat?
         if let _ = self.chatPresentationInterfaceState.adMessage {
+            var animateAppearance = false
             let adPanelNode: ChatAdPanelNode
             if let current = self.adPanelNode {
                 adPanelNode = current
             } else {
                 adPanelNode = ChatAdPanelNode(context: self.context, animationCache: self.controllerInteraction.presentationContext.animationCache, animationRenderer: self.controllerInteraction.presentationContext.animationRenderer)
                 adPanelNode.controllerInteraction = self.controllerInteraction
+                adPanelNode.clipsToBounds = true
+                animateAppearance = true
             }
             
             if self.adPanelNode != adPanelNode {
                 dismissedAdPanelNode = self.adPanelNode
                 self.adPanelNode = adPanelNode
-                self.contentContainerNode.contentNode.addSubnode(adPanelNode)
+                self.titleAccessoryPanelContainer.addSubnode(adPanelNode)
+                
+                adPanelNode.clipsToBounds = true
             }
             
-            adPanelHeight = adPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            let height = adPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            adPanelHeight = height
+            if transition.isAnimated && animateAppearance {
+                adPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                adPanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
+                transition.updateSublayerTransformOffset(layer: adPanelNode.layer, offset: CGPoint())
+            }
         } else if let adPanelNode = self.adPanelNode {
             dismissedAdPanelNode = adPanelNode
             self.adPanelNode = nil
@@ -1759,7 +1770,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         var adPanelFrame: CGRect?
         if let _ = self.adPanelNode, let panelHeight = adPanelHeight {
-            adPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: panelHeight))
+            adPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
             extraNavigationBarHeight += panelHeight
         }
@@ -2212,12 +2223,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         if let adPanelNode = self.adPanelNode, let adPanelFrame, !adPanelNode.frame.equalTo(adPanelFrame) {
-            if adPanelNode.frame.width.isZero {
-                adPanelNode.frame = adPanelFrame
-                transition.animatePositionAdditive(node: adPanelNode, offset: CGPoint(x: 0.0, y: -adPanelFrame.height))
-            } else {
-                transition.updateFrame(node: adPanelNode, frame: adPanelFrame)
-            }
+            adPanelNode.frame = adPanelFrame
         }
         
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
@@ -2339,6 +2345,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         if let dismissedAdPanelNode {
             var dismissedPanelFrame = dismissedAdPanelNode.frame
             dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
+            transition.updateAlpha(node: dismissedAdPanelNode, alpha: 0.0)
             transition.updateFrame(node: dismissedAdPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedAdPanelNode] _ in
                 dismissedAdPanelNode?.removeFromSupernode()
             })

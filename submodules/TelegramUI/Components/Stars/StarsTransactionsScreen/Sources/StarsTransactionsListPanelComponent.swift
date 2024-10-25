@@ -136,8 +136,8 @@ final class StarsTransactionsListPanelComponent: Component {
             
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = true
-            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = false
+//            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -162,6 +162,15 @@ final class StarsTransactionsListPanelComponent: Component {
         
         deinit {
             self.itemsDisposable?.dispose()
+        }
+        
+        func scrollToTop() -> Bool {
+            if self.scrollView.contentOffset.y > 0.0 {
+                self.scrollView.setContentOffset(CGPoint(), animated: true)
+                return true
+            } else {
+                return false
+            }
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {

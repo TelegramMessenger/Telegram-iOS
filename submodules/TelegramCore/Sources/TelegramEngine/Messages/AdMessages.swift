@@ -420,14 +420,14 @@ private class AdMessagesHistoryContextImpl {
             }
         })
 
-        let signal: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
-            return transaction.getPeer(peerId).flatMap(apiInputChannel)
+        let signal: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
-        |> mapToSignal { inputChannel -> Signal<(interPostInterval: Int32?, messages: [Message]), NoError> in
-            guard let inputChannel = inputChannel else {
+        |> mapToSignal { inputPeer -> Signal<(interPostInterval: Int32?, messages: [Message]), NoError> in
+            guard let inputPeer else {
                 return .single((nil, []))
             }
-            return account.network.request(Api.functions.channels.getSponsoredMessages(channel: inputChannel))
+            return account.network.request(Api.functions.messages.getSponsoredMessages(peer: inputPeer))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.SponsoredMessages?, NoError> in
                 return .single(nil)
@@ -515,14 +515,14 @@ private class AdMessagesHistoryContextImpl {
     }
 
     func markAsSeen(opaqueId: Data) {
-        let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
-            return transaction.getPeer(self.peerId).flatMap(apiInputChannel)
+        let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+            return transaction.getPeer(self.peerId).flatMap(apiInputPeer)
         }
-        |> mapToSignal { inputChannel -> Signal<Never, NoError> in
-            guard let inputChannel = inputChannel else {
+        |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+            guard let inputPeer else {
                 return .complete()
             }
-            return self.account.network.request(Api.functions.channels.viewSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId)))
+            return self.account.network.request(Api.functions.messages.viewSponsoredMessage(peer: inputPeer, randomId: Buffer(data: opaqueId)))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }
@@ -608,11 +608,11 @@ public class AdMessagesHistoryContext {
 
 
 func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: Data, media: Bool, fullscreen: Bool) {
-    let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
-        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputChannel -> Signal<Never, NoError> in
-        guard let inputChannel = inputChannel else {
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer else {
             return .complete()
         }
         var flags: Int32 = 0
@@ -622,7 +622,7 @@ func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: D
         if fullscreen {
             flags |= (1 << 1)
         }
-        return account.network.request(Api.functions.channels.clickSponsoredMessage(flags: flags, channel: inputChannel, randomId: Buffer(data: opaqueId)))
+        return account.network.request(Api.functions.messages.clickSponsoredMessage(flags: flags, peer: inputPeer, randomId: Buffer(data: opaqueId)))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

@@ -340,8 +340,8 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     
     public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
         let alpha = max(0.0, min(1.0, alpha))
-        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.backgroundNode, alpha: alpha, delay: 0.15)
-        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.15)
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.backgroundNode, alpha: alpha, delay: 0.1)
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.1)
     }
     
     private func updateSelectedIndex(animated: Bool = false) {
