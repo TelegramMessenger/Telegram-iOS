@@ -258,7 +258,8 @@ private final class PendingPeerMediaUploadManagerImpl {
                                                     message: message,
                                                     cacheReferenceKey: nil,
                                                     result: result,
-                                                    accountPeerId: accountPeerId
+                                                    accountPeerId: accountPeerId,
+                                                    pendingMessageEvent: { _ in }
                                                 )
                                                 |> deliverOn(queue)).start(completed: { [weak self, weak context] in
                                                     guard let strongSelf = self, let initialContext = context else {

@@ -186,7 +186,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CloudPeerPhotoSizeMediaResource.self, f: { CloudPeerPhotoSizeMediaResource(decoder: $0) })
     declareEncodable(CloudStickerPackThumbnailMediaResource.self, f: { CloudStickerPackThumbnailMediaResource(decoder: $0) })
     declareEncodable(ContentRequiresValidationMessageAttribute.self, f: { ContentRequiresValidationMessageAttribute(decoder: $0) })
-    declareEncodable(WasScheduledMessageAttribute.self, f: { WasScheduledMessageAttribute(decoder: $0) })
+    declareEncodable(PendingProcessingMessageAttribute.self, f: { PendingProcessingMessageAttribute(decoder: $0) })
     declareEncodable(OutgoingScheduleInfoMessageAttribute.self, f: { OutgoingScheduleInfoMessageAttribute(decoder: $0) })
     declareEncodable(UpdateMessageReactionsAction.self, f: { UpdateMessageReactionsAction(decoder: $0) })
     declareEncodable(SendStarsReactionsAction.self, f: { SendStarsReactionsAction(decoder: $0) })

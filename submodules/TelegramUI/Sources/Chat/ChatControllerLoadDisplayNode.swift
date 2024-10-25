@@ -4628,22 +4628,63 @@ extension ChatControllerImpl {
             
             if let peerId = peerId {
                 self.sentMessageEventsDisposable.set((self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] namespace, silent in
-                    if let strongSelf = self {
-                        let inAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        if inAppNotificationSettings.playSounds && !silent {
-                            serviceSoundManager.playMessageDeliveredSound()
+                |> deliverOnMainQueue).startStrict(next: { [weak self] eventGroup in
+                    guard let self else {
+                        return
+                    }
+                    let inAppNotificationSettings = self.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                    if inAppNotificationSettings.playSounds, let firstEvent = eventGroup.first, !firstEvent.isSilent {
+                        serviceSoundManager.playMessageDeliveredSound()
+                    }
+                    if self.presentationInterfaceState.subject != .scheduledMessages, let firstEvent = eventGroup.first, firstEvent.id.namespace == Namespaces.Message.ScheduledCloud {
+                        if eventGroup.contains(where: { $0.isPendingProcessing }) {
+                            self.openScheduledMessages(completion: { [weak self] c in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                c.dismissAllUndoControllers()
+                                
+                                Queue.mainQueue().after(1.0) { [weak c] in
+                                    c?.displayProcessingVideoTooltip(messageId: firstEvent.id)
+                                }
+                                
+                                //TODO:localize
+                                c.present(
+                                    UndoOverlayController(
+                                        presentationData: self.presentationData,
+                                        content: .universalImage(
+                                            image: generateTintedImage(image: UIImage(bundleImageName: "Chat/ToastImprovingVideo"), color: .white)!,
+                                            size: nil,
+                                            title: "Improving video...",
+                                            text: "The video will be published after it's optimized for the bese viewing experience.",
+                                            customUndoText: nil,
+                                            timeout: 6.0
+                                        ),
+                                        elevatedLayout: false,
+                                        position: .top,
+                                        action: { _ in
+                                            return true
+                                        }
+                                    ),
+                                    in: .current
+                                )
+                            })
                         }
-                        if strongSelf.presentationInterfaceState.subject != .scheduledMessages && namespace == Namespaces.Message.ScheduledCloud {
-                            strongSelf.openScheduledMessages()
+                    }
+                    
+                    if self.shouldDisplayChecksTooltip {
+                        Queue.mainQueue().after(1.0) { [weak self] in
+                            self?.displayChecksTooltip()
                         }
-                        
-                        if strongSelf.shouldDisplayChecksTooltip {
-                            Queue.mainQueue().after(1.0) {
-                                strongSelf.displayChecksTooltip()
-                            }
-                            strongSelf.shouldDisplayChecksTooltip = false
-                            strongSelf.checksTooltipDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .newcomerTicks).startStrict())
+                        self.shouldDisplayChecksTooltip = false
+                        self.checksTooltipDisposable.set(self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .newcomerTicks).startStrict())
+                    }
+                    
+                    if let shouldDisplayProcessingVideoTooltip = self.shouldDisplayProcessingVideoTooltip {
+                        self.shouldDisplayProcessingVideoTooltip = nil
+                        Queue.mainQueue().after(1.0) { [weak self] in
+                            self?.displayProcessingVideoTooltip(messageId: shouldDisplayProcessingVideoTooltip)
                         }
                     }
                 }))

@@ -1072,6 +1072,56 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
+            case let .universalImage(image, size, title, text, customUndoText, timeout):
+                self.iconNode = ASImageNode()
+                self.iconNode?.displayWithoutProcessing = true
+                self.iconNode?.displaysAsynchronously = false
+                self.iconNode?.image = image
+                self.iconImageSize = size
+            
+                self.avatarNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                self.animatedStickerNode = nil
+            
+                if let title = title, text.isEmpty {
+                    self.titleNode.attributedText = nil
+                    let body = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(title, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                } else {
+                    if let title = title {
+                        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    } else {
+                        self.titleNode.attributedText = nil
+                    }
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                    let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                        return ("URL", contents)
+                    }), textAlignment: .natural)
+                    self.textNode.attributedText = attributedText
+                }
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+                self.originalRemainingSeconds = timeout ?? (isUserInteractionEnabled ? 5 : 3)
+            
+                self.textNode.maximumNumberOfLines = 5
+                
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
             case let .premiumPaywall(title, text, customUndoText, timeout, linkAction):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -1284,7 +1334,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             } else {
                 self.isUserInteractionEnabled = false
             }
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .premiumPaywall, .peers, .messageTagged:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal,. universalImage, .premiumPaywall, .peers, .messageTagged:
             if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {
