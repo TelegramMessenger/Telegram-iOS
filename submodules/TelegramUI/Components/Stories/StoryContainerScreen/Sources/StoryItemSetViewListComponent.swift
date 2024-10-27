@@ -1114,11 +1114,11 @@ final class StoryItemSetViewListComponent: Component {
                 let attributes = MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { _ in return ("URL", "") })
                 
                 let text: String
-                if self.configuration.listMode == .everyone && (self.query == nil || self.query == "") {
+                if self.configuration.listMode == .everyone && ((self.query ?? "") == "") {
                     if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
                         if emptyButton == nil {
                             if let views = component.storyItem.views, views.seenCount > 0 {
-                                text = component.strings.Story_Views_ViewsNotRecorded
+                                text = component.peerId.isGroupOrChannel ? component.strings.Story_Views_NoReactions : component.strings.Story_Views_ViewsNotRecorded
                             } else {
                                 text = component.strings.Story_Views_ViewsExpired
                             }
