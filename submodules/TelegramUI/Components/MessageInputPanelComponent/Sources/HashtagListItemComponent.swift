@@ -298,7 +298,7 @@ public final class HashtagListItemComponent: Component {
             guard let component = self.component else {
                 return
             }
-            component.action(component.hashtag, self)
+            component.action("\(component.hashtag) ", self)
         }
         
         func update(component: HashtagListItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {

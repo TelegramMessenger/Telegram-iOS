@@ -2003,7 +2003,23 @@ public final class MessageInputPanelComponent: Component {
                                         }
                                     }
                                 case let .hashtag(hashtag):
-                                    let _ = hashtag
+                                    var hashtagQueryRange: NSRange?
+                                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(inputState: inputState) {
+                                        if type == [.hashtag] {
+                                            hashtagQueryRange = range
+                                            break inner
+                                        }
+                                    }
+                                    
+                                    if let range = hashtagQueryRange {
+                                        let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                                        
+                                        let replacementText = hashtag
+                                        inputText.replaceCharacters(in: range, with: replacementText)
+                                        
+                                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
+                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    }
                                 }
                             }
                         }
