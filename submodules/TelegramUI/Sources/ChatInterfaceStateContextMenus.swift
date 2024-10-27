@@ -2310,24 +2310,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                                 case .creator, .admin:
                                     optionsMap[id]!.insert(.deleteGlobally)
                                 case .member:
-                                    var hasMediaToReport = false
-                                    for media in message.media {
-                                        if let _ = media as? TelegramMediaImage {
-                                            hasMediaToReport = true
-                                        } else if let _ = media as? TelegramMediaFile {
-                                            hasMediaToReport = true
-                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                                            if let _ = content.image {
-                                                hasMediaToReport = true
-                                            } else if let _ = content.file {
-                                                hasMediaToReport = true
-                                            }
-                                        }
-                                    }
-                                    if hasMediaToReport {
-                                        optionsMap[id]!.insert(.report)
-                                    }
+                                    break
                             }
+                            optionsMap[id]!.insert(.report)
                         }
                     } else if let user = peer as? TelegramUser {
                         if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() && !isShareProtected {
