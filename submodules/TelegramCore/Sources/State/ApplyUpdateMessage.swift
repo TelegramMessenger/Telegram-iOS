@@ -139,7 +139,13 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             let text: String
             let forwardInfo: StoreMessageForwardInfo?
             let threadId: Int64?
-            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false) {
+            
+            var namespace = Namespaces.Message.Cloud
+            if message.id.namespace == Namespaces.Message.ScheduledLocal {
+                namespace = Namespaces.Message.ScheduledCloud
+            }
+            
+            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false, namespace: namespace) {
                 media = updatedMessage.media
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
