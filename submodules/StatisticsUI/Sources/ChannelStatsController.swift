@@ -2182,8 +2182,7 @@ public func channelStatsController(
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
         if existingRevenueContext != nil {
-            //TODO:localize
-            title = .text("TON Balance")
+            title = .text(presentationData.strings.Stats_TonBotRevenue_Title)
             canViewRevenue = true
         } else if section == .boosts {
             title = .text("")

@@ -1514,7 +1514,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 
                 if overallRevenueBalance > 0 || overallStarsBalance > 0 {
                     //TODO:localize
-                    items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: "BALANCE"))
+                    items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: presentationData.strings.PeerInfo_BotBalance_Title))
                     if overallRevenueBalance > 0 {
                         let string = "*\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))"
                         let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
@@ -1522,7 +1522,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
                             attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                         }
-                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 21, label: .attributedText(attributedString), text: "Toncoin", icon: PresentationResourcesSettings.ton, action: {
+                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 21, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_BotBalance_Ton, icon: PresentationResourcesSettings.ton, action: {
                             interaction.editingOpenRevenue()
                         }))
                     }
@@ -1534,7 +1534,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
                             attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                         }
-                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 22, label: .attributedText(attributedString), text: "Stars", icon: PresentationResourcesSettings.stars, action: {
+                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 22, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_BotBalance_Stars, icon: PresentationResourcesSettings.stars, action: {
                             interaction.editingOpenStars()
                         }))
                     }

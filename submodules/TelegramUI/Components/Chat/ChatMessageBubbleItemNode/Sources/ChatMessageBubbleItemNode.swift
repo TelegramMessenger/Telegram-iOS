@@ -5125,12 +5125,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 }
                                 item.controllerInteraction.longTap(.command(command), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
-                        case let .hashtag(_, hashtag):
+                        case let .hashtag(peerName, hashtag):
+                            var fullHashtag = hashtag
+                            if let peerName {
+                                fullHashtag += "@\(peerName)"
+                            }
                             return .action(InternalBubbleTapAction.Action { [weak self] in
-                                guard let self, let contentNode = self.contextContentNodeForLink(hashtag, rects: rects) else {
+                                guard let self, let contentNode = self.contextContentNodeForLink(fullHashtag, rects: rects) else {
                                     return
                                 }
-                                item.controllerInteraction.longTap(.hashtag(hashtag), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
+                                item.controllerInteraction.longTap(.hashtag(fullHashtag), ChatControllerInteraction.LongTapParams(message: item.content.firstMessage, contentNode: contentNode, messageNode: self, progress: tapAction.activate?()))
                             })
                         case .instantPage:
                             break

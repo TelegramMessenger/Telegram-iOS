@@ -13146,13 +13146,21 @@ Sorry for the inconvenience.";
 "TopApps.Info.Text" = "This catalogue ranks mini apps based on their daily revenue, measured in Stars. To be listed, developers must set their main mini app in [@botfather]() (as described [here](https://core.telegram.org/bots/webapps#launching-the-main-mini-app)), have over **1,000** daily users, and earn a daily revenue above **1,000** Stars, based on weekly average.";
 "TopApps.Info.Done" = "Understood";
 
-"Stars.Intro.Transaction.TelegramBotApi.Title" = "Paid Limit Extension";
-"Stars.Intro.Transaction.TelegramBotApi.Subtitle" = "Bot API";
+"Stars.Intro.Transaction.TelegramBotApi.Title" = "Paid Broadcast";
+"Stars.Intro.Transaction.TelegramBotApi.Messages_1" = "%@ Message";
+"Stars.Intro.Transaction.TelegramBotApi.Messages_any" = "%@ Messages";
 
-"Stars.Transaction.TelegramBotApi.Title" = "Paid Limit Extension";
-"Stars.Transaction.TelegramBotApi.Subtitle" = "Bot API";
+"Stars.Transaction.TelegramBotApi.Title" = "Paid Broadcast";
+"Stars.Transaction.TelegramBotApi.Messages_1" = "%@ Message";
+"Stars.Transaction.TelegramBotApi.Messages_any" = "%@ Messages";
 
 "Monetization.Bot.Header" = "Telegram shares 50% of the revenue from ads displayed in your bot. [Learn More >]()";
 "Monetization.Bot.BalanceTitle" = "AVAILABLE BALANCE";
 
 "Resolve.ChannelErrorNotFound" = "Sorry, this channel doesn't seem to exist.";
+
+"Stats.TonBotRevenue.Title" = "TON Balance";
+
+"PeerInfo.BotBalance.Title" = "BALANCE";
+"PeerInfo.BotBalance.Ton" = "Ton";
+"PeerInfo.BotBalance.Stars" = "Stars";

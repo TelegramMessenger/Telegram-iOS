@@ -360,7 +360,11 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
                     case .apiLimitExtension:
                         itemTitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Title
-                        itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Subtitle
+                        if let floodskipNumber = item.floodskipNumber {
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Messages(floodskipNumber)
+                        } else {
+                            itemSubtitle = nil
+                        }
                     case .unsupported:
                         itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

@@ -264,7 +264,11 @@ final class StarsTransactionItemNode: ListViewItemNode, ItemListItemNode {
                         itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
                     case .apiLimitExtension:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramBotApi_Title
-                        itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramBotApi_Subtitle
+                        if let floodskipNumber = item.transaction.floodskipNumber {
+                            itemSubtitle = item.presentationData.strings.Stars_Intro_Transaction_TelegramBotApi_Messages(floodskipNumber)
+                        } else {
+                            itemSubtitle = nil
+                        }
                     case .unsupported:
                         itemTitle = item.presentationData.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil
