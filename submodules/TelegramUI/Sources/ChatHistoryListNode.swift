@@ -3467,6 +3467,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 }
             }
             for id in self.context.engine.messages.synchronouslyIsMessageDeletedInteractively(ids: testIds) {
+                if id.namespace == Namespaces.Message.ScheduledCloud {
+                    continue
+                }
                 inner: for (stableId, listId) in maybeRemovedInteractivelyMessageIds {
                     if listId == id {
                         expiredMessageStableIds.insert(stableId)

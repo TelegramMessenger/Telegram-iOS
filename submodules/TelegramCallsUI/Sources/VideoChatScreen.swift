@@ -1224,7 +1224,7 @@ final class VideoChatScreenComponent: Component {
                         )),
                         background: AnyComponent(FilledRoundedRectangleComponent(
                             color: UIColor(white: 1.0, alpha: 0.1),
-                            cornerRadius: navigationButtonDiameter * 0.5,
+                            cornerRadius: .value(navigationButtonDiameter * 0.5),
                             smoothCorners: false
                         )),
                         effectAlignment: .center,

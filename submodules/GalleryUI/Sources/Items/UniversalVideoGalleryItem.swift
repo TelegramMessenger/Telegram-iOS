@@ -32,6 +32,7 @@ import SectionTitleContextItem
 import RasterizedCompositionComponent
 import BadgeComponent
 import ComponentFlow
+import ComponentDisplayAdapters
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -1318,7 +1319,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var playOnContentOwnership = false
     private var skipInitialPause = false
     private var ignorePauseStatus = false
-    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var didPause = false
     private var isPaused = true
     private var dismissOnOrientationChange = false
@@ -1367,6 +1368,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var activePictureInPictureNavigationController: NavigationController?
     private var activePictureInPictureController: ViewController?
+    
+    private var activeEdgeRateState: (initialRate: Double, currentRate: Double)?
+    private var activeEdgeRateIndicator: ComponentView<Empty>?
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
@@ -1601,6 +1605,46 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 placeholderSize.height += 2.0
                 transition.updateFrame(node: pictureInPictureNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - placeholderSize.width) / 2.0), y: floor((layout.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
                 pictureInPictureNode.updateLayout(placeholderSize, transition: transition)
+            }
+        }
+        
+        if let activeEdgeRateState = self.activeEdgeRateState {
+            var activeEdgeRateIndicatorTransition = transition
+            let activeEdgeRateIndicator: ComponentView<Empty>
+            if let current = self.activeEdgeRateIndicator {
+                activeEdgeRateIndicator = current
+            } else {
+                activeEdgeRateIndicator = ComponentView()
+                self.activeEdgeRateIndicator = activeEdgeRateIndicator
+                activeEdgeRateIndicatorTransition = .immediate
+            }
+            
+            let activeEdgeRateIndicatorSize = activeEdgeRateIndicator.update(
+                transition: ComponentTransition(activeEdgeRateIndicatorTransition),
+                component: AnyComponent(GalleryRateToastComponent(
+                    rate: activeEdgeRateState.currentRate
+                )),
+                environment: {},
+                containerSize: CGSize(width: 200.0, height: 100.0)
+            )
+            let activeEdgeRateIndicatorFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - activeEdgeRateIndicatorSize.width) * 0.5), y: max(navigationBarHeight, layout.statusBarHeight ?? 0.0) + 8.0), size: activeEdgeRateIndicatorSize)
+            if let activeEdgeRateIndicatorView = activeEdgeRateIndicator.view {
+                if activeEdgeRateIndicatorView.superview == nil {
+                    self.view.addSubview(activeEdgeRateIndicatorView)
+                    transition.animateTransformScale(view: activeEdgeRateIndicatorView, from: 0.001)
+                    if transition.isAnimated {
+                        activeEdgeRateIndicatorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                activeEdgeRateIndicatorTransition.updateFrame(view: activeEdgeRateIndicatorView, frame: activeEdgeRateIndicatorFrame)
+            }
+        } else if let activeEdgeRateIndicator = self.activeEdgeRateIndicator {
+            self.activeEdgeRateIndicator = nil
+            if let activeEdgeRateIndicatorView = activeEdgeRateIndicator.view {
+                transition.updateAlpha(layer: activeEdgeRateIndicatorView.layer, alpha: 0.0, completion: { [weak activeEdgeRateIndicatorView] _ in
+                    activeEdgeRateIndicatorView?.removeFromSuperview()
+                })
+                transition.updateTransformScale(layer: activeEdgeRateIndicatorView.layer, scale: 0.001)
             }
         }
                 
@@ -3937,6 +3981,59 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             )
         }
         return keyShortcuts
+    }
+    
+    override func hasActiveEdgeAction(edge: ActiveEdge) -> Bool {
+        if case .right = edge {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    override func setActiveEdgeAction(edge: ActiveEdge?) {
+        guard let videoNode = self.videoNode else {
+            return
+        }
+        if let edge, case .right = edge {
+            let effectiveRate: Double
+            if let current = self.activeEdgeRateState {
+                effectiveRate = min(2.5, current.initialRate + 0.5)
+                self.activeEdgeRateState = (current.initialRate, effectiveRate)
+            } else {
+                guard let playbackRate = self.playbackRate else {
+                    return
+                }
+                effectiveRate = min(2.5, playbackRate + 0.5)
+                self.activeEdgeRateState = (playbackRate, effectiveRate)
+            }
+            videoNode.setBaseRate(effectiveRate)
+        } else if let (initialRate, _) = self.activeEdgeRateState {
+            self.activeEdgeRateState = nil
+            videoNode.setBaseRate(initialRate)
+        }
+        
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .animated(duration: 0.35, curve: .spring))
+        }
+    }
+    
+    override func adjustActiveEdgeAction(distance: CGFloat) {
+        guard let videoNode = self.videoNode else {
+            return
+        }
+        if let current = self.activeEdgeRateState {
+            var rateFraction = Double(distance) / 100.0
+            rateFraction = max(0.0, min(1.0, rateFraction))
+            let rateDistance = (current.initialRate + 0.5) * (1.0 - rateFraction) + 2.5 * rateFraction
+            let effectiveRate = max(1.0, min(2.5, rateDistance))
+            self.activeEdgeRateState = (current.initialRate, effectiveRate)
+            videoNode.setBaseRate(effectiveRate)
+            
+            if let validLayout = self.validLayout {
+                self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .animated(duration: 0.35, curve: .spring))
+            }
+        }
     }
 }
 

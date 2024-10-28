@@ -105,7 +105,7 @@ final class VideoChatExpandedSpeakingToastComponent: Component {
                 transition: transition,
                 component: AnyComponent(FilledRoundedRectangleComponent(
                     color: UIColor(white: 0.0, alpha: 0.9),
-                    cornerRadius: size.height * 0.5,
+                    cornerRadius: .value(size.height * 0.5),
                     smoothCorners: false
                 )),
                 environment: {},

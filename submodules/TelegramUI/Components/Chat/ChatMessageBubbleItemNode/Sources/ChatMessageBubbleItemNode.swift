@@ -6118,13 +6118,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     }
     
     override public func getStatusNode() -> ASDisplayNode? {
+        if let statusNode = self.mosaicStatusNode {
+            return statusNode
+        }
         for contentNode in self.contentNodes {
             if let statusNode = contentNode.getStatusNode() {
                 return statusNode
             }
-        }
-        if let statusNode = self.mosaicStatusNode {
-            return statusNode
         }
         return nil
     }

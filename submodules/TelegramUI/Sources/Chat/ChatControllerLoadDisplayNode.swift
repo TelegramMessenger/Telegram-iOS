@@ -1272,7 +1272,6 @@ extension ChatControllerImpl {
                 let _ = (strongSelf.shouldDivertMessagesToScheduled(messages: transformedMessages)
                 |> deliverOnMainQueue).start(next: { shouldDivert in
                     let signal: Signal<[MessageId?], NoError>
-                    var stayInThisChat = false
                     var shouldOpenScheduledMessages = false
                     if forwardSourcePeerIds.count > 1 {
                         var forwardedMessages = forwardedMessages
@@ -1302,7 +1301,6 @@ extension ChatControllerImpl {
                             }
                             return ids
                         }
-                        stayInThisChat = true
                     } else {
                         var transformedMessages = transformedMessages
                         if shouldDivert {
@@ -1333,56 +1331,6 @@ extension ChatControllerImpl {
                                 if let layoutActionOnViewTransitionAction = strongSelf.layoutActionOnViewTransitionAction {
                                     strongSelf.layoutActionOnViewTransitionAction = nil
                                     layoutActionOnViewTransitionAction()
-                                }
-                                
-                                if stayInThisChat {
-                                    strongSelf.dismissAllUndoControllers()
-                                    
-                                    //TODO:localize
-                                    strongSelf.present(
-                                        UndoOverlayController(
-                                            presentationData: strongSelf.presentationData,
-                                            content: .info(
-                                                title: "Improving video...",
-                                                text: "The video will be published after it's optimized for the bese viewing experience.",
-                                                timeout: 8.0,
-                                                customUndoText: nil
-                                            ),
-                                            elevatedLayout: false,
-                                            position: .top,
-                                            action: { _ in
-                                                return true
-                                            }
-                                        ),
-                                        in: .current
-                                    )
-                                } else {
-                                    strongSelf.openScheduledMessages(force: true, completion: { c in
-                                        guard let self else {
-                                            return
-                                        }
-                                        
-                                        c.dismissAllUndoControllers()
-                                        
-                                        //TODO:localize
-                                        c.present(
-                                            UndoOverlayController(
-                                                presentationData: self.presentationData,
-                                                content: .info(
-                                                    title: "Improving video...",
-                                                    text: "The video will be published after it's optimized for the bese viewing experience.",
-                                                    timeout: 8.0,
-                                                    customUndoText: nil
-                                                ),
-                                                elevatedLayout: false,
-                                                position: .top,
-                                                action: { _ in
-                                                    return true
-                                                }
-                                            ),
-                                            in: .current
-                                        )
-                                    })
                                 }
                             }
                         }
@@ -4659,7 +4607,7 @@ extension ChatControllerImpl {
                                             title: "Improving video...",
                                             text: "The video will be published after it's optimized for the bese viewing experience.",
                                             customUndoText: nil,
-                                            timeout: 6.0
+                                            timeout: 3.5
                                         ),
                                         elevatedLayout: false,
                                         position: .top,
@@ -4992,6 +4940,20 @@ extension ChatControllerImpl {
                 return false
             }), in: .current)
         })
+        
+        if case .scheduledMessages = self.subject {
+            self.postedScheduledMessagesEventsDisposable = (self.context.account.stateManager.sentScheduledMessageIds
+            |> deliverOnMainQueue).start(next: { [weak self] ids in
+                guard let self, let peerId = self.chatLocation.peerId else {
+                    return
+                }
+                let filteredIds = Array(ids).filter({ $0.peerId == peerId })
+                if filteredIds.isEmpty {
+                    return
+                }
+                self.displayPostedScheduledMessagesToast(ids: filteredIds)
+            })
+        }
         
         self.displayNodeDidLoad()
     }
