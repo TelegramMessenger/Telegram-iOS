@@ -2864,7 +2864,7 @@ public final class StoryItemSetContainerComponent: Component {
                         style: .story,
                         placeholder: inputPlaceholder,
                         maxLength: 4096,
-                        queryTypes: [.mention, .emoji],
+                        queryTypes: [.mention, .hashtag, .emoji],
                         alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
                         resetInputContents: resetInputContents,
                         nextInputMode: { [weak self] hasText in

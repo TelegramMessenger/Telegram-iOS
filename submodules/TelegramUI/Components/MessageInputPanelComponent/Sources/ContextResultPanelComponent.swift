@@ -11,14 +11,18 @@ import PeerListItemComponent
 final class ContextResultPanelComponent: Component {
     enum Results: Equatable {
         case mentions([EnginePeer])
-        case hashtags([String])
+        case hashtags(EnginePeer?, [String], String)
        
         var count: Int {
             switch self {
-            case let .hashtags(hashtags):
-                return hashtags.count
             case let .mentions(peers):
                 return peers.count
+            case let .hashtags(peer, hashtags, query):
+                var count = hashtags.count
+                if let _ = peer, query.count >= 4 {
+                    count += 2
+                }
+                return count
             }
         }
     }
@@ -186,38 +190,23 @@ final class ContextResultPanelComponent: Component {
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -200.0)
             
-//            var synchronousLoad = false
-//            if let hint = transition.userData(PeerListItemComponent.TransitionHint.self) {
-//                synchronousLoad = hint.synchronousLoad
-//            }
-            
             var validIds: [AnyHashable] = []
-            if let range = itemLayout.visibleItems(for: visibleBounds), case let .mentions(peers) = component.results {
+            if let range = itemLayout.visibleItems(for: visibleBounds) {
                 for index in range.lowerBound ..< range.upperBound {
-                    guard index < peers.count else {
+                    guard index < component.results.count else {
                         continue
                     }
                     
                     let itemFrame = itemLayout.itemFrame(for: index)
-                                        
                     var itemTransition = transition
-                    let peer = peers[index]
-                    validIds.append(peer.id)
+                    let id: AnyHashable
                     
-                    let visibleItem: ComponentView<Empty>
-                    if let current = self.visibleItems[peer.id] {
-                        visibleItem = current
-                    } else {
-                        if !transition.animation.isImmediate {
-                            itemTransition = .immediate
-                        }
-                        visibleItem = ComponentView()
-                        self.visibleItems[peer.id] = visibleItem
-                    }
-                                       
-                    let _ = visibleItem.update(
-                        transition: itemTransition,
-                        component: AnyComponent(PeerListItemComponent(
+                    let itemComponent: AnyComponent<Empty>
+                    switch component.results {
+                    case let .mentions(peers):
+                        let peer = peers[index]
+                        id = peer.id
+                        itemComponent = AnyComponent(PeerListItemComponent(
                             context: component.context,
                             theme: component.theme,
                             strings: component.strings,
@@ -236,21 +225,100 @@ final class ContextResultPanelComponent: Component {
                                 }
                                 component.action(.mention(peer))
                             }
-                        )),
+                        ))
+                    case let .hashtags(peer, hashtags, query):
+                        var hashtagIndex = index
+                        if let _ = peer, query.count >= 4 {
+                            hashtagIndex -= 2
+                        }
+                        
+                        if let peer, let addressName = peer.addressName, hashtagIndex < 0 {
+                            //TODO: localize
+                            var isGroup = false
+                            if case let .channel(channel) = peer, case .group = channel.info {
+                                isGroup = true
+                            }
+                            id = hashtagIndex
+                            if hashtagIndex == -2 {
+                                itemComponent = AnyComponent(HashtagListItemComponent(
+                                    context: component.context,
+                                    theme: component.theme,
+                                    strings: component.strings,
+                                    peer: nil,
+                                    title: "Use #\(query)",
+                                    subtitle: "searches posts from all channels",
+                                    hashtag: query,
+                                    hasNext: index != hashtags.count - 1,
+                                    action: { [weak self] hashtag, _ in
+                                        guard let self, let component = self.component else {
+                                            return
+                                        }
+                                        component.action(.hashtag(query))
+                                    }
+                                ))
+                            } else {
+                                itemComponent = AnyComponent(HashtagListItemComponent(
+                                    context: component.context,
+                                    theme: component.theme,
+                                    strings: component.strings,
+                                    peer: peer,
+                                    title: "Use #\(query)@\(addressName)",
+                                    subtitle: isGroup ? "searches only posts from this group" : "searches only posts from this channel",
+                                    hashtag: "\(query)@\(addressName)",
+                                    hasNext: index != hashtags.count - 1,
+                                    action: { [weak self] hashtag, _ in
+                                        guard let self, let component = self.component else {
+                                            return
+                                        }
+                                        component.action(.hashtag("\(query)@\(addressName)"))
+                                    }
+                                ))
+                            }
+                        } else {
+                            let hashtag = hashtags[hashtagIndex]
+                            id = hashtag
+                            itemComponent = AnyComponent(HashtagListItemComponent(
+                                context: component.context,
+                                theme: component.theme,
+                                strings: component.strings,
+                                peer: nil,
+                                title: "#\(hashtag)",
+                                subtitle: nil,
+                                hashtag: hashtag,
+                                hasNext: index != hashtags.count - 1,
+                                action: { [weak self] hashtag, _ in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    component.action(.hashtag(hashtag))
+                                }
+                            ))
+                        }
+                    }
+                    validIds.append(id)
+                    
+                    let visibleItem: ComponentView<Empty>
+                    if let current = self.visibleItems[id] {
+                        visibleItem = current
+                    } else {
+                        if !transition.animation.isImmediate {
+                            itemTransition = .immediate
+                        }
+                        visibleItem = ComponentView()
+                        self.visibleItems[id] = visibleItem
+                    }
+                                                           
+                    let _ = visibleItem.update(
+                        transition: itemTransition,
+                        component: itemComponent,
                         environment: {},
                         containerSize: itemFrame.size
                     )
                     if let itemView = visibleItem.view {
-//                        var animateIn = false
                         if itemView.superview == nil {
-//                            animateIn = true
                             self.scrollView.addSubview(itemView)
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
-                        
-//                        if animateIn {
-//                            itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-//                        }
                     }
                 }
             }
@@ -284,9 +352,10 @@ final class ContextResultPanelComponent: Component {
             let sideInset: CGFloat = 3.0
             self.backgroundView.updateColor(color: UIColor(white: 0.0, alpha: 0.7), transition: transition.containedViewLayoutTransition)
             
-            let measureItemSize = self.measureItem.update(
-                transition: .immediate,
-                component: AnyComponent(PeerListItemComponent(
+            let itemComponent: AnyComponent<Empty>
+            switch component.results {
+            case .mentions:
+                itemComponent = AnyComponent(PeerListItemComponent(
                     context: component.context,
                     theme: component.theme,
                     strings: component.strings,
@@ -301,7 +370,25 @@ final class ContextResultPanelComponent: Component {
                     hasNext: true,
                     action: { _, _, _ in
                     }
-                )),
+                ))
+            case .hashtags:
+                itemComponent = AnyComponent(HashtagListItemComponent(
+                    context: component.context,
+                    theme: component.theme,
+                    strings: component.strings,
+                    peer: nil,
+                    title: "AAAAAAAAAAAA",
+                    subtitle: nil,
+                    hashtag: "",
+                    hasNext: true,
+                    action: { _, _ in
+                    }
+                ))
+            }
+            
+            let measureItemSize = self.measureItem.update(
+                transition: .immediate,
+                component: itemComponent,
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 1000.0)
             )

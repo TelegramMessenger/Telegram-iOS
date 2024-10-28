@@ -11753,9 +11753,11 @@ Sorry for the inconvenience.";
 "Monetization.TransactionInfo.ViewInExplorer" = "View in Blockchain Explorer";
 
 "Monetization.Intro.Title" = "Earn From Your Channel";
+"Monetization.Intro.Bot.Title" = "Earn From Your Bot";
 
 "Monetization.Intro.Ads.Title" = "Telegram Ads";
 "Monetization.Intro.Ads.Text" = "Telegram can display ads in your channel.";
+"Monetization.Intro.Bot.Ads.Text" = "Telegram can display ads in your bot.";
 
 "Monetization.Intro.Split.Title" = "50:50 Revenue Split";
 "Monetization.Intro.Split.Text" = "You receive 50% of the ad revenue in TON.";
@@ -11779,13 +11781,18 @@ Sorry for the inconvenience.";
 "AdsInfo.Info" = "Telegram Ads are very different from ads on other platforms. Ads such as this one:";
 "AdsInfo.Respect.Title" = "Respect Your Privacy";
 "AdsInfo.Respect.Text" = "Ads on Telegram do not use your personal information and are based on the channel in which you see them.";
+"AdsInfo.Bot.Respect.Text" = "Ads on Telegram do not use your personal information and are based on the bot in which you see them.";
 "AdsInfo.Split.Title" = "Help the Channel Creator";
 "AdsInfo.Split.Text" = "50% of the revenue from Telegram Ads goes to the owner of the channel where they are displayed.";
+"AdsInfo.Bot.Split.Title" = "Help the Bot Creator";
+"AdsInfo.Bot.Split.Text" = "50% of the revenue from Telegram Ads goes to the owner of the bot where they are displayed.";
 "AdsInfo.Ads.Title" = "Can Be Removed";
 "AdsInfo.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium](), and Level %@ channels can remove them for their subscribers.";
+"AdsInfo.Bot.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium]().";
 
 "AdsInfo.Launch.Title" = "Can I Launch an Ad?";
 "AdsInfo.Launch.Text" = "Anyone can create ads to display in this channel – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()";
+"AdsInfo.Bot.Launch.Text" = "Anyone can create ads to display in this bot – with minimal budgets. Check out the Telegram Ad Platform for details. [Learn More >]()";
 "AdsInfo.Launch.Text_URL" = "https://promote.telegram.org";
 
 "AdsInfo.Understood" = "Understood";
@@ -13000,6 +13007,9 @@ Sorry for the inconvenience.";
 "Gift.View.Availability" = "Availability";
 "Gift.View.Availability.Of" = "%1$@ of %2$@";
 "Gift.View.Availability.NewOf" = "%1$@ of %2$@ left";
+"Gift.View.Visibility" = "Visibility";
+"Gift.View.Visibility.Visible" = "Visible on your page";
+"Gift.View.Visibility.Hide" = "hide";
 "Gift.View.Hide" = "Hide from My Page";
 "Gift.View.Display" = "Display on My Page";
 "Gift.View.Convert" = "Convert to %@";
@@ -13136,8 +13146,21 @@ Sorry for the inconvenience.";
 "TopApps.Info.Text" = "This catalogue ranks mini apps based on their daily revenue, measured in Stars. To be listed, developers must set their main mini app in [@botfather]() (as described [here](https://core.telegram.org/bots/webapps#launching-the-main-mini-app)), have over **1,000** daily users, and earn a daily revenue above **1,000** Stars, based on weekly average.";
 "TopApps.Info.Done" = "Understood";
 
-"Stars.Intro.Transaction.TelegramBotApi.Title" = "Paid Limit Extension";
-"Stars.Intro.Transaction.TelegramBotApi.Subtitle" = "Bot API";
+"Stars.Intro.Transaction.TelegramBotApi.Title" = "Paid Broadcast";
+"Stars.Intro.Transaction.TelegramBotApi.Messages_1" = "%@ Message";
+"Stars.Intro.Transaction.TelegramBotApi.Messages_any" = "%@ Messages";
 
-"Stars.Transaction.TelegramBotApi.Title" = "Paid Limit Extension";
-"Stars.Transaction.TelegramBotApi.Subtitle" = "Bot API";
+"Stars.Transaction.TelegramBotApi.Title" = "Paid Broadcast";
+"Stars.Transaction.TelegramBotApi.Messages_1" = "%@ Message";
+"Stars.Transaction.TelegramBotApi.Messages_any" = "%@ Messages";
+
+"Monetization.Bot.Header" = "Telegram shares 50% of the revenue from ads displayed in your bot. [Learn More >]()";
+"Monetization.Bot.BalanceTitle" = "AVAILABLE BALANCE";
+
+"Resolve.ChannelErrorNotFound" = "Sorry, this channel doesn't seem to exist.";
+
+"Stats.TonBotRevenue.Title" = "TON Balance";
+
+"PeerInfo.BotBalance.Title" = "BALANCE";
+"PeerInfo.BotBalance.Ton" = "Ton";
+"PeerInfo.BotBalance.Stars" = "Stars";

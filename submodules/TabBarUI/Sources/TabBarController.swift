@@ -364,7 +364,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
         self.tabBarControllerNode.tabBarNode.selectedIndex = tabBarSelectedIndex
         
-        var transitionSale: CGFloat = 0.995
+        var transitionSale: CGFloat = 0.998
         if let currentView = self.currentController?.view {
             transitionSale = (currentView.frame.height - 3.0) / currentView.frame.height
         }
@@ -373,7 +373,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             //self.tabBarControllerNode.currentControllerNode = nil
             
             if animated {
-                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.15, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { completed in
+                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.12, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { completed in
                     if completed {
                         currentController.view.layer.removeAllAnimations()
                     }
@@ -395,9 +395,9 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             
             let commit = self.tabBarControllerNode.setCurrentControllerNode(currentController.displayNode)
             if animated {
-                currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.15, timingFunction: kCAMediaTimingFunctionSpring)
+                currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.1, timingFunction: kCAMediaTimingFunctionSpring)
                 currentController.view.layer.allowsGroupOpacity = true
-                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, completion: { completed in
+                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { completed in
                     if completed {
                         currentController.view.layer.allowsGroupOpacity = false
                     }

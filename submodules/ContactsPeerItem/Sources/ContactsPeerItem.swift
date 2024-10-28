@@ -1438,6 +1438,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 verifiedIconView.removeFromSuperview()
                             }
                             
+                            var additionalRightInset: CGFloat = 0.0
                             if let (titleLayout, titleApply) = actionButtonTitleLayoutAndApply {
                                 let actionButtonTitleNode = titleApply()
                                 let actionButtonBackgroundNode: ASImageNode
@@ -1487,6 +1488,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 
                                 let actionTitleFrame = CGRect(origin: CGPoint(x: actionButtonFrame.minX + 13.0, y: actionButtonFrame.minY + floorToScreenPixels((actionButtonFrame.height - titleLayout.size.height) / 2.0) + 1.0), size: titleLayout.size)
                                 actionButtonTitleNode.frame = actionTitleFrame
+                                
+                                additionalRightInset += actionButtonSize.width + 16.0
                             } else {
                                 if let actionButtonTitleNode = strongSelf.actionButtonTitleNode {
                                     strongSelf.actionButtonTitleNode = nil
@@ -1588,7 +1591,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 badgeBackgroundNode.image = currentBadgeBackgroundImage
                                 
                                 badgeBackgroundWidth = max(badgeTextLayout.size.width + 10.0, currentBadgeBackgroundImage.size.width)
-                                var badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
+                                var badgeBackgroundFrame = CGRect(x: revealOffset + params.width - params.rightInset - badgeBackgroundWidth - additionalRightInset - 6.0, y: floor((nodeLayout.contentSize.height - currentBadgeBackgroundImage.size.height) / 2.0), width: badgeBackgroundWidth, height: currentBadgeBackgroundImage.size.height)
                                 
                                 if let arrowButtonImage = arrowButtonImage {
                                     badgeBackgroundFrame.origin.x -= arrowButtonImage.size.width + 6.0

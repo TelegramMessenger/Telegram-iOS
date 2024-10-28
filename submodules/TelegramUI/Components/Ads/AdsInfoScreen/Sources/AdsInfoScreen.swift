@@ -21,15 +21,18 @@ private final class ScrollContent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
+    let mode: AdsInfoScreen.Mode
     let openPremium: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        mode: AdsInfoScreen.Mode,
         openPremium: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.openPremium = openPremium
         self.dismiss = dismiss
     }
@@ -175,7 +178,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Respect_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Respect_Text,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Respect_Text : strings.AdsInfo_Respect_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Privacy",
@@ -187,9 +190,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "split",
                     component: AnyComponent(ParagraphComponent(
-                        title: strings.AdsInfo_Split_Title,
+                        title: component.mode == .bot ? strings.AdsInfo_Bot_Split_Title : strings.AdsInfo_Split_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Split_Text,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Split_Text : strings.AdsInfo_Split_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Split",
@@ -203,7 +206,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Ads_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Ads_Text : strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/BoostPerk/NoAds",
@@ -242,7 +245,7 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            var infoString = strings.AdsInfo_Launch_Text
+            var infoString = component.mode == .bot ? strings.AdsInfo_Bot_Launch_Text : strings.AdsInfo_Launch_Text
             if let spaceRegex {
                 let nsRange = NSRange(infoString.startIndex..., in: infoString)
                 let matches = spaceRegex.matches(in: infoString, options: [], range: nsRange)
@@ -329,18 +332,24 @@ private final class ContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let mode: AdsInfoScreen.Mode
     let openPremium: () -> Void
     
     init(
         context: AccountContext,
+        mode: AdsInfoScreen.Mode,
         openPremium: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.openPremium = openPremium
     }
     
     static func ==(lhs: ContainerComponent, rhs: ContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -385,6 +394,7 @@ private final class ContainerComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(ScrollContent(
                         context: context.component.context,
+                        mode: context.component.mode,
                         openPremium: context.component.openPremium,
                         dismiss: {
                             controller()?.dismiss()
@@ -485,10 +495,16 @@ private final class ContainerComponent: CombinedComponent {
 }
 
 public final class AdsInfoScreen: ViewControllerComponentContainer {
+    public enum Mode: Equatable {
+        case channel
+        case bot
+    }
+    
     private let context: AccountContext
         
     public init(
         context: AccountContext,
+        mode: Mode,
         forceDark: Bool = false
     ) {
         self.context = context
@@ -498,6 +514,7 @@ public final class AdsInfoScreen: ViewControllerComponentContainer {
             context: context,
             component: ContainerComponent(
                 context: context,
+                mode: mode,
                 openPremium: {
                     openPremiumImpl?()
                 }

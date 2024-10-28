@@ -46,11 +46,6 @@ public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDate
             break
         }
     }
-    if value < 0 {
-        balanceText.insert("-", at: balanceText.startIndex)
-    } else if showPlus {
-        balanceText.insert("+", at: balanceText.startIndex)
-    }
     
     if let dotIndex = balanceText.range(of: dateTimeFormat.decimalSeparator) {
         balanceText = String(balanceText[balanceText.startIndex ..< min(balanceText.endIndex, balanceText.index(dotIndex.upperBound, offsetBy: 2))])
@@ -59,11 +54,21 @@ public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDate
         if let integerPart = Int32(integerPartString) {
             let modifiedIntegerPart = presentationStringsFormattedNumber(integerPart, dateTimeFormat.groupingSeparator)
             
-            let resultString = "\(modifiedIntegerPart)\(balanceText[dotIndex.lowerBound...])"
+            var resultString = "\(modifiedIntegerPart)\(balanceText[dotIndex.lowerBound...])"
+            if value < 0 {
+                resultString.insert("-", at: resultString.startIndex)
+            } else if showPlus {
+                resultString.insert("+", at: resultString.startIndex)
+            }
             return resultString
         }
     } else if let integerPart = Int32(balanceText) {
         balanceText = presentationStringsFormattedNumber(integerPart, dateTimeFormat.groupingSeparator)
+    }
+    if value < 0 {
+        balanceText.insert("-", at: balanceText.startIndex)
+    } else if showPlus {
+        balanceText.insert("+", at: balanceText.startIndex)
     }
     
     return balanceText

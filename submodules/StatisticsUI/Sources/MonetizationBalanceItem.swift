@@ -417,7 +417,7 @@ final class MonetizationBalanceItemNode: ListViewItemNode, ItemListItemNode {
                         allowActionWhenDisabled: false,
                         displaysProgress: false,
                         action: { [weak self] in
-                            guard let self, let item = self.item, item.isEnabled else {
+                            guard let self, let item = self.item else {
                                 return
                             }
                             item.buyAdsAction?()

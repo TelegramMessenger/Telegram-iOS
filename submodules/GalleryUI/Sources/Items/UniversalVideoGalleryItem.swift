@@ -3335,7 +3335,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }, iconSource: nil, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
                 if let navigationController = self?.baseNavigationController() as? NavigationController {
-                    navigationController.pushViewController(AdsInfoScreen(context: context, forceDark: true))
+                    navigationController.pushViewController(AdsInfoScreen(context: context, mode: .channel, forceDark: true))
                 }
             })))
             

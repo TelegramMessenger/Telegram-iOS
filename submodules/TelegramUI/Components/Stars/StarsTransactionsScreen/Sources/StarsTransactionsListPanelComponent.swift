@@ -136,8 +136,8 @@ final class StarsTransactionsListPanelComponent: Component {
             
             super.init(frame: frame)
             
-            self.scrollView.delaysContentTouches = false
-//            self.scrollView.canCancelContentTouches = true
+            self.scrollView.delaysContentTouches = true
+            self.scrollView.canCancelContentTouches = true
             self.scrollView.clipsToBounds = false
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                 self.scrollView.contentInsetAdjustmentBehavior = .never
@@ -344,8 +344,13 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                             }
                         } else {
-                            itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
-                            itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                            if item.count > 0 && !item.flags.contains(.isRefund) {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                            } else {
+                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
+                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                            }
                         }
                     case .premiumBot:
                         itemTitle = environment.strings.Stars_Intro_Transaction_PremiumBotTopUp_Title
@@ -355,7 +360,11 @@ final class StarsTransactionsListPanelComponent: Component {
                         itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramAds_Subtitle
                     case .apiLimitExtension:
                         itemTitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Title
-                        itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Subtitle
+                        if let floodskipNumber = item.floodskipNumber {
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramBotApi_Messages(floodskipNumber)
+                        } else {
+                            itemSubtitle = nil
+                        }
                     case .unsupported:
                         itemTitle = environment.strings.Stars_Intro_Transaction_Unsupported_Title
                         itemSubtitle = nil

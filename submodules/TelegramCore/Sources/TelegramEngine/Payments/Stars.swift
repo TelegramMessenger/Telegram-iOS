@@ -468,7 +468,7 @@ private final class StarsContextImpl {
         }
         var transactions = state.transactions
         if addTransaction {
-            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil), at: 0)
+            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil), at: 0)
         }
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: max(0, state.balance + balance), subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
@@ -491,8 +491,6 @@ private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
         case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, giveawayPostId, starGift, floodskipNumber):
-            let _ = floodskipNumber
-            
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             var giveawayMessageId: MessageId?
@@ -548,7 +546,7 @@ private extension StarsContext.State.Transaction {
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) })
+            self.init(flags: flags, id: id, count: stars, date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber)
         }
     }
 }
@@ -619,6 +617,7 @@ public final class StarsContext {
             public let media: [Media]
             public let subscriptionPeriod: Int32?
             public let starGift: StarGift?
+            public let floodskipNumber: Int32?
             
             public init(
                 flags: Flags,
@@ -635,7 +634,8 @@ public final class StarsContext {
                 giveawayMessageId: MessageId?,
                 media: [Media],
                 subscriptionPeriod: Int32?,
-                starGift: StarGift?
+                starGift: StarGift?,
+                floodskipNumber: Int32?
             ) {
                 self.flags = flags
                 self.id = id
@@ -652,6 +652,7 @@ public final class StarsContext {
                 self.media = media
                 self.subscriptionPeriod = subscriptionPeriod
                 self.starGift = starGift
+                self.floodskipNumber = floodskipNumber
             }
             
             public static func == (lhs: Transaction, rhs: Transaction) -> Bool {
@@ -698,6 +699,9 @@ public final class StarsContext {
                     return false
                 }
                 if lhs.starGift != rhs.starGift {
+                    return false
+                }
+                if lhs.floodskipNumber != rhs.floodskipNumber {
                     return false
                 }
                 return true

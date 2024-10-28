@@ -412,11 +412,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_TelegramAds_Subtitle
                     case .apiLimitExtension:
                         titleText = strings.Stars_Transaction_TelegramBotApi_Title
-                        via = strings.Stars_Transaction_TelegramBotApi_Subtitle
                     case .unsupported:
                         titleText = strings.Stars_Transaction_Unsupported_Title
                     }
-                    if !transaction.media.isEmpty {
+                    
+                    if let floodskipNumber = transaction.floodskipNumber {
+                        descriptionText = strings.Stars_Transaction_TelegramBotApi_Messages(floodskipNumber)
+                    } else if !transaction.media.isEmpty {
                         var description: String = ""
                         var photoCount: Int32 = 0
                         var videoCount: Int32 = 0

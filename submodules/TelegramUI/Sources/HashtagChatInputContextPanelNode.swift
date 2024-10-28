@@ -15,8 +15,10 @@ import ChatControllerInteraction
 import ChatContextQuery
 import ChatInputContextPanelNode
 
-private struct HashtagChatInputContextPanelEntryStableId: Hashable {
-    let title: String
+private enum HashtagChatInputContextPanelEntryStableId: Hashable {
+    case generic
+    case peer
+    case hashtag(String)
 }
 
 private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
@@ -31,7 +33,14 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let isAdditionalRecent: Bool
     
     var stableId: HashtagChatInputContextPanelEntryStableId {
-        return HashtagChatInputContextPanelEntryStableId(title: self.title)
+        switch self.index {
+        case 0:
+            return .generic
+        case 1:
+            return .peer
+        default:
+            return .hashtag(self.title)
+        }
     }
     
     func withUpdatedTheme(_ theme: PresentationTheme) -> HashtagChatInputContextPanelEntry {
@@ -128,12 +137,16 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                 stableIds.insert(genericEntry.stableId)
                 entries.append(genericEntry)
                 
+                var isGroup = false
+                if case let .channel(channel) = peer, case .group = channel.info {
+                    isGroup = true
+                }
                 let peerEntry = HashtagChatInputContextPanelEntry(
                     index: 1,
                     theme: self.theme,
                     peer: peer,
                     title: "Use #\(query)@\(addressName)",
-                    text: "searches only posts from this channel",
+                    text: isGroup ? "searches only posts from this group" : "searches only posts from this channel",
                     badge: "NEW",
                     hashtag: "\(query)@\(addressName)",
                     revealed: false,
