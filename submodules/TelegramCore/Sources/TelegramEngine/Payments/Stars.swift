@@ -878,10 +878,10 @@ public final class StarsContext {
 private final class StarsTransactionsContextImpl {
     private let account: Account
     private weak var starsContext: StarsContext?
-    private let peerId: EnginePeer.Id
+    fileprivate let peerId: EnginePeer.Id
     private let mode: StarsTransactionsContext.Mode
     
-    private var _state: StarsTransactionsContext.State
+    fileprivate var _state: StarsTransactionsContext.State
     private let _statePromise = Promise<StarsTransactionsContext.State>()
     var state: Signal<StarsTransactionsContext.State, NoError> {
         return self._statePromise.get()
@@ -894,17 +894,24 @@ private final class StarsTransactionsContextImpl {
     init(account: Account, subject: StarsTransactionsContext.Subject, mode: StarsTransactionsContext.Mode) {
         assert(Queue.mainQueue().isCurrent())
         
+        
+        let currentTransactions: [StarsContext.State.Transaction]
+        
         self.account = account
         switch subject {
+        case let .starsTransactionsContext(transactionsContext):
+            self.peerId = transactionsContext.peerId
+            currentTransactions = transactionsContext.currentState?.transactions ?? []
         case let .starsContext(starsContext):
             self.starsContext = starsContext
             self.peerId = starsContext.peerId
+            currentTransactions = starsContext.currentState?.transactions ?? []
         case let .peer(peerId):
             self.peerId = peerId
+            currentTransactions = []
         }
         self.mode = mode
         
-        let currentTransactions = self.starsContext?.currentState?.transactions ?? []
         let initialTransactions: [StarsContext.State.Transaction]
         switch mode {
         case .all:
@@ -918,7 +925,33 @@ private final class StarsTransactionsContextImpl {
         self._state = StarsTransactionsContext.State(transactions: initialTransactions, canLoadMore: true, isLoading: false)
         self._statePromise.set(.single(self._state))
         
-        if let starsContext = self.starsContext {
+        if case let .starsTransactionsContext(transactionsContext) = subject {
+            self.stateDisposable = (transactionsContext.state
+            |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let self else {
+                    return
+                }
+                let currentTransactions = state.transactions
+                let filteredTransactions: [StarsContext.State.Transaction]
+                switch mode {
+                case .all:
+                    filteredTransactions = currentTransactions
+                case .incoming:
+                    filteredTransactions = currentTransactions.filter { $0.count > 0 }
+                case .outgoing:
+                    filteredTransactions = currentTransactions.filter { $0.count < 0 }
+                }
+                
+                if !filteredTransactions.isEmpty && self._state.transactions.isEmpty  && filteredTransactions != initialTransactions {
+                    var updatedState = self._state
+                    updatedState.transactions.removeAll(where: { $0.flags.contains(.isLocal) })
+                    for transaction in filteredTransactions.reversed() {
+                        updatedState.transactions.insert(transaction, at: 0)
+                    }
+                    self.updateState(updatedState)
+                }
+            })
+        } else if case let .starsContext(starsContext) = subject {
             self.stateDisposable = (starsContext.state
             |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let self, let state else {
@@ -1021,6 +1054,7 @@ public final class StarsTransactionsContext {
     fileprivate let impl: QueueLocalObject<StarsTransactionsContextImpl>
     
     public enum Subject {
+        case starsTransactionsContext(StarsTransactionsContext)
         case starsContext(StarsContext)
         case peer(EnginePeer.Id)
     }
@@ -1043,6 +1077,14 @@ public final class StarsTransactionsContext {
         }
     }
     
+    public var currentState: StarsTransactionsContext.State? {
+        var state: StarsTransactionsContext.State?
+        self.impl.syncWith { impl in
+            state = impl._state
+        }
+        return state
+    }
+    
     public func reload() {
         self.impl.with {
             $0.loadMore(reload: true)
@@ -1059,6 +1101,14 @@ public final class StarsTransactionsContext {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsTransactionsContextImpl(account: account, subject: subject, mode: mode)
         })
+    }
+    
+    var peerId: EnginePeer.Id {
+        var peerId: EnginePeer.Id?
+        self.impl.syncWith { impl in
+            peerId = impl.peerId
+        }
+        return peerId!
     }
 }
 
