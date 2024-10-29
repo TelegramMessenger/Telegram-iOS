@@ -10357,8 +10357,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let bounds = statusNode.view.convert(statusNode.view.bounds, to: self.chatDisplayNode.view)
             let location = CGPoint(x: bounds.midX, y: bounds.minY - 8.0)
             
-            //TODO:localize
-            let tooltipController = TooltipController(content: .text("Processing video may take a few minutes."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, isBlurred: true, timeout: 4.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+            let tooltipController = TooltipController(content: .text(self.presentationData.strings.Chat_MessageTooltipVideoProcessing), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, isBlurred: true, timeout: 4.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
             self.checksTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {

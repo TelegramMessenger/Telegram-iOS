@@ -297,7 +297,6 @@ func chatHistoryEntriesForView(
     }
     
     let insertPendingProcessingMessage: ([Message], Int) -> Void = { messages, index in
-        //TODO:localize
         let serviceMessage = Message(
             stableId: UInt32.max - messages[0].stableId,
             stableVersion: 0,
@@ -316,7 +315,7 @@ func chatHistoryEntriesForView(
             author: nil,
             text: "",
             attributes: [],
-            media: [TelegramMediaAction(action: .customText(text: "This video will be published once converted and optimized", entities: [], additionalAttributes: nil))],
+            media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Chat_VideoProcessingServiceMessage(Int32(messages.count)), entities: [], additionalAttributes: nil))],
             peers: SimpleDictionary<PeerId, Peer>(),
             associatedMessages: SimpleDictionary<MessageId, Message>(),
             associatedMessageIds: [],

@@ -604,7 +604,6 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self._status.set(.never())
             self.player.pause()
             
-            //TODO:release coordinate fetchAutomatically
             self.player = MediaPlayer(audioSessionManager: self.audioSessionManager, postbox: self.postbox, userLocation: self.userLocation, userContentType: userContentType, resourceReference: updatedFileReference.resourceReference(selectedFile.resource), tempFilePath: nil, streamable: self.streamVideo, video: true, preferSoftwareDecoding: false, playAutomatically: false, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: true, soundMuted: self.soundMuted, ambient: beginWithAmbientSound, mixWithOthers: mixWithOthers, continuePlayingWithoutSoundOnLostAudioSession: self.continuePlayingWithoutSoundOnLostAudioSession, storeAfterDownload: nil, isAudioVideoMessage: self.isAudioVideoMessage)
             
             var actionAtEndImpl: (() -> Void)?

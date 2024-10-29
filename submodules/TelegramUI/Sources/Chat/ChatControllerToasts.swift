@@ -61,7 +61,7 @@ extension ChatControllerImpl {
                             context: self.context,
                             file: .message(message: MessageReference(message._asMessage()), media: file),
                             title: nil,
-                            text: "Video Published",
+                            text: self.presentationData.strings.Chat_ToastVideoPublished_Title,
                             undoText: nil,
                             customAction: nil
                         ),
@@ -74,15 +74,14 @@ extension ChatControllerImpl {
                     self.dismiss()
                 }
             } else {
-                //TODO:localize
                 self.controllerInteraction?.presentControllerInCurrent(UndoOverlayController(
                     presentationData: self.presentationData,
                     content: .media(
                         context: self.context,
                         file: .message(message: MessageReference(message._asMessage()), media: file),
                         title: nil,
-                        text: "Video Published",
-                        undoText: "View",
+                        text: self.presentationData.strings.Chat_ToastVideoPublished_Title,
+                        undoText: self.presentationData.strings.Chat_ToastVideoPublished_Action,
                         customAction: { [weak self] in
                             guard let self else {
                                 return

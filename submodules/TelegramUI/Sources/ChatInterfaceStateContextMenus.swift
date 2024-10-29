@@ -1145,13 +1145,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     c?.dismiss(completion: {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         
-                        //TODO:localize
                         controllerInteraction.presentController(standardTextAlertController(
                             theme: AlertControllerTheme(presentationData: presentationData),
-                            title: "Wait!",
-                            text: "This video hasn't been converted and optimized yet. If you send it now, the viewers of the video may experience slow download speed.",
+                            title: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Title,
+                            text: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Text,
                             actions: [
-                                TextAlertAction(type: .defaultAction, title: "Send Anyway", action: {
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Action, action: {
                                     controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
                                 }),
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
@@ -2864,7 +2863,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             })
         }
         
-        item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
+        if !self.item.isEdit {
+            item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
+        }
     }
 
     deinit {
@@ -3131,7 +3132,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
 
             var avatarsPeers: [EnginePeer] = []
-            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser || self.item.isEdit {
             } else if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
                 for recentPeer in recentPeers {
                     if let peer = self.item.message.peers[recentPeer.peerId] {

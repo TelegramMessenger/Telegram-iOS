@@ -4603,15 +4603,14 @@ extension ChatControllerImpl {
                                     c?.displayProcessingVideoTooltip(messageId: firstEvent.id)
                                 }
                                 
-                                //TODO:localize
                                 c.present(
                                     UndoOverlayController(
                                         presentationData: self.presentationData,
                                         content: .universalImage(
                                             image: generateTintedImage(image: UIImage(bundleImageName: "Chat/ToastImprovingVideo"), color: .white)!,
                                             size: nil,
-                                            title: "Improving video...",
-                                            text: "The video will be published after it's optimized for the bese viewing experience.",
+                                            title: self.presentationData.strings.Chat_ToastImprovingVideo_Title,
+                                            text: self.presentationData.strings.Chat_ToastImprovingVideo_Text,
                                             customUndoText: nil,
                                             timeout: 5.0
                                         ),

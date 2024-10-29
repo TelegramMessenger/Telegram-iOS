@@ -13164,3 +13164,40 @@ Sorry for the inconvenience.";
 "PeerInfo.BotBalance.Title" = "BALANCE";
 "PeerInfo.BotBalance.Ton" = "Ton";
 "PeerInfo.BotBalance.Stars" = "Stars";
+
+"Gallery.ToastVideoSpeedSwipe" = "Swipe sideways to adjust speed.";
+"Gallery.VideoSettings.QualitySectionTitle" = "QUALITY";
+"Gallery.VideoSettings.SpeedSectionTitle" = "PLAYBACK SPEED";
+"Gallery.VideoSettings.SpeedControlTitle" = "Speed";
+
+"Gallery.VideoSettings.QualityAuto" = "Auto";
+"Gallery.VideoSettings.QualityLow" = "Low";
+"Gallery.VideoSettings.QualityMedium" = "Medium";
+"Gallery.VideoSettings.QualityHD" = "High";
+"Gallery.VideoSettings.QualityFHD" = "Full HD";
+"Gallery.VideoSettings.QualityQHD" = "Ultra-High";
+
+"Gallery.VideoSettings.IconQualityLow" = "L";
+"Gallery.VideoSettings.IconQualityMedium" = "SD";
+"Gallery.VideoSettings.IconQualityHD" = "HD";
+"Gallery.VideoSettings.IconQualityFHD" = "FHD";
+"Gallery.VideoSettings.IconQualityQHD" = "QHD";
+
+"Gallery.MenuSaveToGallery" = "Save to Gallery";
+"Gallery.SaveToGallery.Quality" = "Save in %@p";
+"Gallery.SaveToGallery.Original" = "Save Original";
+
+"VideoChat.ScheduleButtonTitle" = "Schedule Video Chat";
+
+"Chat.ToastImprovingVideo.Title" = "Improving video...";
+"Chat.ToastImprovingVideo.Text" = "The video will be published after it's optimized for the best viewing experience.";
+"Chat.ToastVideoPublished.Title" = "Video Published";
+"Chat.ToastVideoPublished.Action" = "View";
+"Chat.MessageTooltipVideoProcessing" = "Processing video may take a few minutes.";
+
+"Chat.VideoProcessingServiceMessage_1" = "This video will be published once converted and optimized";
+"Chat.VideoProcessingServiceMessage_any" = "These videos will be published once converted and optimized";
+
+"Chat.ScheduledForceSendProcessingVideo.Title" = "Wait!";
+"Chat.ScheduledForceSendProcessingVideo.Text" = "This video hasn't been converted and optimized yet. If you send it now, the viewers of the video may experience slow download speed.";
+"Chat.ScheduledForceSendProcessingVideo.Action" = "Send Anyway";

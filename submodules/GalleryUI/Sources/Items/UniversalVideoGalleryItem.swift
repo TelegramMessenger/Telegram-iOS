@@ -600,8 +600,6 @@ final class SettingsHeaderButton: HighlightableButtonNode {
                 self.dotLayer.bounds = CGRect(origin: CGPoint(), size: dotFrame.size)
             }
         }
-        
-        //self.setBadges(speed: "1.5x", quality: "HD", transition: .immediate)
     }
 
     override func didLoad() {
@@ -1619,12 +1617,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 activeEdgeRateIndicatorTransition = .immediate
             }
             
-            //TODO:localize
             let activeEdgeRateIndicatorSize = activeEdgeRateIndicator.update(
                 transition: ComponentTransition(activeEdgeRateIndicatorTransition),
                 component: AnyComponent(GalleryRateToastComponent(
                     rate: activeEdgeRateState.currentRate,
-                    displayTooltip: "Swipe sideways to adjust speed."
+                    displayTooltip: self.presentationData.strings.Gallery_ToastVideoSpeedSwipe
                 )),
                 environment: {},
                 containerSize: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 100.0)
@@ -1902,15 +1899,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 var qualityString: String?
                 if case let .quality(quality) = videoQuality {
                     if quality <= 360 {
-                        qualityString = "SD"
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityLow
                     } else if quality <= 480 {
-                        qualityString = "SD"
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityMedium
                     } else if quality <= 720 {
-                        qualityString = "HD"
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityHD
                     } else if quality <= 1080 {
-                        qualityString = "FHD"
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityFHD
                     } else {
-                        qualityString = "UHD"
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityQHD
                     }
                 }
 
@@ -3474,7 +3471,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if isSettings {
                 let sliderValuePromise = ValuePromise<Double?>(nil)
-                topItems.append(.custom(SliderContextItem(title: "Speed", minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
+                topItems.append(.custom(SliderContextItem(title: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedControlTitle, minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
                     guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
                         return
                     }
@@ -3488,7 +3485,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
                 } else {
-                    items.append(.custom(SectionTitleContextItem(text: "PLAYBACK SPEED"), false))
+                    items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedSectionTitle), false))
                     for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
                         let isSelected = abs(status.baseRate - rate) < 0.01
                         items.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
@@ -3514,12 +3511,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 
                 if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
-                    items.append(.custom(SectionTitleContextItem(text: "VIDEO QUALITY"), false))
+                    items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_QualitySectionTitle), false))
                     
-                    //TODO:localize
                     do {
                         let isSelected = videoQualityState.preferred == .auto
-                        let qualityText: String = "Auto"
+                        let qualityText: String = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityAuto
                         let textLayout: ContextMenuActionItemTextLayout
                         if videoQualityState.current != 0 {
                             textLayout = .secondLineWithValue("\(videoQualityState.current)p")
@@ -3551,15 +3547,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         let isSelected = videoQualityState.preferred == .quality(quality)
                         let qualityTitle: String
                         if quality <= 360 {
-                            qualityTitle = "Low"
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityLow
                         } else if quality <= 480 {
-                            qualityTitle = "Medium"
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityMedium
                         } else if quality <= 720 {
-                            qualityTitle = "High"
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityHD
                         } else if quality <= 1080 {
-                            qualityTitle = "Full HD"
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityFHD
                         } else {
-                            qualityTitle = "Ultra HD"
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityQHD
                         }
                         items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
                             if isSelected {
@@ -3584,7 +3580,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             } else {
                 if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
-                    items.append(.action(ContextMenuActionItem(text: "Save to Gallery", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { c, _ in
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_MenuSaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { c, _ in
                         guard let self else {
                             c?.dismiss(result: .default, completion: nil)
                             return
@@ -3616,9 +3612,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 let fileSizeString = dataSizeString(qualityFileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
                                 let title: String
                                 if let quality {
-                                    title = "Save in \(quality)p"
+                                    title = self.presentationData.strings.Gallery_SaveToGallery_Quality("\(quality)").string
                                 } else {
-                                    title = "Save Original"
+                                    title = self.presentationData.strings.Gallery_SaveToGallery_Original
                                 }
                                 items.append(.action(ContextMenuActionItem(text: title, textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
                                     return nil

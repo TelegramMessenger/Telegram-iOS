@@ -110,9 +110,8 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
             var contentHeight: CGFloat = 0.0
             contentHeight += 16.0
             
-            //TODO:localize
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: "Schedule Video Chat", font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: environment.strings.VideoChat_ScheduleButtonTitle, font: Font.semibold(17.0), textColor: environment.theme.list.itemPrimaryTextColor))
             
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -272,7 +271,7 @@ private final class ScheduleVideoChatSheetContentComponent: Component {
                         pressedColor: UIColor(rgb: 0x2B2B2F).withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                        Text(text: "Cancel", font: Font.semibold(17.0), color: environment.theme.list.itemPrimaryTextColor)
+                        Text(text: environment.strings.Common_Cancel, font: Font.semibold(17.0), color: environment.theme.list.itemPrimaryTextColor)
                     )),
                     isEnabled: true,
                     tintWhenDisabled: false,
