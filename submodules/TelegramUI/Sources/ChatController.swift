@@ -3982,6 +3982,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.removeAd(opaqueId: opaqueId)
             }
             self.effectiveNavigationController?.pushViewController(controller)
+        }, removeAd: { [weak self] opaqueId in
+            guard let self else {
+                return
+            }
+            self.removeAd(opaqueId: opaqueId)
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
                 return

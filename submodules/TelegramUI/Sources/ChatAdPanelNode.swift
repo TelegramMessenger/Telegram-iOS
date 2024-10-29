@@ -48,6 +48,8 @@ final class ChatAdPanelNode: ASDisplayNode {
     private let removeBackgroundNode: ASImageNode
     private let removeTextNode: ImmediateTextNode
     
+    private let closeButton: HighlightableButtonNode
+    
     private let imageNode: TransformImageNode
     private let imageNodeContainer: ASDisplayNode
 
@@ -104,6 +106,10 @@ final class ChatAdPanelNode: ASDisplayNode {
         
         self.imageNodeContainer = ASDisplayNode()
         
+        self.closeButton = HighlightableButtonNode()
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
+        self.closeButton.displaysAsynchronously = false
+    
         super.init()
                 
         self.addSubnode(self.contextContainer)
@@ -183,6 +189,9 @@ final class ChatAdPanelNode: ASDisplayNode {
             }
             self.controllerInteraction?.adContextAction(message, self.contextContainer, gesture)
         }
+        
+        self.closeButton.addTarget(self, action: #selector(self.closePressed), forControlEvents: [.touchUpInside])
+        self.addSubnode(self.closeButton)
     }
     
     deinit {
@@ -190,6 +199,14 @@ final class ChatAdPanelNode: ASDisplayNode {
     }
     
     private var theme: PresentationTheme?
+    
+    @objc private func closePressed() {
+        if self.context.isPremium, let adAttribute = self.message?.adAttribute {
+            self.controllerInteraction?.removeAd(adAttribute.opaqueId)
+        } else {
+            self.controllerInteraction?.openNoAdsDemo()
+        }
+    }
     
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         self.message = interfaceState.adMessage
@@ -199,13 +216,16 @@ final class ChatAdPanelNode: ASDisplayNode {
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
             self.removeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 15.0, color: interfaceState.theme.chat.inputPanel.panelControlAccentColor.withMultipliedAlpha(0.1))
             self.removeTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_BotAd_WhatIsThis, font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+            self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
         }
                 
         self.contextContainer.isGestureEnabled = false
         
         let panelHeight: CGFloat
+        var hasCloseButton = true
         if let message = interfaceState.adMessage {
             panelHeight = self.enqueueTransition(width: width, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: nil, message: message, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: false, isReplyThread: false, translateToLanguage: nil)
+            hasCloseButton = message.media.isEmpty
         } else {
             panelHeight = 50.0
         }
@@ -217,6 +237,12 @@ final class ChatAdPanelNode: ASDisplayNode {
                 
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
+        
+        let contentRightInset: CGFloat = 14.0 + rightInset
+        let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
+        self.closeButton.frame = CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize)
+        
+        self.closeButton.isHidden = !hasCloseButton
         
         self.currentLayout = (width, leftInset, rightInset)
         

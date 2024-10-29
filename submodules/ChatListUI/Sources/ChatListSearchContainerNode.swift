@@ -634,6 +634,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
+
+        if !text.hasPrefix("#") && self.paneContainerNode.currentPaneKey == .publicPosts {
+            self.paneContainerNode.requestSelectPane(.chats)
+        }
+        
         self.searchQuery.set(.single(searchQuery))
         self.searchQueryValue = searchQuery
         

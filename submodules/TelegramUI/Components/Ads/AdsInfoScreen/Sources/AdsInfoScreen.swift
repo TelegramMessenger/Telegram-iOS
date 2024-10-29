@@ -381,7 +381,6 @@ private final class ContainerComponent: CombinedComponent {
         var bottomContentOffset: CGFloat?
         
         var cachedMoreImage: (UIImage, PresentationTheme)?
-        var cachedCloseImage: (UIImage, PresentationTheme)?
     }
     
     func makeState() -> State {
@@ -393,9 +392,7 @@ private final class ContainerComponent: CombinedComponent {
         let scroll = Child(ScrollComponent<ViewControllerComponentContainer.Environment>.self)
         let scrollExternalState = ScrollComponent<EnvironmentType>.ExternalState()
         
-        let buttonsBackground = Child(RoundedRectangle.self)
         let moreButton = Child(Button.self)
-        let closeButton = Child(Button.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
@@ -447,20 +444,11 @@ private final class ContainerComponent: CombinedComponent {
             )
             
             if case .bot = context.component.mode {
-                let buttonsBackground = buttonsBackground.update(
-                    component: RoundedRectangle(color: UIColor(rgb: 0x808084, alpha: 0.1), cornerRadius: 15.0),
-                    availableSize: CGSize(width: 73.0, height: 30.0),
-                    transition: .immediate
-                )
-                context.add(buttonsBackground
-                    .position(CGPoint(x: context.availableSize.width - 16.0 - buttonsBackground.size.width / 2.0, y: 13.0 + buttonsBackground.size.height / 2.0))
-                )
-                
                 let moreImage: UIImage
                 if let (image, theme) = state.cachedMoreImage, theme === environment.theme {
                     moreImage = image
                 } else {
-                    moreImage = generateMoreButtonImage(color: environment.theme.actionSheet.inputClearButtonColor)!
+                    moreImage = generateMoreButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: environment.theme.actionSheet.inputClearButtonColor)!
                     state.cachedMoreImage = (moreImage, environment.theme)
                 }
                 let moreButton = moreButton.update(
@@ -474,28 +462,7 @@ private final class ContainerComponent: CombinedComponent {
                     transition: .immediate
                 )
                 context.add(moreButton
-                    .position(CGPoint(x: context.availableSize.width - 16.0 - buttonsBackground.size.width + moreButton.size.width / 2.0 + 3.0, y: 13.0 + buttonsBackground.size.height / 2.0))
-                )
-                
-                let closeImage: UIImage
-                if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
-                    closeImage = image
-                } else {
-                    closeImage = generateCloseButtonImage(color: environment.theme.actionSheet.inputClearButtonColor)!
-                    state.cachedCloseImage = (closeImage, environment.theme)
-                }
-                let closeButton = closeButton.update(
-                    component: Button(
-                        content: AnyComponent(Image(image: closeImage)),
-                        action: {
-                            dismiss()
-                        }
-                    ),
-                    availableSize: CGSize(width: 30.0, height: 30.0),
-                    transition: .immediate
-                )
-                context.add(closeButton
-                    .position(CGPoint(x: context.availableSize.width - 16.0 - closeButton.size.width / 2.0, y: 13.0 + buttonsBackground.size.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width - 16.0 - moreButton.size.width / 2.0, y: 13.0 + moreButton.size.height / 2.0))
                 )
             }
             
@@ -1549,11 +1516,14 @@ private final class FooterComponent: Component {
     }
 }
 
-private func generateMoreButtonImage(color: UIColor) -> UIImage? {
+private func generateMoreButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(color.cgColor)
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(foregroundColor.cgColor)
         
         let circleSize = CGSize(width: 4.0, height: 4.0)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0), y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
@@ -1561,24 +1531,6 @@ private func generateMoreButtonImage(color: UIColor) -> UIImage? {
         context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0) - circleSize.width - 3.0, y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
         
         context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0) + circleSize.width + 3.0, y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
-    })
-}
-
-private func generateCloseButtonImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        
-        context.setLineWidth(2.0)
-        context.setLineCap(.round)
-        context.setStrokeColor(color.cgColor)
-        
-        context.move(to: CGPoint(x: 10.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
-        context.strokePath()
-        
-        context.move(to: CGPoint(x: 20.0, y: 10.0))
-        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
-        context.strokePath()
     })
 }
 
