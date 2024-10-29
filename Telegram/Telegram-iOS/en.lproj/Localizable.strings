@@ -7292,8 +7292,8 @@ Sorry for the inconvenience.";
 "Contacts.QrCode.MyCode" = "My QR Code";
 "Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
 
-"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Telegram to ON.";
-"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Telegram to ON.";
+"AccessDenied.QrCode" = "Teleport needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Teleport to ON.";
+"AccessDenied.QrCamera" = "Teleport needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Teleport to ON.";
 
 "Share.ShareToInstagramStories" = "Share to Instagram Stories";
 
@@ -7406,8 +7406,8 @@ Sorry for the inconvenience.";
 "Attachment.MediaAccessText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
 "Attachment.MediaAccessStoryText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
 
-"Attachment.LimitedMediaAccessText" = "You have limited Telegram from accessing all of your photos.";
-"Attachment.CameraAccessText" = "Telegram needs camera access so that you can take photos and videos.";
+"Attachment.LimitedMediaAccessText" = "You have limited Teleport from accessing all of your photos.";
+"Attachment.CameraAccessText" = "Teleport needs camera access so that you can take photos and videos.";
 "Attachment.Manage" = "Manage";
 
 "Attachment.OpenSettings" = "Go to Settings";
@@ -7442,7 +7442,7 @@ Sorry for the inconvenience.";
 "DownloadList.RemoveFileAlertRemove" = "Remove";
 
 "DownloadList.ClearAlertTitle" = "Downloaded Files";
-"DownloadList.ClearAlertText" = "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
+"DownloadList.ClearAlertText" = "Teleport allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
 
 "ChatList.Search.FilterDownloads" = "Downloads";
 
@@ -7451,7 +7451,7 @@ Sorry for the inconvenience.";
 "LiveStream.ViewerCount_any" = "%@ viewers";
 "LiveStream.Watching" = "watching";
 
-"LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
+"LiveStream.NoSignalAdminText" = "Oops! Teleport doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
 "LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
 
 "LiveStream.ViewCredentials" = "View Stream Key";

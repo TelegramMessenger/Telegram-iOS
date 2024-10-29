@@ -26,14 +26,13 @@ public final class AppReviewLogin {
         }
         return buildConfig.tpAppReviewerPhone
     }
+
+    public var isReviewOnProd: Bool {
+        return buildConfig.tpIsAppReviewerProdEnv
+    }
     
     public var entryCode: String? {
-        guard let phone, phone.count > 3 else {
-            return nil
-        }
-        let codeChar = String(phone[2])
-        
-        return String(repeating: codeChar, count: 5)
+        buildConfig.tpAppReviewerCode
     }
     
     public var isAuthorized: Bool {

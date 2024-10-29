@@ -290,8 +290,14 @@ public final class AuthorizationSequencePhoneEntryController: ViewController, MF
                     
                     if number == AppReviewLogin.shared.phone {
                         AppReviewLogin.shared.isActive = true
-                        sharedContext.beginNewAuth(testingEnvironment: true)
-                        return
+                        if AppReviewLogin.shared.isReviewOnProd {
+                            loginWithNumber?(
+                                controllerNode.currentNumber,
+                                controllerNode.syncContacts
+                            )
+                        } else {
+                            sharedContext.beginNewAuth(testingEnvironment: true)
+                        }
                     } else {
                         loginWithNumber?(
                             controllerNode.currentNumber,

@@ -202,6 +202,14 @@ API_AVAILABLE(ios(10))
     return @(TP_CONFIG_APP_REVIEWER_PHONE);
 }
 
+- (NSString * _Nullable)tpAppReviewerCode {
+    return @(TP_CONFIG_APP_REVIEWER_CODE);
+}
+
+- (BOOL)tpIsAppReviewerProdEnv {
+    return @(TP_CONFIG_APP_REVIEWER_ENV) != nil && [@(TP_CONFIG_APP_REVIEWER_ENV) isEqual:@"prod"];
+}
+
 + (NSString * _Nullable)bundleSeedId {
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
        (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,

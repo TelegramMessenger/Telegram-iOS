@@ -21,7 +21,9 @@ class BuildConfiguration:
         premium_iap_product_id,
         enable_siri,
         enable_icloud,
-        tp_app_reviewer_phone
+        tp_app_reviewer_phone,
+        tp_app_reviewer_code,
+        tp_app_reviewer_env
     ):
         self.bundle_id = bundle_id
         self.api_id = api_id
@@ -36,6 +38,8 @@ class BuildConfiguration:
         self.enable_siri = enable_siri
         self.enable_icloud = enable_icloud
         self.tp_app_reviewer_phone = tp_app_reviewer_phone
+        self.tp_app_reviewer_code = tp_app_reviewer_code
+        self.tp_app_reviewer_env = tp_app_reviewer_env
 
     def write_to_variables_file(self, bazel_path, use_xcode_managed_codesigning, aps_environment, path):
         string = ''
@@ -56,6 +60,8 @@ class BuildConfiguration:
         string += 'telegram_enable_icloud = {}\n'.format(self.enable_icloud)
         string += 'telegram_enable_watch = True\n'
         string += 'teleport_app_reviewer_phone = "{}"\n'.format(self.tp_app_reviewer_phone)
+        string += 'teleport_app_reviewer_code = "{}"\n'.format(self.tp_app_reviewer_code)
+        string += 'teleport_app_reviewer_env = "{}"\n'.format(self.tp_app_reviewer_env)
 
         if os.path.exists(path):
             os.remove(path)
@@ -83,6 +89,8 @@ def build_configuration_from_json(path):
             'enable_siri',
             'enable_icloud',
             'teleport_app_reviewer_phone',
+            'teleport_app_reviewer_code',
+            'teleport_app_reviewer_env',
         ]
         for key in required_keys:
             if key not in configuration_dict:
@@ -101,6 +109,8 @@ def build_configuration_from_json(path):
             enable_siri=configuration_dict['enable_siri'],
             enable_icloud=configuration_dict['enable_icloud'],
             tp_app_reviewer_phone=configuration_dict['teleport_app_reviewer_phone'],
+            tp_app_reviewer_code=configuration_dict['teleport_app_reviewer_code'],
+            tp_app_reviewer_env=configuration_dict['teleport_app_reviewer_env'],
         )
 
 
