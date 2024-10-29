@@ -58,6 +58,7 @@ func openResolvedUrlImpl(
     urlContext: OpenURLContext,
     navigationController: NavigationController?,
     forceExternal: Bool,
+    forceUpdate: Bool,
     openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer) -> Void,
     sendFile: ((FileMediaReference) -> Void)?,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?,
@@ -222,7 +223,16 @@ func openResolvedUrlImpl(
         case let .stickerPack(name, _):
             dismissInput()
 
-            let controller = StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: .name(name), stickerPacks: [.name(name)], parentNavigationController: navigationController, sendSticker: sendSticker, sendEmoji: sendEmoji, actionPerformed: { actions in
+            let controller = StickerPackScreen(
+                context: context,
+                updatedPresentationData: updatedPresentationData,
+                mainStickerPack: .name(name),
+                stickerPacks: [.name(name)],
+                ignoreCache: forceUpdate,
+                parentNavigationController: navigationController,
+                sendSticker: sendSticker,
+                sendEmoji: sendEmoji,
+                actionPerformed: { actions in
                 if actions.count > 1, let first = actions.first {
                     if case .add = first.2 {
                         present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.EmojiPackActionInfo_AddedTitle, text: presentationData.strings.EmojiPackActionInfo_MultipleAddedText(Int32(actions.count)), undo: false, info: first.0, topItem: first.1.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { _ in

@@ -899,7 +899,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, ASScrollVie
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return false
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peer, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { [weak self] peer, navigation in
             guard let strongSelf = self else {
                 return
             }

@@ -965,7 +965,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                     default:
                         strongSelf.loadProgress.set(1.0)
                         strongSelf.minimize()
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peer, navigation in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, forceUpdate: false, openPeer: { peer, navigation in
                             switch navigation {
                                 case let .chat(_, subject, peekData):
                                     if let navigationController = strongSelf.getNavigationController() {

@@ -9800,7 +9800,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             urlContext = .generic
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: urlContext, navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: urlContext, navigationController: self.effectiveNavigationController, forceExternal: forceExternal, forceUpdate: false, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -9896,7 +9896,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil, progress: progress, completion: nil)
     }
     
-    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, commit: @escaping () -> Void = {}) {
+    func openUrl(
+        _ url: String,
+        concealed: Bool,
+        forceExternal: Bool = false,
+        forceUpdate: Bool = false,
+        skipUrlAuth: Bool = false,
+        skipConcealedAlert: Bool = false,
+        message: Message? = nil,
+        allowInlineWebpageResolution: Bool = false,
+        progress: Promise<Bool>? = nil,
+        commit: @escaping () -> Void = {}
+    ) {
         self.commitPurposefulAction()
         
         if allowInlineWebpageResolution, let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {

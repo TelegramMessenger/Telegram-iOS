@@ -4339,6 +4339,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                 urlContext: .generic,
                                                 navigationController: nextController?.navigationController as? NavigationController,
                                                 forceExternal: false,
+                                                forceUpdate: false,
                                                 openPeer: { _, _ in
                                                 },
                                                 sendFile: nil,

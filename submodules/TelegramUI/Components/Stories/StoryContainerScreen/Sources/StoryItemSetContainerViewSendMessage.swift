@@ -1812,7 +1812,7 @@ final class StoryItemSetContainerSendMessage {
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)
-                        controller.openUrl = { [weak self] url, _, _ in
+                        controller.openUrl = { [weak self] url, _, _, _ in
                             guard let self else {
                                 return
                             }
@@ -2676,6 +2676,7 @@ final class StoryItemSetContainerSendMessage {
             urlContext: .chat(peerId: peerId, message: nil, updatedPresentationData: updatedPresentationData),
             navigationController: navigationController,
             forceExternal: forceExternal,
+            forceUpdate: false,
             openPeer: { [weak self, weak view] peerId, navigation in
                 guard let self, let view, let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
                     return
