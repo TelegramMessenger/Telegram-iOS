@@ -261,7 +261,7 @@ public final class RasterizedCompositionMonochromeLayer: SimpleLayer {
     override public init() {
         super.init()
         
-        self.maskedLayer.isHidden = true
+        self.maskedLayer.opacity = 0.0
         self.addSublayer(self.maskedLayer)
         
         self.maskedLayer.mask = self.contentsLayer
@@ -377,9 +377,9 @@ public final class RasterizedCompositionMonochromeLayer: SimpleLayer {
     }
     
     private func updateRasterizationMode() {
-        self.maskedLayer.isHidden = !self.contentsLayer.hasAnimationsInTree
-        if self.rasterizedLayer.isHidden != (!self.maskedLayer.isHidden) {
-            self.rasterizedLayer.isHidden = (!self.maskedLayer.isHidden)
+        self.maskedLayer.opacity = self.contentsLayer.hasAnimationsInTree ? 1.0 : 0.0
+        if self.rasterizedLayer.isHidden != (self.maskedLayer.opacity != 0.0) {
+            self.rasterizedLayer.isHidden = self.maskedLayer.opacity != 0.0
             if !self.rasterizedLayer.isHidden {
                 self.updateContents()
             }
