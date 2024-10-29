@@ -326,6 +326,7 @@ final class ChatManagingBotTitlePanelNode: ChatTitleAccessoryPanelNode {
                         urlContext: .generic,
                         navigationController: chatController.navigationController as? NavigationController,
                         forceExternal: false,
+                        forceUpdate: false,
                         openPeer: { [weak self] peer, navigation in
                             guard let self, let chatController = interfaceInteraction.chatController() else {
                                 return

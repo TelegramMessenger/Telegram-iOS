@@ -145,7 +145,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
         }
         return nil
     } |> mapToSignal { peer -> Signal<RevenueStats?, NoError> in
-        guard let peer, let inputChannel = apiInputChannel(peer) else {
+        guard let peer, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
         
@@ -154,7 +154,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
             flags |= (1 << 1)
         }
         
-        return network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, channel: inputChannel))
+        return network.request(Api.functions.stats.getBroadcastRevenueStats(flags: flags, peer: inputPeer))
         |> map { result -> RevenueStats? in
             return RevenueStats(apiRevenueStats: result, peerId: peerId)
         }
@@ -354,13 +354,13 @@ private final class RevenueStatsTransactionsContextImpl {
         }
         |> mapToSignal { peer -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
             if let peer {
-                guard let inputChannel = apiInputChannel(peer) else {
+                guard let inputPeer = apiInputPeer(peer) else {
                     return .complete()
                 }
                 let offset = lastOffset ?? 0
                 let limit: Int32 = lastOffset == nil ? 25 : 50
                 
-                return account.network.request(Api.functions.stats.getBroadcastRevenueTransactions(channel: inputChannel, offset: offset, limit: limit), automaticFloodWait: false)
+                return account.network.request(Api.functions.stats.getBroadcastRevenueTransactions(peer: inputPeer, offset: offset, limit: limit), automaticFloodWait: false)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stats.BroadcastRevenueTransactions?, NoError> in
                     return .single(nil)
@@ -502,7 +502,7 @@ public enum RequestRevenueWithdrawalError : Equatable {
 }
 
 func _internal_checkChannelRevenueWithdrawalAvailability(account: Account) -> Signal<Never, RequestRevenueWithdrawalError> {
-    return account.network.request(Api.functions.stats.getBroadcastRevenueWithdrawalUrl(channel: .inputChannelEmpty, password: .inputCheckPasswordEmpty))
+    return account.network.request(Api.functions.stats.getBroadcastRevenueWithdrawalUrl(peer: .inputPeerEmpty, password: .inputCheckPasswordEmpty))
     |> mapError { error -> RequestRevenueWithdrawalError in
         if error.errorDescription == "PASSWORD_HASH_INVALID" {
             return .requestPassword
@@ -530,7 +530,7 @@ func _internal_requestChannelRevenueWithdrawalUrl(account: Account, peerId: Peer
     }
     
     return account.postbox.transaction { transaction -> Signal<String, RequestRevenueWithdrawalError> in
-        guard let channel = transaction.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(channel) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
             
@@ -555,7 +555,7 @@ func _internal_requestChannelRevenueWithdrawalUrl(account: Account, peerId: Peer
         
         return checkPassword
         |> mapToSignal { password -> Signal<String, RequestRevenueWithdrawalError> in
-            return account.network.request(Api.functions.stats.getBroadcastRevenueWithdrawalUrl(channel: inputChannel, password: password), automaticFloodWait: false)
+            return account.network.request(Api.functions.stats.getBroadcastRevenueWithdrawalUrl(peer: inputPeer, password: password), automaticFloodWait: false)
             |> mapError { error -> RequestRevenueWithdrawalError in
                 if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                     return .limitExceeded

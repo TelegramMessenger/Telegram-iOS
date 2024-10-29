@@ -180,11 +180,17 @@ extension ChatControllerImpl {
             
         }
         
+        self.chatDisplayNode.historyNode.hasAtLeast3MessagesUpdated = { [weak self] hasAtLeast3Messages in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasAtLeast3Messages(hasAtLeast3Messages) })
+            }
+        }
         self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
             }
         }
+        
         if case .peer(self.context.account.peerId) = self.chatLocation {
             var didDisplayTooltip = false
             if "".isEmpty {
@@ -1120,9 +1126,16 @@ extension ChatControllerImpl {
         self.chatDisplayNode.setupSendActionOnViewUpdate = { [weak self] f, messageCorrelationId in
             //print("setup layoutActionOnViewTransition")
 
-            self?.chatDisplayNode.historyNode.layoutActionOnViewTransition = ({ [weak self] transition in
+            guard let self else {
+                return
+            }
+            self.layoutActionOnViewTransitionAction = f
+            
+            self.chatDisplayNode.historyNode.layoutActionOnViewTransition = ({ [weak self] transition in
                 f()
                 if let strongSelf = self, let validLayout = strongSelf.validLayout {
+                    strongSelf.layoutActionOnViewTransitionAction = nil
+                    
                     var mappedTransition: (ChatHistoryListViewTransition, ListViewUpdateSizeAndInsets?)?
                     
                     let isScheduledMessages: Bool
@@ -1262,35 +1275,75 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let signal: Signal<[MessageId?], NoError>
-                if forwardSourcePeerIds.count > 1 {
-                    var signals: [Signal<[MessageId?], NoError>] = []
-                    for messagesGroup in forwardedMessages {
-                        signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
-                    }
-                    signal = combineLatest(signals)
-                    |> map { results in
-                        var ids: [MessageId?] = []
-                        for result in results {
-                            ids.append(contentsOf: result)
+                let _ = (strongSelf.shouldDivertMessagesToScheduled(messages: transformedMessages)
+                |> deliverOnMainQueue).start(next: { shouldDivert in
+                    let signal: Signal<[MessageId?], NoError>
+                    var shouldOpenScheduledMessages = false
+                    if forwardSourcePeerIds.count > 1 {
+                        var forwardedMessages = forwardedMessages
+                        if shouldDivert {
+                            forwardedMessages = forwardedMessages.map { messageGroup -> [EnqueueMessage] in
+                                return messageGroup.map { message -> EnqueueMessage in
+                                    return message.withUpdatedAttributes { attributes in
+                                        var attributes = attributes
+                                        attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                                        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: Int32(Date().timeIntervalSince1970) + 10 * 24 * 60 * 60))
+                                        return attributes
+                                    }
+                                }
+                            }
+                            shouldOpenScheduledMessages = true
                         }
-                        return ids
+                        
+                        var signals: [Signal<[MessageId?], NoError>] = []
+                        for messagesGroup in forwardedMessages {
+                            signals.append(enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messagesGroup))
+                        }
+                        signal = combineLatest(signals)
+                        |> map { results in
+                            var ids: [MessageId?] = []
+                            for result in results {
+                                ids.append(contentsOf: result)
+                            }
+                            return ids
+                        }
+                    } else {
+                        var transformedMessages = transformedMessages
+                        if shouldDivert {
+                            transformedMessages = transformedMessages.map { message -> EnqueueMessage in
+                                return message.withUpdatedAttributes { attributes in
+                                    var attributes = attributes
+                                    attributes.removeAll(where: { $0 is OutgoingScheduleInfoMessageAttribute })
+                                    attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: Int32(Date().timeIntervalSince1970) + 10 * 24 * 60 * 60))
+                                    return attributes
+                                }
+                            }
+                            shouldOpenScheduledMessages = true
+                        }
+                        
+                        signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
                     }
-                } else {
-                    signal = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: transformedMessages)
-                }
-                
-                let _ = (signal
-                |> deliverOnMainQueue).startStandalone(next: { messageIds in
-                    if let strongSelf = self {
+                    
+                    let _ = (signal
+                    |> deliverOnMainQueue).startStandalone(next: { messageIds in
+                        guard let strongSelf = self else {
+                            return
+                        }
                         if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
                         } else {
                             strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                            
+                            if shouldOpenScheduledMessages {
+                                if let layoutActionOnViewTransitionAction = strongSelf.layoutActionOnViewTransitionAction {
+                                    strongSelf.layoutActionOnViewTransitionAction = nil
+                                    layoutActionOnViewTransitionAction()
+                                }
+                            }
                         }
-                    }
+                    })
+                    
+                    donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
                 })
-                
-                donateSendMessageIntent(account: strongSelf.context.account, sharedContext: strongSelf.context.sharedContext, intentContext: .chat, peerIds: [peerId])
             } else if case let .customChatContents(customChatContents) = strongSelf.subject {
                 switch customChatContents.kind {
                 case .hashTagSearch:
@@ -1390,7 +1443,7 @@ extension ChatControllerImpl {
             if let messageId = strongSelf.presentationInterfaceState.interfaceState.editMessage?.messageId {
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                 |> deliverOnMainQueue).startStandalone(next: { message in
-                    guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState, case let .media(options) = editMessageState.content else {
+                    guard let strongSelf = self, let editMessageState = strongSelf.presentationInterfaceState.editMessageState else {
                         return
                     }
                     var originalMediaReference: AnyMediaReference?
@@ -1405,7 +1458,11 @@ extension ChatControllerImpl {
                             }
                         }
                     }
-                    strongSelf.oldPresentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
+                    var editMediaOptions: MessageMediaEditingOptions?
+                    if case let .media(options) = editMessageState.content {
+                        editMediaOptions = options
+                    }
+                    strongSelf.presentEditingAttachmentMenu(editMediaOptions: editMediaOptions, editMediaReference: originalMediaReference)
                 })
             } else {
                 strongSelf.presentAttachmentMenu(subject: .default)
@@ -4178,12 +4235,7 @@ extension ChatControllerImpl {
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
-            var langCode = langCode
-            if langCode == "nb" {
-                langCode = "no"
-            } else if langCode == "pt-br" {
-                langCode = "pt"
-            }
+            let langCode = normalizeTranslationLanguage(langCode)
             let _ = updateChatTranslationStateInteractively(engine: strongSelf.context.engine, peerId: peerId, { current in
                 return current?.withToLang(langCode).withIsEnabled(true)
             }).startStandalone()
@@ -4530,22 +4582,62 @@ extension ChatControllerImpl {
             
             if let peerId = peerId {
                 self.sentMessageEventsDisposable.set((self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] namespace, silent in
-                    if let strongSelf = self {
-                        let inAppNotificationSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        if inAppNotificationSettings.playSounds && !silent {
-                            serviceSoundManager.playMessageDeliveredSound()
+                |> deliverOnMainQueue).startStrict(next: { [weak self] eventGroup in
+                    guard let self else {
+                        return
+                    }
+                    let inAppNotificationSettings = self.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                    if inAppNotificationSettings.playSounds, let firstEvent = eventGroup.first, !firstEvent.isSilent {
+                        serviceSoundManager.playMessageDeliveredSound()
+                    }
+                    if self.presentationInterfaceState.subject != .scheduledMessages, let firstEvent = eventGroup.first, firstEvent.id.namespace == Namespaces.Message.ScheduledCloud {
+                        if eventGroup.contains(where: { $0.isPendingProcessing }) {
+                            self.openScheduledMessages(completion: { [weak self] c in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                c.dismissAllUndoControllers()
+                                
+                                Queue.mainQueue().after(0.5) { [weak c] in
+                                    c?.displayProcessingVideoTooltip(messageId: firstEvent.id)
+                                }
+                                
+                                c.present(
+                                    UndoOverlayController(
+                                        presentationData: self.presentationData,
+                                        content: .universalImage(
+                                            image: generateTintedImage(image: UIImage(bundleImageName: "Chat/ToastImprovingVideo"), color: .white)!,
+                                            size: nil,
+                                            title: self.presentationData.strings.Chat_ToastImprovingVideo_Title,
+                                            text: self.presentationData.strings.Chat_ToastImprovingVideo_Text,
+                                            customUndoText: nil,
+                                            timeout: 5.0
+                                        ),
+                                        elevatedLayout: false,
+                                        position: .top,
+                                        action: { _ in
+                                            return true
+                                        }
+                                    ),
+                                    in: .current
+                                )
+                            })
                         }
-                        if strongSelf.presentationInterfaceState.subject != .scheduledMessages && namespace == Namespaces.Message.ScheduledCloud {
-                            strongSelf.openScheduledMessages()
+                    }
+                    
+                    if self.shouldDisplayChecksTooltip {
+                        Queue.mainQueue().after(1.0) { [weak self] in
+                            self?.displayChecksTooltip()
                         }
-                        
-                        if strongSelf.shouldDisplayChecksTooltip {
-                            Queue.mainQueue().after(1.0) {
-                                strongSelf.displayChecksTooltip()
-                            }
-                            strongSelf.shouldDisplayChecksTooltip = false
-                            strongSelf.checksTooltipDisposable.set(strongSelf.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .newcomerTicks).startStrict())
+                        self.shouldDisplayChecksTooltip = false
+                        self.checksTooltipDisposable.set(self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .newcomerTicks).startStrict())
+                    }
+                    
+                    if let shouldDisplayProcessingVideoTooltip = self.shouldDisplayProcessingVideoTooltip {
+                        self.shouldDisplayProcessingVideoTooltip = nil
+                        Queue.mainQueue().after(1.0) { [weak self] in
+                            self?.displayProcessingVideoTooltip(messageId: shouldDisplayProcessingVideoTooltip)
                         }
                     }
                 }))
@@ -4853,6 +4945,20 @@ extension ChatControllerImpl {
                 return false
             }), in: .current)
         })
+        
+        if case .scheduledMessages = self.subject {
+            self.postedScheduledMessagesEventsDisposable = (self.context.account.stateManager.sentScheduledMessageIds
+            |> deliverOnMainQueue).start(next: { [weak self] ids in
+                guard let self, let peerId = self.chatLocation.peerId else {
+                    return
+                }
+                let filteredIds = Array(ids).filter({ $0.peerId == peerId })
+                if filteredIds.isEmpty {
+                    return
+                }
+                self.displayPostedScheduledMessagesToast(ids: filteredIds)
+            })
+        }
         
         self.displayNodeDidLoad()
     }

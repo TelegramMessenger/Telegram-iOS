@@ -296,6 +296,10 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
         return nil
     }
     
+    func videoQualityStateSignal() -> Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError> {
+        return .single(nil)
+    }
+    
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {
         return self.playbackCompletedListeners.add(f)
     }
@@ -318,6 +322,9 @@ private final class SystemVideoContentNode: ASDisplayNode, UniversalVideoContent
     }
     
     func exitNativePictureInPicture() {
+    }
+    
+    func setNativePictureInPictureIsActive(_ value: Bool) {
     }
 }
 

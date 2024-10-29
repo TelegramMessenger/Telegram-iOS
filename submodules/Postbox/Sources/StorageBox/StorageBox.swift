@@ -18,6 +18,8 @@ private func md5Hash(_ data: Data) -> HashId {
     return HashId(data: hashData)
 }
 
+public var storageBoxDebugFunc: ((Int64) -> Void)?
+
 public final class StorageBox {
     public final class Stats {
         public final class ContentTypeStats {
@@ -320,7 +322,11 @@ public final class StorageBox {
                 currentSize = 0
             }
             
-            self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            withExtendedLifetime(key, {
+                withUnsafeMutablePointer(to: &currentSize, { pointer in
+                    self.valueBox.set(self.contentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
+                })
+            })
             
             self.totalSize += delta
         }
@@ -342,7 +348,11 @@ public final class StorageBox {
                 currentSize = 0
             }
             
-            self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: &currentSize, capacity: 8, length: 8, freeWhenDone: false))
+            withExtendedLifetime(key, {
+                withUnsafeMutablePointer(to: &currentSize, { pointer in
+                    self.valueBox.set(self.peerContentTypeStatsTable, key: key, value: MemoryBuffer(memory: UnsafeMutableRawPointer(pointer), capacity: 8, length: 8, freeWhenDone: false))
+                })
+            })
         }
         
         func internalAdd(reference: Reference, to id: Data, contentType: UInt8, size: Int64?) {

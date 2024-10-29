@@ -1022,11 +1022,7 @@ public class TranslateScreen: ViewController {
             }
         }
         
-        if toLanguage == "nb" {
-            toLanguage = "no"
-        } else if toLanguage == "pt-br" {
-            toLanguage = "pt"
-        }
+        toLanguage = normalizeTranslationLanguage(toLanguage)
         
         var copyTranslationImpl: ((String) -> Void)?
         var changeLanguageImpl: ((String, String, @escaping (String, String) -> Void) -> Void)?

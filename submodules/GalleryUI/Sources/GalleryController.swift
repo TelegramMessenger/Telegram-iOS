@@ -245,7 +245,18 @@ public func galleryItemForEntry(
                 content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), loopVideo: true, enableSound: false, tempFilePath: tempFilePath, captureProtected: captureProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
             } else {
                 if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
+                    var isHLS = false
                     if NativeVideoContent.isHLSVideo(file: file) {
+                        isHLS = true
+                        
+                        if let data = context.currentAppConfiguration.with({ $0 }).data, let disableHLS = data["video_ignore_alt_documents"] as? Double {
+                            if Int(disableHLS) != 0 {
+                                isHLS = false
+                            }
+                        }
+                    }
+                    
+                    if isHLS {
                         content = HLSVideoContent(id: .message(message.id, message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), streamVideo: streamVideos, loopVideo: loopVideos)
                     } else {
                         content = NativeVideoContent(id: .message(message.stableId, file.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: file), imageReference: mediaImage.flatMap({ ImageMediaReference.message(message: MessageReference(message), media: $0) }), streamVideo: .conservative, loopVideo: loopVideos, tempFilePath: tempFilePath, captureProtected: captureProtected, storeAfterDownload: generateStoreAfterDownload?(message, file))
@@ -309,13 +320,16 @@ public func galleryItemForEntry(
         } else {
             if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {
                 return ChatAnimationGalleryItem(context: context, presentationData: presentationData, message: message, location: location)
-            }
-            else if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
+            } else if file.mimeType.hasPrefix("image/") && file.mimeType != "image/gif" {
                 var pixelsCount: Int = 0
                 if let dimensions = file.dimensions {
                     pixelsCount = Int(dimensions.width) * Int(dimensions.height)
                 }
-                if pixelsCount < 10000 * 10000 {
+                var fileSize: Int64 = 0
+                if let size = file.size {
+                    fileSize = size
+                }
+                if pixelsCount < 10000 * 10000 && fileSize < 16 * 1024 * 1024 {
                     return ChatImageGalleryItem(
                         context: context,
                         presentationData: presentationData,
@@ -697,13 +711,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
                 translateToLanguage = chatTranslationState(context: context, peerId: messageId.peerId)
                 |> map { translationState in
                     if let translationState, translationState.isEnabled {
-                        var translateToLanguage = translationState.toLang ?? baseLanguageCode
-                        if translateToLanguage == "nb" {
-                            translateToLanguage = "no"
-                        } else if translateToLanguage == "pt-br" {
-                            translateToLanguage = "pt"
-                        }
-                        return translateToLanguage
+                        let translateToLanguage = translationState.toLang ?? baseLanguageCode
+                        return normalizeTranslationLanguage(translateToLanguage)
                     } else {
                         return nil
                     }

@@ -178,7 +178,9 @@ private func validatePeerReadState(network: Network, postbox: Postbox, stateMana
                             if case let .idBased(updatedMaxIncomingReadId, _, _, updatedCount, updatedMarkedUnread) = readState {
                                 if updatedCount != 0 || updatedMarkedUnread {
                                     if localMaxIncomingReadId > updatedMaxIncomingReadId {
-                                        return .retry
+                                        if !"".isEmpty {
+                                            return .retry
+                                        }
                                     }
                                 }
                             }

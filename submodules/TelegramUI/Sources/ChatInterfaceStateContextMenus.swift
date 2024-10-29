@@ -476,6 +476,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single(ContextController.Items(content: .list([])))
     }
+    if let message = messages.first, message.id.namespace < 0 {
+        return .single(ContextController.Items(content: .list([])))
+    }
     
     var isEmbeddedMode = false
     if case .standard(.embedded) = chatPresentationInterfaceState.mode {
@@ -547,7 +550,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
             }, iconSource: nil, action: { _, f in
                 f(.dismissWithoutContent)
-                controllerInteraction.navigationController()?.pushViewController(AdsInfoScreen(context: context))
+                controllerInteraction.navigationController()?.pushViewController(AdsInfoScreen(context: context, mode: .channel))
             })))
             
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
@@ -1137,9 +1140,28 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if data.messageActions.options.contains(.sendScheduledNow) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
+            }, action: { c, _ in
+                if messages.contains(where: { $0.pendingProcessingAttribute != nil }) {
+                    c?.dismiss(completion: {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        controllerInteraction.presentController(standardTextAlertController(
+                            theme: AlertControllerTheme(presentationData: presentationData),
+                            title: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Title,
+                            text: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Text,
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_ScheduledForceSendProcessingVideo_Action, action: {
+                                    controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                                }),
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+                            ],
+                            actionLayout: .vertical
+                        ), nil)
+                    })
+                } else {
+                    c?.dismiss(result: .dismissWithoutContent, completion: nil)
+                    controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                }
             })))
         }
         
@@ -1857,6 +1879,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 reactionCount = 0
             }
         }
+        
+        let isEdited = message.attributes.contains(where: { attribute in
+            if let attribute = attribute as? EditedMessageAttribute, !attribute.isHidden, attribute.date != 0 {
+                return true
+            }
+            return false
+        })
+        
+        if isEdited {
+            if !actions.isEmpty {
+                actions.insert(.separator, at: 0)
+            }
+            actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: false, isEdit: true, stats: MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:]), action: nil), false), at: 0)
+        }
 
         if let peer = message.peers[message.id.peerId], (canViewStats || reactionCount != 0) {
             var hasReadReports = false
@@ -1880,18 +1916,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             } else {
                 reactionCount = 0
             }
-            
-            /*var readStats = readStats
-            if !canViewStats {
-                readStats = MessageReadStats(reactionCount: 0, peers: [])
-            }*/
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
                     actions.insert(.separator, at: 0)
                 }
+                
+                var readStats = readStats
+                if !(hasReadReports || reactionCount != 0) {
+                    readStats = MessageReadStats(reactionCount: 0, peers: [], readTimestamps: [:])
+                }
 
-                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
+                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, isEdit: false, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                         if let stats, stats.peers.isEmpty {
                             c.dismiss(completion: {
@@ -2196,8 +2232,10 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
-                        optionsMap[id]!.insert(.editScheduledTime)
+                    if message.pendingProcessingAttribute == nil {
+                        if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
+                            optionsMap[id]!.insert(.editScheduledTime)
+                        }
                     }
                     if let peer = getPeer(id.peerId), let channel = peer as? TelegramChannel {
                         if !message.flags.contains(.Incoming) {
@@ -2296,24 +2334,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                                 case .creator, .admin:
                                     optionsMap[id]!.insert(.deleteGlobally)
                                 case .member:
-                                    var hasMediaToReport = false
-                                    for media in message.media {
-                                        if let _ = media as? TelegramMediaImage {
-                                            hasMediaToReport = true
-                                        } else if let _ = media as? TelegramMediaFile {
-                                            hasMediaToReport = true
-                                        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                                            if let _ = content.image {
-                                                hasMediaToReport = true
-                                            } else if let _ = content.file {
-                                                hasMediaToReport = true
-                                            }
-                                        }
-                                    }
-                                    if hasMediaToReport {
-                                        optionsMap[id]!.insert(.report)
-                                    }
+                                    break
                             }
+                            optionsMap[id]!.insert(.report)
                         }
                     } else if let user = peer as? TelegramUser {
                         if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() && !isShareProtected {
@@ -2634,13 +2657,15 @@ final class ChatReadReportContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let message: Message
     fileprivate let hasReadReports: Bool
+    fileprivate let isEdit: Bool
     fileprivate let stats: MessageReadStats?
-    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void
+    fileprivate let action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?
 
-    init(context: AccountContext, message: Message, hasReadReports: Bool, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void) {
+    init(context: AccountContext, message: Message, hasReadReports: Bool, isEdit: Bool, stats: MessageReadStats?, action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void)?) {
         self.context = context
         self.message = message
         self.hasReadReports = hasReadReports
+        self.isEdit = isEdit
         self.stats = stats
         self.action = action
     }
@@ -2719,7 +2744,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.accessibilityLabel = presentationData.strings.VoiceChat_StopRecording
 
         self.iconNode = ASImageNode()
-        if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        if self.item.isEdit {
+            self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuEditIcon"), color: presentationData.theme.actionSheet.primaryTextColor)
+        } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/MenuReadIcon"), color: presentationData.theme.actionSheet.primaryTextColor)
         } else if let reactionsAttribute = item.message.reactionsAttribute, !reactionsAttribute.reactions.isEmpty {
             self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: presentationData.theme.actionSheet.primaryTextColor)
@@ -2818,12 +2845,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
         if let currentStats = self.currentStats {
             if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-                self.buttonNode.isUserInteractionEnabled = currentStats.peers.isEmpty
+                self.buttonNode.isUserInteractionEnabled = item.action != nil && currentStats.peers.isEmpty
             } else {
-                self.buttonNode.isUserInteractionEnabled = !currentStats.peers.isEmpty || reactionCount != 0
+                self.buttonNode.isUserInteractionEnabled = item.action != nil && (!currentStats.peers.isEmpty || reactionCount != 0)
             }
         } else {
-            self.buttonNode.isUserInteractionEnabled = reactionCount != 0
+            self.buttonNode.isUserInteractionEnabled = item.action != nil && reactionCount != 0
 
             self.disposable = (item.context.engine.messages.messageReadStats(id: item.message.id)
             |> deliverOnMainQueue).startStrict(next: { [weak self] value in
@@ -2836,7 +2863,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             })
         }
         
-        item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
+        if !self.item.isEdit {
+            item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
+        }
     }
 
     deinit {
@@ -2862,9 +2891,9 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
         if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
-            self.buttonNode.isUserInteractionEnabled = stats.peers.isEmpty
+            self.buttonNode.isUserInteractionEnabled = self.item.action != nil && stats.peers.isEmpty
         } else {
-            self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
+            self.buttonNode.isUserInteractionEnabled = self.item.action != nil && (!stats.peers.isEmpty || stats.reactionCount != 0)
         }
 
         guard let (calculatedWidth, size) = self.validLayout else {
@@ -2908,7 +2937,24 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             reactionCount = currentStats.reactionCount
             
             if currentStats.peers.isEmpty {
-                if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                if self.item.isEdit, let attribute = self.item.message.attributes.first(where: { $0 is EditedMessageAttribute }) as? EditedMessageAttribute, !attribute.isHidden, attribute.date != 0 {
+                    let dateText = humanReadableStringForTimestamp(strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, timestamp: attribute.date, alwaysShowTime: true, allowYesterday: true, format: HumanReadableStringFormat(
+                        dateFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_Date(value).string, ranges: [])
+                        },
+                        tomorrowFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
+                        },
+                        todayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_TodayAt(value).string, ranges: [])
+                        },
+                        yesterdayFormatString: { value in
+                            return PresentationStrings.FormattedString(string: self.presentationData.strings.Chat_PrivateMessageEditTimestamp_YesterdayAt(value).string, ranges: [])
+                        }
+                    )).string
+                    
+                    self.textNode.attributedText = NSAttributedString(string: dateText, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
+                } else if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                     let text = NSAttributedString(string: self.presentationData.strings.Chat_ContextMenuReadDate_ReadAvailablePrefix, font: Font.regular(floor(self.presentationData.listsFontSize.baseDisplaySize * 0.8)), textColor: self.presentationData.theme.contextMenu.primaryColor)
                     if self.textNode.attributedText != text {
                         animatePositions = false
@@ -3026,7 +3072,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             let positionTransition: ContainedViewLayoutTransition = animatePositions ? transition : .immediate
             
             let verticalOrigin = floor((size.height - combinedTextHeight) / 2.0)
-            let textFrame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + 4.0, y: verticalOrigin), size: textSize)
+            var textFrame = CGRect(origin: CGPoint(x: sideInset + iconSize.width + 4.0, y: verticalOrigin), size: textSize)
+            
+            if self.item.isEdit {
+                textFrame.origin.x -= 2.0
+            }
+            
             positionTransition.updateFrameAdditive(node: self.textNode, frame: textFrame)
             transition.updateAlpha(node: self.textNode, alpha: self.currentStats == nil ? 0.0 : 1.0)
             
@@ -3070,14 +3121,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             transition.updateAlpha(node: self.shimmerNode, alpha: self.currentStats == nil ? 1.0 : 0.0)
 
             if !iconSize.width.isZero {
-                transition.updateFrameAdditive(node: self.iconNode, frame: CGRect(origin: CGPoint(x: sideInset + 1.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
+                var iconFrame = CGRect(origin: CGPoint(x: sideInset + 1.0, y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                if self.item.isEdit {
+                    iconFrame.origin.x -= 2.0
+                }
+                transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
             }
 
             let avatarsContent: AnimatedAvatarSetContext.Content
             let placeholderAvatarsContent: AnimatedAvatarSetContext.Content
 
             var avatarsPeers: [EnginePeer] = []
-            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+            if self.item.message.id.peerId.namespace == Namespaces.Peer.CloudUser || self.item.isEdit {
             } else if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
                 for recentPeer in recentPeers {
                     if let peer = self.item.message.peers[recentPeer.peerId] {
@@ -3155,12 +3210,15 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         guard let controller = self.getController() else {
             return
         }
-        self.item.action(controller, { [weak self] result in
+        self.item.action?(controller, { [weak self] result in
             self?.actionSelected(result)
         }, self.currentStats, self.customEmojiPacks, self.firstCustomEmojiReaction)
     }
 
     var isActionEnabled: Bool {
+        if self.item.action == nil {
+            return false
+        }
         var reactionCount = 0
         for reaction in mergedMessageReactionsAndPeers(accountPeerId: self.item.context.account.peerId, accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)

@@ -23,6 +23,7 @@ public final class BalancedTextComponent: Component {
     public let textShadowBlur: CGFloat?
     public let textStroke: (UIColor, CGFloat)?
     public let highlightColor: UIColor?
+    public let highlightInset: UIEdgeInsets
     public let highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)?
     public let tapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
     public let longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)?
@@ -41,6 +42,7 @@ public final class BalancedTextComponent: Component {
         textShadowBlur: CGFloat? = nil,
         textStroke: (UIColor, CGFloat)? = nil,
         highlightColor: UIColor? = nil,
+        highlightInset: UIEdgeInsets = .zero,
         highlightAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? = nil,
         tapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil,
         longTapAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil
@@ -58,6 +60,7 @@ public final class BalancedTextComponent: Component {
         self.textShadowBlur = textShadowBlur
         self.textStroke = textStroke
         self.highlightColor = highlightColor
+        self.highlightInset = highlightInset
         self.highlightAction = highlightAction
         self.tapAction = tapAction
         self.longTapAction = longTapAction
@@ -122,6 +125,10 @@ public final class BalancedTextComponent: Component {
             return false
         }
         
+        if lhs.highlightInset != rhs.highlightInset {
+            return false
+        }
+        
         return true
     }
     
@@ -165,6 +172,7 @@ public final class BalancedTextComponent: Component {
             self.textView.textShadowBlur = component.textShadowBlur
             self.textView.textStroke = component.textStroke
             self.textView.linkHighlightColor = component.highlightColor
+            self.textView.linkHighlightInset = component.highlightInset
             self.textView.highlightAttributeAction = component.highlightAction
             self.textView.tapAttributeAction = component.tapAction
             self.textView.longTapAttributeAction = component.longTapAction

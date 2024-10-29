@@ -1812,7 +1812,7 @@ final class StoryItemSetContainerSendMessage {
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)
-                        controller.openUrl = { [weak self] url, _, _ in
+                        controller.openUrl = { [weak self] url, _, _, _ in
                             guard let self else {
                                 return
                             }
@@ -2676,6 +2676,7 @@ final class StoryItemSetContainerSendMessage {
             urlContext: .chat(peerId: peerId, message: nil, updatedPresentationData: updatedPresentationData),
             navigationController: navigationController,
             forceExternal: forceExternal,
+            forceUpdate: false,
             openPeer: { [weak self, weak view] peerId, navigation in
                 guard let self, let view, let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
                     return
@@ -2919,10 +2920,10 @@ final class StoryItemSetContainerSendMessage {
             }
             if !hashtag.isEmpty {
                 if peerName == nil {
-                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(hashtag), listContext: nil)
+                    let searchController = component.context.sharedContext.makeStorySearchController(context: component.context, scope: .query(nil, hashtag), listContext: nil)
                     navigationController.pushViewController(searchController)
                 } else {
-                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, all: true)
+                    let searchController = component.context.sharedContext.makeHashtagSearchController(context: component.context, peer: peer.flatMap(EnginePeer.init), query: hashtag, stories: true, forceDark: true)
                     navigationController.pushViewController(searchController)
                 }
             }

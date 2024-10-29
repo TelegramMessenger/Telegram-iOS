@@ -326,7 +326,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 }
             case let .transaction(transaction, parentPeer):
                 if let starGift = transaction.starGift {
-                    titleText = "Gift"
+                    titleText = strings.Stars_Transaction_Gift_Title
                     descriptionText = ""
                     count = transaction.count
                     transactionId = transaction.id
@@ -410,10 +410,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     case .ads:
                         titleText = strings.Stars_Transaction_TelegramAds_Title
                         via = strings.Stars_Transaction_TelegramAds_Subtitle
+                    case .apiLimitExtension:
+                        titleText = strings.Stars_Transaction_TelegramBotApi_Title
                     case .unsupported:
                         titleText = strings.Stars_Transaction_Unsupported_Title
                     }
-                    if !transaction.media.isEmpty {
+                    
+                    if let floodskipNumber = transaction.floodskipNumber {
+                        descriptionText = strings.Stars_Transaction_TelegramBotApi_Messages(floodskipNumber)
+                    } else if !transaction.media.isEmpty {
                         var description: String = ""
                         var photoCount: Int32 = 0
                         var videoCount: Int32 = 0
@@ -933,7 +938,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 5,
                         lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.2),
+                        highlightColor: linkColor.withAlphaComponent(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)

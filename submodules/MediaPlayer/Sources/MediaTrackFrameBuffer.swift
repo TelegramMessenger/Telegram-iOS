@@ -11,7 +11,7 @@ public enum MediaTrackFrameBufferStatus {
 public enum MediaTrackFrameResult {
     case noFrames
     case skipFrame
-    case restoreState([MediaTrackFrame], CMTime)
+    case restoreState(frames: [MediaTrackFrame], atTimestamp: CMTime, soft: Bool)
     case frame(MediaTrackFrame)
     case finished
 }
@@ -32,6 +32,7 @@ public final class MediaTrackFrameBuffer {
     private let frameSource: MediaFrameSource
     private let decoder: MediaTrackFrameDecoder
     private let type: MediaTrackFrameType
+    public let startTime: CMTime
     public let duration: CMTime
     public let rotationAngle: Double
     public let aspect: Double
@@ -40,16 +41,17 @@ public final class MediaTrackFrameBuffer {
     
     private var frameSourceSinkIndex: Int?
     
-    private var frames: [MediaTrackDecodableFrame] = []
+    private(set) var frames: [MediaTrackDecodableFrame] = []
     private var maxFrameTime: Double?
     private var endOfStream = false
     private var bufferedUntilTime: CMTime?
     private var isWaitingForLowWaterDuration: Bool = false
     
-    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime, rotationAngle: Double, aspect: Double, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
+    init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, startTime: CMTime, duration: CMTime, rotationAngle: Double, aspect: Double, stallDuration: Double = 1.0, lowWaterDuration: Double = 2.0, highWaterDuration: Double = 3.0) {
         self.frameSource = frameSource
         self.type = type
         self.decoder = decoder
+        self.startTime = startTime
         self.duration = duration
         self.rotationAngle = rotationAngle
         self.aspect = aspect
@@ -192,8 +194,10 @@ public final class MediaTrackFrameBuffer {
             if self.endOfStream, let decodedFrame = self.decoder.takeRemainingFrame() {
                 return .frame(decodedFrame)
             } else {
-                if let bufferedUntilTime = self.bufferedUntilTime {
-                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
+                if self.endOfStream {
+                    return .finished
+                } else if let bufferedUntilTime = self.bufferedUntilTime {
+                    if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 {
                         return .finished
                     }
                 }

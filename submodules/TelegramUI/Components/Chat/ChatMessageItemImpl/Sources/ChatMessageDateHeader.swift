@@ -110,7 +110,7 @@ private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String 
 }
 
 private func dateHeaderTimestampId(timestamp: Int32) -> Int32 {
-    if timestamp == scheduleWhenOnlineTimestamp {
+    if timestamp == scheduleWhenOnlineTimestamp || timestamp >= Int32.max - 1000 {
         return timestamp
     } else if timestamp == Int32.max {
         return timestamp / (granularity) * (granularity)

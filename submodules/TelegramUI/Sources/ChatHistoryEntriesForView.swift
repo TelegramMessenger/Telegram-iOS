@@ -223,23 +223,6 @@ func chatHistoryEntriesForView(
         }
     
         if groupMessages || reverseGroupedMessages {
-            /*if !groupBucket.isEmpty && message.groupInfo != groupBucket[0].0.groupInfo {
-                if reverseGroupedMessages {
-                    groupBucket.reverse()
-                }
-                if groupMessages {
-                    let groupStableId = groupBucket[0].0.groupInfo!.stableId
-                    if !existingGroupStableIds.contains(groupStableId) {
-                        existingGroupStableIds.append(groupStableId)
-                        entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
-                    }
-                } else {
-                    for (message, isRead, selection, attributes, location) in groupBucket {
-                        entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
-                    }
-                }
-                groupBucket.removeAll()
-            }*/
             if let messageGroupingKey = message.groupingKey, (groupMessages || reverseGroupedMessages) {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
@@ -286,14 +269,6 @@ func chatHistoryEntriesForView(
                 if !found {
                     entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, attributes))
                 }
-                
-                /*let selection: ChatHistoryMessageSelection
-                if let selectedMessages = selectedMessages {
-                    selection = .selectable(selected: selectedMessages.contains(message.id))
-                } else {
-                    selection = .none
-                }
-                groupBucket.append((message, isRead, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: false, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] }), entry.location))*/
             } else {
                 let selection: ChatHistoryMessageSelection
                 if let selectedMessages = selectedMessages {
@@ -316,27 +291,63 @@ func chatHistoryEntriesForView(
             } else {
                 selection = .none
             }
+            
             entries.append(.MessageEntry(message, presentationData, isRead, entry.location, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: entry.attributes.authorIsContact, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[message.id], isPlaying: message.index == associatedData.currentlyPlayingMessageId, isCentered: false, authorStoryStats: message.author.flatMap { view.peerStoryStats[$0.id] })))
         }
     }
-        
-    /*if !groupBucket.isEmpty {
-        assert(groupMessages || reverseGroupedMessages)
-        if reverseGroupedMessages {
-            groupBucket.reverse()
-        }
-        if groupMessages {
-            let groupStableId = groupBucket[0].0.groupInfo!.stableId
-            if !existingGroupStableIds.contains(groupStableId) {
-                existingGroupStableIds.append(groupStableId)
-                entries.append(.MessageGroupEntry(groupBucket[0].0.groupInfo!, groupBucket, presentationData))
+    
+    let insertPendingProcessingMessage: ([Message], Int) -> Void = { messages, index in
+        let serviceMessage = Message(
+            stableId: UInt32.max - messages[0].stableId,
+            stableVersion: 0,
+            id: MessageId(peerId: messages[0].id.peerId, namespace: -1, id: messages[0].id.id),
+            globallyUniqueId: nil,
+            groupingKey: nil,
+            groupInfo: nil,
+            threadId: nil,
+            timestamp: messages[0].timestamp,
+            flags: [.Incoming],
+            tags: [],
+            globalTags: [],
+            localTags: [],
+            customTags: [],
+            forwardInfo: nil,
+            author: nil,
+            text: "",
+            attributes: [],
+            media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Chat_VideoProcessingServiceMessage(Int32(messages.count)), entities: [], additionalAttributes: nil))],
+            peers: SimpleDictionary<PeerId, Peer>(),
+            associatedMessages: SimpleDictionary<MessageId, Message>(),
+            associatedMessageIds: [],
+            associatedMedia: [:],
+            associatedThreadInfo: nil,
+            associatedStories: [:]
+        )
+        entries.insert(.MessageEntry(serviceMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: index)
+    }
+    
+    for i in (0 ..< entries.count).reversed() {
+        switch entries[i] {
+        case let .MessageEntry(message, _, _, _, _, _):
+            if message.id.namespace == Namespaces.Message.ScheduledCloud && message.pendingProcessingAttribute != nil {
+                insertPendingProcessingMessage([message], i)
             }
-        } else {
-            for (message, isRead, selection, attributes, location) in groupBucket {
-                entries.append(.MessageEntry(message, presentationData, isRead, location, selection, attributes))
+        case let .MessageGroupEntry(_, messages, _):
+            if !messages.isEmpty && messages[0].0.id.namespace == Namespaces.Message.ScheduledCloud {
+                var videoCount = 0
+                for message in messages {
+                    if message.0.pendingProcessingAttribute != nil {
+                        videoCount += 1
+                    }
+                }
+                if videoCount != 0 {
+                    insertPendingProcessingMessage(messages.map(\.0), i)
+                }
             }
+        default:
+            break
         }
-    }*/
+    }
     
     if let lowerTimestamp = view.entries.last?.message.timestamp, let upperTimestamp = view.entries.first?.message.timestamp {
         if let joinMessage {
@@ -657,6 +668,9 @@ func chatHistoryEntriesForView(
     if reverse {
         return (entries.reversed(), currentState)
     } else {
+        #if DEBUG
+        assert(entries.map(\.stableId) == entries.sorted().map(\.stableId))
+        #endif
         return (entries, currentState)
     }
 }

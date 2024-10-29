@@ -27,14 +27,18 @@ public final class TabSelectorComponent: Component {
     public struct CustomLayout: Equatable {
         public var font: UIFont
         public var spacing: CGFloat
+        public var innerSpacing: CGFloat?
         public var lineSelection: Bool
         public var verticalInset: CGFloat
+        public var allowScroll: Bool
         
-        public init(font: UIFont, spacing: CGFloat, lineSelection: Bool = false, verticalInset: CGFloat = 0.0) {
+        public init(font: UIFont, spacing: CGFloat, innerSpacing: CGFloat? = nil, lineSelection: Bool = false, verticalInset: CGFloat = 0.0, allowScroll: Bool = true) {
             self.font = font
             self.spacing = spacing
+            self.innerSpacing = innerSpacing
             self.lineSelection = lineSelection
             self.verticalInset = verticalInset
+            self.allowScroll = allowScroll
         }
     }
     
@@ -154,16 +158,19 @@ public final class TabSelectorComponent: Component {
                 verticalInset = customLayout.verticalInset * 2.0
             }
             
-            let innerInset: CGFloat = 12.0
-            let spacing: CGFloat = component.customLayout?.spacing ?? 2.0
+            var innerInset: CGFloat = component.customLayout?.innerSpacing ?? 12.0
+            var spacing: CGFloat = component.customLayout?.spacing ?? 2.0
             
             let itemFont: UIFont
             var isLineSelection = false
+            let allowScroll: Bool
             if let customLayout = component.customLayout {
                 itemFont = customLayout.font
                 isLineSelection = customLayout.lineSelection
+                allowScroll = customLayout.allowScroll || component.items.count > 3
             } else {
                 itemFont = Font.semibold(14.0)
+                allowScroll = true
             }
             
             if selectionColorUpdated {
@@ -181,15 +188,14 @@ public final class TabSelectorComponent: Component {
                 }
             }
             
-            var contentWidth: CGFloat = spacing
-            var previousBackgroundRect: CGRect?
-            var selectedBackgroundRect: CGRect?
-            var nextBackgroundRect: CGRect?
+            var innerContentWidth: CGFloat = 0.0
             
             let selectedIndex = component.items.firstIndex(where: { $0.id == component.selectedId })
             
             var validIds: [AnyHashable] = []
             var index = 0
+            var itemViews: [AnyHashable: (VisibleItem, CGSize, ComponentTransition)] = [:]
+            
             for item in component.items {
                 var itemTransition = transition
                 let itemView: VisibleItem
@@ -243,8 +249,27 @@ public final class TabSelectorComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: 200.0, height: 100.0)
                 )
-                
-                if !contentWidth.isZero {
+                innerContentWidth += itemSize.width
+                itemViews[item.id] = (itemView, itemSize, itemTransition)
+                index += 1
+            }
+            
+            let estimatedContentWidth = 2.0 * spacing + innerContentWidth + (CGFloat(component.items.count - 1) * (spacing + innerInset))
+            if estimatedContentWidth > availableSize.width && !allowScroll {
+                spacing = (availableSize.width - innerContentWidth) / CGFloat(component.items.count + 1)
+                innerInset = 0.0
+            }
+            
+            var contentWidth: CGFloat = spacing
+            var previousBackgroundRect: CGRect?
+            var selectedBackgroundRect: CGRect?
+            var nextBackgroundRect: CGRect?
+            
+            for item in component.items {
+                guard let (itemView, itemSize, itemTransition) = itemViews[item.id] else {
+                    continue
+                }
+                if contentWidth > spacing {
                     contentWidth += spacing
                 }
                 let itemTitleFrame = CGRect(origin: CGPoint(x: contentWidth + innerInset, y: verticalInset + floor((baseHeight - itemSize.height) * 0.5)), size: itemSize)
@@ -269,7 +294,6 @@ public final class TabSelectorComponent: Component {
                     itemTransition.setBounds(view: itemTitleView, bounds: CGRect(origin: CGPoint(), size: itemTitleFrame.size))
                     itemTransition.setAlpha(view: itemTitleView, alpha: item.id == component.selectedId || isLineSelection || component.colors.simple ? 1.0 : 0.4)
                 }
-                index += 1
             }
             contentWidth += spacing
             
@@ -301,7 +325,7 @@ public final class TabSelectorComponent: Component {
                         }
                     }
                     
-                    var mappedSelectionFrame = effectiveBackgroundRect.insetBy(dx: 12.0, dy: 0.0)
+                    var mappedSelectionFrame = effectiveBackgroundRect.insetBy(dx: innerInset, dy: 0.0)
                     mappedSelectionFrame.origin.y = mappedSelectionFrame.maxY + 6.0
                     mappedSelectionFrame.size.height = 3.0
                     transition.setFrame(view: self.selectionView, frame: mappedSelectionFrame)

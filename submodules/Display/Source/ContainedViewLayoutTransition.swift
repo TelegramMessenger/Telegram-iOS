@@ -273,6 +273,24 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateFrameAdditive(layer: CALayer, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if layer.frame.equalTo(frame) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                layer.frame = frame
+                if let completion = completion {
+                    completion(true)
+                }
+            case .animated:
+                let previousFrame = layer.frame
+                layer.frame = frame
+                self.animatePositionAdditive(layer: layer, offset: CGPoint(x: previousFrame.minX - frame.minX, y: previousFrame.minY - frame.minY))
+            }
+        }
+    }
+    
     func updateFrameAdditive(node: ASDisplayNode, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)

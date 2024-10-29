@@ -303,7 +303,12 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     @objc private func progressPressed() {
-        if let resourceStatus = self.resourceStatus {
+        if let _ = self.arguments?.attributes.updatingMedia {
+            if let message = self.message {
+                self.context?.account.pendingUpdateMessageManager.cancel(messageId: message.id)
+            }
+        }
+        else if let resourceStatus = self.resourceStatus {
             switch resourceStatus.mediaStatus {
             case let .fetchStatus(fetchStatus):
                 if let context = self.context, let message = self.message, message.flags.isSending {
@@ -590,10 +595,15 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     statusUpdated = true
                 }
                 
-                let hasThumbnail = (!arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil) && !arguments.file.isMusic && !arguments.file.isVoice && !arguments.file.isInstantVideo
+                var hasThumbnail = (!arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil) && !arguments.file.isMusic && !arguments.file.isVoice && !arguments.file.isInstantVideo
+                var hasThumbnailImage = !arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil
+                if case let .update(media) = arguments.attributes.updatingMedia?.media, let file = media.media as? TelegramMediaFile {
+                    hasThumbnail = largestImageRepresentation(file.previewRepresentations) != nil || file.immediateThumbnailData != nil || file.mimeType.hasPrefix("image/")
+                    hasThumbnailImage = hasThumbnail
+                }
                 
                 if mediaUpdated {
-                    if largestImageRepresentation(arguments.file.previewRepresentations) != nil || arguments.file.immediateThumbnailData != nil {
+                    if hasThumbnailImage {
                         updateImageSignal = chatMessageImageFile(account: arguments.context.account, userLocation: .peer(arguments.message.id.peerId), fileReference: .message(message: MessageReference(arguments.message), media: arguments.file), thumbnail: true)
                     }
                     
@@ -1622,59 +1632,64 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             }
         }
         
-        switch resourceStatus.mediaStatus {
-        case var .fetchStatus(fetchStatus):
-            if self.message?.forwardInfo != nil {
-                fetchStatus = resourceStatus.fetchStatus
-            }
-            (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = false
-            
-            switch fetchStatus {
-            case let .Fetching(_, progress):
-                let adjustedProgress = max(progress, 0.027)
-                var wasCheck = false
-                if let statusNode = self.statusNode, case .check = statusNode.state {
-                    wasCheck = true
+        if let updatingMedia = arguments.attributes.updatingMedia, case .update = updatingMedia.media {
+            let adjustedProgress = max(CGFloat(updatingMedia.progress), 0.027)
+            state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+        } else {
+            switch resourceStatus.mediaStatus {
+            case var .fetchStatus(fetchStatus):
+                if self.message?.forwardInfo != nil {
+                    fetchStatus = resourceStatus.fetchStatus
                 }
+                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = false
                 
-                if isAudio && !isVoice && !isSending {
-                    state = .play
-                } else {
-                    if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
-                        state = .check(appearance: nil)
+                switch fetchStatus {
+                case let .Fetching(_, progress):
+                    let adjustedProgress = max(progress, 0.027)
+                    var wasCheck = false
+                    if let statusNode = self.statusNode, case .check = statusNode.state {
+                        wasCheck = true
+                    }
+                    
+                    if isAudio && !isVoice && !isSending {
+                        state = .play
                     } else {
-                        state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                        if message.groupingKey != nil, adjustedProgress.isEqual(to: 1.0), (message.flags.contains(.Unsent) || wasCheck) {
+                            state = .check(appearance: nil)
+                        } else {
+                            state = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: nil)
+                        }
+                    }
+                case .Local:
+                    if isAudio  {
+                        state = .play
+                    } else if let fileIconImage = self.fileIconImage {
+                        state = .customIcon(fileIconImage)
+                    } else {
+                        state = .none
+                    }
+                case .Remote, .Paused:
+                    if isAudio && !isVoice {
+                        state = .play
+                    } else {
+                        state = .download
                     }
                 }
-            case .Local:
-                if isAudio  {
-                    state = .play
-                } else if let fileIconImage = self.fileIconImage {
-                    state = .customIcon(fileIconImage)
+            case let .playbackStatus(playbackStatus):
+                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = !isViewOnceMessage
+                
+                if isViewOnceMessage && playbackStatus == .playing {
+                    state = .secretTimeout(position: playbackState.position, duration: playbackState.duration, generationTimestamp: playbackState.generationTimestamp, appearance: .init(inset: 1.0 + UIScreenPixel, lineWidth: 2.0 - UIScreenPixel))
+                    if incoming {
+                        self.consumableContentNode.isHidden = true
+                    }
                 } else {
-                    state = .none
-                }
-            case .Remote, .Paused:
-                if isAudio && !isVoice {
-                    state = .play
-                } else {
-                    state = .download
-                }
-            }
-        case let .playbackStatus(playbackStatus):
-            (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = !isViewOnceMessage
-            
-            if isViewOnceMessage && playbackStatus == .playing {
-                state = .secretTimeout(position: playbackState.position, duration: playbackState.duration, generationTimestamp: playbackState.generationTimestamp, appearance: .init(inset: 1.0 + UIScreenPixel, lineWidth: 2.0 - UIScreenPixel))
-                if incoming {
-                    self.consumableContentNode.isHidden = true
-                }
-            } else {
-                switch playbackStatus {
-                case .playing:
-                    state = .pause
-                case .paused:
-                    state = .play
+                    switch playbackStatus {
+                    case .playing:
+                        state = .pause
+                    case .paused:
+                        state = .play
+                    }
                 }
             }
         }

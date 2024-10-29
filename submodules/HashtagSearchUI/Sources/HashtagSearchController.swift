@@ -12,13 +12,21 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public final class HashtagSearchController: TelegramBaseController {
+    public enum Mode: Equatable {
+        case generic
+        case noChat
+        case chatOnly
+    }
+    
     private let queue = Queue()
     
     private let context: AccountContext
     private let peer: EnginePeer?
     private let query: String
-    let all: Bool
+    let mode: Mode
     let publicPosts: Bool
+    let stories: Bool
+    let forceDark: Bool
     
     private var transitionDisposable: Disposable?
     private let openMessageFromSearchDisposable = MetaDisposable()
@@ -33,23 +41,34 @@ public final class HashtagSearchController: TelegramBaseController {
         return self.displayNode as! HashtagSearchControllerNode
     }
     
-    public init(context: AccountContext, peer: EnginePeer?, query: String, all: Bool = false, publicPosts: Bool = false) {
+    public init(context: AccountContext, peer: EnginePeer?, query: String, mode: Mode = .generic, publicPosts: Bool = false, stories: Bool = false, forceDark: Bool = false) {
         self.context = context
         self.peer = peer
         self.query = query
-        self.all = all
+        self.mode = mode
         self.publicPosts = publicPosts
+        self.stories = stories
+        self.forceDark = forceDark
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if forceDark {
+            presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+        }
+        self.presentationData = presentationData
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none, groupCallPanelSource: .none)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.title = query
+        var title = query
+        if case .chatOnly = mode, let addressName = peer?.addressName {
+            title = "\(query)@\(addressName)"
+        }
+        
+        self.title = title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
                         
         self.presentationDataDisposable = (self.context.sharedContext.presentationData
@@ -57,6 +76,11 @@ public final class HashtagSearchController: TelegramBaseController {
             if let self {
                 let previousTheme = self.presentationData.theme
                 let previousStrings = self.presentationData.strings
+                
+                var presentationData = presentationData
+                if forceDark {
+                    presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+                }
                 
                 self.presentationData = presentationData
                 

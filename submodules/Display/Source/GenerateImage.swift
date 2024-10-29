@@ -476,6 +476,7 @@ public func generateSingleColorImage(size: CGSize, color: UIColor, scale: CGFloa
 
 public enum DrawingContextBltMode {
     case Alpha
+    case AlphaFromColor
 }
 
 public func getSharedDevideGraphicsContextSettings() -> DeviceGraphicsContextSettings {
@@ -745,38 +746,64 @@ public class DrawingContext {
             let maxDstY = dstY + height
             
             switch mode {
-                case .Alpha:
-                    while dstY < maxDstY {
-                        let srcLine = other.bytes.advanced(by: max(0, srcY) * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
-                        let dstLine = self.bytes.advanced(by: max(0, dstY) * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+            case .Alpha:
+                while dstY < maxDstY {
+                    let srcLine = other.bytes.advanced(by: max(0, srcY) * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                    let dstLine = self.bytes.advanced(by: max(0, dstY) * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                    
+                    var dx = dstX
+                    var sx = srcX
+                    while dx < maxDstX {
+                        let srcPixel = srcLine + sx
+                        let dstPixel = dstLine + dx
                         
-                        var dx = dstX
-                        var sx = srcX
-                        while dx < maxDstX {
-                            let srcPixel = srcLine + sx
-                            let dstPixel = dstLine + dx
-                            
-                            let baseColor = dstPixel.pointee
-                            let baseAlpha = (baseColor >> 24) & 0xff
-                            let baseR = (baseColor >> 16) & 0xff
-                            let baseG = (baseColor >> 8) & 0xff
-                            let baseB = baseColor & 0xff
-                            
-                            let alpha = min(baseAlpha, srcPixel.pointee >> 24)
-                            
-                            let r = (baseR * alpha) / 255
-                            let g = (baseG * alpha) / 255
-                            let b = (baseB * alpha) / 255
-                            
-                            dstPixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
-                            
-                            dx += 1
-                            sx += 1
-                        }
+                        let baseColor = dstPixel.pointee
+                        let baseAlpha = (baseColor >> 24) & 0xff
+                        let baseR = (baseColor >> 16) & 0xff
+                        let baseG = (baseColor >> 8) & 0xff
+                        let baseB = baseColor & 0xff
                         
-                        dstY += 1
-                        srcY += 1
+                        let alpha = min(baseAlpha, srcPixel.pointee >> 24)
+                        
+                        let r = (baseR * alpha) / 255
+                        let g = (baseG * alpha) / 255
+                        let b = (baseB * alpha) / 255
+                        
+                        dstPixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
+                        
+                        dx += 1
+                        sx += 1
                     }
+                    
+                    dstY += 1
+                    srcY += 1
+                }
+            case .AlphaFromColor:
+                while dstY < maxDstY {
+                    let srcLine = other.bytes.advanced(by: max(0, srcY) * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                    let dstLine = self.bytes.advanced(by: max(0, dstY) * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                    
+                    var dx = dstX
+                    var sx = srcX
+                    while dx < maxDstX {
+                        let srcPixel = srcLine + sx
+                        let dstPixel = dstLine + dx
+                        
+                        let alpha = (srcPixel.pointee >> 0) & 0xff
+                        
+                        let r = alpha
+                        let g = alpha
+                        let b = alpha
+                        
+                        dstPixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
+                        
+                        dx += 1
+                        sx += 1
+                    }
+                    
+                    dstY += 1
+                    srcY += 1
+                }
             }
         }
     }

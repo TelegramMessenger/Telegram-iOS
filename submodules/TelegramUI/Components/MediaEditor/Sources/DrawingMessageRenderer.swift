@@ -119,7 +119,7 @@ public final class DrawingMessageRenderer {
             let size = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             let _ = self.updateMessagesLayout(layout: layout, presentationData: mockPresentationData)
             
-            Queue.mainQueue().after(0.2, {
+            Queue.mainQueue().after(0.35, {
                 var mediaRect: CGRect?
                 if let messageNode = self.messageNodes?.first {
                     if self.isOverlay {
@@ -343,7 +343,7 @@ public final class DrawingMessageRenderer {
     }
     
     public func render(completion: @escaping (Result) -> Void) {
-        Queue.mainQueue().after(0.12) {
+        Queue.mainQueue().justDispatch {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             let defaultPresentationData = defaultPresentationData()
                         

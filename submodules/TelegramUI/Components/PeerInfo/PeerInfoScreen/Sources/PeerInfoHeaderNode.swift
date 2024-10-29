@@ -1619,7 +1619,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             controlsClippingFrame = apparentAvatarFrame
         }
         
-        let avatarClipOffset: CGFloat = !self.isAvatarExpanded && deviceMetrics.hasDynamicIsland && self.avatarClippingNode.clipsToBounds && !isLandscape ? 48.0 : 0.0
+        let avatarClipOffset: CGFloat = !self.isAvatarExpanded && deviceMetrics.hasDynamicIsland && self.avatarClippingNode.clipsToBounds && !isLandscape ? 47.0 : 0.0
         let clippingNodeTransition = ContainedViewLayoutTransition.immediate
         clippingNodeTransition.updateFrame(layer: self.avatarClippingNode.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: avatarClipOffset), size: CGSize(width: width, height: 1000.0)))
         clippingNodeTransition.updateSublayerTransformOffset(layer: self.avatarClippingNode.layer, offset: CGPoint(x: 0.0, y: -avatarClipOffset))
@@ -2106,7 +2106,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         navigationTransition.updateAlpha(node: self.buttonsContainerNode, alpha: backgroundBannerAlpha)
         
-        let bannerFrame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width, height: 2000.0))
+        let bannerInset: CGFloat = 3.0
+        let bannerFrame = CGRect(origin: CGPoint(x: -bannerInset, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width + bannerInset * 2.0, height: 2000.0))
         
         if additive {
             transition.updateFrameAdditive(view: self.backgroundBannerView, frame: bannerFrame)
@@ -2128,16 +2129,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
             )),
             environment: {},
-            containerSize: CGSize(width: width, height: apparentBackgroundHeight)
+            containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
         )
         if let backgroundCoverView = self.backgroundCover.view {
             if backgroundCoverView.superview == nil {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
             if additive {
-                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             } else {
-                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             }
         }
         

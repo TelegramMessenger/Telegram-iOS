@@ -20,7 +20,7 @@ import UrlEscaping
 final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
-    let file: TelegramMediaFile
+    let file: FileMediaReference
     
     private let webView: WKWebView
         
@@ -47,7 +47,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
     
     private var tempFile: TempBoxFile?
     
-    init(context: AccountContext, presentationData: PresentationData, file: TelegramMediaFile) {
+    init(context: AccountContext, presentationData: PresentationData, file: FileMediaReference) {
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
@@ -63,9 +63,9 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         
         var title: String = "file"
         var url = ""
-        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
+        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.media.resource) {
             var updatedPath = path
-            if let fileName = file.fileName {
+            if let fileName = file.media.fileName {
                 let tempFile = TempBox.shared.file(path: path, fileName: fileName)
                 updatedPath = tempFile.path
                 self.tempFile = tempFile
@@ -73,8 +73,13 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
                 url = updatedPath
             }
 
-            let request = URLRequest(url: URL(fileURLWithPath: updatedPath))
-            self.webView.load(request)
+            let updatedUrl = URL(fileURLWithPath: updatedPath)
+            let request = URLRequest(url: updatedUrl)
+            if updatedPath.lowercased().hasSuffix(".txt"), let data = try? Data(contentsOf: updatedUrl) {
+                self.webView.load(data, mimeType: "text/plain", characterEncodingName: "UTF-8", baseURL: URL(string: "http://localhost")!)
+            } else {
+                self.webView.load(request)
+            }
         }
          
         self._state = BrowserContentState(title: title, url: url, estimatedProgress: 0.0, readingProgress: 0.0, contentType: .document)

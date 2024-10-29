@@ -105,6 +105,10 @@ extension ChatControllerImpl {
                         }
                     }
                 }
+                
+                if messages.contains(where: { $0.pendingProcessingAttribute != nil }) {
+                    tip = .videoProcessing
+                }
 
                 if actions.tip == nil {
                     actions.tip = tip

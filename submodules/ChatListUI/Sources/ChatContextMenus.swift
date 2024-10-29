@@ -253,6 +253,13 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToFolder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Folder"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                                     var updatedItems: [ContextMenuItem] = []
                                     
+                                    updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                                    }, iconPosition: .left, action: { c, _ in
+                                        c?.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController, joined: joined) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                                    })))
+                                    updatedItems.append(.separator)
+                                    
                                     for filter in filters {
                                         if case let .filter(_, title, _, data) = filter {
                                             let predicate = chatListFilterPredicate(filter: data, accountPeerId: context.account.peerId)
@@ -338,16 +345,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                             })))
                                         }
                                     }
-                                    
-                                    updatedItems.append(.separator)
-                                    updatedItems.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Back, icon: { theme in
-                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                                    }, iconPosition: .left, action: { c, _ in
-                                        c?.setItems(chatContextMenuItems(context: context, peerId: peerId, promoInfo: promoInfo, source: source, chatListController: chatListController, joined: joined) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
-                                    })))
-                                    
+                                                                        
                                     c?.setItems(.single(ContextController.Items(content: .list(updatedItems))), minHeight: nil, animated: true)
                                 })))
+                                items.append(.separator)
                             }
                         }
                         

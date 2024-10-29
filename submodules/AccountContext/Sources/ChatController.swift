@@ -63,7 +63,6 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let isStandalone: Bool
     public let isInline: Bool
     public let showSensitiveContent: Bool
-    public let starGifts: [Int64: TelegramMediaFile]
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -97,8 +96,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         deviceContactsNumbers: Set<String> = Set(),
         isStandalone: Bool = false,
         isInline: Bool = false,
-        showSensitiveContent: Bool = false,
-        starGifts: [Int64: TelegramMediaFile] = [:]
+        showSensitiveContent: Bool = false
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -132,7 +130,6 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.isStandalone = isStandalone
         self.isInline = isInline
         self.showSensitiveContent = showSensitiveContent
-        self.starGifts = starGifts
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -224,9 +221,6 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.showSensitiveContent != rhs.showSensitiveContent {
-            return false
-        }
-        if lhs.starGifts != rhs.starGifts {
             return false
         }
         return true
@@ -870,7 +864,7 @@ public struct ChatInputQueryCommandsResult: Equatable {
 
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
-    case hashtags([String])
+    case hashtags([String], String)
     case mentions([EnginePeer])
     case commands(ChatInputQueryCommandsResult)
     case emojis([(String, TelegramMediaFile?, String)], NSRange)
@@ -884,9 +878,9 @@ public enum ChatPresentationInputQueryResult: Equatable {
             } else {
                 return false
             }
-        case let .hashtags(lhsResults):
-            if case let .hashtags(rhsResults) = rhs {
-                return lhsResults == rhsResults
+        case let .hashtags(lhsResults, lhsQuery):
+            if case let .hashtags(rhsResults, rhsQuery) = rhs {
+                return lhsResults == rhsResults && lhsQuery == rhsQuery
             } else {
                 return false
             }
@@ -1031,14 +1025,18 @@ public protocol ChatController: ViewController {
     
     var visibleContextController: ViewController? { get }
     
+    var contentContainerNode: ASDisplayNode { get }
+    
     var searching: ValuePromise<Bool> { get }
+    var searchResultsCount: ValuePromise<Int32> { get }
+    var externalSearchResultsCount: Int32? { get set }
     
     var alwaysShowSearchResultsAsList: Bool { get set }
     var includeSavedPeersInSearchResults: Bool { get set }
     var showListEmptyResults: Bool { get set }
+    func beginMessageSearch(_ query: String)
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
-    func beginMessageSearch(_ query: String)
     func displayPromoAnnouncement(text: String)
     
     func updatePushedTransition(_ fraction: CGFloat, transition: ContainedViewLayoutTransition)

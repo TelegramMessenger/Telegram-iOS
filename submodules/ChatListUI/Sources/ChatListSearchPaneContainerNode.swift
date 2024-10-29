@@ -12,6 +12,7 @@ import MultiAnimationRenderer
 
 protocol ChatListSearchPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
+    var isCurrent: Bool { get set }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
@@ -50,6 +51,7 @@ final class ChatListSearchPaneWrapper {
 public enum ChatListSearchPaneKey {
     case chats
     case topics
+    case publicPosts
     case channels
     case apps
     case media
@@ -67,6 +69,8 @@ extension ChatListSearchPaneKey {
             return .chats
         case .topics:
             return .topics
+        case .publicPosts:
+            return .publicPosts
         case .channels:
             return .channels
         case .apps:
@@ -87,12 +91,15 @@ extension ChatListSearchPaneKey {
     }
 }
 
-func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool) -> [ChatListSearchPaneKey] {
+func defaultAvailableSearchPanes(isForum: Bool, hasDownloads: Bool, hasPublicPosts: Bool) -> [ChatListSearchPaneKey] {
     var result: [ChatListSearchPaneKey] = []
     if isForum {
         result.append(.topics)
     } else {
         result.append(.chats)
+    }
+    if hasPublicPosts {
+        result.append(.publicPosts)
     }
     result.append(.channels)
     result.append(.apps)
@@ -562,6 +569,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     })
                 }
                 pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+                pane.node.isCurrent = key == self.currentPaneKey
                 if paneWasAdded && key == self.currentPaneKey {
                     pane.node.didBecomeFocused()
                 }

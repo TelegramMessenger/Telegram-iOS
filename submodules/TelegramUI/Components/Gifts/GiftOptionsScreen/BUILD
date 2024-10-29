@@ -42,6 +42,7 @@ swift_library(
         "//submodules/InAppPurchaseManager",
         "//submodules/TelegramUI/Components/TabSelectorComponent",
         "//submodules/TelegramUI/Components/Gifts/GiftSetupScreen",
+        "//submodules/TelegramUI/Components/Gifts/GiftViewScreen",
     ],
     visibility = [
         "//visibility:public",

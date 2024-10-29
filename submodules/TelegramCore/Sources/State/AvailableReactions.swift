@@ -223,7 +223,6 @@ public final class AvailableReactions: Equatable, Codable {
         
         var reactions = reactions
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
-        //TODO:release
         reactions.append(generateStarsReaction())
         self.reactions = reactions
     }
@@ -243,7 +242,6 @@ public final class AvailableReactions: Equatable, Codable {
         
         self.hash = try container.decodeIfPresent(Int32.self, forKey: .newHash) ?? 0
         
-        //TODO:release
         var reactions = try container.decode([Reaction].self, forKey: .reactions)
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
         reactions.append(generateStarsReaction())

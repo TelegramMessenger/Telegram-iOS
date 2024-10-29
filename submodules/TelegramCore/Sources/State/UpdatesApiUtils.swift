@@ -115,7 +115,11 @@ extension Api.Message {
     
     func id(namespace: MessageId.Namespace = Namespaces.Message.Cloud) -> MessageId? {
         switch self {
-            case let .message(_, _, id, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .message(_, flags2, id, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                var namespace = namespace
+                if (flags2 & (1 << 4)) != 0 {
+                    namespace = Namespaces.Message.ScheduledCloud
+                }
                 let peerId: PeerId = messagePeerId.peerId
                 return MessageId(peerId: peerId, namespace: namespace, id: id)
             case let .messageEmpty(_, id, peerId):

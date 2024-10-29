@@ -48,7 +48,7 @@ private let selectionSource = "var css = '*{-webkit-touch-callout:none;} :not(in
         " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
 
 private let videoSource = """
-function disableWebkitEnterFullscreen(videoElement) {
+function tgBrowserDisableWebkitEnterFullscreen(videoElement) {
   if (videoElement && videoElement.webkitEnterFullscreen) {
     Object.defineProperty(videoElement, 'webkitEnterFullscreen', {
       value: undefined
@@ -56,11 +56,11 @@ function disableWebkitEnterFullscreen(videoElement) {
   }
 }
 
-function disableFullscreenOnExistingVideos() {
-  document.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+function tgBrowserDisableFullscreenOnExistingVideos() {
+  document.querySelectorAll('video').forEach(tgBrowserDisableWebkitEnterFullscreen);
 }
 
-function handleMutations(mutations) {
+function tgBrowserHandleMutations(mutations) {
   mutations.forEach((mutation) => {
     if (mutation.addedNodes && mutation.addedNodes.length > 0) {
       mutation.addedNodes.forEach((newNode) => {
@@ -75,22 +75,30 @@ function handleMutations(mutations) {
   });
 }
 
-disableFullscreenOnExistingVideos();
+tgBrowserDisableFullscreenOnExistingVideos();
 
-const observer = new MutationObserver(handleMutations);
+const _tgbrowser_observer = new MutationObserver(tgBrowserHandleMutations);
 
-observer.observe(document.body, {
+_tgbrowser_observer.observe(document.body, {
   childList: true,
   subtree: true
 });
 
-function disconnectObserver() {
-  observer.disconnect();
+function tgBrowserDisconnectObserver() {
+  _tgbrowser_observer.disconnect();
 }
 """
 
 final class WebAppWebView: WKWebView {
     var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
+
+    var customSideInset: CGFloat = 0.0 {
+        didSet {
+            if self.customSideInset != oldValue {
+                self.setNeedsLayout()
+            }
+        }
+    }
     
     var customBottomInset: CGFloat = 0.0 {
         didSet {
@@ -101,7 +109,7 @@ final class WebAppWebView: WKWebView {
     }
     
     override var safeAreaInsets: UIEdgeInsets {
-        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: self.customBottomInset, right: 0.0)
+        return UIEdgeInsets(top: 0.0, left: self.customSideInset, bottom: self.customBottomInset, right: self.customSideInset)
     }
     
     init(account: Account) {

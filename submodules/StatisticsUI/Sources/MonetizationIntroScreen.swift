@@ -20,21 +20,27 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let mode: MonetizationIntroScreen.Mode
     let openMore: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        mode: MonetizationIntroScreen.Mode,
         openMore: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.openMore = openMore
         self.dismiss = dismiss
     }
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -136,7 +142,7 @@ private final class SheetContent: CombinedComponent {
             
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: strings.Monetization_Intro_Title, font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: component.mode == .bot ?  strings.Monetization_Intro_Bot_Title : strings.Monetization_Intro_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -157,7 +163,7 @@ private final class SheetContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.Monetization_Intro_Ads_Title,
                         titleColor: textColor,
-                        text: strings.Monetization_Intro_Ads_Text,
+                        text: component.mode == .bot ? strings.Monetization_Intro_Bot_Ads_Text : strings.Monetization_Intro_Ads_Text,
                         textColor: secondaryTextColor,
                         iconName: "Ads/Ads",
                         iconColor: linkColor
@@ -254,6 +260,8 @@ private final class SheetContent: CombinedComponent {
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
+                    highlightColor: linkColor.withMultipliedAlpha(0.1),
+                    highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -341,18 +349,24 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let mode: MonetizationIntroScreen.Mode
     let openMore: () -> Void
     
     init(
         context: AccountContext,
+        mode: MonetizationIntroScreen.Mode,
         openMore: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.openMore = openMore
     }
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -373,6 +387,7 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        mode: context.component.mode,
                         openMore: context.component.openMore,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -442,9 +457,15 @@ private final class SheetContainerComponent: CombinedComponent {
 final class MonetizationIntroScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private var openMore: (() -> Void)?
-        
+    
+    enum Mode: Equatable {
+        case channel
+        case bot
+    }
+    
     init(
         context: AccountContext,
+        mode: Mode,
         openMore: @escaping () -> Void
     ) {
         self.context = context
@@ -454,6 +475,7 @@ final class MonetizationIntroScreen: ViewControllerComponentContainer {
             context: context,
             component: SheetContainerComponent(
                 context: context,
+                mode: mode,
                 openMore: openMore
             ),
             navigationBarAppearance: .none,

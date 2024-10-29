@@ -13,17 +13,19 @@ public final class RoundedRectangle: Component {
     public let gradientDirection: GradientDirection
     public let stroke: CGFloat?
     public let strokeColor: UIColor?
+    public let size: CGSize?
     
-    public convenience init(color: UIColor, cornerRadius: CGFloat?, stroke: CGFloat? = nil, strokeColor: UIColor? = nil) {
-        self.init(colors: [color], cornerRadius: cornerRadius, stroke: stroke, strokeColor: strokeColor)
+    public convenience init(color: UIColor, cornerRadius: CGFloat?, stroke: CGFloat? = nil, strokeColor: UIColor? = nil, size: CGSize? = nil) {
+        self.init(colors: [color], cornerRadius: cornerRadius, stroke: stroke, strokeColor: strokeColor, size: size)
     }
     
-    public init(colors: [UIColor], cornerRadius: CGFloat?, gradientDirection: GradientDirection = .horizontal, stroke: CGFloat? = nil, strokeColor: UIColor? = nil) {
+    public init(colors: [UIColor], cornerRadius: CGFloat?, gradientDirection: GradientDirection = .horizontal, stroke: CGFloat? = nil, strokeColor: UIColor? = nil, size: CGSize? = nil) {
         self.colors = colors
         self.cornerRadius = cornerRadius
         self.gradientDirection = gradientDirection
         self.stroke = stroke
         self.strokeColor = strokeColor
+        self.size = size
     }
 
     public static func ==(lhs: RoundedRectangle, rhs: RoundedRectangle) -> Bool {
@@ -42,6 +44,9 @@ public final class RoundedRectangle: Component {
         if lhs.strokeColor != rhs.strokeColor {
             return false
         }
+        if lhs.size != rhs.size {
+            return false
+        }
         return true
     }
     
@@ -49,8 +54,9 @@ public final class RoundedRectangle: Component {
         var component: RoundedRectangle?
         
         func update(component: RoundedRectangle, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
+            let size = component.size ?? availableSize
             if self.component != component {
-                let cornerRadius = component.cornerRadius ?? min(availableSize.width, availableSize.height) * 0.5
+                let cornerRadius = component.cornerRadius ?? min(size.width, size.height) * 0.5
                 
                 if component.colors.count == 1, let color = component.colors.first {
                     let imageSize = CGSize(width: max(component.stroke ?? 0.0, cornerRadius) * 2.0, height: max(component.stroke ?? 0.0, cornerRadius) * 2.0)
@@ -75,7 +81,7 @@ public final class RoundedRectangle: Component {
                     self.image = UIGraphicsGetImageFromCurrentImageContext()?.stretchableImage(withLeftCapWidth: Int(cornerRadius), topCapHeight: Int(cornerRadius))
                     UIGraphicsEndImageContext()
                 } else if component.colors.count > 1 {
-                    let imageSize = availableSize
+                    let imageSize = size
                     UIGraphicsBeginImageContextWithOptions(imageSize, false, 0.0)
                     if let context = UIGraphicsGetCurrentContext() {
                         context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: imageSize), cornerRadius: cornerRadius).cgPath)
@@ -106,7 +112,7 @@ public final class RoundedRectangle: Component {
                 }
             }
 
-            return availableSize
+            return size
         }
     }
     
@@ -120,13 +126,18 @@ public final class RoundedRectangle: Component {
 }
 
 public final class FilledRoundedRectangleComponent: Component {
+    public enum CornerRadius: Equatable {
+        case value(CGFloat)
+        case minEdge
+    }
+    
     public let color: UIColor
-    public let cornerRadius: CGFloat
+    public let cornerRadius: CornerRadius
     public let smoothCorners: Bool
     
     public init(
         color: UIColor,
-        cornerRadius: CGFloat,
+        cornerRadius: CornerRadius,
         smoothCorners: Bool
     ) {
         self.color = color
@@ -210,9 +221,17 @@ public final class FilledRoundedRectangleComponent: Component {
             
             transition.setTintColor(view: self, color: component.color)
             
-            if self.currentCornerRadius != component.cornerRadius {
+            let cornerRadius: CGFloat
+            switch component.cornerRadius {
+            case let .value(value):
+                cornerRadius = value
+            case .minEdge:
+                cornerRadius = min(availableSize.width, availableSize.height) * 0.5
+            }
+            
+            if self.currentCornerRadius != cornerRadius {
                 let previousCornerRadius = self.currentCornerRadius
-                self.currentCornerRadius = component.cornerRadius
+                self.currentCornerRadius = cornerRadius
                 if transition.animation.isImmediate {
                     self.applyStaticCornerRadius()
                 } else {
@@ -230,7 +249,7 @@ public final class FilledRoundedRectangleComponent: Component {
                         }
                         
                     }
-                    transition.setCornerRadius(layer: self.layer, cornerRadius: component.cornerRadius, completion: { [weak self] completed in
+                    transition.setCornerRadius(layer: self.layer, cornerRadius: cornerRadius, completion: { [weak self] completed in
                         guard let self, completed else {
                             return
                         }

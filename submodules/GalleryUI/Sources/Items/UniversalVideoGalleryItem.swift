@@ -27,6 +27,12 @@ import Pasteboard
 import AdUI
 import AdsInfoScreen
 import AdsReportScreen
+import SaveProgressScreen
+import SectionTitleContextItem
+import RasterizedCompositionComponent
+import BadgeComponent
+import ComponentFlow
+import ComponentDisplayAdapters
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message, Int?)
@@ -502,6 +508,228 @@ final class MoreHeaderButton: HighlightableButtonNode {
     }
 }
 
+final class SettingsHeaderButton: HighlightableButtonNode {
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
+    
+    private let iconLayer: RasterizedCompositionMonochromeLayer
+    
+    private let gearsLayer: RasterizedCompositionImageLayer
+    private let dotLayer: RasterizedCompositionImageLayer
+    
+    private var speedBadge: ComponentView<Empty>?
+    private var qualityBadge: ComponentView<Empty>?
+    
+    private var speedBadgeText: String?
+    private var qualityBadgeText: String?
+    
+    private let badgeFont: UIFont
+    
+    private var isMenuOpen: Bool = false
+
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+
+    private let wide: Bool
+
+    init(wide: Bool = false) {
+        self.wide = wide
+
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        
+        self.iconLayer = RasterizedCompositionMonochromeLayer()
+        //self.iconLayer.backgroundColor = UIColor.green.cgColor
+        
+        self.gearsLayer = RasterizedCompositionImageLayer()
+        self.gearsLayer.image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsNoDot"), color: .white)
+        
+        self.dotLayer = RasterizedCompositionImageLayer()
+        self.dotLayer.image = generateFilledCircleImage(diameter: 4.0, color: .white)
+        
+        self.iconLayer.contentsLayer.addSublayer(self.gearsLayer)
+        self.iconLayer.contentsLayer.addSublayer(self.dotLayer)
+        
+        self.badgeFont = Font.with(size: 8.0, design: .round, weight: .bold)
+
+        super.init()
+
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.layer.addSublayer(self.iconLayer)
+        self.addSubnode(self.containerNode)
+
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.contextAction else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
+
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
+        self.referenceNode.frame = self.containerNode.bounds
+
+        self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -4.0, bottom: 0.0, right: -4.0)
+        
+        if let image = self.gearsLayer.image {
+            let iconInnerInsets = UIEdgeInsets(top: 4.0, left: 8.0, bottom: 4.0, right: 6.0)
+            let iconSize = CGSize(width: image.size.width + iconInnerInsets.left + iconInnerInsets.right, height: image.size.height + iconInnerInsets.top + iconInnerInsets.bottom)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - iconSize.width) / 2.0), y: floor((self.containerNode.bounds.height - iconSize.height) / 2.0)), size: iconSize)
+            self.iconLayer.position = iconFrame.center
+            self.iconLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            
+            self.iconLayer.contentsLayer.position = CGRect(origin: CGPoint(), size: iconFrame.size).center
+            self.iconLayer.contentsLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            
+            self.iconLayer.maskedLayer.position = CGRect(origin: CGPoint(), size: iconFrame.size).center
+            self.iconLayer.maskedLayer.bounds = CGRect(origin: CGPoint(), size: iconFrame.size)
+            self.iconLayer.maskedLayer.backgroundColor = UIColor.white.cgColor
+            
+            let gearsFrame = CGRect(origin: CGPoint(x: floor((iconSize.width - image.size.width) * 0.5), y: floor((iconSize.height - image.size.height) * 0.5)), size: image.size)
+            self.gearsLayer.position = gearsFrame.center
+            self.gearsLayer.bounds = CGRect(origin: CGPoint(), size: gearsFrame.size)
+            
+            if let dotImage = self.dotLayer.image {
+                let dotFrame = CGRect(origin: CGPoint(x: gearsFrame.minX + floorToScreenPixels((gearsFrame.width - dotImage.size.width) * 0.5), y: gearsFrame.minY + floorToScreenPixels((gearsFrame.height - dotImage.size.height) * 0.5)), size: dotImage.size)
+                self.dotLayer.position = dotFrame.center
+                self.dotLayer.bounds = CGRect(origin: CGPoint(), size: dotFrame.size)
+            }
+        }
+    }
+
+    override func didLoad() {
+        super.didLoad()
+        self.view.isOpaque = false
+    }
+
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return CGSize(width: wide ? 32.0 : 22.0, height: 44.0)
+    }
+
+    func onLayout() {
+    }
+    
+    func setIsMenuOpen(isMenuOpen: Bool) {
+        if self.isMenuOpen == isMenuOpen {
+            return
+        }
+        self.isMenuOpen = isMenuOpen
+        
+        let rotationTransition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+        rotationTransition.updateTransform(layer: self.gearsLayer, transform: CGAffineTransformMakeRotation(isMenuOpen ? (CGFloat.pi * 2.0 / 6.0) : 0.0))
+        self.gearsLayer.animateScale(from: 1.0, to: 1.07, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
+            guard let self, finished else {
+                return
+            }
+            self.gearsLayer.animateScale(from: 1.07, to: 1.0, duration: 0.1, removeOnCompletion: true)
+        })
+        
+        self.dotLayer.animateScale(from: 1.0, to: 0.8, duration: 0.1, removeOnCompletion: false, completion: { [weak self] finished in
+            guard let self, finished else {
+                return
+            }
+            self.dotLayer.animateScale(from: 0.8, to: 1.0, duration: 0.1, removeOnCompletion: true)
+        })
+    }
+    
+    func setBadges(speed: String?, quality: String?, transition: ComponentTransition) {
+        if self.speedBadgeText == speed && self.qualityBadgeText == quality {
+            return
+        }
+        self.speedBadgeText = speed
+        self.qualityBadgeText = quality
+        
+        if let badgeText = speed {
+            var badgeTransition = transition
+            let speedBadge: ComponentView<Empty>
+            if let current = self.speedBadge {
+                speedBadge = current
+            } else {
+                speedBadge = ComponentView()
+                self.speedBadge = speedBadge
+                badgeTransition = badgeTransition.withAnimation(.none)
+            }
+            let badgeSize = speedBadge.update(
+                transition: badgeTransition,
+                component: AnyComponent(BadgeComponent(
+                    text: badgeText,
+                    font: self.badgeFont,
+                    cornerRadius: 3.0,
+                    insets: UIEdgeInsets(top: 1.33, left: 1.66, bottom: 1.33, right: 1.66),
+                    outerInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let speedBadgeView = speedBadge.view {
+                if speedBadgeView.layer.superlayer == nil {
+                    self.iconLayer.contentsLayer.addSublayer(speedBadgeView.layer)
+                    
+                    transition.animateAlpha(layer: speedBadgeView.layer, from: 0.0, to: 1.0)
+                    transition.animateScale(layer: speedBadgeView.layer, from: 0.001, to: 1.0)
+                }
+                badgeTransition.setFrame(layer: speedBadgeView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: badgeSize))
+            }
+        } else if let speedBadge = self.speedBadge {
+            self.speedBadge = nil
+            if let speedBadgeView = speedBadge.view {
+                let speedBadgeLayer = speedBadgeView.layer
+                transition.setAlpha(layer: speedBadgeLayer, alpha: 0.0, completion: { [weak speedBadgeLayer] _ in
+                    speedBadgeLayer?.removeFromSuperlayer()
+                })
+                transition.setScale(layer: speedBadgeLayer, scale: 0.001)
+            }
+        }
+        
+        if let badgeText = quality {
+            var badgeTransition = transition
+            let qualityBadge: ComponentView<Empty>
+            if let current = self.qualityBadge {
+                qualityBadge = current
+            } else {
+                qualityBadge = ComponentView()
+                self.qualityBadge = qualityBadge
+                badgeTransition = badgeTransition.withAnimation(.none)
+            }
+            let badgeSize = qualityBadge.update(
+                transition: badgeTransition,
+                component: AnyComponent(BadgeComponent(
+                    text: badgeText,
+                    font: self.badgeFont,
+                    cornerRadius: 3.0,
+                    insets: UIEdgeInsets(top: 1.33, left: 1.66, bottom: 1.33, right: 1.66),
+                    outerInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+                )),
+                environment: {},
+                containerSize: CGSize(width: 100.0, height: 100.0)
+            )
+            if let qualityBadgeView = qualityBadge.view {
+                if qualityBadgeView.layer.superlayer == nil {
+                    self.iconLayer.contentsLayer.addSublayer(qualityBadgeView.layer)
+                    
+                    transition.animateAlpha(layer: qualityBadgeView.layer, from: 0.0, to: 1.0)
+                    transition.animateScale(layer: qualityBadgeView.layer, from: 0.001, to: 1.0)
+                }
+                badgeTransition.setFrame(layer: qualityBadgeView.layer, frame: CGRect(origin: CGPoint(x: self.iconLayer.bounds.width - badgeSize.width, y: self.iconLayer.bounds.height - badgeSize.height), size: badgeSize))
+            }
+        } else if let qualityBadge = self.qualityBadge {
+            self.qualityBadge = nil
+            if let qualityBadgeView = qualityBadge.view {
+                let qualityBadgeLayer = qualityBadgeView.layer
+                transition.setAlpha(layer: qualityBadgeLayer, alpha: 0.0, completion: { [weak qualityBadgeLayer] _ in
+                    qualityBadgeLayer?.removeFromSuperlayer()
+                })
+                transition.setScale(layer: qualityBadgeLayer, scale: 0.001)
+            }
+        }
+    }
+}
+
 @available(iOS 15.0, *)
 private final class PictureInPictureContentImpl: NSObject, PictureInPictureContent, AVPictureInPictureControllerDelegate {
     private final class PlaybackDelegate: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
@@ -901,6 +1129,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     private let node: UniversalVideoNode
     private let willBegin: (NativePictureInPictureContentImpl) -> Void
     private let didBegin: (NativePictureInPictureContentImpl) -> Void
+    private let didEnd: (NativePictureInPictureContentImpl) -> Void
     private let expand: (@escaping () -> Void) -> Void
     private var pictureInPictureTimer: SwiftSignalKit.Timer?
     private var didExpand: Bool = false
@@ -911,7 +1140,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
     
     private var isNativePictureInPictureActiveDisposable: Disposable?
 
-    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
+    init(context: AccountContext, mediaManager: MediaManager, accountId: AccountRecordId, hiddenMedia: (MessageId, Media)?, videoNode: UniversalVideoNode, canSkip: Bool, willBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didBegin: @escaping (NativePictureInPictureContentImpl) -> Void, didEnd: @escaping (NativePictureInPictureContentImpl) -> Void, expand: @escaping (@escaping () -> Void) -> Void) {
         self.context = context
         self.mediaManager = mediaManager
         self.accountId = accountId
@@ -919,6 +1148,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
         self.node = videoNode
         self.willBegin = willBegin
         self.didBegin = didBegin
+        self.didEnd = didEnd
         self.expand = expand
 
         super.init()
@@ -938,21 +1168,30 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
         }
 
         if let (messageId, _) = hiddenMedia {
+            var hadMessage: Bool?
             self.messageRemovedDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
             |> map { message -> Bool in
                 if let _ = message {
-                    return false
-                } else {
                     return true
+                } else {
+                    return false
                 }
             }
-            |> filter { $0 }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self else {
                     return
                 }
-                strongSelf.node.canAttachContent = false
+                if let hadMessage, hadMessage {
+                    if value {
+                    } else {
+                        if let pictureInPictureController = self.pictureInPictureController {
+                            pictureInPictureController.stopPictureInPicture()
+                        }
+                    }
+                    
+                    return
+                }
+                hadMessage = value
             })
         }
     }
@@ -1028,6 +1267,7 @@ private final class NativePictureInPictureContentImpl: NSObject, AVPictureInPict
             mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaManagerIndex)
             self.hiddenMediaManagerIndex = nil
         }
+        self.didEnd(self)
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
@@ -1061,7 +1301,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var moreBarButtonRate: Double = 1.0
     private var moreBarButtonRateTimestamp: Double?
     
-    private let settingsBarButton: MoreHeaderButton
+    private let settingsBarButton: SettingsHeaderButton
     
     private var videoNode: UniversalVideoNode?
     private var videoNodeUserInteractionEnabled: Bool = false
@@ -1079,7 +1319,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var playOnContentOwnership = false
     private var skipInitialPause = false
     private var ignorePauseStatus = false
-    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
     private var didPause = false
     private var isPaused = true
     private var dismissOnOrientationChange = false
@@ -1094,9 +1334,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private var playbackRate: Double?
     private var videoQuality: UniversalVideoContentVideoQuality = .auto
     private let playbackRatePromise = ValuePromise<Double>()
+    private let videoQualityPromise = ValuePromise<UniversalVideoContentVideoQuality>()
     
     private let statusDisposable = MetaDisposable()
     private let moreButtonStateDisposable = MetaDisposable()
+    private let settingsButtonStateDisposable = MetaDisposable()
     private let mediaPlaybackStateDisposable = MetaDisposable()
 
     private let fetchDisposable = MetaDisposable()
@@ -1112,6 +1354,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let isInteractingPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let controlsVisiblePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     private let isShowingContextMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let isShowingSettingsMenuPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let hasExpandedCaptionPromise = Promise<Bool>()
     private var hideControlsDisposable: Disposable?
     private var automaticPictureInPictureDisposable: Disposable?
@@ -1125,6 +1368,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var activePictureInPictureNavigationController: NavigationController?
     private var activePictureInPictureController: ViewController?
+    
+    private var activeEdgeRateState: (initialRate: Double, currentRate: Double)?
+    private var activeEdgeRateIndicator: ComponentView<Empty>?
     
     init(context: AccountContext, presentationData: PresentationData, performAction: @escaping (GalleryControllerInteractionTapAction) -> Void, openActionOptions: @escaping (GalleryControllerInteractionTapAction, Message) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.context = context
@@ -1149,7 +1395,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.moreBarButton.isUserInteractionEnabled = true
         self.moreBarButton.setContent(.more(optionsCircleImage(dark: false)))
         
-        self.settingsBarButton = MoreHeaderButton()
+        self.settingsBarButton = SettingsHeaderButton()
         self.settingsBarButton.isUserInteractionEnabled = true
         
         super.init()
@@ -1281,9 +1527,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.titleContentView = GalleryTitleView(frame: CGRect())
         self._titleView.set(.single(self.titleContentView))
         
-        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.hasExpandedCaptionPromise.get())
-        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
-            if isShowingContextMenu || hasExpandedCaptionPromise {
+        let shouldHideControlsSignal: Signal<Void, NoError> = combineLatest(self.isPlayingPromise.get(), self.isInteractingPromise.get(), self.controlsVisiblePromise.get(), self.isShowingContextMenuPromise.get(), self.isShowingSettingsMenuPromise.get(), self.hasExpandedCaptionPromise.get())
+        |> mapToSignal { isPlaying, isInteracting, controlsVisible, isShowingContextMenu, isShowingSettingsMenu, hasExpandedCaptionPromise -> Signal<Void, NoError> in
+            if isShowingContextMenu || isShowingSettingsMenu || hasExpandedCaptionPromise {
                 return .complete()
             }
             if isPlaying && !isInteracting && controlsVisible {
@@ -1305,6 +1551,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     deinit {
         self.statusDisposable.dispose()
         self.moreButtonStateDisposable.dispose()
+        self.settingsButtonStateDisposable.dispose()
         self.mediaPlaybackStateDisposable.dispose()
         self.scrubbingFrameDisposable?.dispose()
         self.hideControlsDisposable?.dispose()
@@ -1358,6 +1605,47 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 placeholderSize.height += 2.0
                 transition.updateFrame(node: pictureInPictureNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - placeholderSize.width) / 2.0), y: floor((layout.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
                 pictureInPictureNode.updateLayout(placeholderSize, transition: transition)
+            }
+        }
+        
+        if let activeEdgeRateState = self.activeEdgeRateState {
+            var activeEdgeRateIndicatorTransition = transition
+            let activeEdgeRateIndicator: ComponentView<Empty>
+            if let current = self.activeEdgeRateIndicator {
+                activeEdgeRateIndicator = current
+            } else {
+                activeEdgeRateIndicator = ComponentView()
+                self.activeEdgeRateIndicator = activeEdgeRateIndicator
+                activeEdgeRateIndicatorTransition = .immediate
+            }
+            
+            let activeEdgeRateIndicatorSize = activeEdgeRateIndicator.update(
+                transition: ComponentTransition(activeEdgeRateIndicatorTransition),
+                component: AnyComponent(GalleryRateToastComponent(
+                    rate: activeEdgeRateState.currentRate,
+                    displayTooltip: self.presentationData.strings.Gallery_ToastVideoSpeedSwipe
+                )),
+                environment: {},
+                containerSize: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 100.0)
+            )
+            let activeEdgeRateIndicatorFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - activeEdgeRateIndicatorSize.width) * 0.5), y: max(navigationBarHeight, layout.statusBarHeight ?? 0.0) + 8.0), size: activeEdgeRateIndicatorSize)
+            if let activeEdgeRateIndicatorView = activeEdgeRateIndicator.view {
+                if activeEdgeRateIndicatorView.superview == nil {
+                    self.view.addSubview(activeEdgeRateIndicatorView)
+                    transition.animateTransformScale(view: activeEdgeRateIndicatorView, from: 0.001)
+                    if transition.isAnimated {
+                        activeEdgeRateIndicatorView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                activeEdgeRateIndicatorTransition.updateFrame(view: activeEdgeRateIndicatorView, frame: activeEdgeRateIndicatorFrame)
+            }
+        } else if let activeEdgeRateIndicator = self.activeEdgeRateIndicator {
+            self.activeEdgeRateIndicator = nil
+            if let activeEdgeRateIndicatorView = activeEdgeRateIndicator.view {
+                transition.updateAlpha(layer: activeEdgeRateIndicatorView.layer, alpha: 0.0, completion: { [weak activeEdgeRateIndicatorView] _ in
+                    activeEdgeRateIndicatorView?.removeFromSuperview()
+                })
+                transition.updateTransformScale(layer: activeEdgeRateIndicatorView.layer, scale: 0.001)
             }
         }
                 
@@ -1452,11 +1740,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 isAdaptive = true
             }
             
-            if isAdaptive {
-                self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQAuto"), color: .white)))
-            } else {
-                self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettings"), color: .white)))
-            }
+            let _ = isAdaptive
             
             let dimensions = item.content.dimensions
             if dimensions.height > 0.0 {
@@ -1597,46 +1881,48 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            /*self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
+            self.moreButtonStateDisposable.set(combineLatest(queue: .mainQueue(),
                 self.playbackRatePromise.get(),
-                self.isShowingContextMenuPromise.get()
-            ).start(next: { [weak self] playbackRate, isShowingContextMenu in
-                guard let strongSelf = self else {
+                self.videoQualityPromise.get()
+            ).start(next: { [weak self] playbackRate, videoQuality in
+                guard let self else {
                     return
                 }
-
-                let effectiveBaseRate: Double
-                if isShowingContextMenu {
-                    effectiveBaseRate = 1.0
-                } else {
-                    effectiveBaseRate = playbackRate
+                
+                var rateString: String?
+                if abs(playbackRate - 1.0) > 0.05 {
+                    var stringValue = String(format: "%.1fx", playbackRate)
+                    if stringValue.hasSuffix(".0x") {
+                        stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
+                    }
+                    rateString = stringValue
+                }
+                
+                var qualityString: String?
+                if case let .quality(quality) = videoQuality {
+                    if quality <= 360 {
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityLow
+                    } else if quality <= 480 {
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityMedium
+                    } else if quality <= 720 {
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityHD
+                    } else if quality <= 1080 {
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityFHD
+                    } else {
+                        qualityString = self.presentationData.strings.Gallery_VideoSettings_IconQualityQHD
+                    }
                 }
 
-                if abs(effectiveBaseRate - strongSelf.moreBarButtonRate) > 0.01 {
-                    strongSelf.moreBarButtonRate = effectiveBaseRate
-                    let animated: Bool
-                    if let moreBarButtonRateTimestamp = strongSelf.moreBarButtonRateTimestamp {
-                        animated = CFAbsoluteTimeGetCurrent() > (moreBarButtonRateTimestamp + 0.2)
-                    } else {
-                        animated = false
-                    }
-                    strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
-
-                    if abs(effectiveBaseRate - 1.0) > 0.01 {
-                        var stringValue = String(format: "%.1fx", effectiveBaseRate)
-                        if stringValue.hasSuffix(".0x") {
-                            stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
-                        }
-                        strongSelf.moreBarButton.setContent(.image(optionsRateImage(rate: stringValue, isLarge: true)), animated: animated)
-                    } else {
-                        strongSelf.moreBarButton.setContent(.more(optionsCircleImage(dark: false)), animated: animated)
-                    }
-                } else {
-                    if strongSelf.moreBarButtonRateTimestamp == nil {
-                        strongSelf.moreBarButtonRateTimestamp = CFAbsoluteTimeGetCurrent()
-                    }
+                self.settingsBarButton.setBadges(speed: rateString, quality: qualityString, transition: .spring(duration: 0.35))
+            }))
+            
+            self.settingsButtonStateDisposable.set((self.isShowingSettingsMenuPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] isShowingSettingsMenu in
+                guard let self else {
+                    return
                 }
-            }))*/
+                self.settingsBarButton.setIsMenuOpen(isMenuOpen: isShowingSettingsMenu)
+            }))
 
             self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
@@ -1880,6 +2166,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
 
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
+        self.videoQualityPromise.set(self.videoQuality)
         
         var isAd = false
         if let contentInfo = item.contentInfo {
@@ -2361,7 +2648,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if videoNode.hasAttachedContext {
                 if self.isPaused || !self.keepSoundOnDismiss {
-                    videoNode.continuePlayingWithoutSound()
+                    if let item = self.item, item.content is HLSVideoContent {
+                    } else {
+                        videoNode.continuePlayingWithoutSound()
+                    }
                 }
             }
         } else {
@@ -2466,6 +2756,20 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             nodeCompleted = true
             intermediateCompletion()
         })
+    }
+    
+    override func maybePerformActionForSwipeDismiss() -> Bool {
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_swipe_pip"] {
+            return false
+        }
+        
+        if #available(iOS 15.0, *) {
+            if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                nativePictureInPictureContent.beginPictureInPicture()
+                return true
+            }
+        }
+        return false
     }
     
     override func title() -> Signal<String, NoError> {
@@ -2596,13 +2900,31 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         
-        if !(item.content is NativeVideoContent) {
+        if videoNode.getVideoLayer() == nil {
             return
         }
         
         var useNative = true
-        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_native_pip"] {
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_native_pip_v2"] {
             useNative = false
+        }
+        var isAd = false
+        if let contentInfo = item.contentInfo {
+            switch contentInfo {
+            case let .message(message, _):
+                isAd = message.adAttribute != nil
+                self.footerContentNode.setMessage(message, displayInfo: !item.displayInfoOnTop, peerIsCopyProtected: item.peerIsCopyProtected)
+            case let .webPage(webPage, media, _):
+                self.footerContentNode.setWebPage(webPage, media: media)
+            }
+        }
+        if isAd {
+            useNative = false
+        }
+        if let content = item.content as? NativeVideoContent {
+            if content.fileReference.media.isAnimated {
+                useNative = false
+            }
         }
         if !useNative {
             return
@@ -2623,6 +2945,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if #available(iOS 15.0, *) {
+            var didExpand = false
             let content = NativePictureInPictureContentImpl(context: self.context, mediaManager: self.context.sharedContext.mediaManager, accountId: self.context.account.id, hiddenMedia: hiddenMedia, videoNode: videoNode, canSkip: true, willBegin: { [weak self] content in
                 guard let self, let controller = self.galleryController(), let navigationController = self.baseNavigationController() else {
                     return
@@ -2634,12 +2957,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 controller.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
                     self?.completeCustomDismiss(true)
                 })
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                didExpand = false
             }, didBegin: { [weak self] _ in
                 guard let self else {
                     return
                 }
                 let _ = self
+            }, didEnd: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let videoNode = self.videoNode {
+                    videoNode.setNativePictureInPictureIsActive(false)
+                }
+                
+                if !didExpand {
+                    self.activePictureInPictureController = nil
+                    self.activePictureInPictureNavigationController = nil
+                }
             }, expand: { [weak self] completion in
+                didExpand = true
+                
                 guard let self, let activePictureInPictureController = self.activePictureInPictureController, let activePictureInPictureNavigationController = self.activePictureInPictureNavigationController else {
                     completion()
                     return
@@ -2653,9 +2994,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 })
                 
                 activePictureInPictureController.view.alpha = 1.0
-                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { _ in
-                    completion()
+                activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.35, completion: { _ in
                 })
+                
+                completion()
             })
             
             self.nativePictureInPictureContent = content
@@ -2929,25 +3271,42 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let controller = self.baseNavigationController()?.topViewController as? ViewController else {
             return
         }
+        
         var dismissImpl: (() -> Void)?
-        let items: Signal<[ContextMenuItem], NoError>
+        let items: Signal<(items: [ContextMenuItem], topItems: [ContextMenuItem]), NoError>
         if case let .message(message, _) = self.item?.contentInfo, let _ = message.adAttribute {
-            items = self.adMenuMainItems()
+            items = self.adMenuMainItems() |> map { items in
+                return (items, [])
+            }
         } else {
             items = self.contextMenuMainItems(isSettings: isSettings, dismiss: {
                 dismissImpl?()
             })
         }
         
-        let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
-        self.isShowingContextMenuPromise.set(true)
+        let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: items |> map { items in
+            if !items.topItems.isEmpty {
+                return ContextController.Items(id: AnyHashable(0), content: .twoLists(items.items, items.topItems))
+            } else {
+                return ContextController.Items(id: AnyHashable(0), content: .list(items.items))
+            }
+        }, gesture: gesture)
+        if isSettings {
+            self.isShowingSettingsMenuPromise.set(true)
+        } else {
+            self.isShowingContextMenuPromise.set(true)
+        }
         controller.presentInGlobalOverlay(contextController)
         dismissImpl = { [weak contextController] in
             contextController?.dismiss()
         }
         contextController.dismissed = { [weak self] in
-            Queue.mainQueue().after(0.1, {
-                self?.isShowingContextMenuPromise.set(false)
+            Queue.mainQueue().after(isSettings ? 0.0 : 0.1, {
+                if isSettings {
+                    self?.isShowingSettingsMenuPromise.set(false)
+                } else {
+                    self?.isShowingContextMenuPromise.set(false)
+                }
             })
         }
     }
@@ -2977,7 +3336,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }, iconSource: nil, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
                 if let navigationController = self?.baseNavigationController() as? NavigationController {
-                    navigationController.pushViewController(AdsInfoScreen(context: context, forceDark: true))
+                    navigationController.pushViewController(AdsInfoScreen(context: context, mode: .channel, forceDark: true))
                 }
             })))
             
@@ -3090,9 +3449,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
 
 
-    private func contextMenuMainItems(isSettings: Bool, dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
+    private func contextMenuMainItems(isSettings: Bool, dismiss: @escaping () -> Void) -> Signal<(items: [ContextMenuItem], topItems: [ContextMenuItem]), NoError> {
         guard let videoNode = self.videoNode, let item = self.item else {
-            return .single([])
+            return .single(([], []))
         }
         
         let peer: Signal<EnginePeer?, NoError>
@@ -3102,72 +3461,250 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             peer = .single(nil)
         }
 
-        return combineLatest(queue: Queue.mainQueue(), videoNode.status, peer)
-        |> take(1)
-        |> map { [weak self] status, peer -> [ContextMenuItem] in
+        return combineLatest(queue: Queue.mainQueue(),
+            videoNode.status |> take(1),
+            peer,
+            videoNode.videoQualityStateSignal()
+        )
+        |> map { [weak self] status, peer, videoQualityState -> (items: [ContextMenuItem], topItems: [ContextMenuItem]) in
             guard let status = status, let strongSelf = self else {
-                return []
+                return ([], [])
             }
 
+            var topItems: [ContextMenuItem] = []
             var items: [ContextMenuItem] = []
             
             if isSettings {
-                var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
-                var speedIconText: String = "1x"
-                var didSetSpeedValue = false
-                for (text, iconText, speed) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
-                    if abs(speed - status.baseRate) < 0.01 {
-                        speedValue = text
-                        speedIconText = iconText
-                        didSetSpeedValue = true
-                        break
-                    }
-                }
-                if !didSetSpeedValue && status.baseRate != 1.0 {
-                    speedValue = String(format: "%.1fx", status.baseRate)
-                    speedIconText = speedValue
-                }
-                
-                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PlaybackSpeed_Title, textLayout: .secondLineWithValue(speedValue), icon: { theme in
-                    return optionsRateImage(rate: speedIconText, isLarge: false, color: theme.contextMenu.primaryColor)
-                }, action: { c, _ in
-                    guard let strongSelf = self else {
-                        c?.dismiss(completion: nil)
+                let sliderValuePromise = ValuePromise<Double?>(nil)
+                topItems.append(.custom(SliderContextItem(title: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedControlTitle, minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
+                    guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
                         return
                     }
-                    
-                    c?.pushItems(items: strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) })
-                })))
+                    let newValue = normalizeValue(newValue)
+                    videoNode.setBaseRate(newValue)
+                    if let controller = strongSelf.galleryController() as? GalleryController {
+                        controller.updateSharedPlaybackRate(newValue)
+                    }
+                    sliderValuePromise.set(newValue)
+                }), true))
                 
-                if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
-                    items.append(.separator)
+                if let videoQualityState, !videoQualityState.available.isEmpty {
+                } else {
+                    items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedSectionTitle), false))
+                    for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
+                        let isSelected = abs(status.baseRate - rate) < 0.01
+                        items.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
+                        |> map { value in
+                            if isSelected && value == nil {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                            } else {
+                                return nil
+                            }
+                        }), action: { _, f in
+                            f(.default)
+                            
+                            guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
+                                return
+                            }
+
+                            videoNode.setBaseRate(rate)
+                            if let controller = strongSelf.galleryController() as? GalleryController {
+                                controller.updateSharedPlaybackRate(rate)
+                            }
+                        })))
+                    }
+                }
+                
+                if let videoQualityState, !videoQualityState.available.isEmpty {
+                    items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_QualitySectionTitle), false))
                     
-                    //TODO:localize
-                    
-                    let qualityText: String
-                    switch videoQualityState.preferred {
-                    case .auto:
+                    do {
+                        let isSelected = videoQualityState.preferred == .auto
+                        let qualityText: String = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityAuto
+                        let textLayout: ContextMenuActionItemTextLayout
                         if videoQualityState.current != 0 {
-                            qualityText = "Auto (\(videoQualityState.current)p)"
+                            textLayout = .secondLineWithValue("\(videoQualityState.current)p")
                         } else {
-                            qualityText = "Auto"
+                            textLayout = .singleLine
                         }
-                    case let .quality(value):
-                        qualityText = "\(value)p"
+                        items.append(.action(ContextMenuActionItem(id: AnyHashable("q"), text: qualityText, textLayout: textLayout, icon: { _ in
+                            if isSelected {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                            } else {
+                                return nil
+                            }
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let self, let videoNode = self.videoNode else {
+                                return
+                            }
+                            videoNode.setVideoQuality(.auto)
+                            self.videoQualityPromise.set(.auto)
+                        })))
                     }
                     
-                    items.append(.action(ContextMenuActionItem(text: "Video Quality", textLayout: .secondLineWithValue(qualityText), icon: { _ in
-                        return nil
-                    }, action: { c, _ in
-                        guard let strongSelf = self else {
-                            c?.dismiss(completion: nil)
+                    for quality in videoQualityState.available {
+                        let isSelected = videoQualityState.preferred == .quality(quality)
+                        let qualityTitle: String
+                        if quality <= 360 {
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityLow
+                        } else if quality <= 480 {
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityMedium
+                        } else if quality <= 720 {
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityHD
+                        } else if quality <= 1080 {
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityFHD
+                        } else {
+                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityQHD
+                        }
+                        items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
+                            if isSelected {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                            } else {
+                                return nil
+                            }
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            guard let self, let videoNode = self.videoNode else {
+                                return
+                            }
+                            videoNode.setVideoQuality(.quality(quality))
+                            self.videoQualityPromise.set(.quality(quality))
+
+                            /*if let controller = strongSelf.galleryController() as? GalleryController {
+                                controller.updateSharedPlaybackRate(rate)
+                            }*/
+                        })))
+                    }
+                }
+            } else {
+                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil {
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_MenuSaveToGallery, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { c, _ in
+                        guard let self else {
+                            c?.dismiss(result: .default, completion: nil)
                             return
                         }
                         
-                        c?.pushItems(items: .single(ContextController.Items(content: .list(strongSelf.contextMenuVideoQualityItems(dismiss: dismiss)))))
+                        if let content = item.content as? HLSVideoContent {
+                            guard let videoNode = self.videoNode, let qualityState = videoNode.videoQualityState(), !qualityState.available.isEmpty else {
+                                return
+                            }
+                            if qualityState.available.isEmpty {
+                                return
+                            }
+                            guard let qualitySet = HLSQualitySet(baseFile: content.fileReference) else {
+                                return
+                            }
+                            
+                            var items: [ContextMenuItem] = []
+                            
+                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                            }, iconPosition: .left, action: { c, _ in
+                                c?.popItems()
+                            })))
+                            
+                            let addItem: (Int?, FileMediaReference) -> Void = { quality, qualityFile in
+                                guard let qualityFileSize = qualityFile.media.size else {
+                                    return
+                                }
+                                let fileSizeString = dataSizeString(qualityFileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
+                                let title: String
+                                if let quality {
+                                    title = self.presentationData.strings.Gallery_SaveToGallery_Quality("\(quality)").string
+                                } else {
+                                    title = self.presentationData.strings.Gallery_SaveToGallery_Original
+                                }
+                                items.append(.action(ContextMenuActionItem(text: title, textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
+                                    return nil
+                                }, action: { [weak self] c, _ in
+                                    c?.dismiss(result: .default, completion: nil)
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    guard let controller = self.galleryController() else {
+                                        return
+                                    }
+                                    
+                                    let saveScreen = SaveProgressScreen(context: self.context, content: .progress(self.presentationData.strings.Story_TooltipSaving, 0.0))
+                                    controller.present(saveScreen, in: .current)
+                                    
+                                    let stringSaving = self.presentationData.strings.Story_TooltipSaving
+                                    let stringSaved = self.presentationData.strings.Story_TooltipSaved
+                                    
+                                    let saveFileReference: AnyMediaReference = qualityFile.abstract
+                                    let saveSignal = SaveToCameraRoll.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: saveFileReference)
+                                    
+                                    let disposable = (saveSignal
+                                    |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
+                                        guard let saveScreen else {
+                                            return
+                                        }
+                                        saveScreen.content = .progress(stringSaving, progress)
+                                    }, completed: { [weak saveScreen] in
+                                        guard let saveScreen else {
+                                            return
+                                        }
+                                        saveScreen.content = .completion(stringSaved)
+                                        Queue.mainQueue().after(3.0, { [weak saveScreen] in
+                                            saveScreen?.dismiss()
+                                        })
+                                    })
+                                    
+                                    saveScreen.cancelled = {
+                                        disposable.dispose()
+                                    }
+                                })))
+                            }
+                            
+                            if self.context.isPremium {
+                                addItem(nil, content.fileReference)
+                            } else {
+                                #if DEBUG
+                                addItem(nil, content.fileReference)
+                                #endif
+                            }
+                            
+                            for quality in qualityState.available {
+                                guard let qualityFile = qualitySet.qualityFiles[quality] else {
+                                    continue
+                                }
+                                addItem(quality, qualityFile)
+                            }
+                            
+                            c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
+                        } else {
+                            c?.dismiss(result: .default, completion: nil)
+                            
+                            switch self.fetchStatus {
+                            case .Local:
+                                let _ = (SaveToCameraRoll.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file))
+                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    guard let controller = self.galleryController() else {
+                                        return
+                                    }
+                                    controller.present(UndoOverlayController(presentationData: self.presentationData, content: .mediaSaved(text: self.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                })
+                            default:
+                                guard let controller = self.galleryController() else {
+                                    return
+                                }
+                                controller.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                                })]), in: .window(.root))
+                            }
+                        }
                     })))
                 }
-            } else {
+                
+                if !items.isEmpty {
+                    items.append(.separator)
+                }
                 if let (message, _, _) = strongSelf.contentInfo() {
                     let context = strongSelf.context
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
@@ -3225,34 +3762,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 
-                if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() && !item.peerIsCopyProtected && message.paidContent == nil && !(item.content is HLSVideoContent) {
-                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
-                        f(.default)
-                        
-                        if let strongSelf = self {
-                            switch strongSelf.fetchStatus {
-                            case .Local:
-                                let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file))
-                                         |> deliverOnMainQueue).start(completed: {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    guard let controller = strongSelf.galleryController() else {
-                                        return
-                                    }
-                                    controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .mediaSaved(text: strongSelf.presentationData.strings.Gallery_VideoSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                                })
-                            default:
-                                guard let controller = strongSelf.galleryController() else {
-                                    return
-                                }
-                                controller.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Gallery_WaitForVideoDownoad, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                })]), in: .window(.root))
-                            }
-                        }
-                    })))
-                }
-                
                 if let peer, let (message, _, _) = strongSelf.contentInfo(), canSendMessagesToPeer(peer._asPeer()) {
                     items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
                         if let self, let navigationController = self.baseNavigationController() {
@@ -3279,147 +3788,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
 
-            return items
+            return (items, topItems)
         }
-    }
-
-    private func contextMenuSpeedItems(dismiss: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
-        guard let videoNode = self.videoNode else {
-            return .single([])
-        }
-
-        return videoNode.status
-        |> take(1)
-        |> deliverOnMainQueue
-        |> map { [weak self] status -> [ContextMenuItem] in
-            guard let status = status, let strongSelf = self else {
-                return []
-            }
-
-            var items: [ContextMenuItem] = []
-            
-            items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-            }, iconPosition: .left, action: { c, _ in
-                c?.popItems()
-            })))
-
-            let sliderValuePromise = ValuePromise<Double?>(nil)
-            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
-                guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
-                    return
-                }
-                let newValue = normalizeValue(newValue)
-                videoNode.setBaseRate(newValue)
-                if let controller = strongSelf.galleryController() as? GalleryController {
-                    controller.updateSharedPlaybackRate(newValue)
-                }
-                sliderValuePromise.set(newValue)
-            }), true))
-            
-            items.append(.separator)
-            
-            for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
-                let isSelected = abs(status.baseRate - rate) < 0.01
-                items.append(.action(ContextMenuActionItem(text: text, icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 24.0, height: 24.0), signal: sliderValuePromise.get()
-                |> map { value in
-                    if isSelected && value == nil {
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
-                    } else {
-                        return nil
-                    }
-                }), action: { _, f in
-                    f(.default)
-                    
-                    guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
-                        return
-                    }
-
-                    videoNode.setBaseRate(rate)
-                    if let controller = strongSelf.galleryController() as? GalleryController {
-                        controller.updateSharedPlaybackRate(rate)
-                    }
-                })))
-            }
-
-            return items
-        }
-    }
-    
-    private func contextMenuVideoQualityItems(dismiss: @escaping () -> Void) -> [ContextMenuItem] {
-        guard let videoNode = self.videoNode else {
-            return []
-        }
-        guard let qualityState = videoNode.videoQualityState(), !qualityState.available.isEmpty else {
-            return []
-        }
-
-        var items: [ContextMenuItem] = []
-        
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-        }, iconPosition: .left, action: { c, _ in
-            c?.popItems()
-        })))
-        
-        do {
-            let isSelected = qualityState.preferred == .auto
-            let qualityText: String
-            if qualityState.current != 0 {
-                qualityText = "Auto (\(qualityState.current)p)"
-            } else {
-                qualityText = "Auto"
-            }
-            items.append(.action(ContextMenuActionItem(text: qualityText, icon: { _ in
-                if isSelected {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
-                } else {
-                    return nil
-                }
-            }, action: { [weak self] _, f in
-                f(.default)
-                
-                guard let self, let videoNode = self.videoNode else {
-                    return
-                }
-                videoNode.setVideoQuality(.auto)
-                self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQAuto"), color: .white)))
-
-                /*if let controller = strongSelf.galleryController() as? GalleryController {
-                    controller.updateSharedPlaybackRate(rate)
-                }*/
-            })))
-        }
-        
-        for quality in qualityState.available {
-            //TODO:release
-            let isSelected = qualityState.preferred == .quality(quality)
-            items.append(.action(ContextMenuActionItem(text: "\(quality)p", icon: { _ in
-                if isSelected {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
-                } else {
-                    return nil
-                }
-            }, action: { [weak self] _, f in
-                f(.default)
-                
-                guard let self, let videoNode = self.videoNode else {
-                    return
-                }
-                videoNode.setVideoQuality(.quality(quality))
-                if quality >= 700 {
-                    self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQHD"), color: .white)))
-                } else {
-                    self.settingsBarButton.setContent(.image(generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/NavigationSettingsQSD"), color: .white)))
-                }
-
-                /*if let controller = strongSelf.galleryController() as? GalleryController {
-                    controller.updateSharedPlaybackRate(rate)
-                }*/
-            })))
-        }
-
-        return items
     }
     
     private var isAirPlayActive = false
@@ -3530,6 +3900,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func updateVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality) {
         self.videoQuality = videoQuality
+        self.videoQualityPromise.set(videoQuality)
         
         self.videoNode?.setVideoQuality(videoQuality)
     }
@@ -3609,6 +3980,59 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             )
         }
         return keyShortcuts
+    }
+    
+    override func hasActiveEdgeAction(edge: ActiveEdge) -> Bool {
+        if case .right = edge {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    override func setActiveEdgeAction(edge: ActiveEdge?) {
+        guard let videoNode = self.videoNode else {
+            return
+        }
+        if let edge, case .right = edge {
+            let effectiveRate: Double
+            if let current = self.activeEdgeRateState {
+                effectiveRate = min(2.5, current.initialRate + 0.5)
+                self.activeEdgeRateState = (current.initialRate, effectiveRate)
+            } else {
+                guard let playbackRate = self.playbackRate else {
+                    return
+                }
+                effectiveRate = min(2.5, playbackRate + 0.5)
+                self.activeEdgeRateState = (playbackRate, effectiveRate)
+            }
+            videoNode.setBaseRate(effectiveRate)
+        } else if let (initialRate, _) = self.activeEdgeRateState {
+            self.activeEdgeRateState = nil
+            videoNode.setBaseRate(initialRate)
+        }
+        
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .animated(duration: 0.35, curve: .spring))
+        }
+    }
+    
+    override func adjustActiveEdgeAction(distance: CGFloat) {
+        guard let videoNode = self.videoNode else {
+            return
+        }
+        if let current = self.activeEdgeRateState {
+            var rateFraction = Double(distance) / 100.0
+            rateFraction = max(0.0, min(1.0, rateFraction))
+            let rateDistance = (current.initialRate + 0.5) * (1.0 - rateFraction) + 2.5 * rateFraction
+            let effectiveRate = max(1.0, min(2.5, rateDistance))
+            self.activeEdgeRateState = (current.initialRate, effectiveRate)
+            videoNode.setBaseRate(effectiveRate)
+            
+            if let validLayout = self.validLayout {
+                self.containerLayoutUpdated(validLayout.layout, navigationBarHeight: validLayout.navigationBarHeight, transition: .animated(duration: 0.35, curve: .spring))
+            }
+        }
     }
 }
 

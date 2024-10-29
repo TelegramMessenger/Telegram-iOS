@@ -1534,6 +1534,8 @@ public extension EmojiPagerContentComponent {
                     displaySearchWithPlaceholder = strings.Common_Search
                 } else if case .stickerAlt = subject {
                     displaySearchWithPlaceholder = strings.Common_Search
+                } else if case .reactionList = subject {
+                    displaySearchWithPlaceholder = strings.Common_Search
                 }
             }
             

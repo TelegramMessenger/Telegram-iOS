@@ -651,7 +651,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
-                                    let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)], alternativeRepresentations: [])
+                                    let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: fileSize(path), attributes: [.FileName(fileName: name)], alternativeRepresentations: [])
                                     
                                     var attributes: [MessageAttribute] = []
                                     let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
@@ -784,9 +784,9 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     finalDuration = duration
                             }
                             
-                            if !asAnimation {
+                            /*if !asAnimation {
                                 finalDimensions = TGFitSize(finalDimensions, CGSize(width: 848.0, height: 848.0))
-                            }
+                            }*/
                             
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if let thumbnail = thumbnail {

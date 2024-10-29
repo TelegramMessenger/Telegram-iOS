@@ -111,10 +111,10 @@ open class TabBarControllerImpl: ViewController, TabBarController {
             }
         } set(value) {
             let index = max(0, min(self.controllers.count - 1, value))
-            if _selectedIndex != index {
-                _selectedIndex = index
+            if self._selectedIndex != index {
+                self._selectedIndex = index
                 
-                self.updateSelectedIndex()
+                self.updateSelectedIndex(animated: true)
             }
         }
     }
@@ -340,13 +340,18 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     
     public func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
         let alpha = max(0.0, min(1.0, alpha))
-        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.backgroundNode, alpha: alpha, delay: 0.15)
-        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.15)
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.backgroundNode, alpha: alpha, delay: 0.1)
+        transition.updateAlpha(node: self.tabBarControllerNode.tabBarNode.separatorNode, alpha: alpha, delay: 0.1)
     }
     
-    private func updateSelectedIndex() {
+    private func updateSelectedIndex(animated: Bool = false) {
         if !self.isNodeLoaded {
             return
+        }
+        
+        var animated = animated
+        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            animated = false
         }
         
         var tabBarSelectedIndex = self.selectedIndex
@@ -359,9 +364,21 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
         self.tabBarControllerNode.tabBarNode.selectedIndex = tabBarSelectedIndex
         
+        var transitionSale: CGFloat = 0.998
+        if let currentView = self.currentController?.view {
+            transitionSale = (currentView.frame.height - 3.0) / currentView.frame.height
+        }
         if let currentController = self.currentController {
             currentController.willMove(toParent: nil)
-            self.tabBarControllerNode.currentControllerNode = nil
+            //self.tabBarControllerNode.currentControllerNode = nil
+            
+            if animated {
+                currentController.view.layer.animateScale(from: 1.0, to: transitionSale, duration: 0.12, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { completed in
+                    if completed {
+                        currentController.view.layer.removeAllAnimations()
+                    }
+                })
+            }
             currentController.removeFromParent()
             currentController.didMove(toParent: nil)
             
@@ -374,13 +391,25 @@ open class TabBarControllerImpl: ViewController, TabBarController {
 
         if let currentController = self.currentController {
             currentController.willMove(toParent: self)
-            self.tabBarControllerNode.currentControllerNode = currentController.displayNode
             self.addChild(currentController)
+            
+            let commit = self.tabBarControllerNode.setCurrentControllerNode(currentController.displayNode)
+            if animated {
+                currentController.view.layer.animateScale(from: transitionSale, to: 1.0, duration: 0.15, delay: 0.1, timingFunction: kCAMediaTimingFunctionSpring)
+                currentController.view.layer.allowsGroupOpacity = true
+                currentController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { completed in
+                    if completed {
+                        currentController.view.layer.allowsGroupOpacity = false
+                    }
+                    commit()
+                })
+            } else {
+                commit()
+            }
             currentController.didMove(toParent: self)
 
             currentController.displayNode.recursivelyEnsureDisplaySynchronously(true)
             self.statusBar.statusBarStyle = currentController.statusBar.statusBarStyle
-        } else {
         }
         
         if let layout = self.validLayout {

@@ -35,6 +35,8 @@ private final class GiftViewSheetContent: CombinedComponent {
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
+    let sendGift: (EnginePeer.Id) -> Void
+    let openMyGifts: () -> Void
     
     init(
         context: AccountContext,
@@ -43,7 +45,9 @@ private final class GiftViewSheetContent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
-        openStarsIntro: @escaping () -> Void
+        openStarsIntro: @escaping () -> Void,
+    	sendGift: @escaping (EnginePeer.Id) -> Void,
+    	openMyGifts: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -52,6 +56,8 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
+        self.sendGift = sendGift
+        self.openMyGifts = openMyGifts
     }
     
     static func ==(lhs: GiftViewSheetContent, rhs: GiftViewSheetContent) -> Bool {
@@ -74,6 +80,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
+        var cachedSmallChevronImage: (UIImage, PresentationTheme)?
         
         var inProgress = false
         
@@ -84,17 +91,16 @@ private final class GiftViewSheetContent: CombinedComponent {
             
             if let arguments = subject.arguments {
                 var peerIds: [EnginePeer.Id] = [arguments.peerId, context.account.peerId]
-                if let fromPeerId = arguments.fromPeerId {
+                if let fromPeerId = arguments.fromPeerId, !peerIds.contains(fromPeerId) {
                     peerIds.append(fromPeerId)
                 }
-                
                 self.disposable = combineLatest(queue: Queue.mainQueue(),
                     context.engine.data.get(EngineDataMap(
                         peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
                             return TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                         }
                     )),
-                    context.engine.payments.cachedStarGifts()
+                    .single(nil) |> then(context.engine.payments.cachedStarGifts())
                 ).startStrict(next: { [weak self] peers, starGifts in
                     if let strongSelf = self {
                         var peersMap: [EnginePeer.Id: EnginePeer] = [:]
@@ -134,12 +140,11 @@ private final class GiftViewSheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let animation = Child(GiftAnimationComponent.self)
         let title = Child(MultilineTextComponent.self)
-        let amount = Child(BalancedTextComponent.self)
-        let amountStar = Child(BundleIconComponent.self)
         let description = Child(MultilineTextComponent.self)
+        let hiddenText = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
+        let additionalText = Child(MultilineTextComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
-        let secondaryButton = Child(SolidRoundedButtonComponent.self)
                 
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
         
@@ -154,8 +159,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             let state = context.state
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let textSideInset: CGFloat = 32.0 + environment.safeInsets.left
-            
+
             let closeImage: UIImage
             if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
                 closeImage = image
@@ -175,35 +179,43 @@ private final class GiftViewSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
+            let titleString: String
             let animationFile: TelegramMediaFile?
             let stars: Int64
             let convertStars: Int64
             let text: String?
             let entities: [MessageTextEntity]?
             let limitTotal: Int32?
-            var outgoing = false
             var incoming = false
             var savedToProfile = false
             var converted = false
             var giftId: Int64 = 0
-            var date: Int32 = 0
-            if let arguments = component.subject.arguments {
+            var date: Int32?
+            var soldOut = false
+            var nameHidden = false
+            if case let .soldOutGift(gift) = component.subject {
+                animationFile = gift.file
+                stars = gift.price
+                text = nil
+                entities = nil
+                limitTotal = gift.availability?.total
+                convertStars = 0
+                soldOut = true
+                titleString = strings.Gift_View_UnavailableTitle
+            } else if let arguments = component.subject.arguments {
                 animationFile = arguments.gift.file
                 stars = arguments.gift.price
                 text = arguments.text
                 entities = arguments.entities
                 limitTotal = arguments.gift.availability?.total
                 convertStars = arguments.convertStars
-                if case .message = component.subject {
-                    outgoing = !arguments.incoming
-                } else {
-                    outgoing = false
-                }
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
                 giftId = arguments.gift.id
                 date = arguments.date
+                titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
+                nameHidden = arguments.nameHidden
             } else {
                 animationFile = nil
                 stars = 0
@@ -211,10 +223,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 entities = nil
                 limitTotal = nil
                 convertStars = 0
+                titleString = ""
             }
             
             var descriptionText: String
-            if incoming {
+            if soldOut {
+                descriptionText = strings.Gift_View_UnavailableDescription
+            } else if incoming {
                 if !converted {
                     descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
                 } else {
@@ -242,19 +257,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 descriptionText = modifiedString
             }
-            
-            var formattedAmount = presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator)
-            if outgoing {
-                formattedAmount = "- \(formattedAmount)"
-            }
-            let countFont: UIFont = Font.semibold(17.0)
-            let amountText = formattedAmount
-            let countColor = outgoing ? theme.list.itemDestructiveColor : theme.list.itemDisclosureActions.constructive.fillColor
-            
+                   
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title,
+                        string: titleString,
                         font: Font.bold(25.0),
                         textColor: theme.actionSheet.primaryTextColor,
                         paragraphAlignment: .center
@@ -265,27 +272,100 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
             )
-                                    
-            let amountAttributedText = NSMutableAttributedString(string: amountText, font: countFont, textColor: countColor)
-            let amount = amount.update(
-                component: BalancedTextComponent(
-                    text: .plain(amountAttributedText),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.2
-                ),
-                availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 177.0))
             )
             
-            let amountStar = amountStar.update(
-                component: BundleIconComponent(
-                    name: "Premium/Stars/StarMedium",
-                    tintColor: nil
-                ),
-                availableSize: context.availableSize,
-                transition: .immediate
-            )
+            var originY: CGFloat = 0.0
+            if let animationFile {
+                let animation = animation.update(
+                    component: GiftAnimationComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        file: animationFile
+                    ),
+                    availableSize: CGSize(width: 128.0, height: 128.0),
+                    transition: .immediate
+                )
+                context.add(animation
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animation.size.height / 2.0 + 25.0))
+                )
+                originY += animation.size.height
+            }
+            originY += 80.0
+            if soldOut {
+                originY -= 12.0
+            }
+            
+            let linkColor = theme.actionSheet.controlAccentColor
+            if !descriptionText.isEmpty {
+                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
+                }
+                
+                let textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
+                let textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                })
+                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
+                }
+                let description = description.update(
+                    component: MultilineTextComponent(
+                        text: .plain(attributedString),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 5,
+                        lineSpacing: 0.2,
+                        highlightColor: linkColor.withAlphaComponent(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { _, _ in
+                            component.openStarsIntro()
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(description
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
+                )
+                originY += description.size.height + 21.0
+                if soldOut {
+                    originY -= 7.0
+                }
+            } else {
+                originY += 21.0
+            }
+            
+            if nameHidden {
+                let textFont = Font.regular(13.0)
+                let textColor = theme.list.itemSecondaryTextColor
+                
+                let hiddenText = hiddenText.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden, font: textFont, textColor: textColor)),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 2,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(hiddenText
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                )
+
+                originY += hiddenText.size.height
+                originY += 11.0
+            }
             
             let tableFont = Font.regular(15.0)
             let tableBoldFont = Font.semibold(15.0)
@@ -296,13 +376,52 @@ private final class GiftViewSheetContent: CombinedComponent {
             let tableTextColor = theme.list.itemPrimaryTextColor
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
-                        
-            if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
-                tableItems.append(.init(
-                    id: "from",
-                    title: strings.Gift_View_From,
-                    component: AnyComponent(
-                        Button(
+               
+            if !soldOut {
+                if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
+                    let fromComponent: AnyComponent<Empty>
+                    if incoming {
+                        fromComponent = AnyComponent(
+                            HStack([
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable(0),
+                                    component: AnyComponent(Button(
+                                        content: AnyComponent(
+                                            PeerCellComponent(
+                                                context: component.context,
+                                                theme: theme,
+                                                strings: strings,
+                                                peer: peer
+                                            )
+                                        ),
+                                        action: {
+                                            component.openPeer(peer)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        }
+                                    ))
+                                ),
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable(1),
+                                    component: AnyComponent(Button(
+                                        content: AnyComponent(ButtonContentComponent(
+                                            context: component.context,
+                                            text: strings.Gift_View_Send,
+                                            color: theme.list.itemAccentColor
+                                        )),
+                                        action: {
+                                            component.sendGift(peerId)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        }
+                                    ))
+                                )
+                            ], spacing: 4.0)
+                        )
+                    } else {
+                        fromComponent = AnyComponent(Button(
                             content: AnyComponent(
                                 PeerCellComponent(
                                     context: component.context,
@@ -312,37 +431,114 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 )
                             ),
                             action: {
-                                if "".isEmpty {
-                                    component.openPeer(peer)
-                                    Queue.mainQueue().after(1.0, {
-                                        component.cancel(false)
-                                    })
-                                }
+                                component.openPeer(peer)
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
                             }
+                        ))
+                    }
+                    tableItems.append(.init(
+                        id: "from",
+                        title: strings.Gift_View_From,
+                        component: fromComponent
+                    ))
+                } else {
+                    tableItems.append(.init(
+                        id: "from_anon",
+                        title: strings.Gift_View_From,
+                        component: AnyComponent(
+                            PeerCellComponent(
+                                context: component.context,
+                                theme: theme,
+                                strings: strings,
+                                peer: nil
+                            )
                         )
+                    ))
+                }
+            }
+         
+            if case let .soldOutGift(gift) = component.subject, let soldOut = gift.soldOut {
+                tableItems.append(.init(
+                    id: "firstDate",
+                    title: strings.Gift_View_FirstSale,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.firstSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                     )
                 ))
-            } else {
+                
                 tableItems.append(.init(
-                    id: "from_anon",
-                    title: strings.Gift_View_From,
+                    id: "lastDate",
+                    title: strings.Gift_View_LastSale,
                     component: AnyComponent(
-                        PeerCellComponent(
-                            context: component.context,
-                            theme: theme,
-                            strings: strings,
-                            peer: nil
-                        )
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.lastSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            } else if let date {
+                tableItems.append(.init(
+                    id: "date",
+                    title: strings.Gift_View_Date,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
-         
-            tableItems.append(.init(
-                id: "date",
-                title: strings.Gift_View_Date,
-                component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                  
+            let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator))"
+            let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
+            let range = (valueAttributedString.string as NSString).range(of: "⭐️")
+            if range.location != NSNotFound {
+                valueAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                valueAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
+            }
+                        
+            let valueComponent: AnyComponent<Empty>
+            if incoming && !converted {
+                valueComponent = AnyComponent(
+                    HStack([
+                        AnyComponentWithIdentity(
+                            id: AnyHashable(0),
+                            component: AnyComponent(MultilineTextWithEntitiesComponent(
+                                context: component.context,
+                                animationCache: component.context.animationCache,
+                                animationRenderer: component.context.animationRenderer,
+                                placeholderColor: theme.list.mediaPlaceholderColor,
+                                text: .plain(valueAttributedString),
+                                maximumNumberOfLines: 0
+                            ))
+                        ),
+                        AnyComponentWithIdentity(
+                            id: AnyHashable(1),
+                            component: AnyComponent(Button(
+                                content: AnyComponent(ButtonContentComponent(
+                                    context: component.context,
+                                    text: strings.Gift_View_Sale(strings.Gift_View_Sale_Stars(Int32(convertStars))).string,
+                                    color: theme.list.itemAccentColor
+                                )),
+                                action: {
+                                    component.convertToStars()
+                                }
+                            ))
+                        )
+                    ], spacing: 4.0)
                 )
+            } else {
+                valueComponent = AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    placeholderColor: theme.list.mediaPlaceholderColor,
+                    text: .plain(valueAttributedString),
+                    maximumNumberOfLines: 0
+                ))
+            }
+            
+            tableItems.append(.init(
+                id: "value",
+                title: strings.Gift_View_Value,
+                component: valueComponent,
+                insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
             ))
             
             if let limitTotal {
@@ -356,8 +552,37 @@ private final class GiftViewSheetContent: CombinedComponent {
                     id: "availability",
                     title: strings.Gift_View_Availability,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_Of("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_NewOf("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
                     )
+                ))
+            }
+            
+            if savedToProfile {
+                tableItems.append(.init(
+                    id: "visibility",
+                    title: strings.Gift_View_Visibility,
+                    component: AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Visibility_Visible, font: tableFont, textColor: tableTextColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: strings.Gift_View_Visibility_Hide,
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        component.updateSavedToProfile(false)
+                                    }
+                                ))
+                            )
+                        ], spacing: 4.0)
+                    ),
+                    insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
                 ))
             }
 
@@ -389,53 +614,36 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
                 transition: .immediate
             )
-            
-            let textFont = Font.regular(15.0)
-            let linkColor = theme.actionSheet.controlAccentColor
-        
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 177.0))
+            context.add(table
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
             )
-            
-            var originY: CGFloat = 0.0
-            if let animationFile {
-                let animation = animation.update(
-                    component: GiftAnimationComponent(
-                        context: component.context,
-                        theme: environment.theme,
-                        file: animationFile
-                    ),
-                    availableSize: CGSize(width: 128.0, height: 128.0),
-                    transition: .immediate
-                )
-                context.add(animation
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animation.size.height / 2.0 + 25.0))
-                )
-                originY += animation.size.height
-            }
-            originY += 69.0
-            
-            var descriptionSize: CGSize = .zero
-            if !descriptionText.isEmpty {
-                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
+            originY += table.size.height + 23.0
+                        
+            if incoming && !converted {
+                if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
+                    state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
                 }
+                let descriptionText = savedToProfile ? strings.Gift_View_DisplayedInfo : strings.Gift_View_HiddenInfo
                 
-                let textColor = theme.list.itemPrimaryTextColor
+                let textFont = Font.regular(13.0)
+                let textColor = theme.list.itemSecondaryTextColor
                 let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 })
                 let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedSmallChevronImage?.0 {
                     attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
                 }
-                let description = description.update(
+                
+                originY -= 5.0
+                let additionalText = additionalText.update(
                     component: MultilineTextComponent(
                         text: .plain(attributedString),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 5,
                         lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.2),
+                        highlightColor: linkColor.withAlphaComponent(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -444,64 +652,23 @@ private final class GiftViewSheetContent: CombinedComponent {
                             }
                         },
                         tapAction: { _, _ in
-                            component.openStarsIntro()
+                            component.openMyGifts()
+                            Queue.mainQueue().after(1.0, {
+                                component.cancel(false)
+                            })
                         }
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
-                descriptionSize = description.size
-                var descriptionOrigin = originY
-                if "".isEmpty {
-                    descriptionOrigin += amount.size.height + 13.0
-                }
-                context.add(description
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: descriptionOrigin + description.size.height / 2.0))
+                context.add(additionalText
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + additionalText.size.height / 2.0))
                 )
-                originY += description.size.height + 10.0
-            } else {
-                originY += 11.0
+                originY += additionalText.size.height
+                originY += 16.0
             }
             
-            let amountSpacing: CGFloat = 1.0
-            let totalAmountWidth: CGFloat = amount.size.width + amountSpacing + amountStar.size.width
-            let amountOriginX: CGFloat = floor(context.availableSize.width - totalAmountWidth) / 2.0
-            
-            var amountOrigin = originY
-            if "".isEmpty {
-                amountOrigin -= descriptionSize.height + 10.0
-                if descriptionSize.height > 0 {
-                    originY += amount.size.height + 26.0
-                } else {
-                    originY += amount.size.height + 2.0
-                }
-            } else {
-                originY += amount.size.height + 20.0
-            }
-            
-            let amountLabelOriginX: CGFloat
-            let amountStarOriginX: CGFloat
-            if !"".isEmpty {
-                amountStarOriginX = amountOriginX + amountStar.size.width / 2.0
-                amountLabelOriginX = amountOriginX + amountStar.size.width + amountSpacing + amount.size.width / 2.0
-            } else {
-                amountLabelOriginX = amountOriginX + amount.size.width / 2.0
-                amountStarOriginX = amountOriginX + amount.size.width + amountSpacing + amountStar.size.width / 2.0
-            }
-                        
-            context.add(amount
-                .position(CGPoint(x: amountLabelOriginX, y: amountOrigin + amount.size.height / 2.0))
-            )
-            context.add(amountStar
-                .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel))
-            )
-               
-            context.add(table
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
-            )
-            originY += table.size.height + 23.0
-                        
-            if incoming && !converted {
+            if incoming && !converted && !savedToProfile {
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
                         title: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display,
@@ -528,32 +695,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                 )
                 originY += button.size.height
                 originY += 7.0
-
-                let secondaryButton = secondaryButton.update(
-                    component: SolidRoundedButtonComponent(
-                        title: strings.Gift_View_Convert(strings.Gift_View_Convert_Stars(Int32(convertStars))).string,
-                        theme: SolidRoundedButtonComponent.Theme(backgroundColor: .clear, foregroundColor: linkColor),
-                        font: .regular,
-                        fontSize: 17.0,
-                        height: 50.0,
-                        cornerRadius: 10.0,
-                        gloss: false,
-                        iconName: nil,
-                        animationName: nil,
-                        iconPosition: .left,
-                        isLoading: false,
-                        action: {
-                            component.convertToStars()
-                        }
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                    transition: context.transition
-                )
-                let secondaryButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: secondaryButton.size)
-                context.add(secondaryButton
-                    .position(CGPoint(x: secondaryButtonFrame.midX, y: secondaryButtonFrame.midY))
-                )
-                originY += secondaryButton.size.height
             } else {
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
@@ -603,6 +744,8 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
+    let sendGift: (EnginePeer.Id) -> Void
+    let openMyGifts: () -> Void
     
     init(
         context: AccountContext,
@@ -610,7 +753,9 @@ private final class GiftViewSheetComponent: CombinedComponent {
         openPeer: @escaping (EnginePeer) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
-        openStarsIntro: @escaping () -> Void
+        openStarsIntro: @escaping () -> Void,
+        sendGift: @escaping (EnginePeer.Id) -> Void,
+        openMyGifts: @escaping () -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -618,6 +763,8 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
+        self.sendGift = sendGift
+        self.openMyGifts = openMyGifts
     }
     
     static func ==(lhs: GiftViewSheetComponent, rhs: GiftViewSheetComponent) -> Bool {
@@ -660,7 +807,9 @@ private final class GiftViewSheetComponent: CombinedComponent {
                         openPeer: context.component.openPeer,
                         updateSavedToProfile: context.component.updateSavedToProfile,
                         convertToStars: context.component.convertToStars,
-                        openStarsIntro: context.component.openStarsIntro
+                        openStarsIntro: context.component.openStarsIntro,
+                        sendGift: context.component.sendGift,
+                        openMyGifts: context.component.openMyGifts
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
@@ -730,6 +879,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
+        case soldOutGift(StarGift)
         
         var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
@@ -739,6 +889,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 }
             case let .profileGift(peerId, gift):
                 return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+            case .soldOutGift:
+                return nil
             }
             return nil
         }
@@ -762,6 +914,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         var updateSavedToProfileImpl: ((Bool) -> Void)?
         var convertToStarsImpl: (() -> Void)?
         var openStarsIntroImpl: (() -> Void)?
+        var sendGiftImpl: ((EnginePeer.Id) -> Void)?
+        var openMyGiftsImpl: (() -> Void)?
         
         super.init(
             context: context,
@@ -779,6 +933,12 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 },
                 openStarsIntro: {
                     openStarsIntroImpl?()
+                },
+                sendGift: { peerId in
+                    sendGiftImpl?(peerId)
+                },
+                openMyGifts: {
+                    openMyGiftsImpl?()
                 }
             ),
             navigationBarAppearance: .none,
@@ -820,20 +980,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             self.dismissAnimated()
             
-            let title: String = added ? presentationData.strings.Gift_Displayed_Title : presentationData.strings.Gift_Hidden_Title
-            var text = added ? presentationData.strings.Gift_Displayed_Text : presentationData.strings.Gift_Hidden_Text
-            if let _ = updateSavedToProfile {
-                text = text.replacingOccurrences(of: "]()", with: "").replacingOccurrences(of: "[", with: "")
-            }
-            if let navigationController {
+            let text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
+            if let navigationController = self.navigationController as? NavigationController {
                 Queue.mainQueue().after(0.5) {
                     if let lastController = navigationController.viewControllers.last as? ViewController {
                         let resultController = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: title, text: text, undoText: nil, customAction: nil),
+                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: nil, text: text, undoText: updateSavedToProfile == nil ? presentationData.strings.Gift_Displayed_View : nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
                             action: { [weak navigationController] action in
-                                if case .info = action, let navigationController {
+                                if case .undo = action, let navigationController {
                                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                                     |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
                                         guard let peer, let navigationController else {
@@ -866,51 +1022,87 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 return
             }
             
-            let controller = textAlertController(
-                context: self.context,
-                title: presentationData.strings.Gift_Convert_Title,
-                text: presentationData.strings.Gift_Convert_Text(fromPeerName, presentationData.strings.Gift_Convert_Stars(Int32(arguments.convertStars))).string,
-                actions: [
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Gift_Convert_Convert, action: { [weak self, weak navigationController] in
-                        if let convertToStars {
-                            convertToStars()
-                        } else {
-                            let _ = (context.engine.payments.convertStarGift(messageId: messageId)
-                            |> deliverOnMainQueue).startStandalone()
-                        }
-                        self?.dismissAnimated()
-                                                
-                        if let navigationController {
-                            Queue.mainQueue().after(0.5) {
-                                if let starsContext = context.starsContext {
-                                    navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
-                                }
-                                
-                                if let lastController = navigationController.viewControllers.last as? ViewController {
-                                    let resultController = UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .universal(
-                                            animation: "StarsBuy",
-                                            scale: 0.066,
-                                            colors: [:],
-                                            title: presentationData.strings.Gift_Convert_Success_Title,
-                                            text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(arguments.convertStars))).string,
-                                            customUndoText: nil,
-                                            timeout: nil
-                                        ),
-                                        elevatedLayout: lastController is ChatController,
-                                        action: { _ in return true}
-                                    )
-                                    lastController.present(resultController, in: .window(.root))
+            let configuration = GiftConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+            let starsConvertMaxDate = arguments.date + configuration.convertToStarsPeriod
+            
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            
+            if currentTime > starsConvertMaxDate {
+                //TODO:localize
+                
+                let duration: String
+                if starsConvertMaxDate == 300 {
+                    duration = "5 minutes"
+                } else {
+                    duration = "90 days"
+                }
+                
+                let controller = textAlertController(
+                    context: self.context,
+                    title: presentationData.strings.Gift_Convert_Title,
+                    text: "Sorry, you can't convert this gift.\n\nStars can only be claimed within \(duration) after receiving a gift.",
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                    ],
+                    parseMarkdown: true
+                )
+                self.present(controller, in: .window(.root))
+            } else {
+                let delta = starsConvertMaxDate - currentTime
+                let duration: String
+                if starsConvertMaxDate == 300 {
+                    duration = "\(delta / 60) minutes"
+                } else {
+                    duration = "\(delta / 86400) days"
+                }
+                //TODO:localize
+                let text = "Do you want to convert this gift from **\(fromPeerName)** to **\(presentationData.strings.Gift_Convert_Stars(Int32(arguments.convertStars)))**?\n\nConversion is available for the next \(duration).\n\nThis will permanently destroy the gift."
+                let controller = textAlertController(
+                    context: self.context,
+                    title: presentationData.strings.Gift_Convert_Title,
+                    text: text,
+                    actions: [
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
+                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Gift_Convert_Convert, action: { [weak self, weak navigationController] in
+                            if let convertToStars {
+                                convertToStars()
+                            } else {
+                                let _ = (context.engine.payments.convertStarGift(messageId: messageId)
+                                         |> deliverOnMainQueue).startStandalone()
+                            }
+                            self?.dismissAnimated()
+                            
+                            if let navigationController {
+                                Queue.mainQueue().after(0.5) {
+                                    if let starsContext = context.starsContext {
+                                        navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
+                                    }
+                                    
+                                    if let lastController = navigationController.viewControllers.last as? ViewController {
+                                        let resultController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .universal(
+                                                animation: "StarsBuy",
+                                                scale: 0.066,
+                                                colors: [:],
+                                                title: presentationData.strings.Gift_Convert_Success_Title,
+                                                text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(arguments.convertStars))).string,
+                                                customUndoText: nil,
+                                                timeout: nil
+                                            ),
+                                            elevatedLayout: lastController is ChatController,
+                                            action: { _ in return true}
+                                        )
+                                        lastController.present(resultController, in: .window(.root))
+                                    }
                                 }
                             }
-                        }
-                    })
-                ],
-                parseMarkdown: true
-            )
-            self.present(controller, in: .window(.root))
+                        })
+                    ],
+                    parseMarkdown: true
+                )
+                self.present(controller, in: .window(.root))
+            }
         }
         openStarsIntroImpl = { [weak self] in
             guard let self else {
@@ -918,6 +1110,40 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
             let introController = context.sharedContext.makeStarsIntroScreen(context: context)
             self.push(introController)
+        }
+        sendGiftImpl = { [weak self] peerId in
+            guard let self else {
+                return
+            }
+            let _ = (context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+            |> filter { !$0.isEmpty }
+            |> deliverOnMainQueue).start(next: { giftOptions in
+                let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                let controller = context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions)
+                self.push(controller)
+            })
+        }
+        openMyGiftsImpl = { [weak self] in
+            guard let self, let navigationController = self.navigationController as? NavigationController else {
+                return
+            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
+                guard let peer, let navigationController else {
+                    return
+                }
+                if let controller = context.sharedContext.makePeerInfoController(
+                    context: context,
+                    updatedPresentationData: nil,
+                    peer: peer._asPeer(),
+                    mode: .myProfileGifts,
+                    avatarInitiallyExpanded: false,
+                    fromChat: false,
+                    requestsContext: nil
+                ) {
+                    navigationController.pushViewController(controller, animated: true)
+                }
+            })
         }
     }
     
@@ -1331,4 +1557,123 @@ private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor:
         context.addLine(to: CGPoint(x: 10.0, y: 20.0))
         context.strokePath()
     })
+}
+
+private final class ButtonContentComponent: Component {
+    let context: AccountContext
+    let text: String
+    let color: UIColor
+    
+    public init(
+        context: AccountContext,
+        text: String,
+        color: UIColor
+    ) {
+        self.context = context
+        self.text = text
+        self.color = color
+    }
+
+    public static func ==(lhs: ButtonContentComponent, rhs: ButtonContentComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.color != rhs.color {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private var component: ButtonContentComponent?
+        private weak var componentState: EmptyComponentState?
+        
+        private let backgroundLayer = SimpleLayer()
+        private let title = ComponentView<Empty>()
+                
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.layer.addSublayer(self.backgroundLayer)
+            self.backgroundLayer.masksToBounds = true
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: ButtonContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.componentState = state
+                        
+            let attributedText = NSAttributedString(string: component.text, font: Font.regular(11.0), textColor: component.color)
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(
+                    MultilineTextWithEntitiesComponent(
+                        context: component.context,
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        placeholderColor: .white,
+                        text: .plain(attributedText)
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let padding: CGFloat = 6.0
+            let size = CGSize(width: titleSize.width + padding * 2.0, height: 18.0)
+                        
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            
+            let backgroundColor = component.color.withAlphaComponent(0.1)
+            self.backgroundLayer.backgroundColor = backgroundColor.cgColor
+            transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: .zero, size: size))
+            self.backgroundLayer.cornerRadius = size.height / 2.0
+                        
+            return size
+        }
+    }
+
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private struct GiftConfiguration {
+    static var defaultValue: GiftConfiguration {
+        return GiftConfiguration(convertToStarsPeriod: 90 * 86400)
+    }
+    
+    let convertToStarsPeriod: Int32
+    
+    fileprivate init(convertToStarsPeriod: Int32) {
+        self.convertToStarsPeriod = convertToStarsPeriod
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> GiftConfiguration {
+        if let data = appConfiguration.data {
+            var convertToStarsPeriod: Int32?
+            if let value = data["stargifts_convert_period_max"] as? Double {
+                convertToStarsPeriod = Int32(value)
+            }
+            return GiftConfiguration(convertToStarsPeriod: convertToStarsPeriod ?? GiftConfiguration.defaultValue.convertToStarsPeriod)
+        } else {
+            return .defaultValue
+        }
+    }
 }

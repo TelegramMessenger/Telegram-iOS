@@ -427,6 +427,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
     }
     
     class View: UIView, UIGestureRecognizerDelegate {
+        private let topPanelClippingView: UIView
         private let topPanelBackgroundView: UIView
         private let topPanelMergedBackgroundView: UIView
         private let topPanelSeparatorLayer: SimpleLayer
@@ -436,6 +437,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
         private weak var state: EmptyComponentState?
         
         private let panelsBackgroundLayer: SimpleLayer
+        private let clippingView: UIView
         private var visiblePanels: [AnyHashable: ComponentView<StarsTransactionsPanelEnvironment>] = [:]
         private var actualVisibleIds = Set<AnyHashable>()
         private var currentId: AnyHashable?
@@ -443,6 +445,10 @@ final class StarsTransactionsPanelContainerComponent: Component {
         private var animatingTransition: Bool = false
         
         override init(frame: CGRect) {
+            self.topPanelClippingView = UIView()
+            self.topPanelClippingView.clipsToBounds = true
+            self.topPanelClippingView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+            
             self.topPanelBackgroundView = UIView()
             
             self.topPanelMergedBackgroundView = UIView()
@@ -452,11 +458,16 @@ final class StarsTransactionsPanelContainerComponent: Component {
             
             self.panelsBackgroundLayer = SimpleLayer()
             
+            self.clippingView = UIView()
+            self.clippingView.clipsToBounds = true
+            
             super.init(frame: frame)
             
             self.layer.addSublayer(self.panelsBackgroundLayer)
-            self.addSubview(self.topPanelBackgroundView)
-            self.addSubview(self.topPanelMergedBackgroundView)
+            self.addSubview(self.clippingView)
+            self.addSubview(self.topPanelClippingView)
+            self.topPanelClippingView.addSubview(self.topPanelBackgroundView)
+            self.topPanelClippingView.addSubview(self.topPanelMergedBackgroundView)
             self.layer.addSublayer(self.topPanelSeparatorLayer)
             
             let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
@@ -593,6 +604,19 @@ final class StarsTransactionsPanelContainerComponent: Component {
             transition.setAlpha(view: self.topPanelBackgroundView, alpha: 1.0 - value)
         }
         
+        func transferVelocity(_ velocity: CGFloat) {
+            if let currentPanelView = self.currentPanelView as? StarsTransactionsListPanelComponent.View {
+                currentPanelView.transferVelocity(velocity)
+            }
+        }
+        
+        func scrollToTop() -> Bool {
+            if let currentPanelView = self.currentPanelView as? StarsTransactionsListPanelComponent.View {
+                return currentPanelView.scrollToTop()
+            }
+            return false
+        }
+        
         func update(component: StarsTransactionsPanelContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StarsTransactionsPanelContainerEnvironment>, transition: ComponentTransition) -> CGSize {
             let environment = environment[StarsTransactionsPanelContainerEnvironment.self].value
             
@@ -610,13 +634,17 @@ final class StarsTransactionsPanelContainerComponent: Component {
             
             let topPanelCoverHeight: CGFloat = 10.0
             
-            let topPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: -topPanelCoverHeight), size: CGSize(width: availableSize.width, height: 44.0))
-            transition.setFrame(view: self.topPanelBackgroundView, frame: topPanelFrame)
-            transition.setFrame(view: self.topPanelMergedBackgroundView, frame: topPanelFrame)
+            let containerWidth = availableSize.width - component.insets.left - component.insets.right
+            let topPanelFrame = CGRect(origin: CGPoint(x: component.insets.left, y: -topPanelCoverHeight), size: CGSize(width: containerWidth, height: 44.0))
+            transition.setFrame(view: self.topPanelClippingView, frame: topPanelFrame)
+            transition.setFrame(view: self.topPanelBackgroundView, frame: CGRect(origin: .zero, size: topPanelFrame.size))
+            transition.setFrame(view: self.topPanelMergedBackgroundView, frame: CGRect(origin: .zero, size: topPanelFrame.size))
+
+            transition.setCornerRadius(layer: self.topPanelClippingView.layer, cornerRadius: component.insets.left > 0.0 ? 11.0 : 0.0)
             
-            transition.setFrame(layer: self.panelsBackgroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelFrame.maxY)))
+            transition.setFrame(layer: self.panelsBackgroundLayer, frame: CGRect(origin: CGPoint(x: component.insets.left, y: topPanelFrame.maxY), size: CGSize(width: containerWidth, height: availableSize.height - topPanelFrame.maxY)))
             
-            transition.setFrame(layer: self.topPanelSeparatorLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            transition.setFrame(layer: self.topPanelSeparatorLayer, frame: CGRect(origin: CGPoint(x: component.insets.left, y: topPanelFrame.maxY), size: CGSize(width: containerWidth, height: UIScreenPixel)))
             
             if let currentIdValue = self.currentId, !component.items.contains(where: { $0.id == currentIdValue }) {
                 self.currentId = nil
@@ -641,7 +669,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 }
             }
             
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 16.0 + component.insets.left
             let condensedPanelWidth: CGFloat = availableSize.width - sideInset * 2.0
             let headerSize = self.header.update(
                 transition: transition,
@@ -674,7 +702,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
                 if headerView.superview == nil {
                     self.addSubview(headerView)
                 }
-                transition.setFrame(view: headerView, frame: CGRect(origin: topPanelFrame.origin.offsetBy(dx: sideInset, dy: 0.0), size: headerSize))
+                transition.setFrame(view: headerView, frame: CGRect(origin: topPanelFrame.origin.offsetBy(dx: 16.0, dy: 0.0), size: headerSize))
             }
                         
             let centralPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height - topPanelFrame.maxY))
@@ -688,7 +716,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
             for (id, _) in self.visiblePanels {
                 visibleIds.insert(id)
             }
-            
+                        
             var validIds = Set<AnyHashable>()
             if let currentIndex {
                 var anyAnchorOffset: CGFloat = 0.0
@@ -769,7 +797,7 @@ final class StarsTransactionsPanelContainerComponent: Component {
                     )
                     if let panelView = panel.view {
                         if panelView.superview == nil {
-                            self.insertSubview(panelView, belowSubview: self.topPanelBackgroundView)
+                            self.clippingView.addSubview(panelView)
                         }
                         
                         panelTransition.setFrame(view: panelView, frame: itemFrame, completion: { [weak self] _ in
@@ -789,6 +817,11 @@ final class StarsTransactionsPanelContainerComponent: Component {
                     }
                 }
             }
+            
+            let clippingFrame = CGRect(origin: CGPoint(x: component.insets.left, y: 0.0), size: CGSize(width: availableSize.width - component.insets.left - component.insets.right, height: availableSize.height))
+            
+            transition.setPosition(view: self.clippingView, position: clippingFrame.center)
+            transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: component.insets.left, y: 0.0), size: clippingFrame.size))
             
             var removeIds: [AnyHashable] = []
             for (id, panel) in self.visiblePanels {

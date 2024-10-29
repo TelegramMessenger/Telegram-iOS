@@ -452,7 +452,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let url = navigationAction.request.url?.absoluteString {
                 if isTelegramMeLink(url) || isTelegraPhLink(url) {
                     decisionHandler(.cancel)
-                    self.controller?.openUrl(url, true, {})
+                    self.controller?.openUrl(url, true, false, {})
                 } else {
                     decisionHandler(.allow)
                 }
@@ -463,7 +463,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-                self.controller?.openUrl(url.absoluteString, true, {})
+                self.controller?.openUrl(url.absoluteString, true, false, {})
             }
             return nil
         }
@@ -587,6 +587,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
         }
+        
+        private var updateWebViewWhenStable = false
                 
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previousLayout = self.validLayout?.0
@@ -604,7 +606,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     scrollInset.bottom = 0.0
                 }
                 
-                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
+                let frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight - frameBottomInset)))
+                if !webView.frame.width.isZero && webView.frame != frame {
+                    self.updateWebViewWhenStable = true
+                }
                 
                 var bottomInset = layout.intrinsicInsets.bottom + layout.additionalInsets.bottom
                 if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
@@ -635,9 +640,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 if let controller = self.controller {
                     webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
+                    if self.updateWebViewWhenStable && !controller.isContainerPanning() {
+                        self.updateWebViewWhenStable = false
+                        webView.setNeedsLayout()
+                    }
                 }
                 
-                webView.customBottomInset = layout.intrinsicInsets.bottom
+                if layout.intrinsicInsets.bottom > 44.0 {
+                    webView.customBottomInset = 0.0
+                } else {
+                    webView.customBottomInset = layout.intrinsicInsets.bottom
+                }
+                webView.customSideInset = layout.safeInsets.left
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -788,7 +802,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     controller.dismiss()
                 case "web_app_open_tg_link":
                     if let json = json, let path = json["path_full"] as? String {
-                        controller.openUrl("https://t.me\(path)", false, { [weak controller] in
+                        let forceRequest = json["force_request"] as? Bool ?? false
+                        controller.openUrl("https://t.me\(path)", false, forceRequest, { [weak controller] in
                             let _ = controller
 //                            controller?.dismiss()
                         })
@@ -1874,7 +1889,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     private var hasSettings = false
     
-    public var openUrl: (String, Bool, @escaping () -> Void) -> Void = { _, _, _ in }
+    public var openUrl: (String, Bool, Bool, @escaping () -> Void) -> Void = { _, _, _, _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
     public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
@@ -2126,7 +2141,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let context = self.context
                 let _ = (cachedWebAppTermsPage(context: context)
                 |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
-                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
+                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, forceUpdate: false, openPeer: { peer, navigation in
                     }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
                         self?.push(c)
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
@@ -2355,7 +2370,7 @@ public func standaloneWebAppController(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     params: WebAppParameters,
     threadId: Int64?,
-    openUrl: @escaping (String, Bool, @escaping () -> Void) -> Void,
+    openUrl: @escaping (String, Bool, Bool, @escaping () -> Void) -> Void,
     requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in },
     getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil },
     completion: @escaping () -> Void = {},

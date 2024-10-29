@@ -117,6 +117,7 @@ private final class MediaPlayerContext {
     private let userContentType: MediaResourceUserContentType
     private let resourceReference: MediaResourceReference
     private let tempFilePath: String?
+    private let limitedFileRange: Range<Int64>?
     private let streamable: MediaPlayerStreaming
     private let video: Bool
     private let preferSoftwareDecoding: Bool
@@ -151,7 +152,7 @@ private final class MediaPlayerContext {
     
     private var stoppedAtEnd = false
     
-    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, audioLevelPipe: ValuePipe<Float>, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, soundMuted: Bool, ambient: Bool, mixWithOthers: Bool, keepAudioSessionWhilePaused: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool, storeAfterDownload: (() -> Void)? = nil, isAudioVideoMessage: Bool) {
+    init(queue: Queue, audioSessionManager: ManagedAudioSession, playerStatus: Promise<MediaPlayerStatus>, audioLevelPipe: ValuePipe<Float>, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String?, limitedFileRange: Range<Int64>?, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, playAndRecord: Bool, soundMuted: Bool, ambient: Bool, mixWithOthers: Bool, keepAudioSessionWhilePaused: Bool, continuePlayingWithoutSoundOnLostAudioSession: Bool, storeAfterDownload: (() -> Void)? = nil, isAudioVideoMessage: Bool) {
         assert(queue.isCurrent())
         
         self.queue = queue
@@ -163,6 +164,7 @@ private final class MediaPlayerContext {
         self.userContentType = userContentType
         self.resourceReference = resourceReference
         self.tempFilePath = tempFilePath
+        self.limitedFileRange = limitedFileRange
         self.streamable = streamable
         self.video = video
         self.preferSoftwareDecoding = preferSoftwareDecoding
@@ -232,7 +234,7 @@ private final class MediaPlayerContext {
                 if let loadedState = maybeLoadedState, let videoBuffer = loadedState.mediaBuffers.videoBuffer {
                     if let (extraVideoFrames, atTime) = loadedState.extraVideoFrames {
                         loadedState.extraVideoFrames = nil
-                        return .restoreState(extraVideoFrames, atTime)
+                        return .restoreState(frames: extraVideoFrames, atTimestamp: atTime, soft: false)
                     } else {
                         return videoBuffer.takeFrame()
                     }
@@ -340,7 +342,7 @@ private final class MediaPlayerContext {
             let _ = self.playerStatusValue.swap(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable.enabled, isSeekable: self.streamable.isSeekable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, limitedFileRange: self.limitedFileRange, streamable: self.streamable.enabled, isSeekable: self.streamable.isSeekable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload)
         let disposable = MetaDisposable()
         let updatedSeekState: MediaPlayerSeekState?
         if let loadedDuration = loadedDuration {
@@ -1128,10 +1130,10 @@ public final class MediaPlayer {
         }
     }
     
-    public init(audioSessionManager: ManagedAudioSession, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String? = nil, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, soundMuted: Bool = false, ambient: Bool = false, mixWithOthers: Bool = false, keepAudioSessionWhilePaused: Bool = false, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, storeAfterDownload: (() -> Void)? = nil, isAudioVideoMessage: Bool = false) {
+    public init(audioSessionManager: ManagedAudioSession, postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resourceReference: MediaResourceReference, tempFilePath: String? = nil, limitedFileRange: Range<Int64>? = nil, streamable: MediaPlayerStreaming, video: Bool, preferSoftwareDecoding: Bool, playAutomatically: Bool = false, enableSound: Bool, baseRate: Double = 1.0, fetchAutomatically: Bool, playAndRecord: Bool = false, soundMuted: Bool = false, ambient: Bool = false, mixWithOthers: Bool = false, keepAudioSessionWhilePaused: Bool = false, continuePlayingWithoutSoundOnLostAudioSession: Bool = false, storeAfterDownload: (() -> Void)? = nil, isAudioVideoMessage: Bool = false) {
         let audioLevelPipe = self.audioLevelPipe
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, audioLevelPipe: audioLevelPipe, postbox: postbox, userLocation: userLocation, userContentType: userContentType, resourceReference: resourceReference, tempFilePath: tempFilePath, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, soundMuted: soundMuted, ambient: ambient, mixWithOthers: mixWithOthers, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
+            let context = MediaPlayerContext(queue: self.queue, audioSessionManager: audioSessionManager, playerStatus: self.statusValue, audioLevelPipe: audioLevelPipe, postbox: postbox, userLocation: userLocation, userContentType: userContentType, resourceReference: resourceReference, tempFilePath: tempFilePath, limitedFileRange: limitedFileRange, streamable: streamable, video: video, preferSoftwareDecoding: preferSoftwareDecoding, playAutomatically: playAutomatically, enableSound: enableSound, baseRate: baseRate, fetchAutomatically: fetchAutomatically, playAndRecord: playAndRecord, soundMuted: soundMuted, ambient: ambient, mixWithOthers: mixWithOthers, keepAudioSessionWhilePaused: keepAudioSessionWhilePaused, continuePlayingWithoutSoundOnLostAudioSession: continuePlayingWithoutSoundOnLostAudioSession, storeAfterDownload: storeAfterDownload, isAudioVideoMessage: isAudioVideoMessage)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

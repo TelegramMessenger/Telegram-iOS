@@ -1229,7 +1229,7 @@ final class MediaEditorScreenComponent: Component {
                         style: .editor,
                         placeholder: .plain(environment.strings.Story_Editor_InputPlaceholderAddCaption),
                         maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
-                        queryTypes: [.mention],
+                        queryTypes: [.mention, .hashtag],
                         alwaysDarkWhenHasText: false,
                         resetInputContents: nil,
                         nextInputMode: { _ in  return nextInputMode },
@@ -1363,12 +1363,12 @@ final class MediaEditorScreenComponent: Component {
                         header: header,
                         isChannel: false,
                         storyItem: nil,
-                        chatLocation: nil
+                        chatLocation: controller.customTarget.flatMap { .peer(id: $0) }
                     )),
                     environment: {},
                     containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
                 )
-                
+                                
                 if self.inputPanelExternalState.isEditing && controller.node.entitiesView.hasSelection {
                     Queue.mainQueue().justDispatch {
                         controller.node.entitiesView.selectEntity(nil)

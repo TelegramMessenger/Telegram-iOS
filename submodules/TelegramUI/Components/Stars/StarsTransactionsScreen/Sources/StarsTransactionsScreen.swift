@@ -120,6 +120,8 @@ final class StarsTransactionsScreenComponent: Component {
         private var previousVelocityM1: CGFloat = 0.0
         private var previousVelocity: CGFloat = 0.0
         
+        private var listIsExpanded = false
+        
         private var ignoreScrolling: Bool = false
         
         private var stateDisposable: Disposable?
@@ -183,20 +185,56 @@ final class StarsTransactionsScreenComponent: Component {
             self.stateDisposable?.dispose()
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            var currentParent: UIView? = result
+            while true {
+                if currentParent == nil || currentParent === self {
+                    break
+                }
+                if let scrollView = currentParent as? UIScrollView {
+                    if scrollView === self.scrollView {
+                        break
+                    }
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.scrollView
+                    }
+                }
+                currentParent = currentParent?.superview
+            }
+            return result
+        }
+        
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             self.enableVelocityTracking = true
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            if !self.ignoreScrolling {
-                if self.enableVelocityTracking {
-                    self.previousVelocityM1 = self.previousVelocity
-                    if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
-                        self.previousVelocity = CGFloat(value)
-                    }
+            guard !self.ignoreScrolling else {
+                return
+            }
+            if self.enableVelocityTracking {
+                self.previousVelocityM1 = self.previousVelocity
+                if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
+                    self.previousVelocity = CGFloat(value)
                 }
-                
-                self.updateScrolling(transition: .immediate)
+            }
+            
+            self.updateScrolling(transition: .immediate)
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            guard let navigationMetrics = self.navigationMetrics else {
+                return
+            }
+            
+            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                let paneAreaExpansionFinalPoint: CGFloat = panelContainerView.frame.minY - navigationMetrics.navigationHeight
+                if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
+                    panelContainerView.transferVelocity(self.previousVelocityM1)
+                }
             }
         }
         
@@ -212,6 +250,12 @@ final class StarsTransactionsScreenComponent: Component {
                 self.enableVelocityTracking = false
                 self.previousVelocity = 0.0
                 self.previousVelocityM1 = 0.0
+            }
+        }
+        
+        func scrollToTop() {
+            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View, !panelContainerView.scrollToTop() {
+                self.scrollView.setContentOffset(.zero, animated: true)
             }
         }
                 
@@ -272,6 +316,14 @@ final class StarsTransactionsScreenComponent: Component {
                 }
                 if let view = self.topBalanceIconView.view {
                     view.alpha = topBalanceAlpha
+                }
+                
+                let listIsExpanded = expansionDistanceFactor == 0.0
+                if listIsExpanded != self.listIsExpanded {
+                    self.listIsExpanded = listIsExpanded
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .init(animation: .curve(duration: 0.25, curve: .slide)))
+                    }
                 }
             }
             
@@ -362,7 +414,7 @@ final class StarsTransactionsScreenComponent: Component {
             
             var contentHeight: CGFloat = 0.0
                         
-            let sideInsets: CGFloat = environment.safeInsets.left + environment.safeInsets.right + 16 * 2.0
+            let sideInsets: CGFloat = environment.safeInsets.left + environment.safeInsets.right + 16.0 * 2.0
             let bottomInset: CGFloat = environment.safeInsets.bottom
              
             contentHeight += environment.statusBarHeight
@@ -834,13 +886,16 @@ final class StarsTransactionsScreenComponent: Component {
             }
             
             if !panelItems.isEmpty {
+                let panelContainerInset: CGFloat = self.listIsExpanded ? 0.0 : 16.0
+                let panelContainerCornerRadius: CGFloat = self.listIsExpanded ? 0.0 : 11.0
+                
                 let panelContainerSize = self.panelContainer.update(
                     transition: panelTransition,
                     component: AnyComponent(StarsTransactionsPanelContainerComponent(
                         theme: environment.theme,
                         strings: environment.strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: bottomInset, right: environment.safeInsets.right),
+                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left + panelContainerInset, bottom: bottomInset, right: environment.safeInsets.right + panelContainerInset),
                         items: panelItems,
                         currentPanelUpdated: { [weak self] id, transition in
                             guard let self else {
@@ -859,7 +914,8 @@ final class StarsTransactionsScreenComponent: Component {
                     if panelContainerView.superview == nil {
                         self.scrollContainerView.addSubview(panelContainerView)
                     }
-                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: panelContainerSize))
+                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - panelContainerSize.width) / 2.0), y: contentHeight), size: panelContainerSize))
+                    transition.setCornerRadius(layer: panelContainerView.layer, cornerRadius: panelContainerCornerRadius)
                 }
                 contentHeight += panelContainerSize.height
             } else {
@@ -1097,6 +1153,15 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         
         self.starsContext.load(force: false)
         self.subscriptionsContext.loadMore()
+        
+        self.scrollToTop = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let componentView = self.node.hostView.componentView as? StarsTransactionsScreenComponent.View {
+                componentView.scrollToTop()
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

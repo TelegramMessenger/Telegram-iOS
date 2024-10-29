@@ -274,6 +274,19 @@ public final class StarsAvatarComponent: Component {
                 self.iconView.isHidden = false
                 self.avatarNode.isHidden = true
                 self.iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
+            case .apiLimitExtension:
+                self.backgroundView.image = generateGradientFilledCircleImage(
+                    diameter: size.width,
+                    colors: [
+                        UIColor(rgb: 0x32b83b).cgColor,
+                        UIColor(rgb: 0x87d93b).cgColor
+                    ],
+                    direction: .vertical
+                )
+                self.backgroundView.isHidden = false
+                self.iconView.isHidden = false
+                self.avatarNode.isHidden = true
+                self.iconView.image = UIImage(bundleImageName: "Premium/Stars/PaidBroadcast")
             case .unsupported:
                 iconInset = 7.0
                 self.backgroundView.image = generateGradientFilledCircleImage(

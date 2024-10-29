@@ -38,7 +38,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let backgroundNode: ASDisplayNode
     private let scrollNode: ASScrollNode
     
-    private var unlockBackground: ASDisplayNode?
+    private var unlockBackground: NavigationBackgroundNode?
     private var unlockSeparator: ASDisplayNode?
     private var unlockText: ComponentView<Empty>?
     private var unlockButton: SolidRoundedButtonNode?
@@ -263,7 +263,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.theme = presentationData.theme
                 
                 let unlockText: ComponentView<Empty>
-                let unlockBackground: ASDisplayNode
+                let unlockBackground: NavigationBackgroundNode
                 let unlockSeparator: ASDisplayNode
                 let unlockButton: SolidRoundedButtonNode
                 if let current = self.unlockText {
@@ -276,7 +276,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 if let current = self.unlockBackground {
                     unlockBackground = current
                 } else {
-                    unlockBackground = ASDisplayNode()
+                    unlockBackground = NavigationBackgroundNode(color: presentationData.theme.rootController.tabBar.backgroundColor)
                     self.addSubnode(unlockBackground)
                     self.unlockBackground = unlockBackground
                 }
@@ -304,7 +304,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             
                 if themeUpdated {
-                    unlockBackground.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                    unlockBackground.updateColor(color: presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
                     unlockSeparator.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
                     unlockButton.updateTheme(SolidRoundedButtonTheme(theme: presentationData.theme))
                 }
@@ -326,6 +326,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 
                 let bottomPanelHeight = bottomInset + buttonSize.height + 8.0
                 transition.setFrame(view: unlockBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: bottomPanelHeight))
+                unlockBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
                 transition.setFrame(view: unlockSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: UIScreenPixel))
                 
                 let unlockSize = unlockText.update(

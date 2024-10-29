@@ -392,8 +392,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, ASScrollVi
         self.setNeedsLayout()
     }
     
-    func setInvitePeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer], data: JoinLinkPreviewData) {
-        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .invite(isGroup: data.isGroup, image: image, title: title, memberCount: memberCount, members: members))
+    func setInvitePeer(image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, members: [EnginePeer], data: JoinLinkPreviewData) {
+        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .invite(isGroup: data.isGroup, image: image, title: title, about: about, memberCount: memberCount, members: members))
         contentNode.join = { [weak self] in
             self?.join?()
         }

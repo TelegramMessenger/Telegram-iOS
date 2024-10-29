@@ -8,21 +8,35 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AvatarNode
+import AccountContext
 
 final class HashtagChatInputPanelItem: ListViewItem {
+    fileprivate let context: AccountContext
     fileprivate let presentationData: ItemListPresentationData
-    fileprivate let text: String
+    fileprivate let peer: EnginePeer?
+    fileprivate let title: String
+    fileprivate let text: String?
+    fileprivate let badge: String?
+    fileprivate let hashtag: String
     fileprivate let revealed: Bool
+    fileprivate let isAdditionalRecent: Bool
     fileprivate let setHashtagRevealed: (String?) -> Void
     private let hashtagSelected: (String) -> Void
     fileprivate let removeRequested: (String) -> Void
     
     let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, text: String, revealed: Bool, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) {
+    public init(context: AccountContext, presentationData: ItemListPresentationData, peer: EnginePeer?, title: String, text: String?, badge: String? = nil, hashtag: String, revealed: Bool, isAdditionalRecent: Bool, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) {
+        self.context = context
         self.presentationData = presentationData
+        self.peer = peer
+        self.title = title
         self.text = text
+        self.badge = badge
+        self.hashtag = hashtag
         self.revealed = revealed
+        self.isAdditionalRecent = isAdditionalRecent
         self.setHashtagRevealed = setHashtagRevealed
         self.hashtagSelected = hashtagSelected
         self.removeRequested = removeRequested
@@ -79,14 +93,29 @@ final class HashtagChatInputPanelItem: ListViewItem {
         if self.revealed {
             self.setHashtagRevealed(nil)
         } else {
-            self.hashtagSelected(self.text)
+//            if self.isAdditionalRecent {
+//                self.hashtagSelected(self.hashtag)
+//            } else {
+                self.hashtagSelected(self.hashtag + " ")
+//            }
         }
     }
 }
 
+private let avatarFont = avatarPlaceholderFont(size: 16.0)
+
 final class HashtagChatInputPanelItemNode: ListViewItemNode {
     static let itemHeight: CGFloat = 42.0
+    
+    private let iconBackgroundLayer = SimpleLayer()
+    private let iconLayer = SimpleLayer()
+    private var avatarNode: AvatarNode?
+    
+    private let badgeBackgroundLayer = SimpleLayer()
+    
+    private let titleNode: TextNode
     private let textNode: TextNode
+    private let badgeNode: TextNode
     private let topSeparatorNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -105,7 +134,12 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     init() {
+        self.iconBackgroundLayer.cornerRadius = 15.0
+        self.badgeBackgroundLayer.cornerRadius = 4.0
+        
+        self.titleNode = TextNode()
         self.textNode = TextNode()
+        self.badgeNode = TextNode()
         
         self.topSeparatorNode = ASDisplayNode()
         self.topSeparatorNode.isLayerBacked = true
@@ -120,9 +154,10 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
         self.activateAreaNode.accessibilityTraits = [.button]
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
+                
         self.addSubnode(self.topSeparatorNode)
         self.addSubnode(self.separatorNode)
+        self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         
         self.addSubnode(self.activateAreaNode)
@@ -130,6 +165,12 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        self.view.layer.addSublayer(self.iconBackgroundLayer)
+        self.iconBackgroundLayer.addSublayer(self.iconLayer)
+        
+        self.view.layer.addSublayer(self.badgeBackgroundLayer)
+        self.addSubnode(self.badgeNode)
         
         let recognizer = ItemListRevealOptionsGestureRecognizer(target: self, action: #selector(self.revealGesture(_:)))
         self.recognizer = recognizer
@@ -149,16 +190,24 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: HashtagChatInputPanelItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeBadgeLayout = TextNode.asyncLayout(self.badgeNode)
+        
         return { [weak self] item, params, mergedTop, mergedBottom in
-            let textFont = Font.medium(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
-            
-            let baseWidth = params.width - params.leftInset - params.rightInset
+            let titleFont = Font.semibold(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let textFont = Font.regular(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
+            let badgeFont = Font.medium(floor(item.presentationData.fontSize.baseDisplaySize * 10.0 / 17.0))
             
             let leftInset: CGFloat = 15.0 + params.leftInset
+            let textLeftInset: CGFloat = 40.0
+            let baseWidth = params.width - params.leftInset - params.rightInset - textLeftInset
             
-            let title = "#\(item.text)"
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (badgeLayout, badgeApply) = makeBadgeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.badge ?? "", font: badgeFont, textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth - badgeLayout.size.width, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text ?? "", font: textFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             
@@ -166,26 +215,70 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.validLayout = (nodeLayout.contentSize, params.leftInset, params.rightInset)
-                    
+                                        
                     let revealOffset = strongSelf.revealOffset
+                    
+                    if strongSelf.iconLayer.contents == nil {
+                        strongSelf.iconLayer.contents = UIImage(bundleImageName: "Chat/Hashtag/SuggestHashtag")?.cgImage
+                    }
+                    strongSelf.iconBackgroundLayer.backgroundColor = item.presentationData.theme.list.itemAccentColor.cgColor
+                    strongSelf.iconLayer.layerTintColor = item.presentationData.theme.list.itemCheckColors.foregroundColor.cgColor
+                    strongSelf.badgeBackgroundLayer.backgroundColor = item.presentationData.theme.list.itemAccentColor.cgColor
                     
                     strongSelf.separatorNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     strongSelf.topSeparatorNode.backgroundColor = item.presentationData.theme.list.itemPlainSeparatorColor
                     strongSelf.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
                     strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                     
+                    let _ = titleApply()
                     let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: floor((nodeLayout.contentSize.height - textLayout.size.height) / 2.0)), size: textLayout.size)
+                    let _ = badgeApply()
+                    
+                    if textLayout.size.height > 0.0 {
+                        let combinedHeight = titleLayout.size.height + textLayout.size.height
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLeftInset, y: floor((nodeLayout.contentSize.height - combinedHeight) / 2.0)), size: titleLayout.size)
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLeftInset, y: floor((nodeLayout.contentSize.height - combinedHeight) / 2.0) + combinedHeight - textLayout.size.height), size: textLayout.size)
+                    } else {
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: revealOffset + leftInset + textLeftInset, y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
+                    }
+                    
+                    if badgeLayout.size.height > 0.0 {
+                        let badgeFrame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + 8.0, y: floorToScreenPixels(strongSelf.titleNode.frame.midY - badgeLayout.size.height / 2.0)), size: badgeLayout.size)
+                        let badgeBackgroundFrame = badgeFrame.insetBy(dx: -3.0, dy: -2.0)
+                        
+                        strongSelf.badgeNode.frame = badgeFrame
+                        strongSelf.badgeBackgroundLayer.frame = badgeBackgroundFrame
+                    }
                     
                     strongSelf.topSeparatorNode.isHidden = mergedTop
                     strongSelf.separatorNode.isHidden = !mergedBottom
                     
+                    let iconSize = CGSize(width: 30.0, height: 30.0)
+                    strongSelf.iconBackgroundLayer.frame = CGRect(origin: CGPoint(x: params.leftInset + 12.0, y: floor((nodeLayout.contentSize.height - 30.0) / 2.0)), size: iconSize)
+                    strongSelf.iconLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 30.0, height: 30.0))
+                    
+                    if let peer = item.peer {
+                        strongSelf.iconBackgroundLayer.isHidden = true
+                        let avatarNode: AvatarNode
+                        if let current = strongSelf.avatarNode {
+                            avatarNode = current
+                        } else {
+                            avatarNode = AvatarNode(font: avatarFont)
+                            strongSelf.addSubnode(avatarNode)
+                            strongSelf.avatarNode = avatarNode
+                        }
+                        avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer)
+                        avatarNode.frame = strongSelf.iconBackgroundLayer.frame
+                    } else {
+                        strongSelf.iconBackgroundLayer.isHidden = false
+                    }
+                    
                     strongSelf.topSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: UIScreenPixel))
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset + textLeftInset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - textLeftInset, height: UIScreenPixel))
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                     
-                    strongSelf.activateAreaNode.accessibilityLabel = title
+                    strongSelf.activateAreaNode.accessibilityLabel = item.title
                     strongSelf.activateAreaNode.frame = CGRect(origin: .zero, size: nodeLayout.size)
                     
                     strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)])
@@ -197,7 +290,8 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     
     func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         if let (_, leftInset, _) = self.validLayout {
-            transition.updateFrameAdditive(node: self.textNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 15.0 + leftInset, y: self.textNode.frame.minY), size: self.textNode.frame.size))
+            transition.updateFrameAdditive(layer: self.iconBackgroundLayer, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 12.0 + leftInset, y: self.iconBackgroundLayer.frame.minY), size: self.iconBackgroundLayer.frame.size))
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: min(offset, 0.0) + 15.0 + 40.0 + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.frame.size))
         }
     }
     
@@ -276,6 +370,11 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let item = self.item {
+            if let _ = item.text {
+                return false
+            }
+        }
         return true
     }
     
@@ -356,7 +455,7 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
         guard let item = self.item else {
             return
         }
-        item.removeRequested(item.text)
+        item.removeRequested(item.hashtag)
     }
     
     private func setupAndAddRevealNode() {

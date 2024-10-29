@@ -24,19 +24,34 @@ public final class GiftItemComponent: Component {
             case red
             case blue
             
-            var colors: [UIColor] {
+            func colors(theme: PresentationTheme) -> [UIColor] {
                 switch self {
                 case .red:
-                    return [
-                        UIColor(rgb: 0xed1c26),
-                        UIColor(rgb: 0xff5c55)
-                        
-                    ]
+                    if theme.overallDarkAppearance {
+                        return [
+                            UIColor(rgb: 0x522124),
+                            UIColor(rgb: 0x653634)
+                            
+                        ]
+                    } else {
+                        return [
+                            UIColor(rgb: 0xed1c26),
+                            UIColor(rgb: 0xff5c55)
+                            
+                        ]
+                    }
                 case .blue:
-                    return [
-                        UIColor(rgb: 0x34a4fc),
-                        UIColor(rgb: 0x6fd3ff)
-                    ]
+                    if theme.overallDarkAppearance {
+                        return [
+                            UIColor(rgb: 0x142e42),
+                            UIColor(rgb: 0x354f5b)
+                        ]
+                    } else {
+                        return [
+                            UIColor(rgb: 0x34a4fc),
+                            UIColor(rgb: 0x6fd3ff)
+                        ]
+                    }
                 }
             }
         }
@@ -166,9 +181,14 @@ public final class GiftItemComponent: Component {
         
         func update(component: GiftItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
-            
+            let previousComponent = self.component
             self.component = component
             self.componentState = state
+            
+            var themeUpdated = false
+            if previousComponent?.theme !== component.theme {
+                themeUpdated = true
+            }
             
             let size = CGSize(width: availableSize.width, height: component.title != nil ? 178.0 : 154.0)
             
@@ -292,11 +312,9 @@ public final class GiftItemComponent: Component {
             
             let buttonColor: UIColor
             var isStars = false
-            if component.isSoldOut {
-                buttonColor = component.theme.list.itemDestructiveColor
-            } else if component.price.containsEmoji {
-                buttonColor = UIColor(rgb: 0xd3720a)
-                isStars = true
+            if component.price.containsEmoji {
+                buttonColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
+                isStars = !component.isSoldOut
             } else {
                 buttonColor = component.theme.list.itemAccentColor
             }
@@ -341,8 +359,8 @@ public final class GiftItemComponent: Component {
                     }
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
-                    if self.ribbon.image == nil {
-                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors, direction: .diagonal)
+                    if self.ribbon.image == nil || themeUpdated {
+                        self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors(theme: component.theme), direction: .diagonal)
                     }
                     if let ribbonImage = self.ribbon.image {
                         self.ribbon.frame = CGRect(origin: CGPoint(x: size.width - ribbonImage.size.width + 2.0, y: -2.0), size: ribbonImage.size)
@@ -593,7 +611,7 @@ private final class StarsButtonEffectLayer: SimpleLayer {
         let emitter = CAEmitterCell()
         emitter.name = "emitter"
         emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
-        emitter.birthRate = 25.0
+        emitter.birthRate = 14.0
         emitter.lifetime = 2.0
         emitter.velocity = 12.0
         emitter.velocityRange = 3

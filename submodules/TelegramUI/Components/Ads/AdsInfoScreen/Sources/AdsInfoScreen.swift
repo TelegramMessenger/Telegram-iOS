@@ -1,8 +1,10 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import ComponentFlow
 import SwiftSignalKit
+import Postbox
 import TelegramCore
 import Markdown
 import TextFormat
@@ -16,20 +18,29 @@ import SolidRoundedButtonComponent
 import AccountContext
 import ScrollComponent
 import BlurredBackgroundComponent
+import PresentationDataUtils
+import ContextUI
+import UndoUI
+import AdsReportScreen
+
+private let moreTag = GenericComponentViewTag()
 
 private final class ScrollContent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
+    let mode: AdsInfoScreen.Mode
     let openPremium: () -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        mode: AdsInfoScreen.Mode,
         openPremium: @escaping () -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
         self.openPremium = openPremium
         self.dismiss = dismiss
     }
@@ -175,7 +186,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Respect_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Respect_Text,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Respect_Text : strings.AdsInfo_Respect_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Privacy",
@@ -187,9 +198,9 @@ private final class ScrollContent: CombinedComponent {
                 AnyComponentWithIdentity(
                     id: "split",
                     component: AnyComponent(ParagraphComponent(
-                        title: strings.AdsInfo_Split_Title,
+                        title: component.mode == .bot ? strings.AdsInfo_Bot_Split_Title : strings.AdsInfo_Split_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Split_Text,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Split_Text : strings.AdsInfo_Split_Text,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Split",
@@ -203,7 +214,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Ads_Title,
                         titleColor: textColor,
-                        text: strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
+                        text: component.mode == .bot ? strings.AdsInfo_Bot_Ads_Text : strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/BoostPerk/NoAds",
@@ -242,7 +253,7 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            var infoString = strings.AdsInfo_Launch_Text
+            var infoString = component.mode == .bot ? strings.AdsInfo_Bot_Launch_Text : strings.AdsInfo_Launch_Text
             if let spaceRegex {
                 let nsRange = NSRange(infoString.startIndex..., in: infoString)
                 let matches = spaceRegex.matches(in: infoString, options: [], range: nsRange)
@@ -328,19 +339,38 @@ private final class ScrollContent: CombinedComponent {
 private final class ContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
+    class ExternalState {
+        var contentHeight: CGFloat = 0.0
+    }
+    
     let context: AccountContext
+    let mode: AdsInfoScreen.Mode
+    let externalState: ExternalState
     let openPremium: () -> Void
+    let openContextMenu: () -> Void
+    let dismiss: () -> Void
     
     init(
         context: AccountContext,
-        openPremium: @escaping () -> Void
+        mode: AdsInfoScreen.Mode,
+        externalState: ExternalState,
+        openPremium: @escaping () -> Void,
+        openContextMenu: @escaping () -> Void,
+        dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.mode = mode
+        self.externalState = externalState
         self.openPremium = openPremium
+        self.openContextMenu = openContextMenu
+        self.dismiss = dismiss
     }
     
     static func ==(lhs: ContainerComponent, rhs: ContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -349,6 +379,8 @@ private final class ContainerComponent: CombinedComponent {
     final class State: ComponentState {
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
+        
+        var cachedMoreImage: (UIImage, PresentationTheme)?
     }
     
     func makeState() -> State {
@@ -358,18 +390,16 @@ private final class ContainerComponent: CombinedComponent {
     static var body: Body {
         let background = Child(Rectangle.self)
         let scroll = Child(ScrollComponent<ViewControllerComponentContainer.Environment>.self)
-        let bottomPanel = Child(BlurredBackgroundComponent.self)
-        let bottomSeparator = Child(Rectangle.self)
-        let actionButton = Child(SolidRoundedButtonComponent.self)
         let scrollExternalState = ScrollComponent<EnvironmentType>.ExternalState()
+        
+        let moreButton = Child(Button.self)
         
         return { context in
             let environment = context.environment[EnvironmentType.self]
-            let theme = environment.theme
-            let strings = environment.strings
             let state = context.state
             
-            let controller = environment.controller
+            let openContextMenu = context.component.openContextMenu
+            let dismiss = context.component.dismiss
             
             let background = background.update(
                 component: Rectangle(color: environment.theme.list.plainBackgroundColor),
@@ -385,9 +415,10 @@ private final class ContainerComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(ScrollContent(
                         context: context.component.context,
+                        mode: context.component.mode,
                         openPremium: context.component.openPremium,
                         dismiss: {
-                            controller()?.dismiss()
+                            dismiss()
                         }
                     )),
                     externalState: scrollExternalState,
@@ -406,126 +437,37 @@ private final class ContainerComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
+            context.component.externalState.contentHeight = scrollExternalState.contentHeight
             
             context.add(scroll
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
             
-            let buttonHeight: CGFloat = 50.0
-            let bottomPanelPadding: CGFloat = 12.0
-            let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
-            let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
-            
-            let bottomPanelAlpha: CGFloat
-            if scrollExternalState.contentHeight > context.availableSize.height {
-                if let bottomContentOffset = state.bottomContentOffset {
-                    bottomPanelAlpha = min(16.0, bottomContentOffset) / 16.0
+            if case .bot = context.component.mode {
+                let moreImage: UIImage
+                if let (image, theme) = state.cachedMoreImage, theme === environment.theme {
+                    moreImage = image
                 } else {
-                    bottomPanelAlpha = 1.0
+                    moreImage = generateMoreButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: environment.theme.actionSheet.inputClearButtonColor)!
+                    state.cachedMoreImage = (moreImage, environment.theme)
                 }
-            } else {
-                bottomPanelAlpha = 0.0
+                let moreButton = moreButton.update(
+                    component: Button(
+                        content: AnyComponent(Image(image: moreImage)),
+                        action: {
+                            openContextMenu()
+                        }
+                    ).tagged(moreTag),
+                    availableSize: CGSize(width: 30.0, height: 30.0),
+                    transition: .immediate
+                )
+                context.add(moreButton
+                    .position(CGPoint(x: context.availableSize.width - 16.0 - moreButton.size.width / 2.0, y: 13.0 + moreButton.size.height / 2.0))
+                )
             }
             
-            let bottomPanel = bottomPanel.update(
-                component: BlurredBackgroundComponent(
-                    color: theme.rootController.tabBar.backgroundColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: bottomPanelHeight),
-                transition: context.transition
-            )
-            let bottomSeparator = bottomSeparator.update(
-                component: Rectangle(
-                    color: theme.rootController.tabBar.separatorColor
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: UIScreenPixel),
-                transition: context.transition
-            )
-            
-            context.add(bottomPanel
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
-                .opacity(bottomPanelAlpha)
-            )
-            context.add(bottomSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
-                .opacity(bottomPanelAlpha)
-            )
-            
-            let sideInset: CGFloat = 16.0 + environment.safeInsets.left
-            let actionButton = actionButton.update(
-                component: SolidRoundedButtonComponent(
-                    title: strings.AdsInfo_Understood,
-                    theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: theme.list.itemCheckColors.fillColor,
-                        backgroundColors: [],
-                        foregroundColor: theme.list.itemCheckColors.foregroundColor
-                    ),
-                    font: .bold,
-                    fontSize: 17.0,
-                    height: buttonHeight,
-                    cornerRadius: 10.0,
-                    gloss: false,
-                    iconName: nil,
-                    animationName: nil,
-                    iconPosition: .left,
-                    action: {
-                        controller()?.dismiss()
-                    }
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
-                transition: context.transition
-            )
-            context.add(actionButton
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanelHeight + bottomPanelPadding + actionButton.size.height / 2.0))
-            )
-             
             return context.availableSize
         }
-    }
-}
-
-public final class AdsInfoScreen: ViewControllerComponentContainer {
-    private let context: AccountContext
-        
-    public init(
-        context: AccountContext,
-        forceDark: Bool = false
-    ) {
-        self.context = context
-                
-        var openPremiumImpl: (() -> Void)?
-        super.init(
-            context: context,
-            component: ContainerComponent(
-                context: context,
-                openPremium: {
-                    openPremiumImpl?()
-                }
-            ),
-            navigationBarAppearance: .none,
-            statusBarStyle: .ignore,
-            theme: forceDark ? .dark : .default
-        )
-        
-        self.navigationPresentation = .modal
-        
-        openPremiumImpl = { [weak self] in
-            guard let self else {
-                return
-            }
-            
-            let navigationController = self.navigationController
-            self.dismiss()
-            
-            Queue.mainQueue().after(0.3) {
-                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                navigationController?.pushViewController(controller, animated: true)
-            }
-        }
-    }
-    
-    required public init(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }
 
@@ -671,5 +613,941 @@ private final class ParagraphComponent: CombinedComponent {
         
             return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 20.0)
         }
+    }
+}
+
+
+public class AdsInfoScreen: ViewController {
+    public enum Mode: Equatable {
+        case channel
+        case bot
+    }
+    
+    final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {
+        private var presentationData: PresentationData
+        private weak var controller: AdsInfoScreen?
+                
+        let dim: ASDisplayNode
+        let wrappingView: UIView
+        let containerView: UIView
+        
+        let contentView: ComponentHostView<ViewControllerComponentContainer.Environment>
+        let footerContainerView: UIView
+        let footerView: ComponentHostView<Empty>
+        
+        private var containerExternalState = ContainerComponent.ExternalState()
+                        
+        private(set) var isExpanded = false
+        private var panGestureRecognizer: UIPanGestureRecognizer?
+        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?)?
+        
+        private let hapticFeedback = HapticFeedback()
+        
+        private var currentIsVisible: Bool = false
+        private var currentLayout: ContainerViewLayout?
+                        
+        init(context: AccountContext, controller: AdsInfoScreen) {
+            self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            if controller.forceDark {
+                self.presentationData = self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
+            }
+            self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
+            
+            self.controller = controller
+            
+            self.dim = ASDisplayNode()
+            self.dim.alpha = 0.0
+            self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
+            
+            self.wrappingView = UIView()
+            self.containerView = UIView()
+            self.contentView = ComponentHostView()
+            
+            self.footerContainerView = UIView()
+            self.footerView = ComponentHostView()
+            
+            super.init()
+                        
+            self.containerView.clipsToBounds = true
+            self.containerView.backgroundColor = self.presentationData.theme.overallDarkAppearance ? self.presentationData.theme.list.blocksBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
+            
+            self.addSubnode(self.dim)
+            
+            self.view.addSubview(self.wrappingView)
+            self.wrappingView.addSubview(self.containerView)
+            self.containerView.addSubview(self.contentView)
+            
+            self.containerView.addSubview(self.footerContainerView)
+            self.footerContainerView.addSubview(self.footerView)
+        }
+        
+        override func didLoad() {
+            super.didLoad()
+            
+            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            panRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+            panRecognizer.delaysTouchesBegan = false
+            panRecognizer.cancelsTouchesInView = true
+            self.panGestureRecognizer = panRecognizer
+            self.wrappingView.addGestureRecognizer(panRecognizer)
+            
+            self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        }
+        
+        @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+            if case .ended = recognizer.state {
+                self.controller?.dismiss(animated: true)
+            }
+        }
+        
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let layout = self.currentLayout {
+                if case .regular = layout.metrics.widthClass {
+                    return false
+                }
+            }
+            return true
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+                if let scrollView = otherGestureRecognizer.view as? UIScrollView {
+                    if scrollView.contentSize.width > scrollView.contentSize.height {
+                        return false
+                    }
+                }
+                return true
+            }
+            return false
+        }
+        
+        private var isDismissing = false
+        func animateIn() {
+            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
+            
+            let targetPosition = self.containerView.center
+            let startPosition = targetPosition.offsetBy(dx: 0.0, dy: self.bounds.height)
+            
+            self.containerView.center = startPosition
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            transition.animateView(allowUserInteraction: true, {
+                self.containerView.center = targetPosition
+            }, completion: { _ in
+            })
+        }
+        
+        func animateOut(completion: @escaping () -> Void = {}) {
+            self.isDismissing = true
+            
+            let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            positionTransition.updatePosition(layer: self.containerView.layer, position: CGPoint(x: self.containerView.center.x, y: self.bounds.height + self.containerView.bounds.height / 2.0), completion: { [weak self] _ in
+                self?.controller?.dismiss(animated: false, completion: completion)
+            })
+            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+            
+            self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
+        }
+        
+        func requestLayout(transition: ComponentTransition) {
+            guard let layout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, forceUpdate: true, transition: transition)
+        }
+                
+        private var dismissOffset: CGFloat?
+        func containerLayoutUpdated(layout: ContainerViewLayout, forceUpdate: Bool = false, transition: ComponentTransition) {
+            guard !self.isDismissing else {
+                return
+            }
+            self.currentLayout = layout
+            
+            self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
+                                  
+            let isLandscape = layout.orientation == .landscape
+            
+            var containerTopInset: CGFloat = 0.0
+            let clipFrame: CGRect
+            if layout.metrics.widthClass == .compact {
+                self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.25)
+                if isLandscape {
+                    self.containerView.layer.cornerRadius = 0.0
+                } else {
+                    self.containerView.layer.cornerRadius = 10.0
+                }
+                
+                if #available(iOS 11.0, *) {
+                    if layout.safeInsets.bottom.isZero {
+                        self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+                    } else {
+                        self.containerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                    }
+                }
+                
+                if isLandscape {
+                    clipFrame = CGRect(origin: CGPoint(), size: layout.size)
+                } else {
+                    let coveredByModalTransition: CGFloat = 0.0
+                    containerTopInset = 10.0
+                    if let statusBarHeight = layout.statusBarHeight {
+                        containerTopInset += statusBarHeight
+                    }
+                                        
+                    let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: CGSize(width: layout.size.width, height: layout.size.height - containerTopInset))
+                    let maxScale: CGFloat = (layout.size.width - 16.0 * 2.0) / layout.size.width
+                    let containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
+                    let maxScaledTopInset: CGFloat = containerTopInset - 10.0
+                    let scaledTopInset: CGFloat = containerTopInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
+                    let containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
+                    
+                    clipFrame = CGRect(x: containerFrame.minX, y: containerFrame.minY, width: containerFrame.width, height: containerFrame.height)
+                }
+            } else {
+                self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
+                self.containerView.layer.cornerRadius = 10.0
+  
+                let verticalInset: CGFloat = 44.0
+                
+                let maxSide = max(layout.size.width, layout.size.height)
+                let minSide = min(layout.size.width, layout.size.height)
+                let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
+                clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
+            }
+            
+            transition.setFrame(view: self.containerView, frame: clipFrame)
+            
+            var effectiveExpanded = self.isExpanded
+            if case .regular = layout.metrics.widthClass {
+                effectiveExpanded = true
+            }
+        
+            self.updated(transition: transition, forceUpdate: forceUpdate)
+                        
+            let contentHeight = self.containerExternalState.contentHeight
+            if contentHeight > 0.0 && contentHeight < 400.0, let view = self.footerView.componentView as? FooterComponent.View {
+                view.backgroundView.alpha = 0.0
+                view.separator.opacity = 0.0
+            }
+            let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
+
+            let topInset: CGFloat
+            if let (panInitialTopInset, panOffset, _) = self.panGestureArguments {
+                if effectiveExpanded {
+                    topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
+                } else {
+                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
+                }
+            } else if let dismissOffset = self.dismissOffset, !dismissOffset.isZero {
+                topInset = edgeTopInset * dismissOffset
+            } else {
+                topInset = effectiveExpanded ? 0.0 : edgeTopInset
+            }
+            transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
+            
+            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
+            self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
+            
+            let footerHeight = self.footerHeight
+            let convertedFooterFrame = self.view.convert(CGRect(origin: CGPoint(x: clipFrame.minX, y: clipFrame.maxY - footerHeight), size: CGSize(width: clipFrame.width, height: footerHeight)), to: self.containerView)
+            transition.setFrame(view: self.footerContainerView, frame: convertedFooterFrame)
+        }
+        
+        func updated(transition: ComponentTransition, forceUpdate: Bool = false) {
+            guard let controller = self.controller, let layout = self.currentLayout else {
+                return
+            }
+            let environment = ViewControllerComponentContainer.Environment(
+                statusBarHeight: 0.0,
+                navigationHeight: 0.0,
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                additionalInsets: layout.additionalInsets,
+                inputHeight: layout.inputHeight ?? 0.0,
+                metrics: layout.metrics,
+                deviceMetrics: layout.deviceMetrics,
+                orientation: layout.metrics.orientation,
+                isVisible: self.currentIsVisible,
+                theme: self.presentationData.theme,
+                strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
+                controller: { [weak self] in
+                    return self?.controller
+                }
+            )
+            let contentSize = self.contentView.update(
+                transition: transition,
+                component: AnyComponent(
+                    ContainerComponent(
+                        context: controller.context,
+                        mode: controller.mode,
+                        externalState: self.containerExternalState,
+                        openPremium: { [weak self] in
+                            guard let self, let controller = self.controller else {
+                                return
+                            }
+                            
+                            let context = controller.context
+                            let forceDark = controller.forceDark
+                            let navigationController = controller.navigationController
+                            controller.dismiss(animated: true)
+                            
+                            Queue.mainQueue().after(0.3) {
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: forceDark, dismissed: nil)
+                                navigationController?.pushViewController(controller, animated: true)
+                            }
+                        },
+                        openContextMenu: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.infoPressed()
+                        },
+                        dismiss: { [weak self] in
+                            guard let self, let controller = self.controller else {
+                                return
+                            }
+                            controller.dismiss(animated: true)
+                        }
+                    )
+                ),
+                environment: { environment },
+                forceUpdate: forceUpdate,
+                containerSize: self.containerView.bounds.size
+            )
+            self.contentView.frame = CGRect(origin: .zero, size: contentSize)
+            
+            let footerHeight = self.footerHeight
+            let footerSize = self.footerView.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    FooterComponent(
+                        context: controller.context,
+                        theme: self.presentationData.theme,
+                        title: self.presentationData.strings.AdsInfo_Understood,
+                        action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.buttonPressed()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: self.containerView.bounds.width, height: footerHeight)
+            )
+            self.footerView.frame = CGRect(origin: .zero, size: footerSize)
+        }
+        
+        private var didPlayAppearAnimation = false
+        func updateIsVisible(isVisible: Bool) {
+            if self.currentIsVisible == isVisible {
+                return
+            }
+            self.currentIsVisible = isVisible
+            
+            guard let layout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, transition: .immediate)
+            
+            if !self.didPlayAppearAnimation {
+                self.didPlayAppearAnimation = true
+                self.animateIn()
+            }
+        }
+        
+        private var footerHeight: CGFloat {
+            guard let layout = self.currentLayout else {
+                return 58.0
+            }
+                        
+            var footerHeight: CGFloat = 8.0 + 50.0
+            footerHeight += layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : 8.0
+            return footerHeight
+        }
+        
+        private var defaultTopInset: CGFloat {
+            guard let layout = self.currentLayout else {
+                return 210.0
+            }
+            if case .compact = layout.metrics.widthClass {
+                let bottomPanelPadding: CGFloat = 12.0
+                let bottomInset: CGFloat = layout.intrinsicInsets.bottom > 0.0 ? layout.intrinsicInsets.bottom + 5.0 : bottomPanelPadding
+                let panelHeight: CGFloat = bottomPanelPadding + 50.0 + bottomInset + 28.0
+                
+                var defaultTopInset = layout.size.height - layout.size.width - 128.0 - panelHeight
+                
+                let containerTopInset = 10.0 + (layout.statusBarHeight ?? 0.0)
+                let contentHeight = self.containerExternalState.contentHeight
+                let footerHeight = self.footerHeight
+                if contentHeight > 0.0 {
+                    let delta = (layout.size.height - defaultTopInset - containerTopInset) - contentHeight - footerHeight - 16.0
+                    if delta > 0.0 {
+                        defaultTopInset += delta
+                    }
+                }
+                return defaultTopInset
+            } else {
+                return 210.0
+            }
+        }
+        
+        private func findVerticalScrollView(view: UIView?) -> UIScrollView? {
+            if let view = view {
+                if let view = view as? UIScrollView, view.contentSize.height > view.contentSize.width {
+                    return view
+                }
+                return findVerticalScrollView(view: view.superview)
+            } else {
+                return nil
+            }
+        }
+        
+        @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            guard let layout = self.currentLayout else {
+                return
+            }
+            
+            let isLandscape = layout.orientation == .landscape
+            let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
+        
+            switch recognizer.state {
+                case .began:
+                    let point = recognizer.location(in: self.view)
+                    let currentHitView = self.hitTest(point, with: nil)
+                    
+                    var scrollView = self.findVerticalScrollView(view: currentHitView)
+                    if scrollView?.frame.height == self.frame.width {
+                        scrollView = nil
+                    }
+                    if scrollView?.isDescendant(of: self.view) == false {
+                        scrollView = nil
+                    }
+                                
+                    let topInset: CGFloat
+                    if self.isExpanded {
+                        topInset = 0.0
+                    } else {
+                        topInset = edgeTopInset
+                    }
+                
+                    self.panGestureArguments = (topInset, 0.0, scrollView)
+                case .changed:
+                    guard let (topInset, panOffset, scrollView) = self.panGestureArguments else {
+                        return
+                    }
+                    let contentOffset = scrollView?.contentOffset.y ?? 0.0
+                    
+                    var translation = recognizer.translation(in: self.view).y
+
+                    var currentOffset = topInset + translation
+                
+                    let epsilon = 1.0
+                    if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
+                        scrollView.bounces = false
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                    } else if let scrollView = scrollView {
+                        translation = panOffset
+                        currentOffset = topInset + translation
+                        if self.isExpanded {
+                            recognizer.setTranslation(CGPoint(), in: self.view)
+                        } else if currentOffset > 0.0 {
+                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        }
+                    }
+                
+                    if scrollView == nil {
+                        translation = max(0.0, translation)
+                    }
+                    
+                    self.panGestureArguments = (topInset, translation, scrollView)
+                    
+                    if !self.isExpanded {
+                        if currentOffset > 0.0, let scrollView = scrollView {
+                            scrollView.panGestureRecognizer.setTranslation(CGPoint(), in: scrollView)
+                        }
+                    }
+                
+                    var bounds = self.bounds
+                    if self.isExpanded {
+                        bounds.origin.y = -max(0.0, translation - edgeTopInset)
+                    } else {
+                        bounds.origin.y = -translation
+                    }
+                    bounds.origin.y = min(0.0, bounds.origin.y)
+                    self.bounds = bounds
+                
+                    self.containerLayoutUpdated(layout: layout, transition: .immediate)
+                case .ended:
+                    guard let (currentTopInset, panOffset, scrollView) = self.panGestureArguments else {
+                        return
+                    }
+                    self.panGestureArguments = nil
+                
+                    let contentOffset = scrollView?.contentOffset.y ?? 0.0
+                
+                    let translation = recognizer.translation(in: self.view).y
+                    var velocity = recognizer.velocity(in: self.view)
+                    
+                    if self.isExpanded {
+                        if contentOffset > 0.1 {
+                            velocity = CGPoint()
+                        }
+                    }
+                
+                    var bounds = self.bounds
+                    if self.isExpanded {
+                        bounds.origin.y = -max(0.0, translation - edgeTopInset)
+                    } else {
+                        bounds.origin.y = -translation
+                    }
+                    bounds.origin.y = min(0.0, bounds.origin.y)
+                
+                    scrollView?.bounces = true
+                
+                    let offset = currentTopInset + panOffset
+                    let topInset: CGFloat = edgeTopInset
+
+                    var dismissing = false
+                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
+                        self.controller?.dismiss(animated: true, completion: nil)
+                        dismissing = true
+                    } else if self.isExpanded {
+                        if velocity.y > 300.0 || offset > topInset / 2.0 {
+                            self.isExpanded = false
+                            if let scrollView = scrollView {
+                                scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                            }
+                            
+                            let distance = topInset - offset
+                            let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
+                            let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+
+                            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
+                        } else {
+                            self.isExpanded = true
+                            
+                            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
+                        }
+                    } else if scrollView != nil, (velocity.y < -300.0 || offset < topInset / 2.0) {
+                        let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
+                        let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                        self.isExpanded = true
+                       
+                        self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
+                    } else {
+                        if let scrollView = scrollView {
+                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        }
+                        
+                        self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
+                    }
+                    
+                    if !dismissing {
+                        var bounds = self.bounds
+                        let previousBounds = bounds
+                        bounds.origin.y = 0.0
+                        self.bounds = bounds
+                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+                    }
+                case .cancelled:
+                    self.panGestureArguments = nil
+                    
+                    self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(.animated(duration: 0.3, curve: .easeInOut)))
+                default:
+                    break
+            }
+        }
+        
+        func updateDismissOffset(_ offset: CGFloat) {
+            guard self.isExpanded, let layout = self.currentLayout else {
+                return
+            }
+            
+            self.dismissOffset = offset
+            self.containerLayoutUpdated(layout: layout, transition: .immediate)
+        }
+        
+        func update(isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+            guard isExpanded != self.isExpanded else {
+                return
+            }
+            self.dismissOffset = nil
+            self.isExpanded = isExpanded
+            
+            guard let layout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
+        }
+        
+        func displayUndo(_ content: UndoOverlayContent) {
+            guard let controller = self.controller else {
+                return
+            }
+            let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+            controller.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                    return true
+            }), in: .current)
+        }
+        
+        func infoPressed() {
+            guard let referenceView = self.contentView.findTaggedView(tag: moreTag), let controller = self.controller, let message = controller.message, let adAttribute = message.adAttribute else {
+                return
+            }
+
+            let context = controller.context
+            let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+            
+            var actions: [ContextMenuItem] = []
+            if adAttribute.sponsorInfo != nil || adAttribute.additionalInfo != nil {
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] c, _ in
+                    var subItems: [ContextMenuItem] = []
+                    
+                    subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                    }, iconSource: nil, iconPosition: .left, action: { c, _ in
+                        c?.popItems()
+                    })))
+                    
+                    subItems.append(.separator)
+                    
+                    if let sponsorInfo = adAttribute.sponsorInfo {
+                        subItems.append(.action(ContextMenuActionItem(text: sponsorInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                            return nil
+                        }, iconSource: nil, action: { [weak self] c, _ in
+                            c?.dismiss(completion: {
+                                UIPasteboard.general.string = sponsorInfo
+                                
+                                self?.displayUndo(.copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied))
+                            })
+                        })))
+                    }
+                    if let additionalInfo = adAttribute.additionalInfo {
+                        subItems.append(.action(ContextMenuActionItem(text: additionalInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                            return nil
+                        }, iconSource: nil, action: { [weak self] c, _ in
+                            c?.dismiss(completion: {
+                                UIPasteboard.general.string = additionalInfo
+                                
+                                self?.displayUndo(.copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied))
+                            })
+                        })))
+                    }
+                    
+                    c?.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                })))
+            }
+            
+            let removeAd = self.controller?.removeAd
+            if adAttribute.canReport {
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let navigationController = self?.controller?.navigationController as? NavigationController else {
+                        return
+                    }
+                    
+                    self?.controller?.dismiss(animated: true)
+                                        
+                    let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] result in
+                        if case let .options(title, options) = result {
+                            Queue.mainQueue().after(0.2) {
+                                navigationController?.pushViewController(
+                                    AdsReportScreen(
+                                        context: context,
+                                        peerId: message.id.peerId,
+                                        opaqueId: adAttribute.opaqueId,
+                                        title: title,
+                                        options: options,
+                                        completed: {
+                                            removeAd?(adAttribute.opaqueId)
+                                        }
+                                    )
+                                )
+                            }
+                        }
+                    })
+                })))
+                
+                actions.append(.separator)
+                               
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] c, _ in
+                    c?.dismiss(completion: {
+                        if context.isPremium {
+                            removeAd?(adAttribute.opaqueId)
+                        } else {
+                            self?.presentNoAdsDemo()
+                        }
+                    })
+                })))
+            } else {
+                if !actions.isEmpty {
+                    actions.append(.separator)
+                }
+                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
+                }, iconSource: nil, action: { [weak self] c, _ in
+                    c?.dismiss(completion: {
+                        if context.isPremium {
+                            removeAd?(adAttribute.opaqueId)
+                        } else {
+                            self?.presentNoAdsDemo()
+                        }
+                    })
+                })))
+            }
+            
+            let contextController = ContextController(presentationData: presentationData, source: .reference(AdsInfoContextReferenceContentSource(controller: controller, sourceView: referenceView, insets: .zero, contentInsets: .zero)), items: .single(ContextController.Items(content: .list(actions))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
+        func presentNoAdsDemo() {
+            guard let controller = self.controller, let navigationController = controller.navigationController as? NavigationController else {
+                return
+            }
+            let context = controller.context
+            var replaceImpl: ((ViewController) -> Void)?
+            let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
+                replaceImpl?(controller)
+            }, dismissed: nil)
+            replaceImpl = { [weak demoController] c in
+                demoController?.replace(with: c)
+            }
+            controller.dismiss(animated: true)
+            Queue.mainQueue().after(0.4) {
+                navigationController.pushViewController(demoController)
+            }
+        }
+            
+        func buttonPressed() {
+            self.controller?.dismiss(animated: true)
+        }
+    }
+    
+    var node: Node {
+        return self.displayNode as! Node
+    }
+    
+    private let context: AccountContext
+    private let mode: Mode
+    private let message: Message?
+    private let forceDark: Bool
+    
+    private var currentLayout: ContainerViewLayout?
+    
+    public var removeAd: (Data) -> Void = { _ in }
+            
+    public init(
+        context: AccountContext,
+        mode: Mode,
+        message: Message? = nil,
+        forceDark: Bool = false
+    ) {
+        self.context = context
+        self.mode = mode
+        self.message = message
+        self.forceDark = forceDark
+        
+        super.init(navigationBarPresentationData: nil)
+        
+        self.navigationPresentation = .flatModal
+        self.statusBar.statusBarStyle = .Ignore
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    }
+        
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override open func loadDisplayNode() {
+        self.displayNode = Node(context: self.context, controller: self)
+        self.displayNodeDidLoad()
+        
+        self.view.disablesInteractiveModalDismiss = true
+    }
+    
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        self.view.endEditing(true)
+        if flag {
+            self.node.animateOut(completion: {
+                super.dismiss(animated: false, completion: {})
+                completion?()
+            })
+        } else {
+            super.dismiss(animated: false, completion: {})
+            completion?()
+        }
+    }
+    
+    override open func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        self.node.updateIsVisible(isVisible: true)
+    }
+    
+    override open func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+                
+        self.node.updateIsVisible(isVisible: false)
+    }
+        
+    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.currentLayout = layout
+        super.containerLayoutUpdated(layout, transition: transition)
+                
+        self.node.containerLayoutUpdated(layout: layout, transition: ComponentTransition(transition))
+    }
+}
+
+private final class FooterComponent: Component {
+    let context: AccountContext
+    let theme: PresentationTheme
+    let title: String
+    let action: () -> Void
+
+    init(context: AccountContext, theme: PresentationTheme, title: String, action: @escaping () -> Void) {
+        self.context = context
+        self.theme = theme
+        self.title = title
+        self.action = action
+    }
+
+    static func ==(lhs: FooterComponent, rhs: FooterComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        let backgroundView: BlurredBackgroundView
+        let separator = SimpleLayer()
+        
+        private let button = ComponentView<Empty>()
+        
+        private var component: FooterComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            self.backgroundView = BlurredBackgroundView(color: nil)
+            
+            super.init(frame: frame)
+            
+            self.backgroundView.clipsToBounds = true
+            
+            self.addSubview(self.backgroundView)
+            self.layer.addSublayer(self.separator)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: FooterComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let bounds = CGRect(origin: .zero, size: availableSize)
+            
+            self.backgroundView.updateColor(color: component.theme.rootController.tabBar.backgroundColor, transition: transition.containedViewLayoutTransition)
+            self.backgroundView.update(size: bounds.size, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.backgroundView, frame: bounds)
+            
+            self.separator.backgroundColor = component.theme.rootController.tabBar.separatorColor.cgColor
+            transition.setFrame(layer: self.separator, frame: CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: UIScreenPixel)))
+            
+            let buttonSize = self.button.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    SolidRoundedButtonComponent(
+                        title: component.title,
+                        theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        gloss: false,
+                        animationName: nil,
+                        iconPosition: .left,
+                        action: {
+                            component.action()
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 32.0, height: availableSize.height)
+            )
+            
+            if let view = self.button.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                let buttonFrame = CGRect(origin: CGPoint(x: 16.0, y: 8.0), size: buttonSize)
+                view.frame = buttonFrame
+            }
+                        
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private func generateMoreButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(foregroundColor.cgColor)
+        
+        let circleSize = CGSize(width: 4.0, height: 4.0)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0), y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
+        
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0) - circleSize.width - 3.0, y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
+        
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.height - circleSize.width) / 2.0) + circleSize.width + 3.0, y: floorToScreenPixels((size.height - circleSize.height) / 2.0)), size: circleSize))
+    })
+}
+
+private final class AdsInfoContextReferenceContentSource: ContextReferenceContentSource {
+    let controller: ViewController
+    let sourceView: UIView
+    let insets: UIEdgeInsets
+    let contentInsets: UIEdgeInsets
+    
+    init(controller: ViewController, sourceView: UIView, insets: UIEdgeInsets, contentInsets: UIEdgeInsets = UIEdgeInsets()) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.insets = insets
+        self.contentInsets = contentInsets
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
     }
 }

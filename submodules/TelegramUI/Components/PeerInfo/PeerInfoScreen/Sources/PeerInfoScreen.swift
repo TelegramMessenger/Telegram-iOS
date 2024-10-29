@@ -562,6 +562,7 @@ private final class PeerInfoInteraction {
     let editingOpenNameColorSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
+    let editingOpenRevenue: () -> Void
     let editingOpenStars: () -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
@@ -629,6 +630,7 @@ private final class PeerInfoInteraction {
         editingOpenNameColorSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
+        editingOpenRevenue: @escaping () -> Void,
         editingOpenStars: @escaping () -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
@@ -695,6 +697,7 @@ private final class PeerInfoInteraction {
         self.editingOpenNameColorSetup = editingOpenNameColorSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
+        self.editingOpenRevenue = editingOpenRevenue
         self.editingOpenStars = editingOpenStars
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
@@ -1205,6 +1208,7 @@ private enum InfoSection: Int, CaseIterable {
     case calls
     case personalChannel
     case peerInfo
+    case balances
     case peerInfoTrailing
     case peerMembers
 }
@@ -1502,23 +1506,40 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
                                 
+                let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
+                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
+                
                 let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
                 let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
                 
-                if overallStarsBalance > 0 {
-                    var string = ""
+                if overallRevenueBalance > 0 || overallStarsBalance > 0 {
+                    //TODO:localize
+                    items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: presentationData.strings.PeerInfo_BotBalance_Title))
+                    if overallRevenueBalance > 0 {
+                        let string = "*\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))"
+                        let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                        if let range = attributedString.string.range(of: "*") {
+                            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
+                            attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                        }
+                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 21, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_BotBalance_Ton, icon: PresentationResourcesSettings.ton, action: {
+                            interaction.editingOpenRevenue()
+                        }))
+                    }
+
                     if overallStarsBalance > 0 {
-                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
+                        let string = "*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))"
+                        let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                        if let range = attributedString.string.range(of: "*") {
+                            attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                            attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                        }
+                        items[.balances]!.append(PeerInfoScreenDisclosureItem(id: 22, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_BotBalance_Stars, icon: PresentationResourcesSettings.stars, action: {
+                            interaction.editingOpenStars()
+                        }))
                     }
-                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                    if let range = attributedString.string.range(of: "*") {
-                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
-                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
-                    }
-                    
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 9, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
-                        interaction.editingOpenStars()
-                    }))
+                } else {
+                    print()
                 }
                    
                 if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
@@ -1715,7 +1736,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                 if overallRevenueBalance > 0 || overallStarsBalance > 0 {
                                     var string = ""
                                     if overallRevenueBalance > 0 {
-                                        string.append("#\(formatTonAmountText(revenueBalance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))")
+                                        string.append("#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))")
                                     }
                                     if overallStarsBalance > 0 {
                                         if !string.isEmpty {
@@ -2769,6 +2790,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             editingOpenDiscussionGroupSetup: { [weak self] in
                 self?.editingOpenDiscussionGroupSetup()
             },
+            editingOpenRevenue: { [weak self] in
+                self?.editingOpenRevenue()
+            },
             editingOpenStars: { [weak self] in
                 self?.editingOpenStars()
             },
@@ -3474,6 +3498,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openJoinLink: { _ in
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _, _, _, _ in
+        }, adContextAction: { _, _, _ in
+        }, removeAd: { _ in
         }, openRequestedPeerSelection: { _, _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
@@ -5197,7 +5223,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: self.peerId, message: nil, updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peer, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: self.peerId, message: nil, updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { [weak self] peer, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -5243,7 +5269,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             let result: ResolvedUrl = external ? .externalUrl(url) : tempResolved
             
-            strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: forceExternal, openPeer: { peer, navigation in
+            strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: forceExternal, forceUpdate: false, openPeer: { peer, navigation in
                 self?.openPeer(peerId: peer.id, navigation: navigation)
                 commit()
             }, sendFile: nil,
@@ -5420,11 +5446,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let peerId = self.peerId
             let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
             
-            var openUrlImpl: ((String, Bool, @escaping () -> Void) -> Void)?
+            var openUrlImpl: ((String, Bool, Bool, @escaping () -> Void) -> Void)?
             var presentImpl: ((ViewController, Any?) -> Void)?
             
-            let controller = standaloneWebAppController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { url, concealed, commit in
-               openUrlImpl?(url, concealed, commit)
+            let controller = standaloneWebAppController(context: context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { url, concealed, forceUpdate, commit in
+               openUrlImpl?(url, concealed, forceUpdate, commit)
             }, requestSwitchInline: { _, _, _ in
             }, getNavigationController: { [weak self] in
                 return (self?.controller?.navigationController as? NavigationController) ?? context.sharedContext.mainWindow?.viewController as? NavigationController
@@ -5432,7 +5458,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             controller.navigationPresentation = .flatModal
             self.controller?.push(controller)
             
-            openUrlImpl = { [weak self, weak controller] url, concealed, commit in
+            openUrlImpl = { [weak self, weak controller] url, concealed, forceUpdate, commit in
                 let _ = openUserGeneratedUrl(context: context, peerId: peerId, url: url, concealed: concealed, present: { [weak self] c in
                     self?.controller?.present(c, in: .window(.root))
                 }, openResolved: { result in
@@ -5442,7 +5468,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     } else if let current = controller?.navigationController as? NavigationController {
                         navigationController = current
                     }
-                    context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                    context.sharedContext.openResolvedUrl(result, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: forceUpdate, openPeer: { peer, navigation in
                         if let navigationController {
                             PeerInfoScreenImpl.openPeer(context: context, peerId: peer.id, navigation: navigation, navigationController: navigationController)
                         }
@@ -6203,7 +6229,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 guard let self else {
                                     return
                                 }
-                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, forceUpdate: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
                                     guard let self else {
                                         return
                                     }
@@ -6412,7 +6438,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 guard let self else {
                                     return
                                 }
-                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, forceUpdate: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
                                     guard let self else {
                                         return
                                     }
@@ -6542,7 +6568,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 guard let self else {
                                     return
                                 }
-                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, forceUpdate: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
                                     guard let self else {
                                         return
                                     }
@@ -6572,6 +6598,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     })
                                 })
                             }
+                        })))
+                    }
+                    
+                    var canReport = true
+                    if case .creator = group.role {
+                        canReport = false
+                    }
+                    if canReport {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.ReportPeer_Report, icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] c, f in
+                            self?.openReport(type: .default, contextController: c, backAction: { c in
+                                if let mainItemsImpl = mainItemsImpl {
+                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
+                                }
+                            })
                         })))
                     }
                     
@@ -8392,7 +8434,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: "", adminRights: nil), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, forceExternal: false, openPeer: { id, navigation in
+        self.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: "", adminRights: nil), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, forceExternal: false, forceUpdate: false, openPeer: { id, navigation in
         },
         sendFile: nil,
         sendSticker: nil,
@@ -8519,6 +8561,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return
         }
         self.controller?.push(channelDiscussionGroupSetupController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+    }
+    
+    private func editingOpenRevenue() {
+        guard let revenueContext = self.data?.revenueStatsContext else {
+            return
+        }
+        let controller = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, section: .monetization, existingRevenueContext: revenueContext, boostStatus: nil)
+        
+        self.controller?.push(controller)
     }
     
     private func editingOpenStars() {
@@ -10317,7 +10368,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if case let .instantView(webPage, _) = resolvedUrl, let customAnchor = anchor {
                     resolvedUrl = .instantView(webPage, customAnchor)
                 }
-                strongSelf.context.sharedContext.openResolvedUrl(resolvedUrl, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { peer, navigation in
+                strongSelf.context.sharedContext.openResolvedUrl(resolvedUrl, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: false, forceUpdate: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] controller, arguments in
                     self?.controller?.push(controller)
                 }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
@@ -12706,7 +12757,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     self.controllerNode.resetHeaderExpansion()
                 }
             } else {
-                self.controllerNode.updateNavigation(transition: .immediate, additive: false, animateHeader: false)
+                self.controllerNode.updateNavigation(transition: .animated(duration: 0.15, curve: .easeInOut), additive: false, animateHeader: false)
             }
         }
     }

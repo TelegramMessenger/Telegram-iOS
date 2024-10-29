@@ -957,7 +957,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             } else if media is TelegramMediaImage {
                 hasCaption = true
             } else if let file = media as? TelegramMediaFile {
-                hasCaption = file.mimeType.hasPrefix("image/")
+                hasCaption = file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/")
             } else if media is TelegramMediaInvoice {
                 hasCaption = true
             }

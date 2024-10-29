@@ -472,6 +472,7 @@ public final class MessageInputPanelComponent: Component {
         
         private var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
         private var contextQueryResults: [ChatPresentationInputQueryKind: ChatPresentationInputQueryResult] = [:]
+        private var contextQueryPeer: EnginePeer?
         private var contextQueryResultPanel: ComponentView<Empty>?
         
         private var stickersResultPanel: ComponentView<Empty>?
@@ -643,6 +644,17 @@ public final class MessageInputPanelComponent: Component {
             }
             let contextQueryUpdates = contextQueryResultState(context: context, inputState: inputState, availableTypes: availableTypes, chatLocation: component.chatLocation, currentQueryStates: &self.contextQueryStates)
 
+            if self.contextQueryPeer == nil, let peerId = component.chatLocation?.peerId {
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    guard let self, peer?.addressName != nil else {
+                        return
+                    }
+                    self.contextQueryPeer = peer
+                    self.state?.updated(transition: .immediate)
+                })
+            }
+            
             for (kind, update) in contextQueryUpdates {
                 switch update {
                 case .remove:
@@ -1871,6 +1883,8 @@ public final class MessageInputPanelComponent: Component {
             var contextResults: ContextResultPanelComponent.Results?
             if let result = self.contextQueryResults[.mention], case let .mentions(mentions) = result, !mentions.isEmpty {
                 contextResults = .mentions(mentions)
+            } else if let result = self.contextQueryResults[.hashtag], case let .hashtags(hashtags, query) = result, !hashtags.isEmpty || (query.count >= 4 && self.contextQueryPeer != nil) {
+                contextResults = .hashtags(self.contextQueryPeer, hashtags, query)
             }
             
             if let result = self.contextQueryResults[.emoji], case let .stickers(stickers) = result, !stickers.isEmpty {
@@ -1989,7 +2003,23 @@ public final class MessageInputPanelComponent: Component {
                                         }
                                     }
                                 case let .hashtag(hashtag):
-                                    let _ = hashtag
+                                    var hashtagQueryRange: NSRange?
+                                    inner: for (range, type, _) in textInputStateContextQueryRangeAndType(inputState: inputState) {
+                                        if type == [.hashtag] {
+                                            hashtagQueryRange = range
+                                            break inner
+                                        }
+                                    }
+                                    
+                                    if let range = hashtagQueryRange {
+                                        let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                                        
+                                        let replacementText = hashtag
+                                        inputText.replaceCharacters(in: range, with: replacementText)
+                                        
+                                        let selectionPosition = range.lowerBound + (replacementText as NSString).length
+                                        textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                                    }
                                 }
                             }
                         }

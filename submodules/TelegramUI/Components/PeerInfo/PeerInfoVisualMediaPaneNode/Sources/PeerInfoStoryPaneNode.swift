@@ -1492,7 +1492,7 @@ private final class StorySearchHeaderComponent: Component {
 public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
     public enum Scope {
         case peer(id: EnginePeer.Id, isSaved: Bool, isArchived: Bool)
-        case search(query: String)
+        case search(peerId: EnginePeer.Id?, query: String)
         case location(coordinates: MediaArea.Coordinates, venue: MediaArea.Venue)
         case botPreview(id: EnginePeer.Id)
     }
@@ -1749,8 +1749,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
             switch self.scope {
             case let .peer(id, _, isArchived):
                 self.listSource = PeerStoryListContext(account: context.account, peerId: id, isArchived: isArchived)
-            case let .search(query):
-                self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(query))
+            case let .search(peerId, query):
+                self.listSource = SearchStoryListContext(account: context.account, source: .hashtag(peerId, query))
             case let .location(coordinates, venue):
                 self.listSource = SearchStoryListContext(account: context.account, source: .mediaArea(.venue(coordinates: coordinates, venue: venue)))
             case let .botPreview(id):
@@ -1770,7 +1770,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
 
         if case .peer = self.scope {
             let _ = (ApplicationSpecificNotice.getSharedMediaScrollingTooltip(accountManager: context.sharedContext.accountManager)
-                     |> deliverOnMainQueue).start(next: { [weak self] count in
+            |> deliverOnMainQueue).start(next: { [weak self] count in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2420,7 +2420,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
         self.updateDisposable.dispose()
         self.mapDisposable?.dispose()
     }
-
+    
     public func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {
         let listSource = self.listSource
         return Signal { subscriber in
@@ -2862,6 +2862,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 continue
             }
             
+            var authorPeer = item.peer
             var isReorderable = false
             switch self.scope {
             case .botPreview:
@@ -2870,16 +2871,20 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 if id == self.context.account.peerId {
                     isReorderable = state.pinnedIds.contains(item.storyItem.id)
                 }
+            case let .search(peerId, _):
+                if peerId != nil {
+                    authorPeer = nil
+                }
             default:
                 break
             }
-            
+                
             mappedItems.append(VisualMediaItem(
                 index: mappedItems.count,
                 peer: peerReference,
                 storyId: item.id,
                 story: item.storyItem,
-                authorPeer: item.peer,
+                authorPeer: authorPeer,
                 isPinned: state.pinnedIds.contains(item.storyItem.id),
                 localMonthTimestamp: Month(localTimestamp: item.storyItem.timestamp + timezoneOffset).packedValue,
                 isReorderable: isReorderable
@@ -4104,7 +4109,11 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                 if self.isProfileEmbedded, case .botPreview = self.scope {
                     self.view.backgroundColor = presentationData.theme.list.blocksBackgroundColor
                 } else {
-                    self.view.backgroundColor = .clear
+                    if case let .search(peerId, _) = self.scope, peerId != nil {
+                        
+                    } else {
+                        self.view.backgroundColor = .clear
+                    }
                 }
             }
         }

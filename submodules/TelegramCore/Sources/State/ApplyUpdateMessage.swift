@@ -58,7 +58,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
     }
 }
 
-func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, cacheReferenceKey: CachedSentMediaReferenceKey?, result: Api.Updates, accountPeerId: PeerId) -> Signal<Void, NoError> {
+func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, message: Message, cacheReferenceKey: CachedSentMediaReferenceKey?, result: Api.Updates, accountPeerId: PeerId, pendingMessageEvent: @escaping (PeerPendingMessageDelivered) -> Void) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         let messageId: Int32?
         var apiMessage: Api.Message?
@@ -125,7 +125,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var sentStickers: [TelegramMediaFile] = []
         var sentGifs: [TelegramMediaFile] = []
         
-        if let updatedTimestamp = updatedTimestamp {
+        if let updatedTimestamp {
             transaction.offsetPendingMessagesTimestamps(lowerBound: message.id, excludeIds: Set([message.id]), timestamp: updatedTimestamp)
         }
         
@@ -134,29 +134,18 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
         
         transaction.updateMessage(message.id, update: { currentMessage in
-            let updatedId: MessageId
-            if let messageId = messageId {
-                var namespace: MessageId.Namespace = Namespaces.Message.Cloud
-                if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
-                    namespace = Namespaces.Message.QuickReplyCloud
-                } else if let updatedTimestamp = updatedTimestamp {
-                    if message.scheduleTime != nil && message.scheduleTime == updatedTimestamp {
-                        namespace = Namespaces.Message.ScheduledCloud
-                    }
-                } else if Namespaces.Message.allScheduled.contains(message.id.namespace) {
-                    namespace = Namespaces.Message.ScheduledCloud
-                }
-                updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
-            } else {
-                updatedId = currentMessage.id
-            }
-            
             let media: [Media]
             var attributes: [MessageAttribute]
             let text: String
             let forwardInfo: StoreMessageForwardInfo?
             let threadId: Int64?
-            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false) {
+            
+            var namespace = Namespaces.Message.Cloud
+            if message.id.namespace == Namespaces.Message.ScheduledLocal {
+                namespace = Namespaces.Message.ScheduledCloud
+            }
+            
+            if let apiMessage = apiMessage, let apiMessagePeerId = apiMessage.peerId, let updatedMessage = StoreMessage(apiMessage: apiMessage, accountPeerId: accountPeerId, peerIsForum: transaction.getPeer(apiMessagePeerId)?.isForum ?? false, namespace: namespace) {
                 media = updatedMessage.media
                 attributes = updatedMessage.attributes
                 text = updatedMessage.text
@@ -195,12 +184,10 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     updatedAttributes.append(MediaSpoilerMessageAttribute())
                 }
                 
-                if Namespaces.Message.allScheduled.contains(message.id.namespace) && updatedId.namespace == Namespaces.Message.Cloud {
-                    for i in 0 ..< updatedAttributes.count {
-                        if updatedAttributes[i] is OutgoingScheduleInfoMessageAttribute {
-                            updatedAttributes.remove(at: i)
-                            break
-                        }
+                for i in 0 ..< updatedAttributes.count {
+                    if updatedAttributes[i] is OutgoingScheduleInfoMessageAttribute {
+                        updatedAttributes.remove(at: i)
+                        break
                     }
                 }
                 if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
@@ -223,6 +210,30 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 text = currentMessage.text
                 forwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                 threadId = currentMessage.threadId
+            }
+            
+            let updatedId: MessageId
+            if let messageId = messageId {
+                var namespace: MessageId.Namespace = Namespaces.Message.Cloud
+                if attributes.contains(where: { $0 is PendingProcessingMessageAttribute }) {
+                    namespace = Namespaces.Message.ScheduledCloud
+                }
+                if Namespaces.Message.allQuickReply.contains(message.id.namespace) {
+                    namespace = Namespaces.Message.QuickReplyCloud
+                } else if let updatedTimestamp = updatedTimestamp {
+                    if attributes.contains(where: { $0 is PendingProcessingMessageAttribute }) {
+                        namespace = Namespaces.Message.ScheduledCloud
+                    } else {
+                        if message.scheduleTime != nil && message.scheduleTime == updatedTimestamp {
+                            namespace = Namespaces.Message.ScheduledCloud
+                        }
+                    }
+                } else if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    namespace = Namespaces.Message.ScheduledCloud
+                }
+                updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
+            } else {
+                updatedId = currentMessage.id
             }
             
             for attribute in currentMessage.attributes {
@@ -358,12 +369,26 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         
         stateManager.addUpdates(result)
         stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: message.id.peerId)])
+        
+        if let updatedMessage, case let .Id(id) = updatedMessage.id {
+            pendingMessageEvent(PeerPendingMessageDelivered(
+                id: id,
+                isSilent: updatedMessage.attributes.contains(where: { attribute in
+                    if let attribute = attribute as? NotificationInfoMessageAttribute {
+                        return attribute.flags.contains(.muted)
+                    } else {
+                        return false
+                    }
+                }),
+                isPendingProcessing: updatedMessage.attributes.contains(where: { $0 is PendingProcessingMessageAttribute })
+            ))
+        }
     }
 }
 
-func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
+func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates, pendingMessageEvents: @escaping ([PeerPendingMessageDelivered]) -> Void) -> Signal<Void, NoError> {
     guard !messages.isEmpty else {
-        return .complete()
+        return .single(Void())
     }
     
     return postbox.transaction { transaction -> Void in
@@ -372,8 +397,12 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         var namespace = Namespaces.Message.Cloud
         if Namespaces.Message.allQuickReply.contains(messages[0].id.namespace) {
             namespace = Namespaces.Message.QuickReplyCloud
-        } else if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
-            namespace = Namespaces.Message.ScheduledCloud
+        } else if let message = messages.first, let apiMessage = result.messages.first {
+            if message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
+                namespace = Namespaces.Message.ScheduledCloud
+            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
+                namespace = Namespaces.Message.ScheduledCloud
+            }
         }
         
         var resultMessages: [MessageId: StoreMessage] = [:]
@@ -538,6 +567,23 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         }
         stateManager.addUpdates(result)
         stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: messages[0].id.peerId)])
+        
+        pendingMessageEvents(mapping.compactMap { message, _, updatedMessage -> PeerPendingMessageDelivered? in
+            guard case let .Id(id) = updatedMessage.id else {
+                return nil
+            }
+            return PeerPendingMessageDelivered(
+                id: id,
+                isSilent: updatedMessage.attributes.contains(where: { attribute in
+                    if let attribute = attribute as? NotificationInfoMessageAttribute {
+                        return attribute.flags.contains(.muted)
+                    } else {
+                        return false
+                    }
+                }),
+                isPendingProcessing: updatedMessage.attributes.contains(where: { $0 is PendingProcessingMessageAttribute })
+            )
+        })
     }
 }
 

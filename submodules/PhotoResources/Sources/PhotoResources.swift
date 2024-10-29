@@ -448,14 +448,22 @@ private func chatMessageImageFileThumbnailDatas(account: Account, userLocation: 
     return signal
 }
 
-private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
+private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, previewSourceFileReference: FileMediaReference?, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
     let fullSizeResource = fileReference.media.resource
     var reducedSizeResource: MediaResource?
-    if let videoThumbnail = fileReference.media.videoThumbnails.first {
+    if let previewSourceFileReference, let videoThumbnail = previewSourceFileReference.media.videoThumbnails.first {
+        reducedSizeResource = videoThumbnail.resource
+    } else if let videoThumbnail = fileReference.media.videoThumbnails.first {
         reducedSizeResource = videoThumbnail.resource
     }
     
-    let thumbnailRepresentation = useLargeThumbnail ? largestImageRepresentation(fileReference.media.previewRepresentations) : smallestImageRepresentation(fileReference.media.previewRepresentations)
+    var thumbnailRepresentation: TelegramMediaImageRepresentation?
+    if let previewSourceFileReference {
+        thumbnailRepresentation = useLargeThumbnail ? largestImageRepresentation(previewSourceFileReference.media.previewRepresentations) : smallestImageRepresentation(previewSourceFileReference.media.previewRepresentations)
+    }
+    if thumbnailRepresentation == nil {
+        thumbnailRepresentation = useLargeThumbnail ? largestImageRepresentation(fileReference.media.previewRepresentations) : smallestImageRepresentation(fileReference.media.previewRepresentations)
+    }
     let thumbnailResource = thumbnailRepresentation?.resource
     
     let maybeFullSize = postbox.mediaBox.cachedResourceRepresentation(fullSizeResource, representation: thumbnailSize ? CachedScaledVideoFirstFrameRepresentation(size: CGSize(width: 160.0, height: 160.0)) : CachedVideoFirstFrameRepresentation(), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
@@ -979,7 +987,7 @@ public func chatMessagePhotoThumbnail(account: Account, userLocation: MediaResou
 }
 
 public func chatMessageVideoThumbnail(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, blurred: Bool = false, synchronousLoads: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, thumbnailSize: true, synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, forceThumbnail: blurred)
+    let signal = chatMessageVideoDatas(postbox: account.postbox, userLocation: userLocation, fileReference: fileReference, previewSourceFileReference: nil, thumbnailSize: true, synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, forceThumbnail: blurred)
     
     return signal
     |> map { value in
@@ -1581,7 +1589,7 @@ public func mediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceU
     }
 }
 
-public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, imageReference: ImageMediaReference? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, previewSourceFileReference: FileMediaReference? = nil, imageReference: ImageMediaReference? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal: Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError>
     if let imageReference = imageReference {
         signal = chatMessagePhotoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad, forceThumbnail: blurred)
@@ -1592,7 +1600,7 @@ public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaR
             return Tuple(thumbnailData, fullSizeData.flatMap({ Tuple($0, "") }), fullSizeComplete)
         }
     } else {
-        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
+        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, previewSourceFileReference: previewSourceFileReference, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
     }
     
     return signal
@@ -3143,6 +3151,23 @@ public func callDefaultBackground() -> Signal<(TransformImageArguments) -> Drawi
             let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
             c.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: arguments.drawingSize.height), options: CGGradientDrawingOptions())
         }
+        return context
+    })
+}
+
+public func solidColorImage(_ color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return .single({ arguments in
+        guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+            return nil
+        }
+        
+        context.withFlippedContext { c in
+            c.setFillColor(color.withAlphaComponent(1.0).cgColor)
+            c.fill(arguments.drawingRect)
+        }
+        
+        addCorners(context, arguments: arguments)
+        
         return context
     })
 }

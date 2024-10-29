@@ -188,7 +188,7 @@ public final class TextAlertContentNode: AlertContentNode {
         }
     }
     
-    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool) {
+    public init(theme: AlertControllerTheme, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout, dismissOnOutsideTap: Bool, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) {
         self.theme = theme
         self.actionLayout = actionLayout
         self._dismissOnOutsideTap = dismissOnOutsideTap
@@ -214,6 +214,15 @@ public final class TextAlertContentNode: AlertContentNode {
         self.textNode.isAccessibilityElement = true
         self.textNode.accessibilityLabel = text.string
         self.textNode.insets = UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)
+        self.textNode.tapAttributeAction = linkAction
+        self.textNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                return NSAttributedString.Key(rawValue: "URL")
+            } else {
+                return nil
+            }
+        }
+        self.textNode.linkHighlightColor = theme.accentColor.withMultipliedAlpha(0.1)
         if text.length != 0 {
             if let paragraphStyle = text.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
                 self.textNode.textAlignment = paragraphStyle.alignment
@@ -450,7 +459,7 @@ public func textAlertController(theme: AlertControllerTheme, title: NSAttributed
     return AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap))
 }
 
-public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true) -> AlertController {
+public func standardTextAlertController(theme: AlertControllerTheme, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true, linkAction: (([NSAttributedString.Key: Any], Int) -> Void)? = nil) -> AlertController {
     var dismissImpl: (() -> Void)?
     let attributedText: NSAttributedString
     if parseMarkdown {
@@ -458,7 +467,10 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
         let boldFont = title == nil ? Font.bold(theme.baseFontSize) : Font.semibold(floor(theme.baseFontSize * 13.0 / 17.0))
         let body = MarkdownAttributeSet(font: font, textColor: theme.primaryColor)
         let bold = MarkdownAttributeSet(font: boldFont, textColor: theme.primaryColor)
-        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+        let link = MarkdownAttributeSet(font: font, textColor: theme.accentColor)
+        attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { url in
+            return ("URL", url)
+        }), textAlignment: .center)
     } else {
         attributedText = NSAttributedString(string: text, font: title == nil ? Font.semibold(theme.baseFontSize) : Font.regular(floor(theme.baseFontSize * 13.0 / 17.0)), textColor: theme.primaryColor, paragraphAlignment: .center)
     }
@@ -467,7 +479,7 @@ public func standardTextAlertController(theme: AlertControllerTheme, title: Stri
             dismissImpl?()
             action.action()
         })
-    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap), allowInputInset: allowInputInset)
+    }, actionLayout: actionLayout, dismissOnOutsideTap: dismissOnOutsideTap, linkAction: linkAction), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }

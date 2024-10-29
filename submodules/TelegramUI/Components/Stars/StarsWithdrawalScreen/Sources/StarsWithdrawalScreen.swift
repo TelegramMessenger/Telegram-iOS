@@ -222,7 +222,8 @@ private final class SheetContent: CombinedComponent {
                 amountFooter = AnyComponent(MultilineTextComponent(
                     text: .plain(amountInfoString),
                     maximumNumberOfLines: 0,
-                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
+                    highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -456,7 +457,7 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    backgroundColor: .color(environment.theme.list.blocksBackgroundColor),
                     followContentSizeChanges: false,
                     clipsContent: true,
                     isScrollEnabled: false,

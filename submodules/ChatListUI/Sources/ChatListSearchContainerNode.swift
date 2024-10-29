@@ -60,8 +60,9 @@ final class ChatListSearchInteraction {
     let dismissInput: () -> Void
     let getSelectedMessageIds: () -> Set<EngineMessage.Id>?
     let openStories: ((PeerId, ASDisplayNode) -> Void)?
+    let switchToFilter: (ChatListSearchPaneKey) -> Void
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?, openStories: ((PeerId, ASDisplayNode) -> Void)?) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?, openStories: ((PeerId, ASDisplayNode) -> Void)?, switchToFilter: @escaping (ChatListSearchPaneKey) -> Void) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -76,6 +77,7 @@ final class ChatListSearchInteraction {
         self.dismissInput = dismissInput
         self.getSelectedMessageIds = getSelectedMessageIds
         self.openStories = openStories
+        self.switchToFilter = switchToFilter
     }
 }
 
@@ -120,6 +122,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private var suggestedFilters: [ChatListSearchFilter]?
     private let suggestedFiltersDisposable = MetaDisposable()
     private var forumPeer: EnginePeer?
+    private var hasPublicPostsTab = false
+    private var showPublicPostsTab = false
     
     private var shareStatusDisposable: MetaDisposable?
     
@@ -199,7 +203,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             let _ = openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peerId, navigation in
                     
                 },
                 sendFile: nil,
@@ -281,53 +285,27 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 avatarNode: sourceNode as? AvatarNode,
                 sharedProgressDisposable: self.sharedOpenStoryDisposable
             )
+        }, switchToFilter: { [weak self] filter in
+            guard let self else {
+                return
+            }
+            if filter == .publicPosts && !self.showPublicPostsTab {
+                self.showPublicPostsTab = true
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+            }
+            Queue.mainQueue().justDispatch {
+                self.paneContainerNode.requestSelectPane(filter)
+            }
         })
         self.paneContainerNode.interaction = interaction
         
         self.paneContainerNode.currentPaneUpdated = { [weak self] key, transitionFraction, transition in
-            if let strongSelf = self, let key = key {
-                var filterKey: ChatListSearchFilter
-                switch key {
-                case .chats:
-                    filterKey = .chats
-                case .topics:
-                    filterKey = .topics
-                case .channels:
-                    filterKey = .channels
-                case .apps:
-                    filterKey = .apps
-                case .media:
-                    filterKey = .media
-                case .downloads:
-                    filterKey = .downloads
-                case .links:
-                    filterKey = .links
-                case .files:
-                    filterKey = .files
-                case .music:
-                    filterKey = .music
-                case .voice:
-                    filterKey = .voice
-                }
-                strongSelf.selectedFilter = .filter(filterKey)
-                strongSelf.selectedFilterPromise.set(.single(strongSelf.selectedFilter))
-                strongSelf.transitionFraction = transitionFraction
-                
-                if let (layout, _) = strongSelf.validLayout {
-                    let filters: [ChatListSearchFilter]
-                    if let suggestedFilters = strongSelf.suggestedFilters, !suggestedFilters.isEmpty {
-                        filters = suggestedFilters
-                    } else {
-                        var isForum = false
-                        if case .forum = strongSelf.location {
-                            isForum = true
-                        }
-                        
-                        filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: !isForum && strongSelf.hasDownloads).map(\.filter)
-                    }
-                    strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilter?.id, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
-                }
+            guard let self, let key else {
+                return
             }
+            self.currentPaneUpdated(key, transitionFraction: transitionFraction, transition: transition)
         }
         
         self.paneContainerNode.requesDismissInput = {
@@ -368,6 +346,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 key = .music
             case .voice:
                 key = .voice
+            case .publicPosts:
+                key = .publicPosts
             case let .date(minDate, maxDate, title):
                 date = (minDate, maxDate, title)
             case let .peer(id, isGroup, _, compactDisplayTitle):
@@ -435,7 +415,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 return (.complete() |> delay(0.25, queue: Queue.mainQueue()))
                 |> then(.single((peers, dates, selectedFilter?.id, searchQuery, EnginePeer(accountPeer))))
             }
-        } |> map { peers, dates, selectedFilter, searchQuery, accountPeer -> [ChatListSearchFilter] in
+        } |> map { peers, dates, selectedFilter, searchQuery, accountPeer -> ([ChatListSearchFilter], Bool) in
             var suggestedFilters: [ChatListSearchFilter] = []
             if !dates.isEmpty {
                 let formatter = DateFormatter()
@@ -481,26 +461,34 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     existingPeerIds.insert(peer.id)
                 }
             }
-            return suggestedFilters
+            return (suggestedFilters, searchQuery?.hasPrefix("#") ?? false)
         }
-        |> deliverOnMainQueue).startStrict(next: { [weak self] filters in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] filters, hasPublicPosts in
             guard let strongSelf = self else {
                 return
             }
             var filteredFilters: [ChatListSearchFilter] = []
-            for filter in filters {
-                if case .date = filter, strongSelf.searchOptionsValue?.date == nil {
-                    filteredFilters.append(filter)
-                }
-                if case .peer = filter, strongSelf.searchOptionsValue?.peer == nil {
-                    filteredFilters.append(filter)
+            if !hasPublicPosts {
+                for filter in filters {
+                    if case .date = filter, strongSelf.searchOptionsValue?.date == nil {
+                        filteredFilters.append(filter)
+                    }
+                    if case .peer = filter, strongSelf.searchOptionsValue?.peer == nil {
+                        filteredFilters.append(filter)
+                    }
                 }
             }
 
             let previousFilters = strongSelf.suggestedFilters
             strongSelf.suggestedFilters = filteredFilters
             
-            if filteredFilters != previousFilters {
+            let previousHasPublicPosts = strongSelf.hasPublicPostsTab
+            strongSelf.hasPublicPostsTab = hasPublicPosts
+            if !hasPublicPosts {
+                strongSelf.showPublicPostsTab = false
+            }
+            
+            if filteredFilters != previousFilters || hasPublicPosts != previousHasPublicPosts  {
                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
@@ -646,10 +634,61 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
+
+        if !text.hasPrefix("#") && self.paneContainerNode.currentPaneKey == .publicPosts {
+            self.paneContainerNode.requestSelectPane(.chats)
+        }
+        
         self.searchQuery.set(.single(searchQuery))
         self.searchQueryValue = searchQuery
         
         self.suggestedDates.set(.single(suggestDates(for: text, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)))
+    }
+    
+    private func currentPaneUpdated(_ key: ChatListSearchPaneKey, transitionFraction: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
+        var filterKey: ChatListSearchFilter
+        switch key {
+        case .chats:
+            filterKey = .chats
+        case .topics:
+            filterKey = .topics
+        case .channels:
+            filterKey = .channels
+        case .apps:
+            filterKey = .apps
+        case .media:
+            filterKey = .media
+        case .downloads:
+            filterKey = .downloads
+        case .links:
+            filterKey = .links
+        case .files:
+            filterKey = .files
+        case .music:
+            filterKey = .music
+        case .voice:
+            filterKey = .voice
+        case .publicPosts:
+            filterKey = .publicPosts
+        }
+        self.selectedFilter = .filter(filterKey)
+        self.selectedFilterPromise.set(.single(self.selectedFilter))
+        self.transitionFraction = transitionFraction
+        
+        if let (layout, _) = self.validLayout {
+            let filters: [ChatListSearchFilter]
+            if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
+                filters = suggestedFilters
+            } else {
+                var isForum = false
+                if case .forum = self.location {
+                    isForum = true
+                }
+                
+                filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: !isForum && self.hasDownloads, hasPublicPosts: self.showPublicPostsTab).map(\.filter)
+            }
+            self.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilter?.id, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: transition)
+        }
     }
     
     public func search(filter: ChatListSearchFilter, query: String?) {
@@ -713,7 +752,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
             filters = suggestedFilters
         } else {
-            filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: self.hasDownloads).map(\.filter)
+            filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: self.hasDownloads, hasPublicPosts: self.showPublicPostsTab).map(\.filter)
         }
         
         let overflowInset: CGFloat = 20.0
@@ -891,7 +930,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let availablePanes: [ChatListSearchPaneKey]
         if self.displaySearchFilters {
-            availablePanes = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: self.hasDownloads)
+            availablePanes = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: self.hasDownloads, hasPublicPosts: self.hasPublicPostsTab)
         } else {
             availablePanes = isForum ? [.topics] : [.chats]
         }

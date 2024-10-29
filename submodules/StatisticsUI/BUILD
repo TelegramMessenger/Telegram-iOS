@@ -55,6 +55,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/Stars/StarsAvatarComponent",
+        "//submodules/TelegramUI/Components/PremiumPeerShortcutComponent",
     ],
     visibility = [
         "//visibility:public",

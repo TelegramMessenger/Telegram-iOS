@@ -114,10 +114,10 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .hashtag:
                         break
                     default:
-                        signal = .single({ _ in return .hashtags([]) })
+                        signal = .single({ _ in return .hashtags([], query) })
                 }
             } else {
-                signal = .single({ _ in return .hashtags([]) })
+                signal = .single({ _ in return .hashtags([], query) })
             }
             
             let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.messages.recentlyUsedHashtags()
@@ -129,7 +129,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         result.append(hashtag)
                     }
                 }
-                return { _ in return .hashtags(result) }
+                return { _ in return .hashtags(result, query) }
             }
             |> castError(ChatContextQueryError.self)
             

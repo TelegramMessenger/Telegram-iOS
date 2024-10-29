@@ -82,11 +82,7 @@ private func translationSettingsControllerEntries(theme: PresentationTheme, stri
         if activeLanguage.hasSuffix(rawSuffix) {
             activeLanguage = String(activeLanguage.dropLast(rawSuffix.count))
         }
-        if activeLanguage == "nb" {
-            activeLanguage = "no"
-        } else if activeLanguage == "pt-br" {
-            activeLanguage = "pt"
-        }
+        activeLanguage = normalizeTranslationLanguage(activeLanguage)
         selectedLanguages = Set([activeLanguage])
         for language in systemLanguageCodes() {
             selectedLanguages.insert(language)

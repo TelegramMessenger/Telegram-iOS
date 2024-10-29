@@ -89,6 +89,12 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             strongSelf.item?.controllerInteraction.playMessageEffect(message)
         }
+        self.interactiveImageNode.requestInlineUpdate = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.requestInlineUpdate?()
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -557,6 +563,13 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override public func messageEffectTargetView() -> UIView? {
         if !self.interactiveImageNode.dateAndStatusNode.isHidden {
             return self.interactiveImageNode.dateAndStatusNode.messageEffectTargetView()
+        }
+        return nil
+    }
+    
+    override public func getStatusNode() -> ASDisplayNode? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode
         }
         return nil
     }

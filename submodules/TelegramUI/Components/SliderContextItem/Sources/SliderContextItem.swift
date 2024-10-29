@@ -8,12 +8,14 @@ import TelegramPresentationData
 import AnimatedCountLabelNode
 
 public final class SliderContextItem: ContextMenuCustomItem {
+    private let title: String?
     private let minValue: CGFloat
     private let maxValue: CGFloat
     private let value: CGFloat
     private let valueChanged: (CGFloat, Bool) -> Void
     
-    public init(minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    public init(title: String? = nil, minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+        self.title = title
         self.minValue = minValue
         self.maxValue = maxValue
         self.value = value
@@ -21,7 +23,7 @@ public final class SliderContextItem: ContextMenuCustomItem {
     }
     
     public func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
-        return SliderContextItemNode(presentationData: presentationData, getController: getController, minValue: self.minValue, maxValue: self.maxValue, value: self.value, valueChanged: self.valueChanged)
+        return SliderContextItemNode(presentationData: presentationData, getController: getController, title: self.title, minValue: self.minValue, maxValue: self.maxValue, value: self.value, valueChanged: self.valueChanged)
     }
 }
 
@@ -31,12 +33,18 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
     private var presentationData: PresentationData
     
     private(set) var vibrancyEffectView: UIVisualEffectView?
+    
+    private let backgroundTitleNode: ImmediateTextNode
+    private let dimBackgroundTitleNode: ImmediateTextNode
+    private let foregroundTitleNode: ImmediateTextNode
+    
     private let backgroundTextNode: ImmediateAnimatedCountLabelNode
     private let dimBackgroundTextNode: ImmediateAnimatedCountLabelNode
     
     private let foregroundNode: ASDisplayNode
     private let foregroundTextNode: ImmediateAnimatedCountLabelNode
     
+    let title: String?
     let minValue: CGFloat
     let maxValue: CGFloat
     var value: CGFloat = 1.0 {
@@ -49,12 +57,17 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
     
     private let hapticFeedback = HapticFeedback()
 
-    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+    init(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, title: String?, minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
         self.presentationData = presentationData
+        self.title = title
         self.minValue = minValue
         self.maxValue = maxValue
         self.value = value
         self.valueChanged = valueChanged
+        
+        self.backgroundTitleNode = ImmediateTextNode()
+        self.dimBackgroundTitleNode = ImmediateTextNode()
+        self.foregroundTitleNode = ImmediateTextNode()
         
         self.backgroundTextNode = ImmediateAnimatedCountLabelNode()
         self.backgroundTextNode.alwaysOneDirection = true
@@ -76,7 +89,6 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
         self.isUserInteractionEnabled = true
         
         if presentationData.theme.overallDarkAppearance {
-            
         } else {
             let style: UIBlurEffect.Style
             style = .extraLight
@@ -87,9 +99,12 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
             self.vibrancyEffectView = vibrancyEffectView
         }
         
+        self.addSubnode(self.backgroundTitleNode)
+        self.addSubnode(self.dimBackgroundTitleNode)
         self.addSubnode(self.backgroundTextNode)
         self.addSubnode(self.dimBackgroundTextNode)
         self.addSubnode(self.foregroundNode)
+        self.foregroundNode.addSubnode(self.foregroundTitleNode)
         self.foregroundNode.addSubnode(self.foregroundTextNode)
         
         let stringValue = "1.0x"
@@ -114,6 +129,11 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
                 textCount += 1
             }
         }
+        
+        self.backgroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: backgroundTextColor)
+        self.dimBackgroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: dimBackgroundTextColor)
+        self.foregroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: foregroundTextColor)
+        
         self.dimBackgroundTextNode.segments = dimBackgroundSegments
         self.backgroundTextNode.segments = backgroundSegments
         self.foregroundTextNode.segments = foregroundSegments
@@ -179,6 +199,10 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
         self.backgroundTextNode.segments = backgroundSegments
         self.foregroundTextNode.segments = foregroundSegments
         
+        self.backgroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: backgroundTextColor)
+        self.dimBackgroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: dimBackgroundTextColor)
+        self.foregroundTitleNode.attributedText = NSAttributedString(string: self.title ?? "", font: textFont, textColor: foregroundTextColor)
+        
         let _ = self.dimBackgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
         let _ = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
         let _ = self.foregroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: transition.isAnimated)
@@ -188,20 +212,41 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
         let valueWidth: CGFloat = 70.0
         let height: CGFloat = 45.0
                 
-        var backgroundTextSize = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
+        let originalBackgroundTextSize = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true)
+        var backgroundTextSize = originalBackgroundTextSize
         backgroundTextSize.width = valueWidth
+        
+        let backgroundTitleSize = self.backgroundTitleNode.updateLayout(CGSize(width: 120.0, height: 100.0))
+        let _ = self.dimBackgroundTitleNode.updateLayout(CGSize(width: 120.0, height: 100.0))
+        let _ = self.foregroundTitleNode.updateLayout(CGSize(width: 120.0, height: 100.0))
         
         return (CGSize(width: height * 3.0, height: height), { size, transition in
             let leftInset: CGFloat = 17.0
             
             self.vibrancyEffectView?.frame = CGRect(origin: .zero, size: size)
             
-            let textFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - backgroundTextSize.height) / 2.0)), size: backgroundTextSize)
+            let backgroundTextWidth = self.backgroundTextNode.updateLayout(size: CGSize(width: 70.0, height: .greatestFiniteMagnitude), animated: true).width
+            
+            self.updateValue(transition: transition)
+            
+            let titleFrame: CGRect
+            let textFrame: CGRect
+            
+            titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - backgroundTitleSize.height) / 2.0)), size: backgroundTitleSize)
+            
+            if self.title != nil {
+                textFrame = CGRect(origin: CGPoint(x: size.width - leftInset - backgroundTextWidth, y: floor((height - backgroundTextSize.height) / 2.0)), size: backgroundTextSize)
+            } else {
+                textFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - backgroundTextSize.height) / 2.0)), size: backgroundTextSize)
+            }
+            
+            transition.updateFrameAdditive(node: self.dimBackgroundTitleNode, frame: titleFrame)
+            transition.updateFrameAdditive(node: self.backgroundTitleNode, frame: titleFrame)
+            transition.updateFrameAdditive(node: self.foregroundTitleNode, frame: titleFrame)
+            
             transition.updateFrameAdditive(node: self.dimBackgroundTextNode, frame: textFrame)
             transition.updateFrameAdditive(node: self.backgroundTextNode, frame: textFrame)
             transition.updateFrameAdditive(node: self.foregroundTextNode, frame: textFrame)
-                        
-            self.updateValue(transition: transition)
         })
     }
         

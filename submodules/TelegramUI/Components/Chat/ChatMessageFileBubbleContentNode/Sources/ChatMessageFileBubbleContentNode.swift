@@ -106,6 +106,9 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                     selectedFile = telegramFile
                 }
             }
+            if let updatingMedia = item.attributes.updatingMedia, case let .update(media) = updatingMedia.media, let file = media.media as? TelegramMediaFile {
+                selectedFile = file
+            }
             
             var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
@@ -135,7 +138,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
+            let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile)
             
             let (initialWidth, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
                 context: item.context,

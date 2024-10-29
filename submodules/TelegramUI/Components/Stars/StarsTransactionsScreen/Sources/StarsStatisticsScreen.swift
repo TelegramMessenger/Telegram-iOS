@@ -28,7 +28,6 @@ final class StarsStatisticsScreenComponent: Component {
     let context: AccountContext
     let peerId: EnginePeer.Id
     let revenueContext: StarsRevenueStatsContext
-    let transactionsContext: StarsTransactionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let withdraw: () -> Void
     let showTimeoutTooltip: (Int32) -> Void
@@ -38,7 +37,6 @@ final class StarsStatisticsScreenComponent: Component {
         context: AccountContext,
         peerId: EnginePeer.Id,
         revenueContext: StarsRevenueStatsContext,
-        transactionsContext: StarsTransactionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         withdraw: @escaping () -> Void,
         showTimeoutTooltip: @escaping (Int32) -> Void,
@@ -47,7 +45,6 @@ final class StarsStatisticsScreenComponent: Component {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
-        self.transactionsContext = transactionsContext
         self.openTransaction = openTransaction
         self.withdraw = withdraw
         self.showTimeoutTooltip = showTimeoutTooltip
@@ -71,6 +68,21 @@ final class StarsStatisticsScreenComponent: Component {
         override func touchesShouldCancel(in view: UIView) -> Bool {
             return true
         }
+        
+        override var contentOffset: CGPoint {
+            set(value) {
+                var value = value
+                if value.y > self.contentSize.height - self.bounds.height {
+                    value.y = max(0.0, self.contentSize.height - self.bounds.height)
+                    self.bounces = false
+                } else {
+                    self.bounces = true
+                }
+                super.contentOffset = value
+            } get {
+                return super.contentOffset
+            }
+        }
                 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
@@ -92,7 +104,11 @@ final class StarsStatisticsScreenComponent: Component {
                 }
                 
                 if let view = gestureRecognizer.view?.hitTest(gestureRecognizer.location(in: gestureRecognizer.view), with: nil) as? UIControl {
-                    return !view.isTracking
+                    if view is UIButton {
+                        return true
+                    } else {
+                        return !view.isTracking
+                    }
                 }
                 
                 return true
@@ -124,7 +140,12 @@ final class StarsStatisticsScreenComponent: Component {
 
         private let transactionsHeader = ComponentView<Empty>()
         private let transactionsBackground = UIView()
-        private let transactionsView = ComponentView<StarsTransactionsPanelEnvironment>()
+        
+        private let panelContainer = ComponentView<StarsTransactionsPanelContainerEnvironment>()
+        
+        private var allTransactionsContext: StarsTransactionsContext?
+        private var incomingTransactionsContext: StarsTransactionsContext?
+        private var outgoingTransactionsContext: StarsTransactionsContext?
                                 
         private var component: StarsStatisticsScreenComponent?
         private weak var state: EmptyComponentState?
@@ -132,6 +153,12 @@ final class StarsStatisticsScreenComponent: Component {
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
         private var controller: (() -> ViewController?)?
                 
+        private var enableVelocityTracking: Bool = false
+        private var previousVelocityM1: CGFloat = 0.0
+        private var previousVelocity: CGFloat = 0.0
+        
+        private var listIsExpanded = false
+        
         private var ignoreScrolling: Bool = false
         
         private var stateDisposable: Disposable?
@@ -194,10 +221,36 @@ final class StarsStatisticsScreenComponent: Component {
             self.stateDisposable?.dispose()
         }
         
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            var currentParent: UIView? = result
+            while true {
+                if currentParent == nil || currentParent === self {
+                    break
+                }
+                if let scrollView = currentParent as? UIScrollView {
+                    if scrollView === self.scrollView {
+                        break
+                    }
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
+                        return self.scrollView
+                    }
+                }
+                currentParent = currentParent?.superview
+            }
+            return result
+        }
+        
         func scrollToTop() {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.scrollView.contentInset.top), animated: true)
         }
                         
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.enableVelocityTracking = true
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             if !self.ignoreScrolling {
                 self.updateScrolling(transition: .immediate)
@@ -205,57 +258,128 @@ final class StarsStatisticsScreenComponent: Component {
                 if let view = self.chartView.view as? ListItemComponentAdaptor.View, let node = view.itemNode as? StatsGraphItemNode {
                     node.resetInteraction()
                 }
+                
+                if self.enableVelocityTracking {
+                    self.previousVelocityM1 = self.previousVelocity
+                    if let value = (scrollView.value(forKey: (["_", "verticalVelocity"] as [String]).joined()) as? NSNumber)?.doubleValue {
+                        self.previousVelocity = CGFloat(value)
+                    }
+                }
+            }
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            guard let navigationMetrics = self.navigationMetrics else {
+                return
+            }
+            
+            if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                let paneAreaExpansionFinalPoint: CGFloat = panelContainerView.frame.minY - navigationMetrics.navigationHeight
+                if abs(scrollView.contentOffset.y - paneAreaExpansionFinalPoint) < .ulpOfOne {
+                    panelContainerView.transferVelocity(self.previousVelocityM1)
+                }
+            }
+        }
+        
+        func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            guard let _ = self.navigationMetrics else {
+                return
+            }
+            
+            let paneAreaExpansionDistance: CGFloat = 32.0
+            let paneAreaExpansionFinalPoint: CGFloat = scrollView.contentSize.height - scrollView.bounds.height
+            if targetContentOffset.pointee.y > paneAreaExpansionFinalPoint - paneAreaExpansionDistance && targetContentOffset.pointee.y < paneAreaExpansionFinalPoint {
+                targetContentOffset.pointee.y = paneAreaExpansionFinalPoint
+                self.enableVelocityTracking = false
+                self.previousVelocity = 0.0
+                self.previousVelocityM1 = 0.0
             }
         }
                 
         private var lastScrollBounds: CGRect?
         private var lastBottomOffset: CGFloat?
         private func updateScrolling(transition: ComponentTransition) {
-            guard let environment = self.environment?[ViewControllerComponentContainer.Environment.self].value else {
-                return
-            }
-        
             let scrollBounds = self.scrollView.bounds
-                                        
-            let topContentOffset = self.scrollView.contentOffset.y
-            let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset)) / 20.0
-                            
-            let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
-            animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
-            animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
             
-            let expansionDistance: CGFloat = 32.0
-            var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
-            expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+            let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
             
-            transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
-            
-            let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
-            self.lastBottomOffset = bottomOffset
-            
-            let transactionsScrollBounds: CGRect
-            if let transactionsView = self.transactionsView.view {
-                transactionsScrollBounds = CGRect(origin: CGPoint(x: 0.0, y: scrollBounds.origin.y - transactionsView.frame.minY), size: scrollBounds.size)
-            } else {
-                transactionsScrollBounds = .zero
+            if let _ = self.navigationMetrics {
+                let topContentOffset = self.scrollView.contentOffset.y
+                let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset)) / 20.0
+                                
+                let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
+                animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
+                animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
+                
+                let expansionDistance: CGFloat = 32.0
+                var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
+                expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+                
+                transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
+                if let panelContainerView = self.panelContainer.view as? StarsTransactionsPanelContainerComponent.View {
+                    panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
+                }
+                   
+                let listIsExpanded = expansionDistanceFactor == 0.0
+                if listIsExpanded != self.listIsExpanded {
+                    self.listIsExpanded = listIsExpanded
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .init(animation: .curve(duration: 0.25, curve: .slide)))
+                    }
+                }
             }
-            self.lastScrollBounds = transactionsScrollBounds
             
-            let _ = self.transactionsView.updateEnvironment(
+            let _ = self.panelContainer.updateEnvironment(
                 transition: transition,
                 environment: {
-                    StarsTransactionsPanelEnvironment(
-                        theme: environment.theme,
-                        strings: environment.strings,
-                        dateTimeFormat: environment.dateTimeFormat,
-                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
-                        isScrollable: false,
-                        isCurrent: true,
-                        externalScrollBounds: transactionsScrollBounds,
-                        externalBottomOffset: bottomOffset
-                    )
+                    StarsTransactionsPanelContainerEnvironment(isScrollable: isLockedAtPanels)
                 }
             )
+//            guard let environment = self.environment?[ViewControllerComponentContainer.Environment.self].value else {
+//                return
+//            }
+//        
+//            let scrollBounds = self.scrollView.bounds
+//                                        
+//            let topContentOffset = self.scrollView.contentOffset.y
+//            let navigationBackgroundAlpha = min(20.0, max(0.0, topContentOffset)) / 20.0
+//                            
+//            let animatedTransition = ComponentTransition(animation: .curve(duration: 0.18, curve: .easeInOut))
+//            animatedTransition.setAlpha(view: self.navigationBackgroundView, alpha: navigationBackgroundAlpha)
+//            animatedTransition.setAlpha(layer: self.navigationSeparatorLayerContainer, alpha: navigationBackgroundAlpha)
+//            
+//            let expansionDistance: CGFloat = 32.0
+//            var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
+//            expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
+//            
+//            transition.setAlpha(layer: self.navigationSeparatorLayer, alpha: expansionDistanceFactor)
+//            
+//            let bottomOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+//            self.lastBottomOffset = bottomOffset
+//            
+//            let transactionsScrollBounds: CGRect
+//            if let transactionsView = self.transactionsView.view {
+//                transactionsScrollBounds = CGRect(origin: CGPoint(x: 0.0, y: scrollBounds.origin.y - transactionsView.frame.minY), size: scrollBounds.size)
+//            } else {
+//                transactionsScrollBounds = .zero
+//            }
+//            self.lastScrollBounds = transactionsScrollBounds
+//            
+//            let _ = self.transactionsView.updateEnvironment(
+//                transition: transition,
+//                environment: {
+//                    StarsTransactionsPanelEnvironment(
+//                        theme: environment.theme,
+//                        strings: environment.strings,
+//                        dateTimeFormat: environment.dateTimeFormat,
+//                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right),
+//                        isScrollable: false,
+//                        isCurrent: true,
+//                        externalScrollBounds: transactionsScrollBounds,
+//                        externalBottomOffset: bottomOffset
+//                    )
+//                }
+//            )
         }
                 
         private var isUpdating = false
@@ -458,7 +582,8 @@ final class StarsStatisticsScreenComponent: Component {
                     footer: AnyComponent(MultilineTextComponent(
                         text: .plain(balanceInfoString),
                         maximumNumberOfLines: 0,
-                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.2),
+                        highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
+                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                         highlightAction: { attributes in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                                 return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -522,73 +647,118 @@ final class StarsStatisticsScreenComponent: Component {
             }
             
             contentHeight += balanceSize.height
-            contentHeight += 27.0
-                        
-            let transactionsHeaderSize = self.transactionsHeader.update(
-                transition: transition,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: strings.Stars_BotRevenue_Transactions_Title.uppercased(),
-                        font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
-                        textColor: environment.theme.list.freeTextColor
-                    )),
-                    maximumNumberOfLines: 0
-                )),
-                environment: {},
-                containerSize: availableSize
-            )
-            let transactionsHeaderFrame = CGRect(origin: CGPoint(x: environment.safeInsets.left + 32.0, y: contentHeight), size: transactionsHeaderSize)
-            if let transactionsHeaderView = self.transactionsHeader.view {
-                if transactionsHeaderView.superview == nil {
-                    self.scrollView.addSubview(transactionsHeaderView)
+            contentHeight += 44.0
+                    
+            var panelItems: [StarsTransactionsPanelContainerComponent.Item] = []
+            if "".isEmpty {
+                let allTransactionsContext: StarsTransactionsContext
+                if let current = self.allTransactionsContext {
+                    allTransactionsContext = current
+                } else {
+                    allTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .all)
+                    self.allTransactionsContext = allTransactionsContext
                 }
-                transition.setFrame(view: transactionsHeaderView, frame: transactionsHeaderFrame)
+                
+                let incomingTransactionsContext: StarsTransactionsContext
+                if let current = self.incomingTransactionsContext {
+                    incomingTransactionsContext = current
+                } else {
+                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsTransactionsContext(allTransactionsContext), mode: .incoming)
+                    self.incomingTransactionsContext = incomingTransactionsContext
+                }
+                
+                let outgoingTransactionsContext: StarsTransactionsContext
+                if let current = self.outgoingTransactionsContext {
+                    outgoingTransactionsContext = current
+                } else {
+                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsTransactionsContext(allTransactionsContext), mode: .outgoing)
+                    self.outgoingTransactionsContext = outgoingTransactionsContext
+                }
+                
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "all",
+                    title: environment.strings.Stars_Intro_AllTransactions,
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        transactionsContext: allTransactionsContext,
+                        isAccount: false,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
+                    ))
+                ))
+                
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "incoming",
+                    title: environment.strings.Stars_Intro_Incoming,
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        transactionsContext: incomingTransactionsContext,
+                        isAccount: false,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
+                    ))
+                ))
+                
+                panelItems.append(StarsTransactionsPanelContainerComponent.Item(
+                    id: "outgoing",
+                    title: environment.strings.Stars_Intro_Outgoing,
+                    panel: AnyComponent(StarsTransactionsListPanelComponent(
+                        context: component.context,
+                        transactionsContext: outgoingTransactionsContext,
+                        isAccount: false,
+                        action: { transaction in
+                            component.openTransaction(transaction)
+                        }
+                    ))
+                ))
             }
-            contentHeight += transactionsHeaderSize.height
-            contentHeight += 6.0
             
-            self.transactionsBackground.backgroundColor = environment.theme.list.itemBlocksBackgroundColor
-            self.transactionsBackground.layer.cornerRadius = 11.0
-            if #available(iOS 13.0, *) {
-                self.transactionsBackground.layer.cornerCurve = .continuous
+            var wasLockedAtPanels = false
+            if let panelContainerView = self.panelContainer.view, let navigationMetrics = self.navigationMetrics {
+                if self.scrollView.bounds.minY > 0.0 && abs(self.scrollView.bounds.minY - (panelContainerView.frame.minY - navigationMetrics.navigationHeight)) <= UIScreenPixel {
+                    wasLockedAtPanels = true
+                }
             }
             
-            let transactionsSize = self.transactionsView.update(
-                transition: .immediate,
-                component: AnyComponent(StarsTransactionsListPanelComponent(
-                    context: component.context,
-                    transactionsContext: component.transactionsContext,
-                    isAccount: false,
-                    action: { transaction in
-                        component.openTransaction(transaction)
-                    }
-                )),
-                environment: {
-                    StarsTransactionsPanelEnvironment(
+            let panelTransition = transition
+            if !panelItems.isEmpty {
+                let panelContainerInset: CGFloat = self.listIsExpanded ? 0.0 : 16.0
+                let panelContainerCornerRadius: CGFloat = self.listIsExpanded ? 0.0 : 11.0
+                
+                let panelContainerSize = self.panelContainer.update(
+                    transition: panelTransition,
+                    component: AnyComponent(StarsTransactionsPanelContainerComponent(
                         theme: environment.theme,
-                        strings: strings,
+                        strings: environment.strings,
                         dateTimeFormat: environment.dateTimeFormat,
-                        containerInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
-                        isScrollable: false,
-                        isCurrent: true,
-                        externalScrollBounds: self.lastScrollBounds ?? .zero,
-                        externalBottomOffset: self.lastBottomOffset ?? 1000
-                    )
-                },
-                containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
-            )
-            self.transactionsView.parentState = state
-            let transactionsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - transactionsSize.width) / 2.0), y: contentHeight), size: transactionsSize)
-            if let panelContainerView = self.transactionsView.view {
-                if panelContainerView.superview == nil {
-                    self.scrollContainerView.addSubview(panelContainerView)
+                        insets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left + panelContainerInset, bottom: environment.safeInsets.bottom, right: environment.safeInsets.right + panelContainerInset),
+                        items: panelItems,
+                        currentPanelUpdated: { [weak self] id, transition in
+                            guard let self else {
+                                return
+                            }
+                            self.currentSelectedPanelId = id
+                            self.state?.updated(transition: transition)
+                        }
+                    )),
+                    environment: {
+                        StarsTransactionsPanelContainerEnvironment(isScrollable: wasLockedAtPanels)
+                    },
+                    containerSize: CGSize(width: availableSize.width, height: availableSize.height - environment.navigationHeight)
+                )
+                if let panelContainerView = self.panelContainer.view {
+                    if panelContainerView.superview == nil {
+                        self.scrollContainerView.addSubview(panelContainerView)
+                    }
+                    transition.setFrame(view: panelContainerView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - panelContainerSize.width) / 2.0), y: contentHeight), size: panelContainerSize))
+                    transition.setCornerRadius(layer: panelContainerView.layer, cornerRadius: panelContainerCornerRadius)
                 }
-                transition.setFrame(view: panelContainerView, frame: transactionsFrame)
+                contentHeight += panelContainerSize.height
+            } else {
+                self.panelContainer.view?.removeFromSuperview()
             }
-            transition.setFrame(view: self.transactionsBackground, frame: transactionsFrame)
-            
-            contentHeight += transactionsSize.height
-            contentHeight += 31.0
             
             self.ignoreScrolling = true
             
@@ -624,7 +794,6 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let peerId: EnginePeer.Id
     private let revenueContext: StarsRevenueStatsContext
-    private let transactionsContext: StarsTransactionsContext
     
     private weak var tooltipScreen: UndoOverlayController?
     private var timer: Foundation.Timer?
@@ -633,7 +802,6 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
         self.context = context
         self.peerId = peerId
         self.revenueContext = revenueContext
-        self.transactionsContext = context.engine.payments.peerStarsTransactionsContext(subject: .peer(peerId), mode: .all)
         
         var withdrawImpl: (() -> Void)?
         var buyAdsImpl: (() -> Void)?
@@ -643,7 +811,6 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
             context: context,
             peerId: peerId,
             revenueContext: revenueContext,
-            transactionsContext: self.transactionsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
             },
@@ -700,13 +867,14 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                             }
                             let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: peerId, amount: amount, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root))
-                            }, completion: { [weak self] url in
+                            }, completion: { url in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                 
                                 Queue.mainQueue().after(2.0) {
                                     revenueContext.reload()
-                                    self?.transactionsContext.reload()
+                                    //TODO:
+                                    //self?.transactionsContext.reload()
                                 }
                             })
                             self.present(controller, in: .window(.root))
@@ -787,9 +955,7 @@ public final class StarsStatisticsScreen: ViewControllerComponentContainer {
                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
             })
         }
-        
-        self.transactionsContext.loadMore()
-        
+                
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? StarsStatisticsScreenComponent.View else {
                 return

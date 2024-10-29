@@ -104,8 +104,9 @@ private final class InnerActionsContainerNode: ASDisplayNode {
                     }
                 }
             case let .custom(item, _):
-                itemNodes.append(.custom(item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)))
-                if i != items.count - 1 {
+                let itemNode = item.node(presentationData: presentationData, getController: getController, actionSelected: actionSelected)
+                itemNodes.append(.custom(itemNode))
+                if i != items.count - 1 && itemNode.needsSeparator {
                     switch items[i + 1] {
                     case .action, .custom:
                         let separatorNode = ASDisplayNode()
@@ -439,6 +440,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         case let .starsReactions(topCount):
             self.action = nil
             self.text = "Send \(topCount) or more to highlight your profile"
+            self.targetSelectionIndex = nil
+            icon = nil
+            isUserInteractionEnabled = action != nil
+        case .videoProcessing:
+            self.action = nil
+            self.text = "The video will be published once converted and optimized."
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = action != nil

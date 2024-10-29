@@ -11,6 +11,11 @@ public enum GalleryItemNodeNavigationStyle {
 }
 
 open class GalleryItemNode: ASDisplayNode {
+    public enum ActiveEdge {
+        case left
+        case right
+    }
+    
     private var _index: Int?
     public var index: Int {
         get {
@@ -100,11 +105,25 @@ open class GalleryItemNode: ASDisplayNode {
     open func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
     }
     
+    open func maybePerformActionForSwipeDismiss() -> Bool {
+        return false
+    }
+    
     open func contentSize() -> CGSize? {
         return nil
     }
     
     open var keyShortcuts: [KeyShortcut] {
         return []
+    }
+    
+    open func hasActiveEdgeAction(edge: ActiveEdge) -> Bool {
+        return false
+    }
+    
+    open func setActiveEdgeAction(edge: ActiveEdge?) {
+    }
+    
+    open func adjustActiveEdgeAction(distance: CGFloat) {
     }
 }

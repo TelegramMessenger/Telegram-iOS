@@ -208,7 +208,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     style: .media,
                     placeholder: .plain(presentationData.strings.MediaPicker_AddCaption),
                     maxLength: Int(self.context.userLimits.maxCaptionLength),
-                    queryTypes: [.mention],
+                    queryTypes: [.mention, .hashtag],
                     alwaysDarkWhenHasText: false,
                     resetInputContents: resetInputContents,
                     nextInputMode: { [weak self] _ in

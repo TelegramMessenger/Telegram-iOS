@@ -25,6 +25,7 @@ import GiftItemComponent
 import InAppPurchaseManager
 import TabSelectorComponent
 import GiftSetupScreen
+import GiftViewScreen
 import UndoUI
 
 final class GiftOptionsScreenComponent: Component {
@@ -122,6 +123,39 @@ final class GiftOptionsScreenComponent: Component {
         private var starsItems: [AnyHashable: ComponentView<Empty>] = [:]
         private let tabSelector = ComponentView<Empty>()
         private var starsFilter: StarsFilter = .all
+        
+        private var _effectiveStarGifts: ([StarGift], StarsFilter)?
+        private var effectiveStarGifts: [StarGift]? {
+            get {
+                if case .all = self.starsFilter {
+                    return self.state?.starGifts
+                } else {
+                    if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
+                        return currentGifts
+                    } else if let allGifts = self.state?.starGifts {
+                        let filteredGifts: [StarGift] = allGifts.filter {
+                            switch self.starsFilter {
+                            case .all:
+                                return true
+                            case .limited:
+                                if $0.availability != nil {
+                                    return true
+                                }
+                            case let .stars(stars):
+                                if $0.price == stars {
+                                    return true
+                                }
+                            }
+                            return false
+                        }
+                        self._effectiveStarGifts = (filteredGifts, self.starsFilter)
+                        return filteredGifts
+                    } else {
+                        return nil
+                    }
+                }
+            }
+        }
         
         private var isUpdating: Bool = false
         
@@ -242,7 +276,7 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
-            if let starGifts = self.state?.starGifts {
+            if let starGifts = self.effectiveStarGifts {
                 let sideInset: CGFloat = 16.0 + environment.safeInsets.left
                 
                 let optionSpacing: CGFloat = 10.0
@@ -261,19 +295,6 @@ final class GiftOptionsScreenComponent: Component {
                     }
                     
                     if isVisible {
-                        switch self.starsFilter {
-                        case .all:
-                            break
-                        case .limited:
-                            if gift.availability == nil {
-                                continue
-                            }
-                        case let .stars(stars):
-                            if gift.price != stars {
-                                continue
-                            }
-                        }
-                        
                         let itemId = AnyHashable(gift.id)
                         validIds.append(itemId)
                         
@@ -289,7 +310,19 @@ final class GiftOptionsScreenComponent: Component {
                             self.starsItems[itemId] = visibleItem
                         }
                         
-                        let isSoldOut = gift.availability?.remains == 0
+                        var ribbon: GiftItemComponent.Ribbon?
+                        if let _ = gift.soldOut {
+                            ribbon = GiftItemComponent.Ribbon(
+                                text: environment.strings.Gift_Options_Gift_SoldOut,
+                                color: .red
+                            )
+                        } else if let _ = gift.availability {
+                            ribbon = GiftItemComponent.Ribbon(
+                                text: environment.strings.Gift_Options_Gift_Limited,
+                                color: .blue
+                            )
+                        }
+                        
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -300,14 +333,9 @@ final class GiftOptionsScreenComponent: Component {
                                             theme: environment.theme,
                                             peer: nil,
                                             subject: .starGift(gift.id, gift.file),
-                                            price: isSoldOut ? environment.strings.Gift_Options_Gift_SoldOut : "⭐️ \(gift.price)",
-                                            ribbon: gift.availability != nil ?
-                                            GiftItemComponent.Ribbon(
-                                                text: environment.strings.Gift_Options_Gift_Limited,
-                                                color: .blue
-                                            )
-                                            : nil,
-                                            isSoldOut: isSoldOut
+                                            price: "⭐️ \(gift.price)",
+                                            ribbon: ribbon,
+                                            isSoldOut: gift.soldOut != nil
                                         )
                                     ),
                                     effectAlignment: .center,
@@ -321,16 +349,11 @@ final class GiftOptionsScreenComponent: Component {
                                                     mainController = controller
                                                 }
                                                 if gift.availability?.remains == 0 {
-                                                    self.dismissAllTooltips(controller: mainController)
-                                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                                    let resultController = UndoOverlayController(
-                                                        presentationData: presentationData,
-                                                        content: .sticker(context: component.context, file: gift.file, loop: false, title: nil, text: presentationData.strings.Gift_Options_SoldOut_Text, undoText: nil, customAction: nil),
-                                                        elevatedLayout: false,
-                                                        action: { _ in return true }
+                                                    let giftController = GiftViewScreen(
+                                                        context: component.context,
+                                                        subject: .soldOutGift(gift)
                                                     )
-                                                    mainController.present(resultController, in: .window(.root))
-                                                    HapticFeedback().error()
+                                                    mainController.push(giftController)
                                                 } else {
                                                     let giftController = GiftSetupScreen(
                                                         context: component.context,
@@ -340,6 +363,7 @@ final class GiftOptionsScreenComponent: Component {
                                                     )
                                                     mainController.push(giftController)
                                                 }
+                                               
                                             }
                                         }
                                     },
@@ -601,7 +625,8 @@ final class GiftOptionsScreenComponent: Component {
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
-                    highlightColor: accentColor.withAlphaComponent(0.2),
+                    highlightColor: accentColor.withAlphaComponent(0.1),
+                    highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -789,7 +814,8 @@ final class GiftOptionsScreenComponent: Component {
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2,
-                    highlightColor: accentColor.withAlphaComponent(0.2),
+                    highlightColor: accentColor.withAlphaComponent(0.1),
+                    highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
                     highlightAction: { attributes in
                         if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                             return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
@@ -892,9 +918,9 @@ final class GiftOptionsScreenComponent: Component {
             contentHeight += tabSelectorSize.height
             contentHeight += 19.0
             
-            if let starGifts = state.starGifts {
+            if let starGifts = self.effectiveStarGifts {
                 self.starsItemsOrigin = contentHeight
-                
+
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
                 contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * starsOptionSize.height
                 contentHeight += 66.0

@@ -106,8 +106,7 @@ class BazelCommandLine:
             # 1. resolves issues with the linker caused by the swift-objc mixing.
             # 2. makes the resulting binaries significantly smaller (up to 9% for this project).
             #'--swiftcopt=-num-threads', '--swiftcopt=1',
-            '--swiftcopt=-j1',
-            '--features=swift._num_threads_0_in_swiftcopts',
+            '--swiftcopt=-num-threads', '--swiftcopt=1',
 
             # Strip unsused code.
             '--features=dead_strip',

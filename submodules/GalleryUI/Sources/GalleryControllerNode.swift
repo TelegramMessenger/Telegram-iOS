@@ -303,7 +303,7 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         
         self.pager.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
 
-        self.pager.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        self.pager.containerLayoutUpdated(layout, navigationBarHeight: self.areControlsHidden ? 0.0 : navigationBarHeight, transition: transition)
     }
     
     open func setControlsHidden(_ hidden: Bool, animated: Bool) {
@@ -470,6 +470,10 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
         let minimalDismissDistance = scrollView.contentSize.height / 12.0
         if abs(velocity.y) > 1.0 || abs(distanceFromEquilibrium) > minimalDismissDistance {
+            if distanceFromEquilibrium > 1.0, let centralItemNode = self.pager.centralItemNode(), centralItemNode.maybePerformActionForSwipeDismiss() {
+                return
+            }
+            
             if let backgroundColor = self.backgroundNode.backgroundColor {
                 self.backgroundNode.layer.animate(from: backgroundColor, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2, removeOnCompletion: false)
             }

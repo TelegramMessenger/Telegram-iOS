@@ -18,12 +18,26 @@ final class TabBarControllerNode: ASDisplayNode {
     private let toolbarActionSelected: (ToolbarActionOption) -> Void
     private let disabledPressed: () -> Void
 
-    var currentControllerNode: ASDisplayNode? {
-        didSet {
-            oldValue?.removeFromSupernode()
-            
-            if let currentControllerNode = self.currentControllerNode {
+    var currentControllerNode: ASDisplayNode?
+    
+    func setCurrentControllerNode(_ node: ASDisplayNode?) -> () -> Void {
+        guard node !== self.currentControllerNode else {
+            return {}
+        }
+        
+        let previousNode = self.currentControllerNode
+        self.currentControllerNode = node
+        if let currentControllerNode = self.currentControllerNode {
+            if let previousNode {
+                self.insertSubnode(currentControllerNode, aboveSubnode: previousNode)
+            } else {
                 self.insertSubnode(currentControllerNode, at: 0)
+            }
+        }
+        
+        return { [weak self, weak previousNode] in
+            if previousNode !== self?.currentControllerNode {
+                previousNode?.removeFromSupernode()
             }
         }
     }

@@ -655,6 +655,12 @@ extension StoreMessage {
     convenience init?(apiMessage: Api.Message, accountPeerId: PeerId, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, flags2, id, fromId, boosts, chatPeerId, savedPeerId, fwdFrom, viaBotId, viaBusinessBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod, quickReplyShortcutId, messageEffectId, factCheck):
+                var attributes: [MessageAttribute] = []
+            
+                if (flags2 & (1 << 4)) != 0 {
+                    attributes.append(PendingProcessingMessageAttribute(approximateCompletionTime: date))
+                }
+            
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
             
                 var namespace = namespace
@@ -675,8 +681,6 @@ extension StoreMessage {
                         peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                         authorId = resolvedFromId
                 }
-                
-                var attributes: [MessageAttribute] = []
                 
                 var threadId: Int64?
                 if let replyTo = replyTo {
@@ -725,7 +729,7 @@ extension StoreMessage {
                                     threadId = Int64(threadIdValue.id)
                                 }
                             }
-                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: namespace, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))
                         }
                         if let replyHeader = replyHeader {
                             attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
@@ -867,7 +871,7 @@ extension StoreMessage {
                     attributes.append(InlineBusinessBotMessageAttribute(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(viaBusinessBotId)), title: nil))
                 }
                 
-                if namespace != Namespaces.Message.ScheduledCloud && namespace != Namespaces.Message.QuickReplyCloud {
+                if !Namespaces.Message.allNonRegular.contains(namespace) {
                     if let views = views {
                         attributes.append(ViewCountMessageAttribute(count: Int(views)))
                     }

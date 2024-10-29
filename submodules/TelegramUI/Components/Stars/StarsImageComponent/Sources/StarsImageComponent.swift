@@ -788,6 +788,16 @@ public final class StarsImageComponent: Component {
                             direction: .mirroredDiagonal
                         )
                         iconView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputPremiumIcon"), color: .white)
+                    case .apiLimitExtension:
+                        iconBackgroundView.image = generateGradientFilledCircleImage(
+                            diameter: imageSize.width,
+                            colors: [
+                                UIColor(rgb: 0x32b83b).cgColor,
+                                UIColor(rgb: 0x87d93b).cgColor
+                            ],
+                            direction: .vertical
+                        )
+                        iconView.image = UIImage(bundleImageName: "Premium/Stars/PaidBroadcast")
                     case .peer, .unsupported:
                         iconInset = 15.0
                         iconBackgroundView.image = generateGradientFilledCircleImage(

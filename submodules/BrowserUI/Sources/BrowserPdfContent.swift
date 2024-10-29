@@ -20,7 +20,7 @@ import PDFKit
 final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDFDocumentDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
-    let file: TelegramMediaFile
+    let file: FileMediaReference
     
     private let pdfView: PDFView
     private let scrollView: UIScrollView!
@@ -53,7 +53,7 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
     
     private var tempFile: TempBoxFile?
     
-    init(context: AccountContext, presentationData: PresentationData, file: TelegramMediaFile) {
+    init(context: AccountContext, presentationData: PresentationData, file: FileMediaReference) {
         self.context = context
         self.uuid = UUID()
         self.presentationData = presentationData
@@ -86,9 +86,9 @@ final class BrowserPdfContent: UIView, BrowserContent, UIScrollViewDelegate, PDF
         
         var title = "file"
         var url = ""
-        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.resource) {
+        if let path = self.context.account.postbox.mediaBox.completedResourcePath(file.media.resource) {
             var updatedPath = path
-            if let fileName = file.fileName {
+            if let fileName = file.media.fileName {
                 let tempFile = TempBox.shared.file(path: path, fileName: fileName)
                 updatedPath = tempFile.path
                 self.tempFile = tempFile

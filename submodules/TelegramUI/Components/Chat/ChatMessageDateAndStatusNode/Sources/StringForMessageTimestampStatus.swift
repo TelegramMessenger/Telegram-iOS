@@ -70,7 +70,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
             return strings.Message_RecommendedLabel
         }
     }
-
+    
     var timestamp: Int32
     if let scheduleTime = message.scheduleTime {
         timestamp = scheduleTime
@@ -93,6 +93,10 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
     var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
     if timestamp == scheduleWhenOnlineTimestamp {
         dateText = "         "
+    }
+    
+    if message.id.namespace == Namespaces.Message.ScheduledCloud, let _ = message.pendingProcessingAttribute {
+        return "appx. \(dateText)"
     }
     
     if displayFullDate {

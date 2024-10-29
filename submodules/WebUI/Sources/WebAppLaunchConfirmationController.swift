@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import ComponentFlow
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -12,6 +13,7 @@ import AppBundle
 import AvatarNode
 import CheckNode
 import Markdown
+import EmojiStatusComponent
 
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
@@ -21,6 +23,8 @@ private func formattedText(_ text: String, color: UIColor, linkColor: UIColor, t
 }
 
 private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
+    private let context: AccountContext
+    private let presentationTheme: PresentationTheme
     private let strings: PresentationStrings
     private let peer: EnginePeer
     private let title: String
@@ -28,6 +32,7 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     private let showMore: Bool
     
     private let titleNode: ImmediateTextNode
+    private var titleCredibilityIconView: ComponentHostView<Empty>?
     private let textNode: ASTextNode
     private let avatarNode: AvatarNode
     
@@ -57,7 +62,9 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
     }
     
     init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, title: String, text: String, showMore: Bool, requestWriteAccess: Bool, actions: [TextAlertAction], morePressed: @escaping () -> Void, termsPressed: @escaping () -> Void) {
+        self.context = context
         self.strings = strings
+        self.presentationTheme = ptheme
         self.peer = peer
         self.title = title
         self.text = text
@@ -209,7 +216,42 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 32.0, height: size.height))
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: origin.y), size: titleSize))
+        var totalWidth = titleSize.width
+        
+        if self.peer.isVerified {
+            let statusContent: EmojiStatusComponent.Content = .verified(fillColor: self.presentationTheme.list.itemCheckColors.fillColor, foregroundColor: self.presentationTheme.list.itemCheckColors.foregroundColor, sizeType: .large)
+            let titleCredibilityIconTransition: ComponentTransition = .immediate
+            
+            let titleCredibilityIconView: ComponentHostView<Empty>
+            if let current = self.titleCredibilityIconView {
+                titleCredibilityIconView = current
+            } else {
+                titleCredibilityIconView = ComponentHostView<Empty>()
+                self.titleCredibilityIconView = titleCredibilityIconView
+                self.view.addSubview(titleCredibilityIconView)
+            }
+            
+            let titleIconSize = titleCredibilityIconView.update(
+                transition: titleCredibilityIconTransition,
+                component: AnyComponent(EmojiStatusComponent(
+                    context: self.context,
+                    animationCache: self.context.animationCache,
+                    animationRenderer: self.context.animationRenderer,
+                    content: statusContent,
+                    isVisibleForAnimations: true,
+                    action: {
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 20.0, height: 20.0)
+            )
+            
+            totalWidth += titleIconSize.width + 2.0
+            
+            titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x:floorToScreenPixels((size.width - totalWidth) / 2.0) + titleSize.width + 2.0, y: origin.y), size: titleIconSize))
+        }
+        
+        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - totalWidth) / 2.0), y: origin.y), size: titleSize))
         origin.y += titleSize.height + 6.0
         
         var entriesHeight: CGFloat = 0.0

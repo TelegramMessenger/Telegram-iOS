@@ -1167,7 +1167,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     detailText = stringForMediumCompactDate(timestamp: date, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
                 }
             
-                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
+                let label = tonAmountAttributedString(formatTonAmountText(transaction.amount, dateTimeFormat: presentationData.dateTimeFormat, showPlus: true), integralFont: font, fractionalFont: smallLabelFont, color: labelColor).mutableCopy() as! NSMutableAttributedString
             
                 label.insert(NSAttributedString(string: " $ ", font: font, textColor: labelColor), at: 1)
                 if let range = label.string.range(of: "$"), let icon = generateTintedImage(image: UIImage(bundleImageName: "Ads/TonMedium"), color: labelColor) {
@@ -1559,8 +1559,13 @@ private func monetizationEntries(
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
+    var isBot = false
+    if case let .user(user) = peer, let _ = user.botInfo {
+        isBot = true
+    }
+    
     if canViewRevenue {
-        entries.append(.adsHeader(presentationData.theme, presentationData.strings.Monetization_Header))
+        entries.append(.adsHeader(presentationData.theme, isBot ? presentationData.strings.Monetization_Bot_Header : presentationData.strings.Monetization_Header))
         
         if !data.topHoursGraph.isEmpty {
             entries.append(.adsImpressionsTitle(presentationData.theme, presentationData.strings.Monetization_ImpressionsTitle))
@@ -1602,7 +1607,7 @@ private func monetizationEntries(
     }
     
     if canViewRevenue {
-        entries.append(.adsTonBalanceTitle(presentationData.theme, presentationData.strings.Monetization_TonBalanceTitle))
+        entries.append(.adsTonBalanceTitle(presentationData.theme, isBot ? presentationData.strings.Monetization_Bot_BalanceTitle : presentationData.strings.Monetization_TonBalanceTitle))
         entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, data.balances.withdrawEnabled))
     
         if isCreator {
@@ -1644,7 +1649,7 @@ private func monetizationEntries(
     
     if displayTonTransactions {
         if !addedTransactionsTabs {
-            entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_TonTransactions.uppercased()))
+            entries.append(.adsTransactionsTitle(presentationData.theme, isBot ? presentationData.strings.Monetization_TransactionsTitle.uppercased() : presentationData.strings.Monetization_TonTransactions.uppercased()))
         }
         
         var transactions = transactionsInfo.transactions
@@ -1788,7 +1793,15 @@ private func channelStatsControllerEntries(
     return []
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil) -> ViewController {
+public func channelStatsController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    peerId: PeerId,
+    section: ChannelStatsSection = .stats,
+    existingRevenueContext: RevenueStatsContext? = nil,
+    boostStatus: ChannelBoostStatus? = nil,
+    boostStatusUpdated: ((ChannelBoostStatus) -> Void)? = nil
+) -> ViewController {
     let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, starsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false, starsSelected: false, transactionsExpanded: false, moreTransactionsDisplayed: 0))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
@@ -1845,7 +1858,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
 
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
-    let revenueContext = RevenueStatsContext(account: context.account, peerId: peerId)
+    let revenueContext = existingRevenueContext ?? RevenueStatsContext(account: context.account, peerId: peerId)
     let revenueState = Promise<RevenueStatsContextState?>()
     revenueState.set(.single(nil) |> then(revenueContext.state |> map(Optional.init)))
     
@@ -2013,7 +2026,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         buyAdsImpl?()
     },
     openMonetizationIntro: {
-        let controller = MonetizationIntroScreen(context: context, openMore: {})
+        let controller = MonetizationIntroScreen(context: context, mode: existingRevenueContext != nil ? .bot : .channel, openMore: {})
         pushImpl?(controller)
     },
     openMonetizationInfo: {
@@ -2112,7 +2125,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, peer, data, messageView, stories, boostData, boostersState, giftsState, revenueState, revenueTransactions, starsState, starsTransactions, peerData, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let (canViewStats, adsRestricted, canViewRevenue, canViewStarsRevenue) = peerData
+        let (canViewStats, adsRestricted, _, canViewStarsRevenue) = peerData
+        var canViewRevenue = peerData.2
         
         let _ = canViewStatsValue.swap(canViewStats)
         
@@ -2167,7 +2181,10 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         var headerItem: BoostHeaderItem?
         var leftNavigationButton: ItemListNavigationButton?
         var boostsOnly = false
-        if section == .boosts {
+        if existingRevenueContext != nil {
+            title = .text(presentationData.strings.Stats_TonBotRevenue_Title)
+            canViewRevenue = true
+        } else if section == .boosts {
             title = .text("")
             
             let headerTitle = isGroup ? presentationData.strings.GroupBoost_Title : presentationData.strings.ChannelBoost_Title
