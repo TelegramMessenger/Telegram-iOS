@@ -362,7 +362,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     selectedStarsForeground: themeColors.reactionStarsActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
                     extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
-                    extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.list.itemCheckColors.foregroundColor.argb,
+                    extractedSelectedForeground: arguments.presentationData.theme.theme.overallDarkAppearance ? themeColors.reactionActiveForeground.argb : arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
                     deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
                     selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )

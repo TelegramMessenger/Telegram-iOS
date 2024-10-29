@@ -4613,7 +4613,7 @@ extension ChatControllerImpl {
                                             title: "Improving video...",
                                             text: "The video will be published after it's optimized for the bese viewing experience.",
                                             customUndoText: nil,
-                                            timeout: 3.5
+                                            timeout: 5.0
                                         ),
                                         elevatedLayout: false,
                                         position: .top,

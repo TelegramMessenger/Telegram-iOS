@@ -1619,13 +1619,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 activeEdgeRateIndicatorTransition = .immediate
             }
             
+            //TODO:localize
             let activeEdgeRateIndicatorSize = activeEdgeRateIndicator.update(
                 transition: ComponentTransition(activeEdgeRateIndicatorTransition),
                 component: AnyComponent(GalleryRateToastComponent(
-                    rate: activeEdgeRateState.currentRate
+                    rate: activeEdgeRateState.currentRate,
+                    displayTooltip: "Swipe sideways to adjust speed."
                 )),
                 environment: {},
-                containerSize: CGSize(width: 200.0, height: 100.0)
+                containerSize: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: 100.0)
             )
             let activeEdgeRateIndicatorFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - activeEdgeRateIndicatorSize.width) * 0.5), y: max(navigationBarHeight, layout.statusBarHeight ?? 0.0) + 8.0), size: activeEdgeRateIndicatorSize)
             if let activeEdgeRateIndicatorView = activeEdgeRateIndicator.view {

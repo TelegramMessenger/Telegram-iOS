@@ -5,16 +5,26 @@ import ComponentFlow
 import AppBundle
 
 final class GalleryRateToastAnimationComponent: Component {
-    init() {
+    let speedFraction: CGFloat
+    
+    init(speedFraction: CGFloat) {
+        self.speedFraction = speedFraction
     }
     
     static func ==(lhs: GalleryRateToastAnimationComponent, rhs: GalleryRateToastAnimationComponent) -> Bool {
+        if lhs.speedFraction != rhs.speedFraction {
+            return false
+        }
         return true
     }
     
     final class View: UIView {
         private let itemViewContainer: UIView
         private var itemViews: [UIImageView] = []
+        
+        private var link: SharedDisplayLinkDriver.Link?
+        private var timeValue: CGFloat = 0.0
+        private var speedFraction: CGFloat = 1.0
         
         override init(frame: CGRect) {
             self.itemViewContainer = UIView()
@@ -36,41 +46,49 @@ final class GalleryRateToastAnimationComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.link?.invalidate()
+        }
+        
         private func setupAnimations() {
-            let beginTime = self.layer.convertTime(CACurrentMediaTime(), from: nil)
-            
-            for i in 0 ..< self.itemViews.count {
-                if self.itemViews[i].layer.animation(forKey: "idle-opacity") != nil {
-                    continue
+            if self.link == nil {
+                var previousTimestamp = CACurrentMediaTime()
+                self.link = SharedDisplayLinkDriver.shared.add { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    
+                    let timestamp = CACurrentMediaTime()
+                    let deltaMultiplier = 1.0 * (1.0 - self.speedFraction) + 3.0 * self.speedFraction
+                    let deltaTime = (timestamp - previousTimestamp) * deltaMultiplier
+                    previousTimestamp = timestamp
+                    
+                    self.timeValue += deltaTime
+                    
+                    let duration: CGFloat = 1.2
+                    
+                    for i in 0 ..< self.itemViews.count {
+                        var itemFraction = (self.timeValue + CGFloat(i) * 0.1).truncatingRemainder(dividingBy: duration) / duration
+                        
+                        if itemFraction >= 0.5 {
+                            itemFraction = (1.0 - itemFraction) / 0.5
+                        } else {
+                            itemFraction = itemFraction / 0.5
+                        }
+                        
+                        let itemAlpha = 0.6 * (1.0 - itemFraction) + 1.0 * itemFraction
+                        let itemScale = 0.9 * (1.0 - itemFraction) + 1.1 * itemFraction
+                        
+                        self.itemViews[i].alpha = itemAlpha
+                        self.itemViews[i].transform = CGAffineTransformMakeScale(itemScale, itemScale)
+                    }
                 }
-                
-                let delay = Double(i) * 0.1
-                
-                let animation = CABasicAnimation(keyPath: "opacity")
-                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                animation.beginTime = beginTime + delay
-                animation.fromValue = 0.6 as NSNumber
-                animation.toValue = 1.0 as NSNumber
-                animation.repeatCount = Float.infinity
-                animation.autoreverses = true
-                animation.fillMode = .both
-                animation.duration = 0.4
-                self.itemViews[i].layer.add(animation, forKey: "idle-opacity")
-                
-                let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
-                scaleAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                scaleAnimation.beginTime = beginTime + delay
-                scaleAnimation.fromValue = 0.9 as NSNumber
-                scaleAnimation.toValue = 1.1 as NSNumber
-                scaleAnimation.repeatCount = Float.infinity
-                scaleAnimation.autoreverses = true
-                scaleAnimation.fillMode = .both
-                scaleAnimation.duration = 0.4
-                self.itemViews[i].layer.add(scaleAnimation, forKey: "idle-scale")
             }
         }
         
         func update(component: GalleryRateToastAnimationComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.speedFraction = component.speedFraction
+            
             let itemSize = self.itemViews[0].image?.size ?? CGSize(width: 10.0, height: 10.0)
             let itemSpacing: CGFloat = 1.0
             
@@ -78,7 +96,10 @@ final class GalleryRateToastAnimationComponent: Component {
             
             for i in 0 ..< self.itemViews.count {
                 let itemFrame = CGRect(origin: CGPoint(x: CGFloat(i) * (itemSize.width + itemSpacing), y: UIScreenPixel), size: itemSize)
-                self.itemViews[i].frame = itemFrame
+                self.itemViews[i].center = itemFrame.center
+                self.itemViews[i].bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
+                
+                self.itemViews[i].layer.speed = Float(1.0 * (1.0 - component.speedFraction) + 2.0 * component.speedFraction)
             }
             
             self.setupAnimations()
