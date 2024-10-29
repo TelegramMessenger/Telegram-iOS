@@ -452,7 +452,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let url = navigationAction.request.url?.absoluteString {
                 if isTelegramMeLink(url) || isTelegraPhLink(url) {
                     decisionHandler(.cancel)
-                    self.controller?.openUrl(url, true, {})
+                    self.controller?.openUrl(url, true, false, {})
                 } else {
                     decisionHandler(.allow)
                 }
@@ -463,7 +463,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
             if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
-                self.controller?.openUrl(url.absoluteString, true, {})
+                self.controller?.openUrl(url.absoluteString, true, false, {})
             }
             return nil
         }
@@ -803,8 +803,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_open_tg_link":
                     if let json = json, let path = json["path_full"] as? String {
                         let forceRequest = json["force_request"] as? Bool ?? false
-                        let _ = forceRequest
-                        controller.openUrl("https://t.me\(path)", false, { [weak controller] in
+                        controller.openUrl("https://t.me\(path)", false, forceRequest, { [weak controller] in
                             let _ = controller
 //                            controller?.dismiss()
                         })
@@ -1890,7 +1889,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     private var hasSettings = false
     
-    public var openUrl: (String, Bool, @escaping () -> Void) -> Void = { _, _, _ in }
+    public var openUrl: (String, Bool, Bool, @escaping () -> Void) -> Void = { _, _, _, _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
     public var requestSwitchInline: (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in }
@@ -2142,7 +2141,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let context = self.context
                 let _ = (cachedWebAppTermsPage(context: context)
                 |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
-                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, openPeer: { peer, navigation in
+                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: true, forceUpdate: false, openPeer: { peer, navigation in
                     }, sendFile: nil, sendSticker: nil, sendEmoji: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] c, arguments in
                         self?.push(c)
                     }, dismissInput: {}, contentContext: nil, progress: nil, completion: nil)
@@ -2371,7 +2370,7 @@ public func standaloneWebAppController(
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
     params: WebAppParameters,
     threadId: Int64?,
-    openUrl: @escaping (String, Bool, @escaping () -> Void) -> Void,
+    openUrl: @escaping (String, Bool, Bool, @escaping () -> Void) -> Void,
     requestSwitchInline: @escaping (String, [ReplyMarkupButtonRequestPeerType]?, @escaping () -> Void) -> Void = { _, _, _ in },
     getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil },
     completion: @escaping () -> Void = {},

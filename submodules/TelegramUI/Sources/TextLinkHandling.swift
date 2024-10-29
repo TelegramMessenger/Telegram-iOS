@@ -26,7 +26,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
         guard let peer = peer else {
             return
         }
-        context.sharedContext.openResolvedUrl(.peer(peer._asPeer(), navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), forceExternal: false, openPeer: { (peer, navigation) in
+        context.sharedContext.openResolvedUrl(.peer(peer._asPeer(), navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), forceExternal: false, forceUpdate: false, openPeer: { (peer, navigation) in
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if let navigationController = controller?.navigationController as? NavigationController {
@@ -102,7 +102,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         (controller.navigationController as? NavigationController)?.pushViewController(browserController, animated: true)
                     case .boost, .chatFolder, .join:
                         if let navigationController = controller.navigationController as? NavigationController {
-                            openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigateToPeer in
+                            openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peer, navigateToPeer in
                                 openResolvedPeerImpl(peer, navigateToPeer)
                             }, sendFile: nil, sendSticker: nil, sendEmoji: nil, joinVoiceChat: nil, present: { c, a in
                                 controller.present(c, in: .window(.root), with: a)

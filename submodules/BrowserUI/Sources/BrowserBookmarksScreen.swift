@@ -149,6 +149,7 @@ public final class BrowserBookmarksScreen: ViewController {
             }, openWebView: { _, _, _, _ in
             }, activateAdAction: { _, _, _, _ in
             }, adContextAction: { _, _, _ in
+            }, removeAd: { _ in
             }, openRequestedPeerSelection: { _, _, _, _ in
             }, saveMediaToFiles: { _ in
             }, openNoAdsDemo: {

@@ -417,6 +417,33 @@ final class GiftSetupScreenComponent: Component {
             }
         }
         
+        @objc private func previewTap() {
+            func hasFirstResponder(_ view: UIView) -> Bool {
+                if view.isFirstResponder {
+                    return true
+                }
+                for subview in view.subviews {
+                    if hasFirstResponder(subview) {
+                        return true
+                    }
+                }
+                return false
+            }
+            
+            self.currentInputMode = .keyboard
+            if hasFirstResponder(self) {
+                if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                    if titleView.isActive {
+                        titleView.deactivateInput()
+                    } else {
+                        self.endEditing(true)
+                    }
+                }
+            } else {
+                self.state?.updated(transition: .spring(duration: 0.4))
+            }
+        }
+        
         func update(component: GiftSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -693,28 +720,7 @@ final class GiftSetupScreenComponent: Component {
             ))))
             self.resetText = nil
             
-            
-            var inputHeight: CGFloat = 0.0
-            inputHeight += self.updateInputMediaNode(
-                component: component,
-                availableSize: availableSize,
-                bottomInset: environment.safeInsets.bottom,
-                inputHeight: 0.0,
-                effectiveInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false),
-                metrics: environment.metrics,
-                deviceMetrics: environment.deviceMetrics,
-                transition: transition
-            )
-            if self.inputMediaNode == nil {
-                if environment.inputHeight.isZero && self.textInputState.isEditing, let previousInputHeight = self.previousInputHeight {
-                    inputHeight = previousInputHeight
-                } else {
-                    inputHeight = environment.inputHeight
-                }
-            }
-            
             let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
-            
             let introFooter: AnyComponent<Empty>?
             switch component.subject {
             case .premium:
@@ -751,7 +757,26 @@ final class GiftSetupScreenComponent: Component {
             }
             contentHeight += introSectionSize.height
             contentHeight += sectionSpacing
-                        
+            
+            var inputHeight: CGFloat = 0.0
+            inputHeight += self.updateInputMediaNode(
+                component: component,
+                availableSize: availableSize,
+                bottomInset: environment.safeInsets.bottom,
+                inputHeight: 0.0,
+                effectiveInputHeight: environment.deviceMetrics.standardInputHeight(inLandscape: false),
+                metrics: environment.metrics,
+                deviceMetrics: environment.deviceMetrics,
+                transition: transition
+            )
+            if self.inputMediaNode == nil {
+                if environment.inputHeight.isZero && self.textInputState.isEditing, let previousInputHeight = self.previousInputHeight {
+                    inputHeight = previousInputHeight
+                } else {
+                    inputHeight = environment.inputHeight
+                }
+            }
+                         
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             if let accountPeer = self.peerMap[component.context.account.peerId] {
                 let subject: ChatGiftPreviewItem.Subject
@@ -793,6 +818,8 @@ final class GiftSetupScreenComponent: Component {
                     if introContentView.superview == nil {
                         if let placeholderView = self.introSection.findTaggedView(tag: self.introPlaceholderTag) {
                             placeholderView.addSubview(introContentView)
+                            
+                            placeholderView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.previewTap)))
                         }
                     }
                     transition.setFrame(view: introContentView, frame: CGRect(origin: CGPoint(), size: introContentSize))

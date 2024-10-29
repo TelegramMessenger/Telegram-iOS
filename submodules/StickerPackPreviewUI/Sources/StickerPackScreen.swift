@@ -389,15 +389,14 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        
-        
+        let ignoreCache = controller?.ignoreCache ?? false
         let fetchedStickerPacks: Signal<[LoadedStickerPack], NoError> = combineLatest(stickerPacks.map { packReference in
             for pack in loadedStickerPacks {
                 if case let .result(info, _, _) = pack, case let .id(id, _) = packReference, info.id.id == id {
                     return .single(pack)
                 }
             }
-            return context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: true)
+            return context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: true, ignoreCache: ignoreCache)
         })
         
         self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), fetchedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
@@ -2686,13 +2685,14 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
     private var animatedIn: Bool = false
     fileprivate var initialIsEditing: Bool = false
     fileprivate var expandIfNeeded: Bool = false
+    fileprivate let ignoreCache: Bool
     
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
     let mainActionTitle: String?
     let actionTitle: String?
-    
+        
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
@@ -2703,6 +2703,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
         actionTitle: String? = nil,
         isEditing: Bool = false,
         expandIfNeeded: Bool = false,
+        ignoreCache: Bool = false,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
         sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)?,
@@ -2718,6 +2719,7 @@ public final class StickerPackScreenImpl: ViewController, StickerPackScreen {
         self.actionTitle = actionTitle
         self.initialIsEditing = isEditing
         self.expandIfNeeded = expandIfNeeded
+        self.ignoreCache = ignoreCache
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.sendEmoji = sendEmoji
@@ -2952,6 +2954,7 @@ public func StickerPackScreen(
     actionTitle: String? = nil,
     isEditing: Bool = false,
     expandIfNeeded: Bool = false,
+    ignoreCache: Bool = false,
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
@@ -2969,6 +2972,7 @@ public func StickerPackScreen(
         actionTitle: actionTitle,
         isEditing: isEditing,
         expandIfNeeded: expandIfNeeded,
+        ignoreCache: ignoreCache,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,
         sendEmoji: sendEmoji,

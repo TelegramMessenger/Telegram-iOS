@@ -203,7 +203,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             let _ = openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peerId, navigation in
                     
                 },
                 sendFile: nil,
@@ -634,6 +634,11 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     override public func searchTextUpdated(text: String) {
         let searchQuery: String? = !text.isEmpty ? text : nil
+
+        if !text.hasPrefix("#") && self.paneContainerNode.currentPaneKey == .publicPosts {
+            self.paneContainerNode.requestSelectPane(.chats)
+        }
+        
         self.searchQuery.set(.single(searchQuery))
         self.searchQueryValue = searchQuery
         

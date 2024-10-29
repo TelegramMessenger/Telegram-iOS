@@ -12,6 +12,7 @@ import MultiAnimationRenderer
 
 protocol ChatListSearchPaneNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
+    var isCurrent: Bool { get set }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
     func scrollToTop() -> Bool
@@ -568,6 +569,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, ASGestureRecognizerD
                     })
                 }
                 pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+                pane.node.isCurrent = key == self.currentPaneKey
                 if paneWasAdded && key == self.currentPaneKey {
                     pane.node.didBecomeFocused()
                 }

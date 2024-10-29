@@ -227,9 +227,23 @@ public final class ListMultilineTextFieldItemComponent: Component {
             return false
         }
         
+        public var isActive: Bool {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.isActive
+            } else {
+                return false
+            }
+        }
+        
         public func activateInput() {
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 textFieldView.activateInput()
+            }
+        }
+        
+        public func deactivateInput() {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                textFieldView.deactivateInput()
             }
         }
         

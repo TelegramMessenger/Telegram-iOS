@@ -3966,189 +3966,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: media, fullscreen: fullscreen)
             self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: adAttribute.url, concealed: false, external: true, progress: progress))
         }, adContextAction: { [weak self] message, sourceNode, gesture in
-            guard let self, let adAttribute = message.adAttribute else {
+            guard let self else {
                 return
             }
-            
-            let controllerInteraction = self.controllerInteraction
-            let chatPresentationInterfaceState = self.presentationInterfaceState
-            
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
-            var actions: [ContextMenuItem] = []
-            if adAttribute.sponsorInfo != nil || adAttribute.additionalInfo != nil {
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { c, _ in
-                    var subItems: [ContextMenuItem] = []
-                    
-                    subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                    }, iconSource: nil, iconPosition: .left, action: { c, _ in
-                        c?.popItems()
-                    })))
-                    
-                    subItems.append(.separator)
-                    
-                    if let sponsorInfo = adAttribute.sponsorInfo {
-                        subItems.append(.action(ContextMenuActionItem(text: sponsorInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                            return nil
-                        }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
-                            c?.dismiss(completion: {
-                                UIPasteboard.general.string = sponsorInfo
-                                
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
-                                controllerInteraction?.displayUndo(content)
-                            })
-                        })))
-                    }
-                    if let additionalInfo = adAttribute.additionalInfo {
-                        subItems.append(.action(ContextMenuActionItem(text: additionalInfo, textColor: .primary, textLayout: .multiline, textFont: .custom(font: Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 0.8)), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                            return nil
-                        }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
-                            c?.dismiss(completion: {
-                                UIPasteboard.general.string = additionalInfo
-                                
-                                let content: UndoOverlayContent = .copy(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfoCopied)
-                                controllerInteraction?.displayUndo(content)
-                            })
-                        })))
-                    }
-                    
-                    c?.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
-                })))
-                actions.append(.separator)
+            var isBot = false
+            if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                isBot = true
             }
-            
-            if adAttribute.canReport {
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { [weak self] _, f in
-                    f(.dismissWithoutContent)
-                    
-                    var isBot = false
-                    if let self, let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                        isBot = true
-                    }
-                    self?.effectiveNavigationController?.pushViewController(AdsInfoScreen(context: context, mode: isBot ? .bot : .channel))
-                })))
-                
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_ReportAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { [weak self] _, f in
-                    f(.default)
-                    
-                    let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        if case let .options(title, options) = result {
-                            self?.effectiveNavigationController?.pushViewController(
-                                AdsReportScreen(
-                                    context: context,
-                                    peerId: message.id.peerId,
-                                    opaqueId: adAttribute.opaqueId,
-                                    title: title,
-                                    options: options,
-                                    completed: { [weak self] in
-                                        self?.removeAd(opaqueId: adAttribute.opaqueId)
-                                    }
-                                )
-                            )
-                        }
-                    })
-                })))
-                
-                actions.append(.separator)
-                               
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_RemoveAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { [weak controllerInteraction] c, _ in
-                    c?.dismiss(completion: {
-                        controllerInteraction?.openNoAdsDemo()
-                    })
-                })))
-            } else {
-                actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
-                }, iconSource: nil, action: { [weak self] _, f in
-                    f(.dismissWithoutContent)
-                    self?.effectiveNavigationController?.pushViewController(AdInfoScreen(context: context, forceDark: true))
-                })))
-                
-                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                if !chatPresentationInterfaceState.isPremium && !premiumConfiguration.isPremiumDisabled {
-                    actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.actionSheet.primaryTextColor)
-                    }, iconSource: nil, action: { [weak self] c, _ in
-                        c?.dismiss(completion: {
-                            var replaceImpl: ((ViewController) -> Void)?
-                            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .noAds, forceDark: false, action: {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .ads, forceDark: false, dismissed: nil)
-                                replaceImpl?(controller)
-                            }, dismissed: nil)
-                            replaceImpl = { [weak controller] c in
-                                controller?.replace(with: c)
-                            }
-                            self?.effectiveNavigationController?.pushViewController(controller)
-                        })
-                    })))
-                }
-                
-                actions.append(.separator)
-                
-                if chatPresentationInterfaceState.copyProtectionEnabled {
-                } else {
-                    actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { [weak controllerInteraction] _, f in
-                        var messageEntities: [MessageTextEntity]?
-                        var restrictedText: String?
-                        for attribute in message.attributes {
-                            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                messageEntities = attribute.entities
-                            }
-                            if let attribute = attribute as? RestrictedContentMessageAttribute {
-                                restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
-                            }
-                        }
-                        
-                        if let restrictedText = restrictedText {
-                            storeMessageTextInPasteboard(restrictedText, entities: nil)
-                        } else {
-                            if let translationState = chatPresentationInterfaceState.translationState, translationState.isEnabled,
-                               let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
-                                storeMessageTextInPasteboard(translation.text, entities: translation.entities)
-                            } else {
-                                storeMessageTextInPasteboard(message.text, entities: messageEntities)
-                            }
-                        }
-                        
-                        Queue.mainQueue().after(0.2, {
-                            let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_MessageCopied)
-                            controllerInteraction?.displayUndo(content)
-                        })
-                        
-                        f(.default)
-                    })))
-                }
-                
-                if let author = message.author, let addressName = author.addressName {
-                    let link = "https://t.me/\(addressName)"
-                    actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopyLink, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { [weak controllerInteraction] _, f in
-                        UIPasteboard.general.string = link
-                        
-                        Queue.mainQueue().after(0.2, {
-                            controllerInteraction?.displayUndo(.linkCopied(text: presentationData.strings.Conversation_LinkCopied))
-                        })
-                        
-                        f(.default)
-                    })))
-                }
+            let controller = AdsInfoScreen(
+                context: context,
+                mode: isBot ? .bot : .channel,
+                message: message
+            )
+            controller.removeAd = { [weak self] opaqueId in
+                self?.removeAd(opaqueId: opaqueId)
             }
-            
-            let contextController = ContextController(presentationData: presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: self, sourceView: sourceNode.view, insets: .zero, contentInsets: .zero)), items: .single(ContextController.Items(content: .list(actions))), gesture: gesture)
-            self.presentInGlobalOverlay(contextController)
+            self.effectiveNavigationController?.pushViewController(controller)
+        }, removeAd: { [weak self] opaqueId in
+            guard let self else {
+                return
+            }
+            self.removeAd(opaqueId: opaqueId)
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId, maxQuantity in
             guard let self else {
                 return
@@ -9962,7 +9800,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             urlContext = .generic
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: urlContext, navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: urlContext, navigationController: self.effectiveNavigationController, forceExternal: forceExternal, forceUpdate: false, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -10058,7 +9896,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil, progress: progress, completion: nil)
     }
     
-    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, commit: @escaping () -> Void = {}) {
+    func openUrl(
+        _ url: String,
+        concealed: Bool,
+        forceExternal: Bool = false,
+        forceUpdate: Bool = false,
+        skipUrlAuth: Bool = false,
+        skipConcealedAlert: Bool = false,
+        message: Message? = nil,
+        allowInlineWebpageResolution: Bool = false,
+        progress: Promise<Bool>? = nil,
+        commit: @escaping () -> Void = {}
+    ) {
         self.commitPurposefulAction()
         
         if allowInlineWebpageResolution, let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {
