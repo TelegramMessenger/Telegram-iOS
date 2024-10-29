@@ -784,9 +784,9 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     finalDuration = duration
                             }
                             
-                            if !asAnimation {
+                            /*if !asAnimation {
                                 finalDimensions = TGFitSize(finalDimensions, CGSize(width: 848.0, height: 848.0))
-                            }
+                            }*/
                             
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if let thumbnail = thumbnail {
