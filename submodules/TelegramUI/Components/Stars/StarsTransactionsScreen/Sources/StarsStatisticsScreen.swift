@@ -663,7 +663,7 @@ final class StarsStatisticsScreenComponent: Component {
                 if let current = self.incomingTransactionsContext {
                     incomingTransactionsContext = current
                 } else {
-                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .incoming)
+                    incomingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsTransactionsContext(allTransactionsContext), mode: .incoming)
                     self.incomingTransactionsContext = incomingTransactionsContext
                 }
                 
@@ -671,7 +671,7 @@ final class StarsStatisticsScreenComponent: Component {
                 if let current = self.outgoingTransactionsContext {
                     outgoingTransactionsContext = current
                 } else {
-                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .peer(component.peerId), mode: .outgoing)
+                    outgoingTransactionsContext = component.context.engine.payments.peerStarsTransactionsContext(subject: .starsTransactionsContext(allTransactionsContext), mode: .outgoing)
                     self.outgoingTransactionsContext = outgoingTransactionsContext
                 }
                 
