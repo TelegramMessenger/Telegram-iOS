@@ -13138,7 +13138,7 @@ Sorry for the inconvenience.";
 "AttachmentMenu.AddDocument" = "Add Document";
 
 "Chat.BotAd.Title" = "Ad";
-"Chat.BotAd.Remove" = "remove";
+"Chat.BotAd.WhatIsThis" = "what's this?";
 
 "ChatList.Search.TopAppsInfo" = "Which apps are included here? [Learn >]()";
 

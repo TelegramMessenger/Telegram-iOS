@@ -124,6 +124,39 @@ final class GiftOptionsScreenComponent: Component {
         private let tabSelector = ComponentView<Empty>()
         private var starsFilter: StarsFilter = .all
         
+        private var _effectiveStarGifts: ([StarGift], StarsFilter)?
+        private var effectiveStarGifts: [StarGift]? {
+            get {
+                if case .all = self.starsFilter {
+                    return self.state?.starGifts
+                } else {
+                    if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
+                        return currentGifts
+                    } else if let allGifts = self.state?.starGifts {
+                        let filteredGifts: [StarGift] = allGifts.filter {
+                            switch self.starsFilter {
+                            case .all:
+                                return true
+                            case .limited:
+                                if $0.availability != nil {
+                                    return true
+                                }
+                            case let .stars(stars):
+                                if $0.price == stars {
+                                    return true
+                                }
+                            }
+                            return false
+                        }
+                        self._effectiveStarGifts = (filteredGifts, self.starsFilter)
+                        return filteredGifts
+                    } else {
+                        return nil
+                    }
+                }
+            }
+        }
+        
         private var isUpdating: Bool = false
         
         private var starsStateDisposable: Disposable?
@@ -243,7 +276,7 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
-            if let starGifts = self.state?.starGifts {
+            if let starGifts = self.effectiveStarGifts {
                 let sideInset: CGFloat = 16.0 + environment.safeInsets.left
                 
                 let optionSpacing: CGFloat = 10.0
@@ -262,19 +295,6 @@ final class GiftOptionsScreenComponent: Component {
                     }
                     
                     if isVisible {
-                        switch self.starsFilter {
-                        case .all:
-                            break
-                        case .limited:
-                            if gift.availability == nil {
-                                continue
-                            }
-                        case let .stars(stars):
-                            if gift.price != stars {
-                                continue
-                            }
-                        }
-                        
                         let itemId = AnyHashable(gift.id)
                         validIds.append(itemId)
                         
@@ -898,9 +918,9 @@ final class GiftOptionsScreenComponent: Component {
             contentHeight += tabSelectorSize.height
             contentHeight += 19.0
             
-            if let starGifts = state.starGifts {
+            if let starGifts = self.effectiveStarGifts {
                 self.starsItemsOrigin = contentHeight
-                
+
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
                 contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * starsOptionSize.height
                 contentHeight += 66.0

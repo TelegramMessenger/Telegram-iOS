@@ -29,6 +29,9 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/TelegramStringFormatting",
         "//submodules/PresentationDataUtils",
+        "//submodules/ContextUI",
+        "//submodules/UndoUI",
+        "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
     ],
     visibility = [
         "//visibility:public",

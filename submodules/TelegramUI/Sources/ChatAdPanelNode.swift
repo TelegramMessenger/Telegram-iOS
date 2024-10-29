@@ -198,10 +198,10 @@ final class ChatAdPanelNode: ASDisplayNode {
             self.theme = interfaceState.theme
             self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
             self.removeBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 15.0, color: interfaceState.theme.chat.inputPanel.panelControlAccentColor.withMultipliedAlpha(0.1))
-            self.removeTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_BotAd_Remove, font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
+            self.removeTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_BotAd_WhatIsThis, font: Font.regular(11.0), textColor: interfaceState.theme.chat.inputPanel.panelControlAccentColor)
         }
                 
-        self.contextContainer.isGestureEnabled = true
+        self.contextContainer.isGestureEnabled = false
         
         let panelHeight: CGFloat
         if let message = interfaceState.adMessage {
