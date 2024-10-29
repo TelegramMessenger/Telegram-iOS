@@ -667,6 +667,10 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         return nil
     }
     
+    func videoQualityStateSignal() -> Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError> {
+        return .single(nil)
+    }
+    
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd) {
         assert(Queue.mainQueue().isCurrent())
         let action = { [weak self] in

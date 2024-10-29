@@ -678,10 +678,11 @@ final class SettingsHeaderButton: HighlightableButtonNode {
         } else if let speedBadge = self.speedBadge {
             self.speedBadge = nil
             if let speedBadgeView = speedBadge.view {
-                transition.setAlpha(layer: speedBadgeView.layer, alpha: 0.0, completion: { [weak speedBadgeView] _ in
-                    speedBadgeView?.layer.removeFromSuperlayer()
+                let speedBadgeLayer = speedBadgeView.layer
+                transition.setAlpha(layer: speedBadgeLayer, alpha: 0.0, completion: { [weak speedBadgeLayer] _ in
+                    speedBadgeLayer?.removeFromSuperlayer()
                 })
-                transition.setScale(layer: speedBadgeView.layer, scale: 0.001)
+                transition.setScale(layer: speedBadgeLayer, scale: 0.001)
             }
         }
         
@@ -719,10 +720,11 @@ final class SettingsHeaderButton: HighlightableButtonNode {
         } else if let qualityBadge = self.qualityBadge {
             self.qualityBadge = nil
             if let qualityBadgeView = qualityBadge.view {
-                transition.setAlpha(layer: qualityBadgeView.layer, alpha: 0.0, completion: { [weak qualityBadgeView] _ in
-                    qualityBadgeView?.layer.removeFromSuperlayer()
+                let qualityBadgeLayer = qualityBadgeView.layer
+                transition.setAlpha(layer: qualityBadgeLayer, alpha: 0.0, completion: { [weak qualityBadgeLayer] _ in
+                    qualityBadgeLayer?.removeFromSuperlayer()
                 })
-                transition.setScale(layer: qualityBadgeView.layer, scale: 0.001)
+                transition.setScale(layer: qualityBadgeLayer, scale: 0.001)
             }
         }
     }
@@ -1888,7 +1890,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 
                 var rateString: String?
-                if abs(playbackRate - 1.0) > 0.1 {
+                if abs(playbackRate - 1.0) > 0.05 {
                     var stringValue = String(format: "%.1fx", playbackRate)
                     if stringValue.hasSuffix(".0x") {
                         stringValue = stringValue.replacingOccurrences(of: ".0x", with: "x")
@@ -3284,9 +3286,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         let contextController = ContextController(presentationData: self.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme), source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: items |> map { items in
             if !items.topItems.isEmpty {
-                return ContextController.Items(content: .twoLists(items.items, items.topItems))
+                return ContextController.Items(id: AnyHashable(0), content: .twoLists(items.items, items.topItems))
             } else {
-                return ContextController.Items(content: .list(items.items))
+                return ContextController.Items(id: AnyHashable(0), content: .list(items.items))
             }
         }, gesture: gesture)
         if isSettings {
@@ -3459,9 +3461,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             peer = .single(nil)
         }
 
-        return combineLatest(queue: Queue.mainQueue(), videoNode.status, peer)
-        |> take(1)
-        |> map { [weak self] status, peer -> (items: [ContextMenuItem], topItems: [ContextMenuItem]) in
+        return combineLatest(queue: Queue.mainQueue(),
+            videoNode.status |> take(1),
+            peer,
+            videoNode.videoQualityStateSignal()
+        )
+        |> map { [weak self] status, peer, videoQualityState -> (items: [ContextMenuItem], topItems: [ContextMenuItem]) in
             guard let status = status, let strongSelf = self else {
                 return ([], [])
             }
@@ -3483,7 +3488,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     sliderValuePromise.set(newValue)
                 }), true))
                 
-                if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
+                if let videoQualityState, !videoQualityState.available.isEmpty {
                 } else {
                     items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedSectionTitle), false))
                     for (text, _, rate) in strongSelf.speedList(strings: strongSelf.presentationData.strings) {
@@ -3510,7 +3515,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 }
                 
-                if let videoQualityState = strongSelf.videoNode?.videoQualityState(), !videoQualityState.available.isEmpty {
+                if let videoQualityState, !videoQualityState.available.isEmpty {
                     items.append(.custom(SectionTitleContextItem(text: strongSelf.presentationData.strings.Gallery_VideoSettings_QualitySectionTitle), false))
                     
                     do {
@@ -3522,7 +3527,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         } else {
                             textLayout = .singleLine
                         }
-                        items.append(.action(ContextMenuActionItem(text: qualityText, textLayout: textLayout, icon: { _ in
+                        items.append(.action(ContextMenuActionItem(id: AnyHashable("q"), text: qualityText, textLayout: textLayout, icon: { _ in
                             if isSelected {
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
                             } else {
@@ -3536,10 +3541,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             }
                             videoNode.setVideoQuality(.auto)
                             self.videoQualityPromise.set(.auto)
-
-                            /*if let controller = strongSelf.galleryController() as? GalleryController {
-                                controller.updateSharedPlaybackRate(rate)
-                            }*/
                         })))
                     }
                     

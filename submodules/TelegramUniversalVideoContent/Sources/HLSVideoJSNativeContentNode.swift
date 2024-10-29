@@ -978,6 +978,18 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         }
     }
     
+    private struct VideoQualityState: Equatable {
+        var current: Int
+        var preferred: UniversalVideoContentVideoQuality
+        var available: [Int]
+        
+        init(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int]) {
+            self.current = current
+            self.preferred = preferred
+            self.available = available
+        }
+    }
+    
     fileprivate static var sharedBandwidthEstimate: Double?
     
     private let postbox: Postbox
@@ -1047,8 +1059,12 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     fileprivate var playerRate: Double = 0.0
     fileprivate var playerDefaultRate: Double = 1.0
     fileprivate var playerTime: Double = 0.0
+    
     fileprivate var playerAvailableLevels: [Int: Level] = [:]
     fileprivate var playerCurrentLevelIndex: Int?
+   
+    private var videoQualityStateValue: VideoQualityState?
+    private let videoQualityStatePromise = Promise<VideoQualityState?>(nil)
     
     private var hasRequestedPlayerLoad: Bool = false
     
@@ -1264,6 +1280,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         } else {
             self.playerCurrentLevelIndex = nil
         }
+        
+        self.updateVideoQualityState()
         
         if self.playerIsReady {
             if !self.hasRequestedPlayerLoad {
@@ -1566,8 +1584,21 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
         }
         
+        self.updateVideoQualityState()
+        
         if self.playerIsReady {
             SharedHLSVideoWebView.shared.webView?.evaluateJavaScript("window.hlsPlayer_instances[\(self.instanceId)].playerSetLevel(\(self.requestedLevelIndex ?? -1));", completionHandler: nil)
+        }
+    }
+    
+    private func updateVideoQualityState() {
+        var videoQualityState: VideoQualityState?
+        if let value = self.videoQualityState() {
+            videoQualityState = VideoQualityState(current: value.current, preferred: value.preferred, available: value.available)
+        }
+        if self.videoQualityStateValue != videoQualityState {
+            self.videoQualityStateValue = videoQualityState
+            self.videoQualityStatePromise.set(.single(videoQualityState))
         }
     }
     
@@ -1592,6 +1623,16 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         available.sort(by: { $0 > $1 })
         
         return (min(currentLevel.width, currentLevel.height), self.preferredVideoQuality, available)
+    }
+    
+    public func videoQualityStateSignal() -> Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError> {
+        return self.videoQualityStatePromise.get()
+        |> map { value -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? in
+            guard let value else {
+                return nil
+            }
+            return (value.current, value.preferred, value.available)
+        }
     }
     
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int {

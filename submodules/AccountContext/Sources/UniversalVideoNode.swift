@@ -37,6 +37,7 @@ public protocol UniversalVideoContentNode: AnyObject {
     func setBaseRate(_ baseRate: Double)
     func setVideoQuality(_ videoQuality: UniversalVideoContentVideoQuality)
     func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?
+    func videoQualityStateSignal() -> Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError>
     func addPlaybackCompleted(_ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(_ index: Int)
     func fetchControl(_ control: UniversalVideoNodeFetchControl)
@@ -365,6 +366,16 @@ public final class UniversalVideoNode: ASDisplayNode {
             }
         })
         return result
+    }
+    
+    public func videoQualityStateSignal() -> Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError> {
+        var result: Signal<(current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])?, NoError>?
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode {
+                result = contentNode.videoQualityStateSignal()
+            }
+        })
+        return result ?? .single(nil)
     }
     
     public func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd = .loopDisablingSound) {
