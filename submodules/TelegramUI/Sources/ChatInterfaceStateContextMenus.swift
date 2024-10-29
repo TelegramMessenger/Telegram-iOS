@@ -1137,9 +1137,29 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if data.messageActions.options.contains(.sendScheduledNow) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
+            }, action: { c, _ in
+                if messages.contains(where: { $0.pendingProcessingAttribute != nil }) {
+                    c?.dismiss(completion: {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        //TODO:localize
+                        controllerInteraction.presentController(standardTextAlertController(
+                            theme: AlertControllerTheme(presentationData: presentationData),
+                            title: "Wait!",
+                            text: "This video hasn't been converted and optimized yet. If you send it now, the viewers of the video may experience slow download speed.",
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: "Send Anyway", action: {
+                                    controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                                }),
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
+                            ],
+                            actionLayout: .vertical
+                        ), nil)
+                    })
+                } else {
+                    c?.dismiss(result: .dismissWithoutContent, completion: nil)
+                    controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                }
             })))
         }
         
@@ -2210,8 +2230,10 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
-                        optionsMap[id]!.insert(.editScheduledTime)
+                    if message.pendingProcessingAttribute == nil {
+                        if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
+                            optionsMap[id]!.insert(.editScheduledTime)
+                        }
                     }
                     if let peer = getPeer(id.peerId), let channel = peer as? TelegramChannel {
                         if !message.flags.contains(.Incoming) {

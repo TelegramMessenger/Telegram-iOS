@@ -1401,6 +1401,10 @@ public extension TelegramEngine {
             return self.account.stateManager.synchronouslyIsMessageDeletedInteractively(ids: ids)
         }
         
+        public func synchronouslyIsMessageDeletedRemotely(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
+            return self.account.stateManager.synchronouslyIsMessageDeletedRemotely(ids: ids)
+        }
+        
         public func synchronouslyLookupCorrelationId(correlationId: Int64) -> EngineMessage.Id? {
             return self.account.pendingMessageManager.synchronouslyLookupCorrelationId(correlationId: correlationId)
         }

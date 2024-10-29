@@ -656,6 +656,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var layoutActionOnViewTransitionAction: (() -> Void)?
     
+    var lastPostedScheduledMessagesToastTimestamp: Double = 0.0
+    var postedScheduledMessagesEventsDisposable: Disposable?
+    
     public init(
         context: AccountContext,
         chatLocation: ChatLocation,
@@ -7213,6 +7216,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.recorderDataDisposable.dispose()
             self.displaySendWhenOnlineTipDisposable.dispose()
             self.networkSpeedEventsDisposable?.dispose()
+            self.postedScheduledMessagesEventsDisposable?.dispose()
         }
         deallocate()
     }
@@ -9155,52 +9159,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func shouldDivertMessagesToScheduled(targetPeer: EnginePeer? = nil, messages: [EnqueueMessage]) -> Signal<Bool, NoError> {
         return .single(false)
-        /*guard let peer = targetPeer?._asPeer() ?? self.presentationInterfaceState.renderedPeer?.peer else {
-            return .single(false)
-        }
-        
-        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-        } else {
-            return .single(false)
-        }
-        
-        //TODO:release
-        if !"".isEmpty {
-            return .single(false)
-        }
-        
-        var forwardMessageIds: [EngineMessage.Id] = []
-        
-        for message in messages {
-            if case let .message(_, _, _, mediaReference, _, _, _, _, _, _) = message, let media = mediaReference?.media {
-                if let file = media as? TelegramMediaFile, file.isVideo && !file.isInstantVideo && !file.isAnimated {
-                    return .single(true)
-                }
-            } else if case let .forward(sourceId, _, _, _, _) = message {
-                forwardMessageIds.append(sourceId)
-            }
-        }
-        
-        if forwardMessageIds.isEmpty {
-            return .single(false)
-        } else {
-            return self.context.engine.data.get(
-                EngineDataList(forwardMessageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
-            )
-            |> map { messages -> Bool in
-                for message in messages {
-                    guard let message else {
-                        continue
-                    }
-                    for media in message.media {
-                        if let file = media as? TelegramMediaFile, file.isVideo && !file.isInstantVideo && !file.isAnimated {
-                            return true
-                        }
-                    }
-                }
-                return false
-            }
-        }*/
     }
     
     func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
@@ -9259,30 +9217,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         layoutActionOnViewTransitionAction()
                     }
                     
-                    self.openScheduledMessages(force: true, completion: { [weak self] c in
-                        guard let self else {
-                            return
-                        }
-                        c.dismissAllUndoControllers()
-                        
-                        //TODO:localize
-                        c.present(
-                            UndoOverlayController(
-                                presentationData: self.presentationData,
-                                content: .info(
-                                    title: "Improving video...",
-                                    text: "The video will be published after it's optimized for the bese viewing experience.",
-                                    timeout: 8.0,
-                                    customUndoText: nil
-                                ),
-                                elevatedLayout: false,
-                                position: .top,
-                                action: { _ in
-                                    return true
-                                }
-                            ),
-                            in: .current
-                        )
+                    self.openScheduledMessages(force: true, completion: { _ in
                     })
                 }
             } else {
@@ -10404,10 +10339,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let itemNode = latestNode, let statusNode = itemNode.getStatusNode() {
             let bounds = statusNode.view.convert(statusNode.view.bounds, to: self.chatDisplayNode.view)
-            let location = CGPoint(x: bounds.midX, y: bounds.minY - 11.0)
+            let location = CGPoint(x: bounds.midX, y: bounds.minY - 8.0)
             
             //TODO:localize
-            let tooltipController = TooltipController(content: .text("Processing video may take a few minutes."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+            let tooltipController = TooltipController(content: .text("Processing video may take a few minutes."), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, balancedTextLayout: true, isBlurred: true, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
             self.checksTooltipController = tooltipController
             tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.checksTooltipController === tooltipController {

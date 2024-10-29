@@ -33,6 +33,7 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/PhotoResources",
     ],
     visibility = [
         "//visibility:public",

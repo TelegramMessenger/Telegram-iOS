@@ -63,6 +63,7 @@ public enum DeletedMessageId: Hashable {
 
 final class MessagesRemovedContext {
     private var messagesRemovedInteractively = Set<DeletedMessageId>()
+    private var messagesRemovedRemotely = Set<DeletedMessageId>()
     private var messagesRemovedInteractivelyLock = NSLock()
     
     func synchronouslyIsMessageDeletedInteractively(ids: [MessageId]) -> [EngineMessage.Id] {
@@ -85,6 +86,26 @@ final class MessagesRemovedContext {
         return result
     }
     
+    func synchronouslyIsMessageDeletedRemotely(ids: [MessageId]) -> [EngineMessage.Id] {
+        var result: [EngineMessage.Id] = []
+        
+        self.messagesRemovedInteractivelyLock.lock()
+        for id in ids {
+            let mappedId: DeletedMessageId
+            if id.peerId.namespace == Namespaces.Peer.CloudUser || id.peerId.namespace == Namespaces.Peer.CloudGroup {
+                mappedId = .global(id.id)
+            } else {
+                mappedId = .messageId(id)
+            }
+            if self.messagesRemovedRemotely.contains(mappedId) {
+                result.append(id)
+            }
+        }
+        self.messagesRemovedInteractivelyLock.unlock()
+        
+        return result
+    }
+    
     func addIsMessagesDeletedInteractively(ids: [DeletedMessageId]) {
         if ids.isEmpty {
             return
@@ -92,6 +113,16 @@ final class MessagesRemovedContext {
         
         self.messagesRemovedInteractivelyLock.lock()
         self.messagesRemovedInteractively.formUnion(ids)
+        self.messagesRemovedInteractivelyLock.unlock()
+    }
+    
+    func addIsMessagesDeletedRemotely(ids: [DeletedMessageId]) {
+        if ids.isEmpty {
+            return
+        }
+        
+        self.messagesRemovedInteractivelyLock.lock()
+        self.messagesRemovedRemotely.formUnion(ids)
         self.messagesRemovedInteractivelyLock.unlock()
     }
 }
@@ -295,6 +326,11 @@ public final class AccountStateManager {
         fileprivate let forceSendPendingStarsReactionPipe = ValuePipe<MessageId>()
         public var forceSendPendingStarsReaction: Signal<MessageId, NoError> {
             return self.forceSendPendingStarsReactionPipe.signal()
+        }
+        
+        fileprivate let sentScheduledMessageIdsPipe = ValuePipe<Set<MessageId>>()
+        public var sentScheduledMessageIds: Signal<Set<MessageId>, NoError> {
+            return self.sentScheduledMessageIdsPipe.signal()
         }
         
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
@@ -690,6 +726,7 @@ public final class AccountStateManager {
                     
                     if let result = result, !result.deletedMessageIds.isEmpty {
                         messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
+                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
                     }
                     
                     return result
@@ -835,6 +872,7 @@ public final class AccountStateManager {
                                                 if let replayedState = replayedState {
                                                     if !replayedState.deletedMessageIds.isEmpty {
                                                         messagesRemovedContext.addIsMessagesDeletedInteractively(ids: replayedState.deletedMessageIds)
+                                                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: replayedState.deletedMessageIds)
                                                     }
                                                     
                                                     return (difference, replayedState, false, false)
@@ -973,6 +1011,7 @@ public final class AccountStateManager {
                                 
                                 if let result = result, !result.deletedMessageIds.isEmpty {
                                     messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
+                                    messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
                                 }
                                 
                                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -1079,6 +1118,9 @@ public final class AccountStateManager {
                             }
                             if !events.updatedIncomingThreadReadStates.isEmpty || !events.updatedOutgoingThreadReadStates.isEmpty {
                                 strongSelf.threadReadStateUpdatesPipe.putNext((events.updatedIncomingThreadReadStates, events.updatedOutgoingThreadReadStates))
+                            }
+                            if !events.sentScheduledMessageIds.isEmpty {
+                                strongSelf.sentScheduledMessageIdsPipe.putNext(events.sentScheduledMessageIds)
                             }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)
@@ -1248,6 +1290,7 @@ public final class AccountStateManager {
                     
                     if let result = result, !result.deletedMessageIds.isEmpty {
                         messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
+                        messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
                     }
                     
                     return result
@@ -1296,6 +1339,7 @@ public final class AccountStateManager {
                 
                 if let result = result, !result.deletedMessageIds.isEmpty {
                     messagesRemovedContext.addIsMessagesDeletedInteractively(ids: result.deletedMessageIds)
+                    messagesRemovedContext.addIsMessagesDeletedRemotely(ids: result.deletedMessageIds)
                 }
                 
                 let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -1388,6 +1432,7 @@ public final class AccountStateManager {
                                             
                                             if let replayedState = replayedState, !replayedState.deletedMessageIds.isEmpty {
                                                 messagesRemovedContext.addIsMessagesDeletedInteractively(ids: replayedState.deletedMessageIds)
+                                                messagesRemovedContext.addIsMessagesDeletedRemotely(ids: replayedState.deletedMessageIds)
                                             }
                                             
                                             let deltaTime = CFAbsoluteTimeGetCurrent() - startTime
@@ -1889,6 +1934,12 @@ public final class AccountStateManager {
         }
     }
     
+    public var sentScheduledMessageIds: Signal<Set<MessageId>, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.sentScheduledMessageIds.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
     func forceSendPendingStarsReaction(messageId: MessageId) {
         self.impl.with { impl in
             impl.forceSendPendingStarsReactionPipe.putNext(messageId)
@@ -2127,6 +2178,10 @@ public final class AccountStateManager {
     
     public func synchronouslyIsMessageDeletedInteractively(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
         return self.messagesRemovedContext.synchronouslyIsMessageDeletedInteractively(ids: ids)
+    }
+    
+    public func synchronouslyIsMessageDeletedRemotely(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
+        return self.messagesRemovedContext.synchronouslyIsMessageDeletedRemotely(ids: ids)
     }
 }
 

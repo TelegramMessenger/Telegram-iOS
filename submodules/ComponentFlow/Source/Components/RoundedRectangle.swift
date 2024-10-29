@@ -126,13 +126,18 @@ public final class RoundedRectangle: Component {
 }
 
 public final class FilledRoundedRectangleComponent: Component {
+    public enum CornerRadius: Equatable {
+        case value(CGFloat)
+        case minEdge
+    }
+    
     public let color: UIColor
-    public let cornerRadius: CGFloat
+    public let cornerRadius: CornerRadius
     public let smoothCorners: Bool
     
     public init(
         color: UIColor,
-        cornerRadius: CGFloat,
+        cornerRadius: CornerRadius,
         smoothCorners: Bool
     ) {
         self.color = color
@@ -216,9 +221,17 @@ public final class FilledRoundedRectangleComponent: Component {
             
             transition.setTintColor(view: self, color: component.color)
             
-            if self.currentCornerRadius != component.cornerRadius {
+            let cornerRadius: CGFloat
+            switch component.cornerRadius {
+            case let .value(value):
+                cornerRadius = value
+            case .minEdge:
+                cornerRadius = min(availableSize.width, availableSize.height) * 0.5
+            }
+            
+            if self.currentCornerRadius != cornerRadius {
                 let previousCornerRadius = self.currentCornerRadius
-                self.currentCornerRadius = component.cornerRadius
+                self.currentCornerRadius = cornerRadius
                 if transition.animation.isImmediate {
                     self.applyStaticCornerRadius()
                 } else {
@@ -236,7 +249,7 @@ public final class FilledRoundedRectangleComponent: Component {
                         }
                         
                     }
-                    transition.setCornerRadius(layer: self.layer, cornerRadius: component.cornerRadius, completion: { [weak self] completed in
+                    transition.setCornerRadius(layer: self.layer, cornerRadius: cornerRadius, completion: { [weak self] completed in
                         guard let self, completed else {
                             return
                         }

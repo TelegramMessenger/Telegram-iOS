@@ -1572,6 +1572,15 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
     
     func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
+        if self.playerAvailableLevels.isEmpty {
+            if let qualitySet = HLSQualitySet(baseFile: self.fileReference), let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file {
+                let sortedFiles = qualitySet.qualityFiles.sorted(by: { $0.key > $1.key })
+                if let minQuality = sortedFiles.first(where: { $0.value.media.fileId == minQualityFile.media.fileId }) {
+                    return (minQuality.key, .auto, sortedFiles.map(\.key))
+                }
+            }
+        }
+        
         guard let playerCurrentLevelIndex = self.playerCurrentLevelIndex else {
             return nil
         }

@@ -676,7 +676,7 @@ public extension Api {
         case updateDeleteMessages(messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateDeleteQuickReply(shortcutId: Int32)
         case updateDeleteQuickReplyMessages(shortcutId: Int32, messages: [Int32])
-        case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
+        case updateDeleteScheduledMessages(flags: Int32, peer: Api.Peer, messages: [Int32], sentMessages: [Int32]?)
         case updateDialogFilter(flags: Int32, id: Int32, filter: Api.DialogFilter?)
         case updateDialogFilterOrder(order: [Int32])
         case updateDialogFilters
@@ -1246,16 +1246,22 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .updateDeleteScheduledMessages(let peer, let messages):
+                case .updateDeleteScheduledMessages(let flags, let peer, let messages, let sentMessages):
                     if boxed {
-                        buffer.appendInt32(-1870238482)
+                        buffer.appendInt32(-223929981)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sentMessages!.count))
+                    for item in sentMessages! {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }}
                     break
                 case .updateDialogFilter(let flags, let id, let filter):
                     if boxed {
@@ -2097,8 +2103,8 @@ public extension Api {
                 return ("updateDeleteQuickReply", [("shortcutId", shortcutId as Any)])
                 case .updateDeleteQuickReplyMessages(let shortcutId, let messages):
                 return ("updateDeleteQuickReplyMessages", [("shortcutId", shortcutId as Any), ("messages", messages as Any)])
-                case .updateDeleteScheduledMessages(let peer, let messages):
-                return ("updateDeleteScheduledMessages", [("peer", peer as Any), ("messages", messages as Any)])
+                case .updateDeleteScheduledMessages(let flags, let peer, let messages, let sentMessages):
+                return ("updateDeleteScheduledMessages", [("flags", flags as Any), ("peer", peer as Any), ("messages", messages as Any), ("sentMessages", sentMessages as Any)])
                 case .updateDialogFilter(let flags, let id, let filter):
                 return ("updateDialogFilter", [("flags", flags as Any), ("id", id as Any), ("filter", filter as Any)])
                 case .updateDialogFilterOrder(let order):
@@ -3309,18 +3315,26 @@ public extension Api {
             }
         }
         public static func parse_updateDeleteScheduledMessages(_ reader: BufferReader) -> Update? {
-            var _1: Api.Peer?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _2: [Int32]?
+            var _3: [Int32]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
             }
+            var _4: [Int32]?
+            if Int(_1!) & Int(1 << 0) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateDeleteScheduledMessages(peer: _1!, messages: _2!)
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateDeleteScheduledMessages(flags: _1!, peer: _2!, messages: _3!, sentMessages: _4)
             }
             else {
                 return nil

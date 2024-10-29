@@ -257,24 +257,6 @@ extension ChatControllerImpl {
                         })
                         
                         if displayConvertingTooltip {
-                            //TODO:localize
-                            strongSelf.present(
-                                UndoOverlayController(
-                                    presentationData: strongSelf.presentationData,
-                                    content: .info(
-                                        title: "Improving video...",
-                                        text: "The video will be published after it's optimized for the bese viewing experience.",
-                                        timeout: 8.0,
-                                        customUndoText: nil
-                                    ),
-                                    elevatedLayout: false,
-                                    position: .top,
-                                    action: { _ in
-                                        return true
-                                    }
-                                ),
-                                in: .current
-                            )
                         }
                     })
                 }
