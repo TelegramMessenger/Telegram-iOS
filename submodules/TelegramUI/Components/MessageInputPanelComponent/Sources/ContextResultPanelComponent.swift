@@ -233,7 +233,6 @@ final class ContextResultPanelComponent: Component {
                         }
                         
                         if let peer, let addressName = peer.addressName, hashtagIndex < 0 {
-                            //TODO: localize
                             var isGroup = false
                             if case let .channel(channel) = peer, case .group = channel.info {
                                 isGroup = true
@@ -245,8 +244,8 @@ final class ContextResultPanelComponent: Component {
                                     theme: component.theme,
                                     strings: component.strings,
                                     peer: nil,
-                                    title: "Use #\(query)",
-                                    subtitle: "searches posts from all channels",
+                                    title: component.strings.Chat_HashtagSuggestion_UseGeneric_Title("#\(query)").string,
+                                    subtitle: component.strings.Chat_HashtagSuggestion_UseGeneric_Text,
                                     hashtag: query,
                                     hasNext: index != hashtags.count - 1,
                                     action: { [weak self] hashtag, _ in
@@ -262,8 +261,8 @@ final class ContextResultPanelComponent: Component {
                                     theme: component.theme,
                                     strings: component.strings,
                                     peer: peer,
-                                    title: "Use #\(query)@\(addressName)",
-                                    subtitle: isGroup ? "searches only posts from this group" : "searches only posts from this channel",
+                                    title: component.strings.Chat_HashtagSuggestion_UseLocal_Title("#\(query)@\(addressName)").string,
+                                    subtitle: isGroup ? component.strings.Chat_HashtagSuggestion_UseLocal_Group_Text : component.strings.Chat_HashtagSuggestion_UseLocal_Channel_Text,
                                     hashtag: "\(query)@\(addressName)",
                                     hasNext: index != hashtags.count - 1,
                                     action: { [weak self] hashtag, _ in

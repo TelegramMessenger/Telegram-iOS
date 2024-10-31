@@ -13201,3 +13201,20 @@ Sorry for the inconvenience.";
 "Chat.ScheduledForceSendProcessingVideo.Title" = "Wait!";
 "Chat.ScheduledForceSendProcessingVideo.Text" = "This video hasn't been converted and optimized yet. If you send it now, the viewers of the video may experience slow download speed.";
 "Chat.ScheduledForceSendProcessingVideo.Action" = "Send Anyway";
+
+"Chat.HashtagSuggestion.UseGeneric.Title" = "Use %@";
+"Chat.HashtagSuggestion.UseGeneric.Text" = "searches posts from all channels";
+
+"Chat.HashtagSuggestion.UseLocal.Title" = "Use %@";
+"Chat.HashtagSuggestion.UseLocal.Channel.Text" = "searches only posts from this channel";
+"Chat.HashtagSuggestion.UseLocal.Group.Text" = "searches only posts from this group";
+
+"Gift.Convert.Period.Text" = "Do you want to convert this gift from **%1$@** to **%2$@**?\n\nConversion is available for the next %3$@.\n\nThis will permanently destroy the gift.";
+"Gift.Convert.Period.Stars_1" = "%@ Star";
+"Gift.Convert.Period.Stars_any" = "%@ Stars";
+"Gift.Convert.Period.Days_1" = "%@ day";
+"Gift.Convert.Period.Days_any" = "%@ days";
+
+"Gift.Convert.Period.Unavailable.Text" = "Sorry, you can't convert this gift.\n\nStars can only be claimed within %@ after receiving a gift.";
+"Gift.Convert.Period.Unavailable.Days_1" = "%@ day";
+"Gift.Convert.Period.Unavailable.Days_any" = "%@ days";

@@ -19,11 +19,13 @@ open class ChatInputContextPanelNode: ASDisplayNode {
     open var interfaceInteraction: ChatPanelInterfaceInteraction?
     open var placement: ChatInputContextPanelPlacement = .overPanels
     open var theme: PresentationTheme
+    open var strings: PresentationStrings
     open var fontSize: PresentationFontSize
     
     public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.fontSize = fontSize
         
         super.init()

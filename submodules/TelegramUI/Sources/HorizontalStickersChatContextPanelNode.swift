@@ -103,8 +103,6 @@ private func preparedGridEntryTransition(context: AccountContext, from fromEntri
 }
 
 final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
-    private var strings: PresentationStrings
-    
     private let backgroundLeftNode: ASImageNode
     private let backgroundNode: ASImageNode
     private let backgroundRightNode: ASImageNode
@@ -121,8 +119,6 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private var stickerPreviewController: StickerPreviewController?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
-        self.strings = strings
-        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false

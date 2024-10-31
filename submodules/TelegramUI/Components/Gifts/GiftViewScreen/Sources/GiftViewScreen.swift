@@ -557,7 +557,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 ))
             }
             
-            if savedToProfile {
+            if incoming && savedToProfile {
                 tableItems.append(.init(
                     id: "visibility",
                     title: strings.Gift_View_Visibility,
@@ -1028,19 +1028,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             
             if currentTime > starsConvertMaxDate {
-                //TODO:localize
-                
-                let duration: String
-                if starsConvertMaxDate == 300 {
-                    duration = "5 minutes"
-                } else {
-                    duration = "90 days"
-                }
-                
+                let days: Int32 = Int32(ceil(Float(configuration.convertToStarsPeriod) / 86400.0))
                 let controller = textAlertController(
                     context: self.context,
                     title: presentationData.strings.Gift_Convert_Title,
-                    text: "Sorry, you can't convert this gift.\n\nStars can only be claimed within \(duration) after receiving a gift.",
+                    text: presentationData.strings.Gift_Convert_Period_Unavailable_Text(presentationData.strings.Gift_Convert_Period_Unavailable_Days(days)).string,
                     actions: [
                         TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                     ],
@@ -1049,14 +1041,9 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 self.present(controller, in: .window(.root))
             } else {
                 let delta = starsConvertMaxDate - currentTime
-                let duration: String
-                if starsConvertMaxDate == 300 {
-                    duration = "\(delta / 60) minutes"
-                } else {
-                    duration = "\(delta / 86400) days"
-                }
-                //TODO:localize
-                let text = "Do you want to convert this gift from **\(fromPeerName)** to **\(presentationData.strings.Gift_Convert_Stars(Int32(arguments.convertStars)))**?\n\nConversion is available for the next \(duration).\n\nThis will permanently destroy the gift."
+                let days: Int32 = Int32(ceil(Float(delta) / 86400.0))
+                
+                let text = presentationData.strings.Gift_Convert_Period_Text(fromPeerName, presentationData.strings.Gift_Convert_Period_Stars(Int32(arguments.convertStars)), presentationData.strings.Gift_Convert_Period_Days(days)).string
                 let controller = textAlertController(
                     context: self.context,
                     title: presentationData.strings.Gift_Convert_Title,
