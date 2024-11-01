@@ -317,6 +317,15 @@ public final class MediaBox {
         }
     }
     
+    public func storeResourceData(_ id: MediaResourceId, range: Range<Int64>, data: Data) {
+        self.dataQueue.async {
+            if let (fileContext, dispose) = self.fileContext(for: id) {
+                fileContext.internalStore(data: data, range: range)
+                dispose()
+            }
+        }
+    }
+    
     public func moveResourceData(_ id: MediaResourceId, fromTempPath: String) {
         self.dataQueue.async {
             let paths = self.storePathsForId(id)

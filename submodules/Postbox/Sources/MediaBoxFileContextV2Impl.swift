@@ -296,6 +296,16 @@ public final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             }
         }
         
+        func internalStore(data: Data, range: Range<Int64>) {
+            assert(self.queue.isCurrent())
+            
+            if data.count == Int(range.upperBound - range.lowerBound) {
+                self.processFetchResult(result: .dataPart(resourceOffset: range.lowerBound, data: data, range: 0 ..< Int64(data.count), complete: false))
+            } else {
+                assertionFailure()
+            }
+        }
+        
         private func updateRequests() {
             var rangesByPriority: [MediaBoxFetchPriority: RangeSet<Int64>] = [:]
             for (index, rangeRequest) in self.rangeRequests.copyItemsWithIndices() {
@@ -792,6 +802,15 @@ public final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
         } else {
             return self.withPartialState { partialState in
                 return partialState.status(next: next, completed: completed, size: size)
+            }
+        }
+    }
+    
+    public func internalStore(data: Data, range: Range<Int64>) {
+        if let _ = fileSize(self.path) {
+        } else {
+            self.withPartialState { partialState in
+                partialState.internalStore(data: data, range: range)
             }
         }
     }

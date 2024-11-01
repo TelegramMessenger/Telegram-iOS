@@ -15,4 +15,6 @@ protocol MediaBoxFileContext: AnyObject {
     func cancelFullRangeFetches()
     func rangeStatus(next: @escaping (RangeSet<Int64>) -> Void, completed: @escaping () -> Void) -> Disposable
     func status(next: @escaping (MediaResourceStatus) -> Void, completed: @escaping () -> Void, size: Int64?) -> Disposable
+    
+    func internalStore(data: Data, range: Range<Int64>)
 }

@@ -200,14 +200,10 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                     }
                 }
             }
-            if point.x < activeEdgeWidth(width: size.width) {
-                if let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .left) {
-                    activeSide = false
-                }
-            } else if point.x > size.width - activeEdgeWidth(width: size.width) {
-                if let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .right) {
-                    activeSide = true
-                }
+            if point.x < activeEdgeWidth(width: size.width), let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .left) {
+                activeSide = false
+            } else if point.x > 0.0, let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .right) {
+                activeSide = true
             }
             
             if !strongSelf.pagingEnabled {
@@ -250,14 +246,10 @@ public final class GalleryPagerNode: ASDisplayNode, ASScrollViewDelegate, ASGest
                         }
                     }
                 }
-                if point.x < activeEdgeWidth(width: size.width) {
-                    if let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .left) {
-                        activeSide = false
-                    }
-                } else if point.x > size.width - activeEdgeWidth(width: size.width) {
-                    if let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .right) {
-                        activeSide = true
-                    }
+                if point.x < activeEdgeWidth(width: size.width), let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .left) {
+                    activeSide = false
+                } else if point.x > 0.0, let centralIndex = strongSelf.centralItemIndex, let itemNode = strongSelf.visibleItemNode(at: centralIndex), itemNode.hasActiveEdgeAction(edge: .right) {
+                    activeSide = true
                 }
             }
             
