@@ -30,6 +30,7 @@ import ChatHistoryEntry
 import ChatMessageItemCommon
 import WallpaperPreviewMedia
 import TextNodeWithEntities
+import RangeSet
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -1584,7 +1585,71 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                         } else if let file = media as? TelegramMediaFile {
-                            updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file, adjustForVideoThumbnail: true), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
+                            if NativeVideoContent.isHLSVideo(file: file), let minimizedQuality = HLSVideoContent.minimizedHLSQuality(file: .standalone(media: file)) {
+                                let postbox = context.account.postbox
+                                
+                                let playlistStatusSignal = postbox.mediaBox.resourceStatus(minimizedQuality.playlist.media.resource)
+                                |> map { status -> MediaResourceStatus in
+                                    switch status {
+                                    case .Fetching, .Paused:
+                                        return .Fetching(isActive: true, progress: 0.0)
+                                    case .Local:
+                                        return .Local
+                                    case .Remote:
+                                        return .Remote(progress: 0.0)
+                                    }
+                                }
+                                |> distinctUntilChanged
+                                
+                                updatedStatusSignal = playlistStatusSignal
+                                |> mapToSignal { playlistStatus -> Signal<(MediaResourceStatus, MediaResourceStatus?), NoError> in
+                                    switch playlistStatus {
+                                    case .Fetching, .Paused:
+                                        return .single((.Fetching(isActive: true, progress: 0.0), nil))
+                                    case .Remote:
+                                        return .single((.Remote(progress: 0.0), nil))
+                                    case .Local:
+                                        break
+                                    }
+                                    
+                                    return HLSVideoContent.minimizedHLSQualityPreloadData(postbox: postbox, file: .message(message: MessageReference(message), media: file), userLocation: .peer(message.id.peerId), prefixSeconds: 10, autofetchPlaylist: true)
+                                    |> mapToSignal { preloadData -> Signal<(MediaResourceStatus, MediaResourceStatus?), NoError> in
+                                        guard let preloadData else {
+                                            return .single((.Local, nil))
+                                        }
+                                        
+                                        return postbox.mediaBox.resourceStatus(preloadData.0.media.resource)
+                                        |> map { status -> Bool in
+                                            if case .Fetching = status {
+                                                return true
+                                            } else {
+                                                return false
+                                            }
+                                        }
+                                        |> distinctUntilChanged
+                                        |> mapToSignal { isFetching -> Signal<(MediaResourceStatus, MediaResourceStatus?), NoError> in
+                                            return postbox.mediaBox.resourceRangesStatus(preloadData.0.media.resource)
+                                            |> map { status -> (MediaResourceStatus, MediaResourceStatus?) in
+                                                let preloadRanges = RangeSet(preloadData.1)
+                                                let intersection = status.intersection(preloadRanges)
+                                                var totalLoaded: Int64 = 0
+                                                for range in intersection.ranges {
+                                                    totalLoaded += range.upperBound - range.lowerBound
+                                                }
+                                                let preloadLength = preloadData.1.upperBound - preloadData.1.lowerBound
+                                                if totalLoaded >= preloadLength {
+                                                    return (.Local, nil)
+                                                } else if isFetching {
+                                                    return (.Fetching(isActive: true, progress: Float(totalLoaded) / Float(preloadLength)), nil)
+                                                } else {
+                                                    return (.Remote(progress: 0.0), nil)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                updatedStatusSignal = combineLatest(messageMediaFileStatus(context: context, messageId: message.id, file: file, adjustForVideoThumbnail: true), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
                                 |> map { resourceStatus, pendingStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     if let pendingStatus = pendingStatus {
                                         var progress: Float = pendingStatus.progress.progress
@@ -1596,6 +1661,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     } else {
                                         return (resourceStatus, nil)
                                     }
+                                }
                             }
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             switch wallpaper.content {
@@ -1992,9 +2058,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         file: .message(message: MessageReference(message), media: loadHLSRangeVideoFile),
                                         userLocation: .peer(message.id.peerId),
                                         prefixSeconds: 10,
-                                        autofetchPlaylist: false
+                                        autofetchPlaylist: true
                                     )
-                                    //|> delay(2.0, queue: .mainQueue())
                                     |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] preloadData in
                                         guard let strongSelf else {
                                             return
@@ -2237,9 +2302,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 }
             }
             
-            if let file = self.media as? TelegramMediaFile, NativeVideoContent.isHLSVideo(file: file) {
+            /*if let file = self.media as? TelegramMediaFile, NativeVideoContent.isHLSVideo(file: file) {
                 fetchStatus = .Local
-            }
+            }*/
                         
             let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
             
@@ -2281,7 +2346,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             badgeContent = nil
                         } else if wideLayout {
                             if let size = file.size, size > 0 && size != .max {
-                                let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
+                                let sizeString: String
+                                if NativeVideoContent.isHLSVideo(file: file) {
+                                    sizeString = "\(Int(progress * 100.0))%"
+                                } else {
+                                    sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
+                                }
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
                                     let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : Int32(duration), position: playerPosition)
                                     if isMediaStreamable(message: message, media: file) {
@@ -2382,32 +2452,36 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                         badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
                 case .Remote, .Paused:
-                    state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
-                    if let file = media as? TelegramMediaFile, !file.isVideoSticker {
-                        do {
-                            let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration.flatMap { Int32(floor($0)) } ?? 0), position: playerPosition)
-                            if wideLayout {
-                                if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
-                                    state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
-                                    badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(fileSize, formatting: formatting), muted: muted, active: true)
-                                    mediaDownloadState = .remote
+                    if let file = media as? TelegramMediaFile, NativeVideoContent.isHLSVideo(file: file), let automaticDownload = self.automaticDownload, case .none = automaticDownload {
+                        state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+                    } else {
+                        state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
+                        if let file = media as? TelegramMediaFile, !file.isVideoSticker {
+                            do {
+                                let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration.flatMap { Int32(floor($0)) } ?? 0), position: playerPosition)
+                                if wideLayout {
+                                    if isMediaStreamable(message: message, media: file), let fileSize = file.size, fileSize > 0 && fileSize != .max {
+                                        state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+                                        badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: dataSizeString(fileSize, formatting: formatting), muted: muted, active: true)
+                                        mediaDownloadState = .remote
+                                    } else {
+                                        state = automaticPlayback ? .none : state
+                                        badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
+                                    }
                                 } else {
-                                    state = automaticPlayback ? .none : state
-                                    badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
-                                }
-                            } else {
-                                if isMediaStreamable(message: message, media: file) {
-                                    state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
-                                    badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
-                                    mediaDownloadState = .compactRemote
-                                } else {
-                                    state = automaticPlayback ? .none : state
-                                    badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
+                                    if isMediaStreamable(message: message, media: file) {
+                                        state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
+                                        badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
+                                        mediaDownloadState = .compactRemote
+                                    } else {
+                                        state = automaticPlayback ? .none : state
+                                        badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
+                                    }
                                 }
                             }
+                        } else if let webpage = webpage, let automaticDownload = self.automaticDownload, case .full = automaticDownload, case let .Loaded(content) = webpage.content, content.type != "telegram_background" {
+                            state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                         }
-                    } else if let webpage = webpage, let automaticDownload = self.automaticDownload, case .full = automaticDownload, case let .Loaded(content) = webpage.content, content.type != "telegram_background" {
-                        state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                     }
             }
         }
