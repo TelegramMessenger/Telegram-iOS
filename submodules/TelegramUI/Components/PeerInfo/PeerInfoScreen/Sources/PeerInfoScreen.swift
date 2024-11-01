@@ -1513,7 +1513,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
                 
                 if overallRevenueBalance > 0 || overallStarsBalance > 0 {
-                    //TODO:localize
                     items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: presentationData.strings.PeerInfo_BotBalance_Title))
                     if overallRevenueBalance > 0 {
                         let string = "*\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))"

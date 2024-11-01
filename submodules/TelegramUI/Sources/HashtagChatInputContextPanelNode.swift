@@ -120,15 +120,14 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         if let peer, let _ = peer.addressName {
             isAdditionalRecent = true
         }
-        //TODO:localize
-        if query.count > 3 {
+        if query.count >= 4 {
             if let peer, let addressName = peer.addressName {
                 let genericEntry = HashtagChatInputContextPanelEntry(
                     index: 0,
                     theme: self.theme,
                     peer: nil,
-                    title: "Use #\(query)",
-                    text: "searches posts from all channels",
+                    title: self.strings.Chat_HashtagSuggestion_UseGeneric_Title("#\(query)").string,
+                    text: self.strings.Chat_HashtagSuggestion_UseGeneric_Text,
                     badge: nil,
                     hashtag: query,
                     revealed: false,
@@ -145,9 +144,9 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                     index: 1,
                     theme: self.theme,
                     peer: peer,
-                    title: "Use #\(query)@\(addressName)",
-                    text: isGroup ? "searches only posts from this group" : "searches only posts from this channel",
-                    badge: "NEW",
+                    title: self.strings.Chat_HashtagSuggestion_UseLocal_Title("#\(query)@\(addressName)").string,
+                    text: isGroup ? self.strings.Chat_HashtagSuggestion_UseLocal_Group_Text : self.strings.Chat_HashtagSuggestion_UseLocal_Channel_Text,
+                    badge: self.strings.ChatList_ContextMenuBadgeNew,
                     hashtag: "\(query)@\(addressName)",
                     revealed: false,
                     isAdditionalRecent: false

@@ -947,8 +947,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                                 return nil
                             }
                         },
-                        tapAction: { _, _ in
-                            openAppExamples()
+                        tapAction: { attributes, _ in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                openAppExamples()
+                            }
                         }
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),

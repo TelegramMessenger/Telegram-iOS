@@ -74,7 +74,7 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
         if !icons.isEmpty {
             if self.iconLayers.isEmpty {
                 for icon in icons {
-                    let iconSize = CGSize(width: 24.0, height: 24.0)
+                    let iconSize = CGSize(width: 18.0, height: 18.0)
                     
                     let emoji = ChatTextInputTextCustomEmojiAttribute(
                         interactivelySelectedFromPackId: nil,
@@ -121,11 +121,11 @@ final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
         totalWidth = titleSize.width
         
         if !self.iconLayers.isEmpty {
-            totalWidth += 1.0
-            let iconSize = CGSize(width: 24.0, height: 24.0)
+            totalWidth += 2.0
+            let iconSize = CGSize(width: 18.0, height: 18.0)
             let spacing: CGFloat = 1.0
             for iconlayer in self.iconLayers {
-                iconlayer.frame = CGRect(origin: CGPoint(x: totalWidth, y: 12.0), size: iconSize)
+                iconlayer.frame = CGRect(origin: CGPoint(x: totalWidth, y: 15.0), size: iconSize)
                 totalWidth += iconSize.width + spacing
             }
             totalWidth -= spacing

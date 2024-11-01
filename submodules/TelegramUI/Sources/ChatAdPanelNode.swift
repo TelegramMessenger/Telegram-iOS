@@ -338,6 +338,8 @@ final class ChatAdPanelNode: ASDisplayNode {
         if let imageDimensions {
             applyImage = imageNodeLayout(TransformImageArguments(corners: ImageCorners(radius: 3.0), imageSize: imageDimensions.aspectFilled(imageBoundingSize), boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
             textRightInset += imageBoundingSize.width + 18.0
+        } else {
+            textRightInset = 27.0
         }
         
         var mediaUpdated = false
