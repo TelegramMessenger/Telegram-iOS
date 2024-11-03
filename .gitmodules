@@ -23,9 +23,6 @@ url=../tgcalls.git
 [submodule "third-party/webrtc/webrtc"]
 	path = third-party/webrtc/webrtc
 	url = https://github.com/ali-fareed/webrtc.git
-[submodule "third-party/libx264/x264"]
-	path = third-party/libx264/x264
-	url = https://github.com/mirror/x264.git
 [submodule "build-system/bazel-rules/rules_xcodeproj"]
 	path = build-system/bazel-rules/rules_xcodeproj
 	url = https://github.com/MobileNativeFoundation/rules_xcodeproj.git

@@ -40,6 +40,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/Utils/RangeSet",
     ],
     visibility = [
         "//visibility:public",

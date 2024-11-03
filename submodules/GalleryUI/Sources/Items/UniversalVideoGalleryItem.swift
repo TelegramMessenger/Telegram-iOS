@@ -1336,7 +1336,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let playbackRatePromise = ValuePromise<Double>()
     private let videoQualityPromise = ValuePromise<UniversalVideoContentVideoQuality>()
     
+    private var playerStatusValue: MediaPlayerStatus?
     private let statusDisposable = MetaDisposable()
+    
     private let moreButtonStateDisposable = MetaDisposable()
     private let settingsButtonStateDisposable = MetaDisposable()
     private let mediaPlaybackStateDisposable = MetaDisposable()
@@ -1927,6 +1929,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.statusDisposable.set((combineLatest(queue: .mainQueue(), videoNode.status, mediaFileStatus)
             |> deliverOnMainQueue).start(next: { [weak self] value, fetchStatus in
                 if let strongSelf = self {
+                    strongSelf.playerStatusValue = value
+                    
                     var initialBuffering = false
                     var isPlaying = false
                     var isPaused = true
@@ -3598,84 +3602,109 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 return
                             }
                             
-                            var items: [ContextMenuItem] = []
+                            var allFiles: [FileMediaReference] = []
+                            allFiles.append(content.fileReference)
+                            allFiles.append(contentsOf: qualitySet.qualityFiles.values)
                             
-                            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                            }, iconPosition: .left, action: { c, _ in
-                                c?.popItems()
-                            })))
-                            
-                            let addItem: (Int?, FileMediaReference) -> Void = { quality, qualityFile in
-                                guard let qualityFileSize = qualityFile.media.size else {
+                            let qualitySignals = allFiles.map { file -> Signal<(fileId: MediaId, isCached: Bool), NoError> in
+                                return self.context.account.postbox.mediaBox.resourceStatus(file.media.resource)
+                                |> take(1)
+                                |> map { status -> (fileId: MediaId, isCached: Bool) in
+                                    return (file.media.fileId, status == .Local)
+                                }
+                            }
+                            let _ = (combineLatest(queue: .mainQueue(), qualitySignals)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak self, weak c] fileStatuses in
+                                guard let self else {
                                     return
                                 }
-                                let fileSizeString = dataSizeString(qualityFileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
-                                let title: String
-                                if let quality {
-                                    title = self.presentationData.strings.Gallery_SaveToGallery_Quality("\(quality)").string
-                                } else {
-                                    title = self.presentationData.strings.Gallery_SaveToGallery_Original
-                                }
-                                items.append(.action(ContextMenuActionItem(text: title, textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
-                                    return nil
-                                }, action: { [weak self] c, _ in
-                                    c?.dismiss(result: .default, completion: nil)
-                                    
-                                    guard let self else {
-                                        return
-                                    }
-                                    guard let controller = self.galleryController() else {
-                                        return
-                                    }
-                                    
-                                    let saveScreen = SaveProgressScreen(context: self.context, content: .progress(self.presentationData.strings.Story_TooltipSaving, 0.0))
-                                    controller.present(saveScreen, in: .current)
-                                    
-                                    let stringSaving = self.presentationData.strings.Story_TooltipSaving
-                                    let stringSaved = self.presentationData.strings.Story_TooltipSaved
-                                    
-                                    let saveFileReference: AnyMediaReference = qualityFile.abstract
-                                    let saveSignal = SaveToCameraRoll.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: saveFileReference)
-                                    
-                                    let disposable = (saveSignal
-                                    |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
-                                        guard let saveScreen else {
-                                            return
-                                        }
-                                        saveScreen.content = .progress(stringSaving, progress)
-                                    }, completed: { [weak saveScreen] in
-                                        guard let saveScreen else {
-                                            return
-                                        }
-                                        saveScreen.content = .completion(stringSaved)
-                                        Queue.mainQueue().after(3.0, { [weak saveScreen] in
-                                            saveScreen?.dismiss()
-                                        })
-                                    })
-                                    
-                                    saveScreen.cancelled = {
-                                        disposable.dispose()
-                                    }
+                                
+                                var items: [ContextMenuItem] = []
+                                
+                                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Common_Back, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                                }, iconPosition: .left, action: { c, _ in
+                                    c?.popItems()
                                 })))
-                            }
-                            
-                            if self.context.isPremium {
-                                addItem(nil, content.fileReference)
-                            } else {
-                                #if DEBUG
-                                addItem(nil, content.fileReference)
-                                #endif
-                            }
-                            
-                            for quality in qualityState.available {
-                                guard let qualityFile = qualitySet.qualityFiles[quality] else {
-                                    continue
+                                
+                                let addItem: (Int?, FileMediaReference) -> Void = { quality, qualityFile in
+                                    guard let qualityFileSize = qualityFile.media.size else {
+                                        return
+                                    }
+                                    var fileSizeString = dataSizeString(qualityFileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))
+                                    let title: String
+                                    if let quality {
+                                        title = self.presentationData.strings.Gallery_SaveToGallery_Quality("\(quality)").string
+                                    } else {
+                                        title = self.presentationData.strings.Gallery_SaveToGallery_Original
+                                    }
+                                    
+                                    if let statusValue = fileStatuses.first(where: { $0.fileId ==  qualityFile.media.fileId }), statusValue.isCached {
+                                        fileSizeString.append(" • cached")
+                                    } else {
+                                        fileSizeString.insert(contentsOf: "↓ ", at: fileSizeString.startIndex)
+                                    }
+                                    
+                                    items.append(.action(ContextMenuActionItem(text: title, textLayout: .secondLineWithValue(fileSizeString), icon: { _ in
+                                        return nil
+                                    }, action: { [weak self] c, _ in
+                                        c?.dismiss(result: .default, completion: nil)
+                                        
+                                        guard let self else {
+                                            return
+                                        }
+                                        guard let controller = self.galleryController() else {
+                                            return
+                                        }
+                                        
+                                        let saveScreen = SaveProgressScreen(context: self.context, content: .progress(self.presentationData.strings.Story_TooltipSaving, 0.0))
+                                        controller.present(saveScreen, in: .current)
+                                        
+                                        let stringSaving = self.presentationData.strings.Story_TooltipSaving
+                                        let stringSaved = self.presentationData.strings.Story_TooltipSaved
+                                        
+                                        let saveFileReference: AnyMediaReference = qualityFile.abstract
+                                        let saveSignal = SaveToCameraRoll.saveToCameraRoll(context: self.context, postbox: self.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: saveFileReference)
+                                        
+                                        let disposable = (saveSignal
+                                        |> deliverOnMainQueue).start(next: { [weak saveScreen] progress in
+                                            guard let saveScreen else {
+                                                return
+                                            }
+                                            saveScreen.content = .progress(stringSaving, progress)
+                                        }, completed: { [weak saveScreen] in
+                                            guard let saveScreen else {
+                                                return
+                                            }
+                                            saveScreen.content = .completion(stringSaved)
+                                            Queue.mainQueue().after(3.0, { [weak saveScreen] in
+                                                saveScreen?.dismiss()
+                                            })
+                                        })
+                                        
+                                        saveScreen.cancelled = {
+                                            disposable.dispose()
+                                        }
+                                    })))
                                 }
-                                addItem(quality, qualityFile)
-                            }
-                            
-                            c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
+                                
+                                if self.context.isPremium {
+                                    addItem(nil, content.fileReference)
+                                } else {
+                                    #if DEBUG
+                                    addItem(nil, content.fileReference)
+                                    #endif
+                                }
+                                
+                                for quality in qualityState.available {
+                                    guard let qualityFile = qualitySet.qualityFiles[quality] else {
+                                        continue
+                                    }
+                                    addItem(quality, qualityFile)
+                                }
+                                
+                                c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
+                            })
                         } else {
                             c?.dismiss(result: .default, completion: nil)
                             
@@ -3984,7 +4013,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func hasActiveEdgeAction(edge: ActiveEdge) -> Bool {
         if case .right = edge {
-            return true
+            if let playerStatusValue = self.playerStatusValue, case .playing = playerStatusValue.status {
+                return true
+            } else {
+                return false
+            }
         } else {
             return false
         }
@@ -3997,13 +4030,13 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         if let edge, case .right = edge {
             let effectiveRate: Double
             if let current = self.activeEdgeRateState {
-                effectiveRate = min(2.5, current.initialRate + 0.5)
+                effectiveRate = min(4.0, current.initialRate + 1.0)
                 self.activeEdgeRateState = (current.initialRate, effectiveRate)
             } else {
                 guard let playbackRate = self.playbackRate else {
                     return
                 }
-                effectiveRate = min(2.5, playbackRate + 0.5)
+                effectiveRate = min(4.0, playbackRate + 1.0)
                 self.activeEdgeRateState = (playbackRate, effectiveRate)
             }
             videoNode.setBaseRate(effectiveRate)
@@ -4023,9 +4056,16 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         if let current = self.activeEdgeRateState {
             var rateFraction = Double(distance) / 100.0
-            rateFraction = max(0.0, min(1.0, rateFraction))
-            let rateDistance = (current.initialRate + 0.5) * (1.0 - rateFraction) + 2.5 * rateFraction
-            let effectiveRate = max(1.0, min(2.5, rateDistance))
+            rateFraction = max(-1.0, min(1.0, rateFraction))
+            
+            let effectiveRate: Double
+            if rateFraction < 0.0 {
+                let rateDistance = (current.initialRate + 1.0) * (1.0 - (-rateFraction)) + 1.0 * (-rateFraction)
+                effectiveRate = max(1.0, min(4.0, rateDistance))
+            } else {
+                let rateDistance = (current.initialRate + 1.0) * (1.0 - rateFraction) + 3.0 * rateFraction
+                effectiveRate = max(1.0, min(4.0, rateDistance))
+            }
             self.activeEdgeRateState = (current.initialRate, effectiveRate)
             videoNode.setBaseRate(effectiveRate)
             

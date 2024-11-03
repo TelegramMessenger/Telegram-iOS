@@ -146,7 +146,7 @@ final class HLSJSServerSource: SharedHLSServer.Source {
         guard let (quality, file) = self.qualityFiles.first(where: { $0.value.media.fileId.id == id }) else {
             return .single(nil)
         }
-        let _ = quality
+        
         guard let size = file.media.size else {
             return .single(nil)
         }
@@ -154,115 +154,174 @@ final class HLSJSServerSource: SharedHLSServer.Source {
         let postbox = self.postbox
         let userLocation = self.userLocation
         
+        let playlistPreloadRange = self.playlistData(quality: quality)
+        |> mapToSignal { playlistString -> Signal<Range<Int64>?, NoError> in
+            var durations: [Int] = []
+            var byteRanges: [Range<Int>] = []
+            
+            let extinfRegex = try! NSRegularExpression(pattern: "EXTINF:(\\d+)", options: [])
+            let byteRangeRegex = try! NSRegularExpression(pattern: "EXT-X-BYTERANGE:(\\d+)@(\\d+)", options: [])
+            
+            let extinfResults = extinfRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
+            for result in extinfResults {
+                if let durationRange = Range(result.range(at: 1), in: playlistString) {
+                    if let duration = Int(String(playlistString[durationRange])) {
+                        durations.append(duration)
+                    }
+                }
+            }
+            
+            let byteRangeResults = byteRangeRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
+            for result in byteRangeResults {
+                if let lengthRange = Range(result.range(at: 1), in: playlistString), let upperBoundRange = Range(result.range(at: 2), in: playlistString) {
+                    if let length = Int(String(playlistString[lengthRange])), let lowerBound = Int(String(playlistString[upperBoundRange])) {
+                        byteRanges.append(lowerBound ..< (lowerBound + length))
+                    }
+                }
+            }
+            
+            let prefixSeconds = 10
+            var rangeUpperBound: Int64 = 0
+            if durations.count == byteRanges.count {
+                var remainingSeconds = prefixSeconds
+                
+                for i in 0 ..< durations.count {
+                    if remainingSeconds <= 0 {
+                        break
+                    }
+                    let duration = durations[i]
+                    let byteRange = byteRanges[i]
+                    
+                    remainingSeconds -= duration
+                    rangeUpperBound = max(rangeUpperBound, Int64(byteRange.upperBound))
+                }
+            }
+
+            if rangeUpperBound != 0 {
+                return .single(0 ..< rangeUpperBound)
+            } else {
+                return .single(nil)
+            }
+        }
+        
         let mappedRange: Range<Int64> = Int64(range.lowerBound) ..< Int64(range.upperBound)
         
         let queue = postbox.mediaBox.dataQueue
-        let fetchFromRemote: Signal<(TempBoxFile, Range<Int>, Int)?, NoError> = Signal { subscriber in
-            let partialFile = TempBox.shared.tempFile(fileName: "data")
-            
-            if let cachedData = postbox.mediaBox.internal_resourceData(id: file.media.resource.id, size: size, in: Int64(range.lowerBound) ..< Int64(range.upperBound)) {
+        let fetchFromRemote: Signal<(TempBoxFile, Range<Int>, Int)?, NoError> = playlistPreloadRange
+        |> mapToSignal { preloadRange -> Signal<(TempBoxFile, Range<Int>, Int)?, NoError> in
+            return Signal { subscriber in
+                let partialFile = TempBox.shared.tempFile(fileName: "data")
+                
+                if let cachedData = postbox.mediaBox.internal_resourceData(id: file.media.resource.id, size: size, in: Int64(range.lowerBound) ..< Int64(range.upperBound)) {
+                    #if DEBUG
+                    print("Fetched \(quality)p part from cache")
+                    #endif
+                    
+                    let outputFile = ManagedFile(queue: nil, path: partialFile.path, mode: .readwrite)
+                    if let outputFile {
+                        let blockSize = 128 * 1024
+                        var tempBuffer = Data(count: blockSize)
+                        var blockOffset = 0
+                        while blockOffset < cachedData.length {
+                            let currentBlockSize = min(cachedData.length - blockOffset, blockSize)
+                            
+                            tempBuffer.withUnsafeMutableBytes { bytes -> Void in
+                                let _ = cachedData.file.read(bytes.baseAddress!, currentBlockSize)
+                                let _ = outputFile.write(bytes.baseAddress!, count: currentBlockSize)
+                            }
+                            
+                            blockOffset += blockSize
+                        }
+                        outputFile._unsafeClose()
+                        subscriber.putNext((partialFile, 0 ..< cachedData.length, Int(size)))
+                        subscriber.putCompletion()
+                    } else {
+                        #if DEBUG
+                        print("Error writing cached file to disk")
+                        #endif
+                    }
+                    
+                    return EmptyDisposable
+                }
+                
+                guard let fetchResource = postbox.mediaBox.fetchResource else {
+                    return EmptyDisposable
+                }
+                
+                let location = MediaResourceStorageLocation(userLocation: userLocation, reference: file.resourceReference(file.media.resource))
+                let params = MediaResourceFetchParameters(
+                    tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video),
+                    info: TelegramCloudMediaResourceFetchInfo(reference: file.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: true, continueInBackground: true),
+                    location: location,
+                    contentType: .video,
+                    isRandomAccessAllowed: true
+                )
+                
+                let completeFile = TempBox.shared.tempFile(fileName: "data")
+                let metaFile = TempBox.shared.tempFile(fileName: "data")
+                
+                guard let fileContext = MediaBoxFileContextV2Impl(
+                    queue: queue,
+                    manager: postbox.mediaBox.dataFileManager,
+                    storageBox: nil,
+                    resourceId: file.media.resource.id.stringRepresentation.data(using: .utf8)!,
+                    path: completeFile.path,
+                    partialPath: partialFile.path,
+                    metaPath: metaFile.path
+                ) else {
+                    return EmptyDisposable
+                }
+                
+                let fetchDisposable = fileContext.fetched(
+                    range: mappedRange,
+                    priority: .default,
+                    fetch: { intervals in
+                        return fetchResource(file.media.resource, intervals, params)
+                    },
+                    error: { _ in
+                    },
+                    completed: {
+                    }
+                )
+                
                 #if DEBUG
-                print("Fetched \(quality)p part from cache")
+                let startTime = CFAbsoluteTimeGetCurrent()
                 #endif
                 
-                let outputFile = ManagedFile(queue: nil, path: partialFile.path, mode: .readwrite)
-                if let outputFile {
-                    let blockSize = 128 * 1024
-                    var tempBuffer = Data(count: blockSize)
-                    var blockOffset = 0
-                    while blockOffset < cachedData.length {
-                        let currentBlockSize = min(cachedData.length - blockOffset, blockSize)
-                        
-                        tempBuffer.withUnsafeMutableBytes { bytes -> Void in
-                            let _ = cachedData.file.read(bytes.baseAddress!, currentBlockSize)
-                            let _ = outputFile.write(bytes.baseAddress!, count: currentBlockSize)
+                let dataDisposable = fileContext.data(
+                    range: mappedRange,
+                    waitUntilAfterInitialFetch: true,
+                    next: { result in
+                        if result.complete {
+                            #if DEBUG
+                            let fetchTime = CFAbsoluteTimeGetCurrent() - startTime
+                            print("Fetching \(quality)p part took \(fetchTime * 1000.0) ms")
+                            #endif
+                            if let preloadRange, Int(preloadRange.lowerBound) <= range.upperBound && Int(preloadRange.upperBound) >= range.lowerBound {
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: partialFile.path), options: .alwaysMapped) {
+                                    let subData = data.subdata(in: Int(result.offset) ..< Int(result.offset + result.size))
+                                    postbox.mediaBox.storeResourceData(file.media.resource.id, range: Int64(range.lowerBound) ..< Int64(range.upperBound), data: subData)
+                                }
+                            }
+                            subscriber.putNext((partialFile, Int(result.offset) ..< Int(result.offset + result.size), Int(size)))
+                            subscriber.putCompletion()
                         }
-                        
-                        blockOffset += blockSize
                     }
-                    outputFile._unsafeClose()
-                    subscriber.putNext((partialFile, 0 ..< cachedData.length, Int(size)))
-                    subscriber.putCompletion()
-                } else {
-                    #if DEBUG
-                    print("Error writing cached file to disk")
-                    #endif
-                }
+                )
                 
-                return EmptyDisposable
-            }
-            
-            guard let fetchResource = postbox.mediaBox.fetchResource else {
-                return EmptyDisposable
-            }
-            
-            let location = MediaResourceStorageLocation(userLocation: userLocation, reference: file.resourceReference(file.media.resource))
-            let params = MediaResourceFetchParameters(
-                tag: TelegramMediaResourceFetchTag(statsCategory: .video, userContentType: .video),
-                info: TelegramCloudMediaResourceFetchInfo(reference: file.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: true, continueInBackground: true),
-                location: location,
-                contentType: .video,
-                isRandomAccessAllowed: true
-            )
-            
-            let completeFile = TempBox.shared.tempFile(fileName: "data")
-            let metaFile = TempBox.shared.tempFile(fileName: "data")
-            
-            guard let fileContext = MediaBoxFileContextV2Impl(
-                queue: queue,
-                manager: postbox.mediaBox.dataFileManager,
-                storageBox: nil,
-                resourceId: file.media.resource.id.stringRepresentation.data(using: .utf8)!,
-                path: completeFile.path,
-                partialPath: partialFile.path,
-                metaPath: metaFile.path
-            ) else {
-                return EmptyDisposable
-            }
-            
-            let fetchDisposable = fileContext.fetched(
-                range: mappedRange,
-                priority: .default,
-                fetch: { intervals in
-                    return fetchResource(file.media.resource, intervals, params)
-                },
-                error: { _ in
-                },
-                completed: {
-                }
-            )
-            
-            #if DEBUG
-            let startTime = CFAbsoluteTimeGetCurrent()
-            #endif
-            
-            let dataDisposable = fileContext.data(
-                range: mappedRange,
-                waitUntilAfterInitialFetch: true,
-                next: { result in
-                    if result.complete {
-                        #if DEBUG
-                        let fetchTime = CFAbsoluteTimeGetCurrent() - startTime
-                        print("Fetching \(quality)p part took \(fetchTime * 1000.0) ms")
-                        #endif
-                        subscriber.putNext((partialFile, Int(result.offset) ..< Int(result.offset + result.size), Int(size)))
-                        subscriber.putCompletion()
+                return ActionDisposable {
+                    queue.async {
+                        fetchDisposable.dispose()
+                        dataDisposable.dispose()
+                        fileContext.cancelFullRangeFetches()
+                        
+                        TempBox.shared.dispose(completeFile)
+                        TempBox.shared.dispose(metaFile)
                     }
                 }
-            )
-            
-            return ActionDisposable {
-                queue.async {
-                    fetchDisposable.dispose()
-                    dataDisposable.dispose()
-                    fileContext.cancelFullRangeFetches()
-                    
-                    TempBox.shared.dispose(completeFile)
-                    TempBox.shared.dispose(metaFile)
-                }
             }
+            |> runOn(queue)
         }
-        |> runOn(queue)
         
         return fetchFromRemote
     }
@@ -1287,12 +1346,32 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             if !self.hasRequestedPlayerLoad {
                 if !self.playerAvailableLevels.isEmpty {
                     var selectedLevelIndex: Int?
-                    if let minimizedQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file {
-                        if let dimensions = minimizedQualityFile.media.dimensions {
+                    
+                    if let qualityFiles = HLSQualitySet(baseFile: self.fileReference)?.qualityFiles.values, let maxQualityFile = qualityFiles.max(by: { lhs, rhs in
+                        if let lhsDimensions = lhs.media.dimensions, let rhsDimensions = rhs.media.dimensions {
+                            return lhsDimensions.width < rhsDimensions.width
+                        } else {
+                            return lhs.media.fileId.id < rhs.media.fileId.id
+                        }
+                    }), let dimensions = maxQualityFile.media.dimensions {
+                        if self.postbox.mediaBox.completedResourcePath(maxQualityFile.media.resource) != nil {
                             for (index, level) in self.playerAvailableLevels {
                                 if level.height == Int(dimensions.height) {
                                     selectedLevelIndex = index
                                     break
+                                }
+                            }
+                        }
+                    }
+                    
+                    if selectedLevelIndex == nil {
+                        if let minimizedQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file {
+                            if let dimensions = minimizedQualityFile.media.dimensions {
+                                for (index, level) in self.playerAvailableLevels {
+                                    if level.height == Int(dimensions.height) {
+                                        selectedLevelIndex = index
+                                        break
+                                    }
                                 }
                             }
                         }
@@ -1612,10 +1691,29 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
         }
         
-        guard let playerCurrentLevelIndex = self.playerCurrentLevelIndex else {
-            return nil
+        let currentLevelIndex: Int
+        if let playerCurrentLevelIndex = self.playerCurrentLevelIndex {
+            currentLevelIndex = playerCurrentLevelIndex
+        } else {
+            if let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file, let dimensions = minQualityFile.media.dimensions {
+                var foundIndex: Int?
+                for (index, level) in self.playerAvailableLevels {
+                    if level.width == Int(dimensions.width) && level.height == Int(dimensions.height) {
+                        foundIndex = index
+                        break
+                    }
+                }
+                if let foundIndex {
+                    currentLevelIndex = foundIndex
+                } else {
+                    return nil
+                }
+            } else {
+                return nil
+            }
         }
-        guard let currentLevel = self.playerAvailableLevels[playerCurrentLevelIndex] else {
+        
+        guard let currentLevel = self.playerAvailableLevels[currentLevelIndex] else {
             return nil
         }
         
