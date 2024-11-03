@@ -2751,6 +2751,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     return CGRectMake(0, 82, screenSize.width, screenSize.height - 82 - 83);
                 else if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 83);
+                else if (widescreenWidth == 874.0f)
+                    return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 83);
                 else if (widescreenWidth == 812.0f)
                     return CGRectMake(0, 77, screenSize.width, screenSize.height - 77 - 68);
                 else
@@ -2782,6 +2784,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                     return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 234);
                 else if (widescreenWidth == 896.0f)
                     return CGRectMake(0, 121, screenSize.width, screenSize.height - 121 - 223);
+                else if (widescreenWidth == 874.0f)
+                    return CGRectMake(0, 121, screenSize.width, screenSize.height - 135 - 202);
                 else if (widescreenWidth == 852.0f)
                     return CGRectMake(0, 136, screenSize.width, screenSize.height - 136 - 192);
                 else if (widescreenWidth == 844.0f)
