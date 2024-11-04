@@ -31,13 +31,11 @@ public final class GiftItemComponent: Component {
                         return [
                             UIColor(rgb: 0x522124),
                             UIColor(rgb: 0x653634)
-                            
                         ]
                     } else {
                         return [
                             UIColor(rgb: 0xed1c26),
                             UIColor(rgb: 0xff5c55)
-                            
                         ]
                     }
                 case .blue:
@@ -359,7 +357,7 @@ public final class GiftItemComponent: Component {
                     }
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
-                    if self.ribbon.image == nil || themeUpdated {
+                    if self.ribbon.image == nil || themeUpdated || previousComponent?.ribbon?.color != component.ribbon?.color {
                         self.ribbon.image = generateGradientTintedImage(image: UIImage(bundleImageName: "Premium/GiftRibbon"), colors: ribbon.color.colors(theme: component.theme), direction: .diagonal)
                     }
                     if let ribbonImage = self.ribbon.image {

@@ -113,7 +113,18 @@
         CGFloat shutterButtonWidth = 66.0f;
         CGSize screenSize = TGScreenSize();
         CGFloat widescreenWidth = MAX(screenSize.width, screenSize.height);
-        if (widescreenWidth == 932.0f)
+        if (widescreenWidth == 956.0f)
+        {
+            _topPanelOffset = 48.0f;
+            _topPanelHeight = 48.0f;
+            _bottomPanelOffset = 83.0f;
+            _bottomPanelHeight = 140.0f;
+            _modeControlOffset = -1.0f;
+            _modeControlHeight = 66.0f;
+            _counterOffset = 7.0f;
+            shutterButtonWidth = 72.0f;
+        }
+        else if (widescreenWidth == 932.0f)
         {
             _topPanelOffset = 48.0f;
             _topPanelHeight = 48.0f;
