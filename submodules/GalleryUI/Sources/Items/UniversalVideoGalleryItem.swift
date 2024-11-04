@@ -3548,39 +3548,41 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         })))
                     }
                     
-                    for quality in videoQualityState.available {
-                        let isSelected = videoQualityState.preferred == .quality(quality)
-                        let qualityTitle: String
-                        if quality <= 360 {
-                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityLow
-                        } else if quality <= 480 {
-                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityMedium
-                        } else if quality <= 720 {
-                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityHD
-                        } else if quality <= 1080 {
-                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityFHD
-                        } else {
-                            qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityQHD
-                        }
-                        items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
-                            if isSelected {
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                    if videoQualityState.available.count > 1 {
+                        for quality in videoQualityState.available {
+                            let isSelected = videoQualityState.preferred == .quality(quality)
+                            let qualityTitle: String
+                            if quality <= 360 {
+                                qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityLow
+                            } else if quality <= 480 {
+                                qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityMedium
+                            } else if quality <= 720 {
+                                qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityHD
+                            } else if quality <= 1080 {
+                                qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityFHD
                             } else {
-                                return nil
+                                qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityQHD
                             }
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            guard let self, let videoNode = self.videoNode else {
-                                return
-                            }
-                            videoNode.setVideoQuality(.quality(quality))
-                            self.videoQualityPromise.set(.quality(quality))
-
-                            /*if let controller = strongSelf.galleryController() as? GalleryController {
-                                controller.updateSharedPlaybackRate(rate)
-                            }*/
-                        })))
+                            items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
+                                if isSelected {
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                                } else {
+                                    return nil
+                                }
+                            }, action: { [weak self] _, f in
+                                f(.default)
+                                
+                                guard let self, let videoNode = self.videoNode else {
+                                    return
+                                }
+                                videoNode.setVideoQuality(.quality(quality))
+                                self.videoQualityPromise.set(.quality(quality))
+                                
+                                /*if let controller = strongSelf.galleryController() as? GalleryController {
+                                 controller.updateSharedPlaybackRate(rate)
+                                 }*/
+                            })))
+                        }
                     }
                 }
             } else {
