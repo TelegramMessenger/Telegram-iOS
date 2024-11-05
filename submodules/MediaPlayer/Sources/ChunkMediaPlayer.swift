@@ -119,13 +119,15 @@ public final class ChunkMediaPlayerPart {
     public let startTime: Double
     public let endTime: Double
     public let file: TempBoxFile
+    public let clippedStartTime: Double?
     
     public var id: Id {
         return Id(rawValue: self.file.path)
     }
     
-    public init(startTime: Double, endTime: Double, file: TempBoxFile) {
+    public init(startTime: Double, clippedStartTime: Double? = nil, endTime: Double, file: TempBoxFile) {
         self.startTime = startTime
+        self.clippedStartTime = clippedStartTime
         self.endTime = endTime
         self.file = file
     }
@@ -620,58 +622,54 @@ private final class ChunkMediaPlayerContext {
         
         var validParts: [ChunkMediaPlayerPart] = []
         
+        var minStartTime: Double = 0.0
         for i in 0 ..< self.partsState.parts.count {
             let part = self.partsState.parts[i]
+            
+            let partStartTime = max(minStartTime, part.startTime)
+            let partEndTime = max(partStartTime, part.endTime)
+            if partStartTime >= partEndTime {
+                continue
+            }
+            
             var partMatches = false
-            if timestamp >= part.startTime - 0.5 && timestamp < part.endTime + 0.5 {
+            if timestamp >= partStartTime - 0.5 && timestamp < partEndTime + 0.5 {
                 partMatches = true
             }
             
             if partMatches {
-                validParts.append(part)
+                validParts.append(ChunkMediaPlayerPart(
+                    startTime: part.startTime,
+                    clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
+                    endTime: part.endTime,
+                    file: part.file
+                ))
+                minStartTime = max(minStartTime, partEndTime)
             }
         }
+        
         if let lastValidPart = validParts.last {
             for i in 0 ..< self.partsState.parts.count {
                 let part = self.partsState.parts[i]
-                if lastValidPart !== part && part.startTime > lastValidPart.startTime && part.startTime <= lastValidPart.endTime + 0.5 {
-                    validParts.append(part)
+                
+                let partStartTime = max(minStartTime, part.startTime)
+                let partEndTime = max(partStartTime, part.endTime)
+                if partStartTime >= partEndTime {
+                    continue
+                }
+                
+                if lastValidPart !== part && partStartTime > (lastValidPart.clippedStartTime ?? lastValidPart.startTime) && partStartTime <= lastValidPart.endTime + 0.5 {
+                    validParts.append(ChunkMediaPlayerPart(
+                        startTime: part.startTime,
+                        clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
+                        endTime: part.endTime,
+                        file: part.file
+                    ))
+                    minStartTime = max(minStartTime, partEndTime)
                     break
                 }
             }
         }
-        
-        /*for i in 0 ..< self.partsState.parts.count {
-            let part = self.partsState.parts[i]
-            var partMatches = false
-            if timestamp >= part.startTime - 0.001 && timestamp < part.endTime - 0.001 {
-                partMatches = true
-            } else if part.startTime < 0.2 && timestamp < part.endTime - 0.001 {
-                partMatches = true
-            }
-            
-            if !partMatches, i != self.partsState.parts.count - 1, part.startTime >= 0.001, timestamp >= part.startTime {
-                let nextPart = self.partsState.parts[i + 1]
-                if timestamp < nextPart.endTime - 0.001 {
-                    if part.endTime >= nextPart.startTime - 0.1 {
-                        partMatches = true
-                    }
-                }
-            }
-            
-            if partMatches {
-                validParts.append(part)
-                
-                inner: for lookaheadPart in self.partsState.parts {
-                    if lookaheadPart.startTime >= part.endTime - 0.001 && lookaheadPart.startTime - 0.1 < part.endTime {
-                        validParts.append(lookaheadPart)
-                        break inner
-                    }
-                }
-                
-                break
-            }
-        }*/
         
         if validParts.isEmpty, let initialSeekTimestamp = self.initialSeekTimestamp {
             for part in self.partsState.parts {
@@ -700,6 +698,8 @@ private final class ChunkMediaPlayerContext {
         } else {
             self.initialSeekTimestamp = nil
         }
+        
+        //print("validParts: \(validParts.map { "\($0.startTime) ... \($0.endTime)" })")
         
         self.loadedState.partStates.removeAll(where: { partState in
             if !validParts.contains(where: { $0.id == partState.part.id }) {
@@ -742,7 +742,13 @@ private final class ChunkMediaPlayerContext {
         for i in 0 ..< self.loadedState.partStates.count {
             let partState = self.loadedState.partStates[i]
             if partState.mediaBuffersDisposable == nil {
-                partState.mediaBuffersDisposable = (partState.frameSource.seek(timestamp: i == 0 ? timestamp : 0.0)
+                let partSeekOffset: Double
+                if let clippedStartTime = partState.part.clippedStartTime {
+                    partSeekOffset = clippedStartTime - partState.part.startTime
+                } else {
+                    partSeekOffset = 0.0
+                }
+                partState.mediaBuffersDisposable = (partState.frameSource.seek(timestamp: i == 0 ? timestamp : partSeekOffset)
                 |> deliverOn(self.queue)).startStrict(next: { [weak self, weak partState] result in
                     guard let self, let partState else {
                         return
@@ -921,13 +927,14 @@ private final class ChunkMediaPlayerContext {
                 
                 for partState in self.loadedState.partStates {
                     if let audioTrackFrameBuffer = partState.mediaBuffers?.audioBuffer {
+                        //print("Poll audio: part \(partState.part.startTime) frames: \(audioTrackFrameBuffer.frames.map(\.pts.seconds))")
                         let frame = audioTrackFrameBuffer.takeFrame()
                         switch frame {
                         case .finished:
                             continue
                         default:
                             /*if case let .frame(frame) = frame {
-                                print("audio: \(frame.position.seconds) \(frame.position.value) next: (\(frame.position.value + frame.duration.value))")
+                                print("audio: \(frame.position.seconds) \(frame.position.value) part \(partState.part.startTime) next: (\(frame.position.value + frame.duration.value))")
                             }*/
                             return frame
                         }

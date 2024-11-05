@@ -246,12 +246,14 @@ public func galleryItemForEntry(
             } else {
                 if true || (file.mimeType == "video/mpeg4" || file.mimeType == "video/mov" || file.mimeType == "video/mp4") {
                     var isHLS = false
-                    if NativeVideoContent.isHLSVideo(file: file) {
-                        isHLS = true
-                        
-                        if let data = context.currentAppConfiguration.with({ $0 }).data, let disableHLS = data["video_ignore_alt_documents"] as? Double {
-                            if Int(disableHLS) != 0 {
-                                isHLS = false
+                    if #available(iOS 13.0, *) {
+                        if NativeVideoContent.isHLSVideo(file: file) {
+                            isHLS = true
+                            
+                            if let data = context.currentAppConfiguration.with({ $0 }).data, let disableHLS = data["video_ignore_alt_documents"] as? Double {
+                                if Int(disableHLS) != 0 {
+                                    isHLS = false
+                                }
                             }
                         }
                     }

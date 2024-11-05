@@ -113,6 +113,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private var dateTimeFormat: PresentationDateTimeFormat
     
     private let tapAction: () -> Void
+    private let notifyScheduledTapAction: () -> Void
     
     private let contentNode: ASDisplayNode
     
@@ -163,13 +164,14 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private var currentData: GroupCallPanelData?
     private var validLayout: (CGSize, CGFloat, CGFloat, Bool)?
     
-    public init(context: AccountContext, presentationData: PresentationData, tapAction: @escaping () -> Void) {
+    public init(context: AccountContext, presentationData: PresentationData, tapAction: @escaping () -> Void, notifyScheduledTapAction: @escaping () -> Void) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.tapAction = tapAction
+        self.notifyScheduledTapAction = notifyScheduledTapAction
         
         self.contentNode = ASDisplayNode()
         
@@ -234,7 +236,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.joinButton.addSubnode(self.joinButtonBackgroundNode)
         self.joinButton.addSubnode(self.joinButtonTitleNode)
         self.contentNode.addSubnode(self.joinButton)
-        self.joinButton.addTarget(self, action: #selector(self.tapped), forControlEvents: [.touchUpInside])
+        self.joinButton.addTarget(self, action: #selector(self.joinTapped), forControlEvents: [.touchUpInside])
         
         self.micButton.addSubnode(self.micButtonBackgroundNode)
         self.micButton.addSubnode(self.micButtonForegroundNode)
@@ -265,6 +267,14 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     
     @objc private func tapped() {
         self.tapAction()
+    }
+    
+    @objc private func joinTapped() {
+        if let info = self.currentData?.info, let _ = info.scheduleTimestamp, !info.subscribedToScheduled {
+            self.notifyScheduledTapAction()
+        } else {
+            self.tapAction()
+        }
     }
     
     @objc private func micTapped() {
@@ -645,7 +655,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         var text = self.currentText
         var isScheduled = false
         var isLate = false
-        if let scheduleTime = self.currentData?.info.scheduleTimestamp {
+        if let info = self.currentData?.info, let scheduleTime = info.scheduleTimestamp {
             isScheduled = true
             if let voiceChatTitle = self.currentData?.info.title {
                 title = voiceChatTitle
@@ -655,15 +665,20 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 text = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: scheduleTime, alwaysShowTime: true, format: HumanReadableStringFormat(dateFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsOnShort($0) }, tomorrowFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTomorrowShort($0) }, todayFormatString: { self.strings.Conversation_ScheduledVoiceChatStartsTodayShort($0) })).string
             }
             
-            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            let elapsedTime = scheduleTime - currentTime
-            if elapsedTime >= 86400 {
-                joinText = scheduledTimeIntervalString(strings: strings, value: elapsedTime)
-            } else if elapsedTime < 0 {
-                joinText = "-\(textForTimeout(value: abs(elapsedTime)))"
-                isLate = true
+            if info.subscribedToScheduled {
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                let elapsedTime = scheduleTime - currentTime
+                if elapsedTime >= 86400 {
+                    joinText = scheduledTimeIntervalString(strings: strings, value: elapsedTime).uppercased()
+                } else if elapsedTime < 0 {
+                    joinText = "-\(textForTimeout(value: abs(elapsedTime)))".uppercased()
+                    isLate = true
+                } else {
+                    joinText = textForTimeout(value: elapsedTime).uppercased()
+                }
             } else {
-                joinText = textForTimeout(value: elapsedTime)
+                //TODO:localize
+                joinText = "Notify Me"
             }
             
             if self.updateTimer == nil {
@@ -691,7 +706,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             self.updateJoinButton()
         }
         
-        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText.uppercased(), font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: isScheduled ? .white : self.theme.chat.inputPanel.actionControlForegroundColor)
+        self.joinButtonTitleNode.attributedText = NSAttributedString(string: joinText, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: isScheduled ? .white : self.theme.chat.inputPanel.actionControlForegroundColor)
         
         let joinButtonTitleSize = self.joinButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
         let joinButtonSize = CGSize(width: joinButtonTitleSize.width + 20.0, height: 28.0)

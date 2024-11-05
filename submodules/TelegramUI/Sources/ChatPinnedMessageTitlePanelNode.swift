@@ -72,7 +72,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var currentLayout: (CGFloat, CGFloat, CGFloat)?
     private var currentMessage: ChatPinnedMessage?
     private var previousMediaReference: AnyMediaReference?
-    private var currentTranslateToLanguage: String?
+    private var currentTranslateToLanguage: (fromLang: String, toLang: String)?
     private let translationDisposable = MetaDisposable()
     
     private var isReplyThread: Bool = false
@@ -496,21 +496,21 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
-        var translateToLanguage: String?
+        var translateToLanguage: (fromLang: String, toLang: String)?
         if let translationState = interfaceState.translationState, translationState.isEnabled {
-            translateToLanguage = normalizeTranslationLanguage(translationState.toLang)
+            translateToLanguage = (normalizeTranslationLanguage(translationState.fromLang), normalizeTranslationLanguage(translationState.toLang))
         }
         
         var currentTranslateToLanguageUpdated = false
-        if self.currentTranslateToLanguage != translateToLanguage {
+        if self.currentTranslateToLanguage?.fromLang != translateToLanguage?.fromLang || self.currentTranslateToLanguage?.toLang != translateToLanguage?.toLang {
             self.currentTranslateToLanguage = translateToLanguage
             currentTranslateToLanguageUpdated = true
         }
         
         if currentTranslateToLanguageUpdated || messageUpdated, let message = interfaceState.pinnedMessage?.message {
-            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage {
-            } else if let translateToLanguage  {
-                self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], toLang: translateToLanguage).startStrict())
+            if let translation = message.attributes.first(where: { $0 is TranslationMessageAttribute }) as? TranslationMessageAttribute, translation.toLang == translateToLanguage?.toLang {
+            } else if let translateToLanguage {
+                self.translationDisposable.set(translateMessageIds(context: self.context, messageIds: [message.id], fromLang: translateToLanguage.fromLang, toLang: translateToLanguage.toLang).startStrict())
             }
         }
         
@@ -522,7 +522,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             
             if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
                 self.dustNode?.update(revealed: false, animated: false)
-                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread, translateToLanguage: translateToLanguage)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread, translateToLanguage: translateToLanguage?.toLang)
             }
         }
         

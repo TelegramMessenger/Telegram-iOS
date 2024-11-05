@@ -244,40 +244,54 @@ public enum ToggleScheduledGroupCallSubscriptionError {
 }
 
 func _internal_toggleScheduledGroupCallSubscription(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, subscribe: Bool) -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> {
-    return account.network.request(Api.functions.phone.toggleGroupCallStartSubscription(call: .inputGroupCall(id: callId, accessHash: accessHash), subscribed: subscribe ? .boolTrue : .boolFalse))
-    |> mapError { error -> ToggleScheduledGroupCallSubscriptionError in
-        return .generic
-    }
-    |> mapToSignal { result -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> in
-        var parsedCall: GroupCallInfo?
-        loop: for update in result.allUpdates {
-            switch update {
-            case let .updateGroupCall(_, call):
-                parsedCall = GroupCallInfo(call)
-                break loop
-            default:
-                break
+    return account.postbox.transaction { transaction -> Void in
+        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+            if let cachedData = cachedData as? CachedChannelData, let activeCall = cachedData.activeCall {
+                return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: true, isStream: activeCall.isStream))
+            } else if let cachedData = cachedData as? CachedGroupData, let activeCall = cachedData.activeCall {
+                return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: true, isStream: activeCall.isStream))
+            } else {
+                return cachedData
             }
+        })
+    }
+    |> castError(ToggleScheduledGroupCallSubscriptionError.self)
+    |> mapToSignal { _ -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> in
+        return account.network.request(Api.functions.phone.toggleGroupCallStartSubscription(call: .inputGroupCall(id: callId, accessHash: accessHash), subscribed: subscribe ? .boolTrue : .boolFalse))
+        |> mapError { error -> ToggleScheduledGroupCallSubscriptionError in
+            return .generic
         }
-        
-        guard let callInfo = parsedCall else {
-            return .fail(.generic)
-        }
-        
-        return account.postbox.transaction { transaction in
-            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
-                } else {
-                    return cachedData
+        |> mapToSignal { result -> Signal<Void, ToggleScheduledGroupCallSubscriptionError> in
+            var parsedCall: GroupCallInfo?
+            loop: for update in result.allUpdates {
+                switch update {
+                case let .updateGroupCall(_, call):
+                    parsedCall = GroupCallInfo(call)
+                    break loop
+                default:
+                    break
                 }
-            })
+            }
             
-            account.stateManager.addUpdates(result)
+            guard let callInfo = parsedCall else {
+                return .fail(.generic)
+            }
+            
+            return account.postbox.transaction { transaction in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
+                    } else {
+                        return cachedData
+                    }
+                })
+                
+                account.stateManager.addUpdates(result)
+            }
+            |> castError(ToggleScheduledGroupCallSubscriptionError.self)
         }
-        |> castError(ToggleScheduledGroupCallSubscriptionError.self)
     }
 }
 
