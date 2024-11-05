@@ -345,7 +345,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += 21.0
             }
             
-            if nameHidden {
+            if nameHidden && incoming {
                 let textFont = Font.regular(13.0)
                 let textColor = theme.list.itemSecondaryTextColor
                 
