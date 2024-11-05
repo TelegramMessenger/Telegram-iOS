@@ -161,7 +161,7 @@ def remote_build(darwin_containers_path, darwin_containers_host, macos_version, 
                 sys.exit(1)
 
         DarwinContainers.run_remote_ssh(credentials=credentials, command='')
-        sys.exit(0)
+        #sys.exit(0)
 
     def handle_stopped():
         pass
