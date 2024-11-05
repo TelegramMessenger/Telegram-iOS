@@ -944,7 +944,9 @@ private func boxedDecryptedMessage(transaction: Transaction, message: Message, g
         if let attribute = attribute as? ReplyMessageAttribute {
             if let message = message.associatedMessages[attribute.messageId] {
                 replyGlobalId = message.globallyUniqueId
-                flags |= (1 << 3)
+                if replyGlobalId != nil {
+                    flags |= (1 << 3)
+                }
                 break
             }
         }

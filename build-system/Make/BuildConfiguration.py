@@ -62,7 +62,7 @@ class BuildConfiguration:
 
 def build_configuration_from_json(path):
     if not os.path.exists(path):
-        print('Could not load build configuration from {}'.format(path))
+        print('Could not load build configuration from non-existing path {}'.format(path))
         sys.exit(1)
     with open(path) as file:
         configuration_dict = json.load(file)

@@ -84,16 +84,22 @@ func _internal_translate_texts(network: Network, texts: [(String, [MessageTextEn
     }
 }
 
-func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Never, TranslationError> {
+func _internal_translateMessages(account: Account, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool) -> Signal<Never, TranslationError> {
     var signals: [Signal<Void, TranslationError>] = []
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(messageIds) {
-        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, toLang: toLang))
+        signals.append(_internal_translateMessagesByPeerId(account: account, peerId: peerId, messageIds: messageIds, fromLang: fromLang, toLang: toLang, enableLocalIfPossible: enableLocalIfPossible))
     }
     return combineLatest(signals)
     |> ignoreValues
 }
 
-private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], toLang: String) -> Signal<Void, TranslationError> {
+public protocol ExperimentalInternalTranslationService: AnyObject {
+    func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError>
+}
+
+public var engineExperimentalInternalTranslationService: ExperimentalInternalTranslationService?
+
+private func _internal_translateMessagesByPeerId(account: Account, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromLang: String?, toLang: String, enableLocalIfPossible: Bool) -> Signal<Void, TranslationError> {
     return account.postbox.transaction { transaction -> (Api.InputPeer?, [Message]) in
         return (transaction.getPeer(peerId).flatMap(apiInputPeer), messageIds.compactMap({ transaction.getMessage($0) }))
     }
@@ -132,21 +138,58 @@ private func _internal_translateMessagesByPeerId(account: Account, peerId: Engin
         if id.isEmpty {
             msgs = .single(nil)
         } else {
-            msgs = account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
-            |> map(Optional.init)
-            |> mapError { error -> TranslationError in
-                if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-                    return .limitExceeded
-                } else if error.errorDescription == "MSG_ID_INVALID" {
-                    return .invalidMessageId
-                } else if error.errorDescription == "INPUT_TEXT_EMPTY" {
-                    return .textIsEmpty
-                } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
-                    return .textTooLong
-                } else if error.errorDescription == "TO_LANG_INVALID" {
-                    return .invalidLanguage
-                } else {
-                    return .generic
+            if enableLocalIfPossible, let engineExperimentalInternalTranslationService, let fromLang {
+                msgs = account.postbox.transaction { transaction -> [MessageId: String] in
+                    var texts: [MessageId: String] = [:]
+                    for messageId in messageIds {
+                        if let message = transaction.getMessage(messageId) {
+                            texts[message.id] = message.text
+                        }
+                    }
+                    return texts
+                }
+                |> castError(TranslationError.self)
+                |> mapToSignal { messageTexts -> Signal<Api.messages.TranslatedText?, TranslationError> in
+                    var mappedTexts: [AnyHashable: String] = [:]
+                    for (id, text) in messageTexts {
+                        mappedTexts[AnyHashable(id)] = text
+                    }
+                    return engineExperimentalInternalTranslationService.translate(texts: mappedTexts, fromLang: fromLang, toLang: toLang)
+                    |> castError(TranslationError.self)
+                    |> mapToSignal { resultTexts -> Signal<Api.messages.TranslatedText?, TranslationError> in
+                        guard let resultTexts else {
+                            return .fail(.generic)
+                        }
+                        var result: [Api.TextWithEntities] = []
+                        for messageId in messageIds {
+                            if let text = resultTexts[AnyHashable(messageId)] {
+                                result.append(.textWithEntities(text: text, entities: []))
+                            } else if let text = messageTexts[messageId] {
+                                result.append(.textWithEntities(text: text, entities: []))
+                            } else {
+                                result.append(.textWithEntities(text: "", entities: []))
+                            }
+                        }
+                        return .single(.translateResult(result: result))
+                    }
+                }
+            } else {
+                msgs = account.network.request(Api.functions.messages.translateText(flags: flags, peer: inputPeer, id: id, text: nil, toLang: toLang))
+                |> map(Optional.init)
+                |> mapError { error -> TranslationError in
+                    if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                        return .limitExceeded
+                    } else if error.errorDescription == "MSG_ID_INVALID" {
+                        return .invalidMessageId
+                    } else if error.errorDescription == "INPUT_TEXT_EMPTY" {
+                        return .textIsEmpty
+                    } else if error.errorDescription == "INPUT_TEXT_TOO_LONG" {
+                        return .textTooLong
+                    } else if error.errorDescription == "TO_LANG_INVALID" {
+                        return .invalidLanguage
+                    } else {
+                        return .generic
+                    }
                 }
             }
         }

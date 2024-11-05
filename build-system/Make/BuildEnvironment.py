@@ -65,6 +65,28 @@ def run_executable_with_output(path, arguments, decode=True, input=None, stderr_
         return output_data
 
 
+def run_executable_with_status(arguments, use_clean_environment=True):
+    executable_path = resolve_executable(arguments[0])
+    if executable_path is None:
+        raise Exception(f'Could not resolve {arguments[0]} to a valid executable file')
+
+    if use_clean_environment:
+        resolved_env = get_clean_env()
+    else:
+        resolved_env = os.environ
+
+    resolved_arguments = [executable_path] + arguments[1:]
+
+    result = subprocess.run(
+        resolved_arguments,
+        env=resolved_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+
+    return result.returncode
+
+
 def call_executable(arguments, use_clean_environment=True, check_result=True):
     executable_path = resolve_executable(arguments[0])
     if executable_path is None:
@@ -135,7 +157,9 @@ class BuildEnvironmentVersions:
             if configuration_dict['bazel'] is None:
                 raise Exception('Missing bazel version in {}'.format(configuration_path))
             else:
-                self.bazel_version = configuration_dict['bazel']
+                bazel_version, bazel_version_sha256 = configuration_dict['bazel'].split(':')
+                self.bazel_version = bazel_version
+                self.bazel_version_sha256 = bazel_version_sha256
             if configuration_dict['xcode'] is None:
                 raise Exception('Missing xcode version in {}'.format(configuration_path))
             else:

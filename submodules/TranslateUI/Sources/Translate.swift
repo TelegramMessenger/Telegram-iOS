@@ -5,6 +5,9 @@ import SwiftSignalKit
 import AccountContext
 import NaturalLanguage
 import TelegramCore
+import SwiftUI
+import Translation
+import Combine
 
 // Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
 private final class LinkHelperClass: NSObject {
@@ -212,4 +215,191 @@ public func systemLanguageCodes() -> [String] {
         languages = Array(languages.prefix(1))
     }
     return languages
+}
+
+@available(iOS 13.0, *)
+class ExternalTranslationTrigger: ObservableObject {
+    @Published var shouldInvalidate: Int = 0
+}
+
+@available(iOS 18.0, *)
+private struct TranslationViewImpl: View {
+    @State private var configuration: TranslationSession.Configuration?
+    @ObservedObject var externalCondition: ExternalTranslationTrigger
+    private let taskContainer: Atomic<ExperimentalInternalTranslationServiceImpl.TranslationTaskContainer>
+    
+    init(externalCondition: ExternalTranslationTrigger, taskContainer: Atomic<ExperimentalInternalTranslationServiceImpl.TranslationTaskContainer>) {
+        self.externalCondition = externalCondition
+        self.taskContainer = taskContainer
+    }
+    
+    var body: some View {
+        Text("ABC")
+        .onChange(of: self.externalCondition.shouldInvalidate) { _ in
+            let firstTaskLanguagePair = self.taskContainer.with { taskContainer -> (String, String)? in
+                if let firstTask = taskContainer.tasks.first {
+                    return (firstTask.fromLang, firstTask.toLang)
+                } else {
+                    return nil
+                }
+            }
+            
+            if let firstTaskLanguagePair {
+                if let configuration = self.configuration, configuration.source?.languageCode?.identifier == firstTaskLanguagePair.0, configuration.target?.languageCode?.identifier == firstTaskLanguagePair.1 {
+                    self.configuration?.invalidate()
+                } else {
+                    self.configuration = .init(
+                        source: Locale.Language(identifier: firstTaskLanguagePair.0),
+                        target: Locale.Language(identifier: firstTaskLanguagePair.1)
+                    )
+                }
+            }
+        }
+        .translationTask(self.configuration, action: { session in
+            var task: ExperimentalInternalTranslationServiceImpl.TranslationTask?
+            task = self.taskContainer.with { taskContainer -> ExperimentalInternalTranslationServiceImpl.TranslationTask? in
+                if !taskContainer.tasks.isEmpty {
+                    return taskContainer.tasks.removeFirst()
+                } else {
+                    return nil
+                }
+            }
+            
+            guard let task else {
+                return
+            }
+            
+            do {
+                var nextClientIdentifier: Int = 0
+                var clientIdentifierMap: [String: AnyHashable] = [:]
+                let translationRequests = task.texts.map { key, value in
+                    let id = nextClientIdentifier
+                    nextClientIdentifier += 1
+                    clientIdentifierMap["\(id)"] = key
+                    return TranslationSession.Request(sourceText: value, clientIdentifier: "\(id)")
+                }
+                
+                let responses = try await session.translations(from: translationRequests)
+                var resultMap: [AnyHashable: String] = [:]
+                for response in responses {
+                    if let clientIdentifier = response.clientIdentifier, let originalKey = clientIdentifierMap[clientIdentifier] {
+                        resultMap[originalKey] = "<L>\(response.targetText)"
+                    }
+                }
+                
+                task.completion(resultMap)
+            } catch let e {
+                print("Translation error: \(e)")
+                task.completion(nil)
+            }
+            
+            let firstTaskLanguagePair = self.taskContainer.with { taskContainer -> (String, String)? in
+                if let firstTask = taskContainer.tasks.first {
+                    return (firstTask.fromLang, firstTask.toLang)
+                } else {
+                    return nil
+                }
+            }
+            
+            if let firstTaskLanguagePair {
+                if let configuration = self.configuration, configuration.source?.languageCode?.identifier == firstTaskLanguagePair.0, configuration.target?.languageCode?.identifier == firstTaskLanguagePair.1 {
+                    self.configuration?.invalidate()
+                } else {
+                    self.configuration = .init(
+                        source: Locale.Language(identifier: firstTaskLanguagePair.0),
+                        target: Locale.Language(identifier: firstTaskLanguagePair.1)
+                    )
+                }
+            }
+        })
+    }
+}
+
+@available(iOS 18.0, *)
+public final class ExperimentalInternalTranslationServiceImpl: ExperimentalInternalTranslationService {
+    fileprivate final class TranslationTask {
+        let id: Int
+        let texts: [AnyHashable: String]
+        let fromLang: String
+        let toLang: String
+        let completion: ([AnyHashable: String]?) -> Void
+        
+        init(id: Int, texts: [AnyHashable: String], fromLang: String, toLang: String, completion: @escaping ([AnyHashable: String]?) -> Void) {
+            self.id = id
+            self.texts = texts
+            self.fromLang = fromLang
+            self.toLang = toLang
+            self.completion = completion
+        }
+    }
+    
+    fileprivate final class TranslationTaskContainer {
+        var tasks: [TranslationTask] = []
+        
+        init() {
+        }
+    }
+    
+    private final class Impl {
+        private let hostingController: UIViewController
+        
+        private let taskContainer = Atomic(value: TranslationTaskContainer())
+        private let taskTrigger = ExternalTranslationTrigger()
+        
+        private var nextId: Int = 0
+        
+        init(view: UIView) {
+            self.hostingController = UIHostingController(rootView: TranslationViewImpl(
+                externalCondition: self.taskTrigger,
+                taskContainer: self.taskContainer
+            ))
+            
+            view.addSubview(self.hostingController.view)
+        }
+        
+        func translate(texts: [AnyHashable: String], fromLang: String, toLang: String, onResult: @escaping ([AnyHashable: String]?) -> Void) -> Disposable {
+            let id = self.nextId
+            self.nextId += 1
+            self.taskContainer.with { taskContainer in
+                taskContainer.tasks.append(TranslationTask(
+                    id: id,
+                    texts: texts,
+                    fromLang: fromLang,
+                    toLang: toLang,
+                    completion: { result in
+                        onResult(result)
+                    }
+                ))
+            }
+            self.taskTrigger.shouldInvalidate += 1
+            
+            return ActionDisposable { [weak self] in
+                Queue.mainQueue().async {
+                    guard let self else {
+                        return
+                    }
+                    self.taskContainer.with { taskContainer in
+                        taskContainer.tasks.removeAll(where: { $0.id == id })
+                    }
+                }
+            }
+        }
+    }
+    
+    private let impl: QueueLocalObject<Impl>
+    
+    public init(view: UIView) {
+        self.impl = QueueLocalObject(queue: .mainQueue(), generate: {
+            return Impl(view: view)
+        })
+    }
+    
+    public func translate(texts: [AnyHashable: String], fromLang: String, toLang: String) -> Signal<[AnyHashable: String]?, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.translate(texts: texts, fromLang: fromLang, toLang: toLang, onResult: { result in
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            })
+        }
+    }
 }

@@ -2993,9 +2993,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.activePictureInPictureController = nil
                 self.activePictureInPictureNavigationController = nil
                 
+                let previousPresentationArguments = activePictureInPictureController.presentationArguments
                 activePictureInPictureController.presentationArguments = nil
                 activePictureInPictureNavigationController.currentWindow?.present(activePictureInPictureController, on: .root, blockInteraction: false, completion: {
                 })
+                activePictureInPictureController.presentationArguments = previousPresentationArguments
                 
                 activePictureInPictureController.view.alpha = 1.0
                 activePictureInPictureController.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.35, completion: { _ in
