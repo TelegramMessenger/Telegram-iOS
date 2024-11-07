@@ -63,14 +63,16 @@ public struct BotPaymentInvoice : Equatable {
     public let prices: [BotPaymentPrice]
     public let tip: Tip?
     public let termsInfo: RecurrentInfo?
+    public let subscriptionPeriod: Int32?
     
-    public init(isTest: Bool, requestedFields: BotPaymentInvoiceFields, currency: String, prices: [BotPaymentPrice], tip: Tip?, termsInfo: RecurrentInfo?) {
+    public init(isTest: Bool, requestedFields: BotPaymentInvoiceFields, currency: String, prices: [BotPaymentPrice], tip: Tip?, termsInfo: RecurrentInfo?, subscriptionPeriod: Int32?) {
         self.isTest = isTest
         self.requestedFields = requestedFields
         self.currency = currency
         self.prices = prices
         self.tip = tip
         self.termsInfo = termsInfo
+        self.subscriptionPeriod = subscriptionPeriod
     }
 }
 
@@ -175,7 +177,7 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-        case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, termsUrl):
+        case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, termsUrl, subscriptionPeriod):
             var fields = BotPaymentInvoiceFields()
             if (flags & (1 << 1)) != 0 {
                 fields.insert(.name)
@@ -212,7 +214,7 @@ extension BotPaymentInvoice {
                 case let .labeledPrice(label, amount):
                     return BotPaymentPrice(label: label, amount: amount)
                 }
-            }, tip: parsedTip, termsInfo: termsInfo)
+            }, tip: parsedTip, termsInfo: termsInfo, subscriptionPeriod: subscriptionPeriod)
         }
     }
 }

@@ -114,8 +114,8 @@ public final class TelegramMediaInvoice: Media, Equatable {
         self.currency = currency
         self.totalAmount = totalAmount
         self.startParam = startParam
-        self.flags = flags
         self.extendedMedia = extendedMedia
+        self.flags = flags
         self.version = version
     }
     
@@ -126,8 +126,8 @@ public final class TelegramMediaInvoice: Media, Equatable {
         self.totalAmount = decoder.decodeInt64ForKey("ta", orElse: 0)
         self.startParam = decoder.decodeStringForKey("sp", orElse: "")
         self.photo = decoder.decodeObjectForKey("p") as? TelegramMediaWebFile
-        self.flags = TelegramMediaInvoiceFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         self.extendedMedia = decoder.decodeObjectForKey("m", decoder: { TelegramExtendedMedia(decoder: $0) }) as? TelegramExtendedMedia
+        self.flags = TelegramMediaInvoiceFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0))
         
         if let receiptMessageIdPeerId = decoder.decodeOptionalInt64ForKey("r.p") as Int64?, let receiptMessageIdNamespace = decoder.decodeOptionalInt32ForKey("r.n") as Int32?, let receiptMessageIdId = decoder.decodeOptionalInt32ForKey("r.i") as Int32? {
             self.receiptMessageId = MessageId(peerId: PeerId(receiptMessageIdPeerId), namespace: receiptMessageIdNamespace, id: receiptMessageIdId)

@@ -554,7 +554,7 @@ private extension StarsContext.State.Transaction {
 private extension StarsContext.State.Subscription {
     init?(apiSubscription: Api.StarsSubscription, transaction: Transaction) {
         switch apiSubscription {
-        case let .starsSubscription(apiFlags, id, apiPeer, untilDate, pricing, inviteHash):
+        case let .starsSubscription(apiFlags, id, apiPeer, untilDate, pricing, inviteHash, title, photo, invoiceSlug):
             guard let peer = transaction.getPeer(apiPeer.peerId) else {
                 return nil
             }
@@ -568,7 +568,7 @@ private extension StarsContext.State.Subscription {
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.missingBalance)
             }
-            self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing), inviteHash: inviteHash)
+            self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing), inviteHash: inviteHash, title: title, photo: photo.flatMap(TelegramMediaWebFile.init), invoiceSlug: invoiceSlug)
         }
     }
 }
@@ -727,6 +727,9 @@ public final class StarsContext {
             public let untilDate: Int32
             public let pricing: StarsSubscriptionPricing
             public let inviteHash: String?
+            public let title: String?
+            public let photo: TelegramMediaWebFile?
+            public let invoiceSlug: String?
             
             public init(
                 flags: Flags,
@@ -734,7 +737,10 @@ public final class StarsContext {
                 peer: EnginePeer,
                 untilDate: Int32,
                 pricing: StarsSubscriptionPricing,
-                inviteHash: String?
+                inviteHash: String?,
+                title: String?,
+                photo: TelegramMediaWebFile?,
+                invoiceSlug: String?
             ) {
                 self.flags = flags
                 self.id = id
@@ -742,6 +748,9 @@ public final class StarsContext {
                 self.untilDate = untilDate
                 self.pricing = pricing
                 self.inviteHash = inviteHash
+                self.title = title
+                self.photo = photo
+                self.invoiceSlug = invoiceSlug
             }
             
             public static func == (lhs: Subscription, rhs: Subscription) -> Bool {
@@ -761,6 +770,15 @@ public final class StarsContext {
                     return false
                 }
                 if lhs.inviteHash != rhs.inviteHash {
+                    return false
+                }
+                if lhs.title != rhs.title {
+                    return false
+                }
+                if lhs.photo != rhs.photo {
+                    return false
+                }
+                if lhs.invoiceSlug != rhs.invoiceSlug {
                     return false
                 }
                 return true
@@ -1192,7 +1210,7 @@ private final class StarsSubscriptionsContextImpl {
             } else {
                 updatedFlags.remove(.isCancelled)
             }
-            let updatedSubscription = StarsContext.State.Subscription(flags: updatedFlags, id: subscription.id, peer: subscription.peer, untilDate: subscription.untilDate, pricing: subscription.pricing, inviteHash: subscription.inviteHash)
+            let updatedSubscription = StarsContext.State.Subscription(flags: updatedFlags, id: subscription.id, peer: subscription.peer, untilDate: subscription.untilDate, pricing: subscription.pricing, inviteHash: subscription.inviteHash, title: subscription.title, photo: subscription.photo, invoiceSlug: subscription.invoiceSlug)
             updatedState.subscriptions[index] = updatedSubscription
         }
         self.updateState(updatedState)

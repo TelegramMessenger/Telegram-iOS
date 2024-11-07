@@ -645,6 +645,7 @@ public extension Api {
         case updateBotPurchasedPaidMedia(userId: Int64, payload: String, qts: Int32)
         case updateBotShippingQuery(queryId: Int64, userId: Int64, payload: Buffer, shippingAddress: Api.PostAddress)
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
+        case updateBotSubscriptionExpire(userId: Int64, payload: String, untilDate: Int32, qts: Int32)
         case updateBotWebhookJSON(data: Api.DataJSON)
         case updateBotWebhookJSONQuery(queryId: Int64, data: Api.DataJSON, timeout: Int32)
         case updateBroadcastRevenueTransactions(peer: Api.Peer, balances: Api.BroadcastRevenueBalances)
@@ -967,6 +968,15 @@ public extension Api {
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     stopped.serialize(buffer, true)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateBotSubscriptionExpire(let userId, let payload, let untilDate, let qts):
+                    if boxed {
+                        buffer.appendInt32(-1464975695)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeString(payload, buffer: buffer, boxed: false)
+                    serializeInt32(untilDate, buffer: buffer, boxed: false)
                     serializeInt32(qts, buffer: buffer, boxed: false)
                     break
                 case .updateBotWebhookJSON(let data):
@@ -2041,6 +2051,8 @@ public extension Api {
                 return ("updateBotShippingQuery", [("queryId", queryId as Any), ("userId", userId as Any), ("payload", payload as Any), ("shippingAddress", shippingAddress as Any)])
                 case .updateBotStopped(let userId, let date, let stopped, let qts):
                 return ("updateBotStopped", [("userId", userId as Any), ("date", date as Any), ("stopped", stopped as Any), ("qts", qts as Any)])
+                case .updateBotSubscriptionExpire(let userId, let payload, let untilDate, let qts):
+                return ("updateBotSubscriptionExpire", [("userId", userId as Any), ("payload", payload as Any), ("untilDate", untilDate as Any), ("qts", qts as Any)])
                 case .updateBotWebhookJSON(let data):
                 return ("updateBotWebhookJSON", [("data", data as Any)])
                 case .updateBotWebhookJSONQuery(let queryId, let data, let timeout):
@@ -2727,6 +2739,26 @@ public extension Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateBotStopped(userId: _1!, date: _2!, stopped: _3!, qts: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotSubscriptionExpire(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.Update.updateBotSubscriptionExpire(userId: _1!, payload: _2!, untilDate: _3!, qts: _4!)
             }
             else {
                 return nil

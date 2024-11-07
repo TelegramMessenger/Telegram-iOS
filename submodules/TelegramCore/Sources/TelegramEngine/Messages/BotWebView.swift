@@ -56,6 +56,9 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }
         }
@@ -103,6 +106,9 @@ func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: Pee
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }
         }
@@ -128,6 +134,7 @@ public struct RequestWebViewResult {
         }
         
         public static let fullSize = Flags(rawValue: 1 << 0)
+        public static let fullScreen = Flags(rawValue: 1 << 1)
     }
     
     public let flags: Flags
@@ -237,6 +244,9 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
                 if (webViewFlags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 let keepAlive: Signal<Never, KeepWebViewError>?
                 if let queryId {
                     keepAlive = keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId, threadId: threadId, sendAs: nil)
@@ -322,6 +332,9 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
                 var resultFlags: RequestWebViewResult.Flags = []
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
+                }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
                 }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }

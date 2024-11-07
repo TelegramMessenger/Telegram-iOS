@@ -416,13 +416,13 @@ public extension Api {
 }
 public extension Api {
     enum Invoice: TypeConstructorDescription {
-        case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice], maxTipAmount: Int64?, suggestedTipAmounts: [Int64]?, termsUrl: String?)
+        case invoice(flags: Int32, currency: String, prices: [Api.LabeledPrice], maxTipAmount: Int64?, suggestedTipAmounts: [Int64]?, termsUrl: String?, subscriptionPeriod: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .invoice(let flags, let currency, let prices, let maxTipAmount, let suggestedTipAmounts, let termsUrl):
+                case .invoice(let flags, let currency, let prices, let maxTipAmount, let suggestedTipAmounts, let termsUrl, let subscriptionPeriod):
                     if boxed {
-                        buffer.appendInt32(1572428309)
+                        buffer.appendInt32(77522308)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
@@ -438,14 +438,15 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }}
                     if Int(flags) & Int(1 << 10) != 0 {serializeString(termsUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 11) != 0 {serializeInt32(subscriptionPeriod!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .invoice(let flags, let currency, let prices, let maxTipAmount, let suggestedTipAmounts, let termsUrl):
-                return ("invoice", [("flags", flags as Any), ("currency", currency as Any), ("prices", prices as Any), ("maxTipAmount", maxTipAmount as Any), ("suggestedTipAmounts", suggestedTipAmounts as Any), ("termsUrl", termsUrl as Any)])
+                case .invoice(let flags, let currency, let prices, let maxTipAmount, let suggestedTipAmounts, let termsUrl, let subscriptionPeriod):
+                return ("invoice", [("flags", flags as Any), ("currency", currency as Any), ("prices", prices as Any), ("maxTipAmount", maxTipAmount as Any), ("suggestedTipAmounts", suggestedTipAmounts as Any), ("termsUrl", termsUrl as Any), ("subscriptionPeriod", subscriptionPeriod as Any)])
     }
     }
     
@@ -466,14 +467,17 @@ public extension Api {
             } }
             var _6: String?
             if Int(_1!) & Int(1 << 10) != 0 {_6 = parseString(reader) }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 11) != 0 {_7 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 8) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 8) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 10) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Invoice.invoice(flags: _1!, currency: _2!, prices: _3!, maxTipAmount: _4, suggestedTipAmounts: _5, termsUrl: _6)
+            let _c7 = (Int(_1!) & Int(1 << 11) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Invoice.invoice(flags: _1!, currency: _2!, prices: _3!, maxTipAmount: _4, suggestedTipAmounts: _5, termsUrl: _6, subscriptionPeriod: _7)
             }
             else {
                 return nil

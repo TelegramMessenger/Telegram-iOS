@@ -858,13 +858,13 @@ public extension Api {
 }
 public extension Api {
     enum StarsSubscription: TypeConstructorDescription {
-        case starsSubscription(flags: Int32, id: String, peer: Api.Peer, untilDate: Int32, pricing: Api.StarsSubscriptionPricing, chatInviteHash: String?)
+        case starsSubscription(flags: Int32, id: String, peer: Api.Peer, untilDate: Int32, pricing: Api.StarsSubscriptionPricing, chatInviteHash: String?, title: String?, photo: Api.WebDocument?, invoiceSlug: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash):
+                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash, let title, let photo, let invoiceSlug):
                     if boxed {
-                        buffer.appendInt32(1401868056)
+                        buffer.appendInt32(779004698)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
@@ -872,14 +872,17 @@ public extension Api {
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
                     pricing.serialize(buffer, true)
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(chatInviteHash!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {photo!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeString(invoiceSlug!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash):
-                return ("starsSubscription", [("flags", flags as Any), ("id", id as Any), ("peer", peer as Any), ("untilDate", untilDate as Any), ("pricing", pricing as Any), ("chatInviteHash", chatInviteHash as Any)])
+                case .starsSubscription(let flags, let id, let peer, let untilDate, let pricing, let chatInviteHash, let title, let photo, let invoiceSlug):
+                return ("starsSubscription", [("flags", flags as Any), ("id", id as Any), ("peer", peer as Any), ("untilDate", untilDate as Any), ("pricing", pricing as Any), ("chatInviteHash", chatInviteHash as Any), ("title", title as Any), ("photo", photo as Any), ("invoiceSlug", invoiceSlug as Any)])
     }
     }
     
@@ -900,14 +903,25 @@ public extension Api {
             }
             var _6: String?
             if Int(_1!) & Int(1 << 3) != 0 {_6 = parseString(reader) }
+            var _7: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_7 = parseString(reader) }
+            var _8: Api.WebDocument?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.WebDocument
+            } }
+            var _9: String?
+            if Int(_1!) & Int(1 << 6) != 0 {_9 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.StarsSubscription.starsSubscription(flags: _1!, id: _2!, peer: _3!, untilDate: _4!, pricing: _5!, chatInviteHash: _6)
+            let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 5) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 6) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.StarsSubscription.starsSubscription(flags: _1!, id: _2!, peer: _3!, untilDate: _4!, pricing: _5!, chatInviteHash: _6, title: _7, photo: _8, invoiceSlug: _9)
             }
             else {
                 return nil
