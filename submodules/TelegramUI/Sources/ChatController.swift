@@ -2880,7 +2880,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let sourceMessageId = message.forwardInfo?.sourceMessageId {
                                     messageId = sourceMessageId
                                 }
-                                let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: paidContent.amount, startParam: "", extendedMedia: .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: nil), flags: [], version: 0)
+                                let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: paidContent.amount, startParam: "", extendedMedia: .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: nil), subscriptionPeriod: nil, flags: [], version: 0)
                                 let controller = strongSelf.context.sharedContext.makeStarsTransferScreen(context: strongSelf.context, starsContext: starsContext, invoice: invoice, source: .message(messageId), extendedMedia: paidContent.extendedMedia, inputData: starsInputData, completion: { _ in })
                                 strongSelf.push(controller)
                                 

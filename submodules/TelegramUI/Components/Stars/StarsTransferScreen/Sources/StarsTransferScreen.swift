@@ -300,11 +300,7 @@ private final class SheetContent: CombinedComponent {
                 if let photo = component.invoice.photo {
                     subject = .photo(photo)
                 } else {
-                    if "".isEmpty {
-                        subject = .color(.lightGray)
-                    } else {
-                        subject = .transactionPeer(.peer(peer))
-                    }
+                    subject = .transactionPeer(.peer(peer))
                 }
             } else {
                 subject = .none
@@ -318,7 +314,7 @@ private final class SheetContent: CombinedComponent {
             var isSubscription = false
             if case .starsChatSubscription = component.source {
                 isSubscription = true
-            } else if "".isEmpty {
+            } else if let _ = component.invoice.subscriptionPeriod {
                 isSubscription = true
             }
             let star = star.update(
@@ -415,8 +411,8 @@ private final class SheetContent: CombinedComponent {
             let infoText: String
             if case .starsChatSubscription = context.component.source {
                 infoText = strings.Stars_Transfer_SubscribeInfo(state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_Info_Stars(Int32(amount))).string
-            } else if "".isEmpty {
-                infoText = "Do you want to subscribe to **Subscription Name** in **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
+            } else if let _ = component.invoice.subscriptionPeriod {
+                infoText = "Do you want to subscribe to **\(component.invoice.title)** in **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
             } else if !component.extendedMedia.isEmpty {
                 var description: String = ""
                 var photoCount: Int32 = 0
@@ -541,7 +537,7 @@ private final class SheetContent: CombinedComponent {
                 //TODO:localize
                 buttonAttributedString = NSMutableAttributedString(string: "Subscribe for   #  \(amountString) / month", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
                 //buttonAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Subscribe, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
-            } else if "".isEmpty {
+            } else if let _ = component.invoice.subscriptionPeriod {
                 buttonAttributedString = NSMutableAttributedString(string: "Subscribe for   #  \(amountString) / month", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             } else {
                 buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)

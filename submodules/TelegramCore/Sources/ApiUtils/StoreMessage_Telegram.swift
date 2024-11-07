@@ -395,7 +395,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             if (flags & (1 << 1)) != 0 {
                 parsedFlags.insert(.shippingAddressRequested)
             }
-            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, extendedMedia: apiExtendedMedia.flatMap({ TelegramExtendedMedia(apiExtendedMedia: $0, peerId: peerId) }), flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), nil, nil, nil, nil)
+            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, extendedMedia: apiExtendedMedia.flatMap({ TelegramExtendedMedia(apiExtendedMedia: $0, peerId: peerId) }), subscriptionPeriod: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), nil, nil, nil, nil)
         case let .messageMediaPoll(poll, results):
             switch poll {
             case let .poll(id, flags, question, answers, closePeriod, _):
