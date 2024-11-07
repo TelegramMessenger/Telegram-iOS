@@ -638,8 +638,11 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
             self.webView.reloadInputViews()
         }
         
-        self.webView.customBottomInset = safeInsets.bottom * (1.0 - insets.bottom / fullInsets.bottom)
-
+        if fullInsets.bottom.isZero {
+            self.webView.customBottomInset = safeInsets.bottom
+        } else {
+            self.webView.customBottomInset = safeInsets.bottom * (1.0 - insets.bottom / fullInsets.bottom)
+        }
 //        self.webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
 //        self.webView.scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets(top: 0.0, left: -insets.left, bottom: 0.0, right: -insets.right)
         

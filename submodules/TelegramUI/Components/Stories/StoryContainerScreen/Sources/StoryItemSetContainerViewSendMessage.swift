@@ -12,7 +12,6 @@ import MediaPickerUI
 import LegacyMediaPickerUI
 import LocationUI
 import ChatEntityKeyboardInputNode
-import WebUI
 import ChatScheduleTimeController
 import TextFormat
 import PhoneNumberFormat
@@ -1808,37 +1807,38 @@ final class StoryItemSetContainerSendMessage {
                         //TODO:gift controller
                         break
                     case let .app(bot):
-                        let params = WebAppParameters(source: .attachMenu, peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: false, fullSize: true)
-                        let theme = component.theme
-                        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
-                        let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)
-                        controller.openUrl = { [weak self] url, _, _, _ in
-                            guard let self else {
-                                return
-                            }
-                            let _ = self
-                            //self?.openUrl(url, concealed: true, forceExternal: true)
-                        }
-                        controller.getNavigationController = { [weak view] in
-                            guard let view, let controller = view.component?.controller() else {
-                                return nil
-                            }
-                            return controller.navigationController as? NavigationController
-                        }
-                        controller.completion = { [weak self] in
-                            guard let self else {
-                                return
-                            }
-                            let _ = self
-                            /*if let strongSelf = self {
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
-                                })
-                                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                            }*/
-                        }
-                        completion(controller, controller.mediaPickerContext)
-                        self.controllerNavigationDisposable.set(nil)
+                        let _ = bot
+//                        let params = WebAppParameters(source: .attachMenu, peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: false, fullSize: true)
+//                        let theme = component.theme
+//                        let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+//                        let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)
+//                        controller.openUrl = { [weak self] url, _, _, _ in
+//                            guard let self else {
+//                                return
+//                            }
+//                            let _ = self
+//                            //self?.openUrl(url, concealed: true, forceExternal: true)
+//                        }
+//                        controller.getNavigationController = { [weak view] in
+//                            guard let view, let controller = view.component?.controller() else {
+//                                return nil
+//                            }
+//                            return controller.navigationController as? NavigationController
+//                        }
+//                        controller.completion = { [weak self] in
+//                            guard let self else {
+//                                return
+//                            }
+//                            let _ = self
+//                            /*if let strongSelf = self {
+//                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+//                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil) }
+//                                })
+//                                strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+//                            }*/
+//                        }
+//                        completion(controller, controller.mediaPickerContext)
+//                        self.controllerNavigationDisposable.set(nil)
                     default:
                         break
                     }

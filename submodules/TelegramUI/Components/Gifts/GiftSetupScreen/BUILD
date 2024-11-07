@@ -44,6 +44,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/InAppPurchaseManager",
         "//submodules/Components/BlurredBackgroundComponent",
+        "//submodules/ProgressNavigationButtonNode",
     ],
     visibility = [
         "//visibility:public",

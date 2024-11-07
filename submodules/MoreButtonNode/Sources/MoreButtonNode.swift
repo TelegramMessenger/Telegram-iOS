@@ -13,18 +13,27 @@ public final class MoreButtonNode: ASDisplayNode {
             case search
         }
         
+        private let encircled: Bool
         private let duration: Double = 0.21
         public var iconState: State = .search
         
-        init() {
-            super.init(size: CGSize(width: 30.0, height: 30.0))
+        init(size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool) {
+            self.encircled = encircled
             
-            self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 90, endFrame: 90), duration: 0.0))
+            super.init(size: size)
+            
+            if self.encircled {
+                self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 90, endFrame: 90), duration: 0.0))
+            } else {
+                self.iconState = .more
+                self.trackTo(item: ManagedAnimationItem(source: .local("anim_baremoredots"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
+            }
         }
             
         func play() {
             if case .more = self.iconState {
-                self.trackTo(item: ManagedAnimationItem(source: .local("anim_moredots"), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
+                let animationName = self.encircled ? "anim_moredots" : "anim_baremoredots"
+                self.trackTo(item: ManagedAnimationItem(source: .local(animationName), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
             }
         }
         
@@ -81,6 +90,7 @@ public final class MoreButtonNode: ASDisplayNode {
             self.update()
         }
     }
+    private let size: CGSize
     
     public func updateColor(_ color: UIColor?, transition: ContainedViewLayoutTransition) {
         self.color = color
@@ -104,15 +114,16 @@ public final class MoreButtonNode: ASDisplayNode {
         self.iconNode.customColor = color
     }
     
-    public init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme, size: CGSize = CGSize(width: 30.0, height: 30.0), encircled: Bool = true) {
         self.theme = theme
+        self.size = size
         
         self.contextSourceNode = ContextReferenceContentNode()
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         
         self.buttonNode = HighlightableButtonNode()
-        self.iconNode = MoreIconNode()
+        self.iconNode = MoreIconNode(size: size, encircled: encircled)
         self.iconNode.customColor = self.theme.rootController.navigationBar.buttonColor
         
         super.init()
@@ -143,7 +154,7 @@ public final class MoreButtonNode: ASDisplayNode {
     }
         
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        let animationSize = CGSize(width: 30.0, height: 30.0)
+        let animationSize = self.size
         let inset: CGFloat = 0.0
         let iconFrame = CGRect(origin: CGPoint(x: inset + 6.0, y: floor((constrainedSize.height - animationSize.height) / 2.0) + 1.0), size: animationSize)
         

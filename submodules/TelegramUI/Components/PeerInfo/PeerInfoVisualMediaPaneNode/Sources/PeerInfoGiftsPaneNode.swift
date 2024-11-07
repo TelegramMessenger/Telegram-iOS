@@ -317,14 +317,18 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     return nil
                 })
                 
-                let scrollOffset: CGFloat = max(0.0, size.height - params.visibleHeight)
-                                 
+                var scrollOffset: CGFloat = max(0.0, size.height - params.visibleHeight)
+                
                 let buttonSideInset = sideInset + 16.0
                 let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
+                let bottomPanelHeight = bottomInset + buttonSize.height + 8.0
+                if params.visibleHeight < 110.0 {
+                    scrollOffset -= bottomPanelHeight
+                }
+                
                 transition.setFrame(view: unlockButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
                 let _ = unlockButton.updateLayout(width: buttonSize.width, transition: .immediate)
                 
-                let bottomPanelHeight = bottomInset + buttonSize.height + 8.0
                 transition.setFrame(view: unlockBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: bottomPanelHeight))
                 unlockBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
                 transition.setFrame(view: unlockSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomInset - buttonSize.height - 8.0 - scrollOffset, width: size.width, height: UIScreenPixel))

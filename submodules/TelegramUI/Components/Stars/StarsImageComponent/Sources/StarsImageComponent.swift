@@ -254,6 +254,7 @@ public final class StarsImageComponent: Component {
         case extendedMedia([TelegramExtendedMedia])
         case transactionPeer(StarsContext.State.Transaction.Peer)
         case gift(Int64)
+        case color(UIColor)
         
         public static func == (lhs: StarsImageComponent.Subject, rhs: StarsImageComponent.Subject) -> Bool {
             switch lhs {
@@ -293,6 +294,12 @@ public final class StarsImageComponent: Component {
                 } else {
                     return false
                 }
+            case let .color(lhsColor):
+                if case let .color(rhsColor) = rhs, lhsColor == rhsColor {
+                    return true
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -307,6 +314,7 @@ public final class StarsImageComponent: Component {
     public let diameter: CGFloat
     public let backgroundColor: UIColor
     public let icon: Icon?
+    public let value: Int64?
     public let action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
     
     public init(
@@ -316,6 +324,7 @@ public final class StarsImageComponent: Component {
         diameter: CGFloat,
         backgroundColor: UIColor,
         icon: Icon? = nil,
+        value: Int64? = nil,
         action: ((@escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)? = nil
     ) {
         self.context = context
@@ -324,6 +333,7 @@ public final class StarsImageComponent: Component {
         self.diameter = diameter
         self.backgroundColor = backgroundColor
         self.icon = icon
+        self.value = value
         self.action = action
     }
     
@@ -344,6 +354,9 @@ public final class StarsImageComponent: Component {
             return false
         }
         if lhs.icon != rhs.icon {
+            return false
+        }
+        if lhs.value != rhs.value {
             return false
         }
         return true
@@ -368,10 +381,14 @@ public final class StarsImageComponent: Component {
         private var dustNode: MediaDustNode?
         private var button: UIControl?
         
+        private var amountIconView: UIImageView?
+        private var amountBackgroundView = ComponentView<Empty>()
+        private let amountView = ComponentView<Empty>()
+        
         private var animationNode: AnimatedStickerNode?
         
         private var lockView: UIImageView?
-        private var countView = ComponentView<Empty>()
+        private let countView = ComponentView<Empty>()
         
         private let fetchDisposable = MetaDisposable()
         private var hiddenMediaDisposable: Disposable?
@@ -471,6 +488,21 @@ public final class StarsImageComponent: Component {
             switch component.subject {
             case .none:
                 break
+            case let .color(color):
+                let imageNode: TransformImageNode
+                if let current = self.imageNode {
+                    imageNode = current
+                } else {
+                    imageNode = TransformImageNode()
+                    imageNode.contentAnimations = [.firstUpdate, .subsequentUpdates]
+                    containerNode.view.addSubview(imageNode.view)
+                    self.imageNode = imageNode
+                    
+                    imageNode.setSignal(solidColorImage(color))
+                }
+
+                imageNode.frame = imageFrame
+                imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 16.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: component.theme.list.mediaPlaceholderColor))()
             case let .photo(photo):
                 let imageNode: TransformImageNode
                 if let current = self.imageNode {
@@ -871,6 +903,62 @@ public final class StarsImageComponent: Component {
                 smallIconView.removeFromSuperview()
                 self.smallIconOutlineView = nil
                 smallIconOutlineView.removeFromSuperview()
+            }
+            
+            if let amount = component.value {
+                let smallIconView: UIImageView
+                if let current = self.amountIconView {
+                    smallIconView = current
+                } else {
+                    smallIconView = UIImageView()
+                    self.amountIconView = smallIconView
+                    
+                    smallIconView.image = UIImage(bundleImageName: "Premium/SendStarsPeerBadgeStarIcon")?.withRenderingMode(.alwaysTemplate)
+                    smallIconView.tintColor = .white
+                }
+                
+                let countSize = self.amountView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        Text(text: "\(amount)", font: Font.with(size: 12.0, design: .round, weight: .bold), color: .white)
+                    ),
+                    environment: {},
+                    containerSize: imageFrame.size
+                )
+                
+                let iconSize = CGSize(width: 11.0, height: 11.0)
+                let iconSpacing: CGFloat = 1.0
+                
+                let totalLabelWidth = iconSize.width + iconSpacing + countSize.width
+                let iconFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - totalLabelWidth) / 2.0), y: imageFrame.maxY - countSize.height + 4.0), size: iconSize)
+                smallIconView.frame = iconFrame
+                
+                let countFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - totalLabelWidth) / 2.0) + iconSize.width + iconSpacing, y: imageFrame.maxY - countSize.height + 2.0), size: countSize)
+                       
+                let amountBackgroundFrame = CGRect(origin: CGPoint(x: imageFrame.minX + floorToScreenPixels((imageFrame.width - totalLabelWidth) / 2.0) - 7.0, y: imageFrame.maxY - countSize.height - 3.0), size: CGSize(width: totalLabelWidth + 14.0, height: countFrame.height + 10.0))
+                
+                let _ = self.amountBackgroundView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        RoundedRectangle(colors: [UIColor(rgb: 0xffaa01)], cornerRadius: amountBackgroundFrame.height / 2.0, gradientDirection: .horizontal, stroke: 2.0 - UIScreenPixel, strokeColor: component.backgroundColor, size: amountBackgroundFrame.size)
+                    ),
+                    environment: {},
+                    containerSize: amountBackgroundFrame.size
+                )
+                if let backgroundView = self.amountBackgroundView.view {
+                    if backgroundView.superview == nil {
+                        containerNode.view.addSubview(backgroundView)
+                    }
+                    backgroundView.frame = amountBackgroundFrame
+                }
+                
+                if let countView = self.amountView.view {
+                    if countView.superview == nil {
+                        containerNode.view.addSubview(countView)
+                        containerNode.view.addSubview(smallIconView)
+                    }
+                    countView.frame = countFrame
+                }
             }
             
             if let _ = component.action {

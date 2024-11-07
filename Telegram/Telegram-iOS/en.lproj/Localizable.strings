@@ -13218,3 +13218,6 @@ Sorry for the inconvenience.";
 "Gift.Convert.Period.Unavailable.Text" = "Sorry, you can't convert this gift.\n\nStars can only be claimed within %@ after receiving a gift.";
 "Gift.Convert.Period.Unavailable.Days_1" = "%@ day";
 "Gift.Convert.Period.Unavailable.Days_any" = "%@ days";
+
+"Gift.Send.TitleTo" = "Gift to %@";
+"Gift.Send.SendShort" = "Send";

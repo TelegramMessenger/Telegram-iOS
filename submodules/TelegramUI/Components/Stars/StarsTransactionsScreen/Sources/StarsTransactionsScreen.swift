@@ -698,8 +698,33 @@ final class StarsTransactionsScreenComponent: Component {
                             isExpired = true
                         }
                     }
+                    
+                    if let title = subscription.title {
+                        let nameComponent = AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: title,
+                                font: Font.regular(fontBaseDisplaySize * 16.0 / 17.0),
+                                textColor: environment.theme.list.itemPrimaryTextColor
+                            ))
+                        ))
+                        var nameGroupComponent: AnyComponent<Empty>
+                        if let _ = subscription.photo {
+                            nameGroupComponent = AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(RoundedRectangle(color: .lightGray, cornerRadius: 3.0, size: CGSize(width: 19.0, height: 19.0)))),
+                                    AnyComponentWithIdentity(id: AnyHashable(1), component: nameComponent)
+                                ], spacing: 6.0)
+                            )
+                        } else {
+                            nameGroupComponent = nameComponent
+                        }
+                        titleComponents.append(
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: nameGroupComponent)
+                        )
+                    }
+                    
                     titleComponents.append(
-                        AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                        AnyComponentWithIdentity(id: AnyHashable(2), component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
                                 string: dateText,
                                 font: Font.regular(floor(fontBaseDisplaySize * 15.0 / 17.0)),

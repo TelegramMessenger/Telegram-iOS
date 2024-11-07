@@ -103,12 +103,18 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
             }
             
             var fullSize = false
+            var isFullscreen = false
             if isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
-                fullSize = !url.contains("?mode=compact")
+                if url.contains("&mode=fullscreen") {
+                    isFullscreen = true
+                    fullSize = true
+                } else {
+                    fullSize = !url.contains("?mode=compact")
+                }
             }
 
             var presentImpl: ((ViewController, Any?) -> Void)?
-            let params = WebAppParameters(source: .menu, peerId: peer.id, botId: peer.id, botName: botName, botVerified: botVerified, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize)
+            let params = WebAppParameters(source: .menu, peerId: peer.id, botId: peer.id, botName: botName, botVerified: botVerified, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: fullSize, isFullscreen: isFullscreen)
             let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, forceUpdate, commit in
                 ChatControllerImpl.botOpenUrl(context: context, peerId: peer.id, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
                     presentImpl?(c, a)
@@ -196,7 +202,7 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                 } else {
                     source = url.isEmpty ? .generic : .simple
                 }
-                let params = WebAppParameters(source: source, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: payload, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                let params = WebAppParameters(source: source, peerId: peer.id, botId: botId, botName: botName, botVerified: botVerified, url: result.url, queryId: nil, payload: payload, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen))
                 let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, forceUpdate, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peer.id, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
                         presentImpl?(c, a)
@@ -242,7 +248,7 @@ func openWebAppImpl(context: AccountContext, parentController: ViewController, u
                     return
                 }
                 var presentImpl: ((ViewController, Any?) -> Void)?
-                let params = WebAppParameters(source: .button, peerId: peer.id, botId: peer.id, botName: botName, botVerified: botVerified, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize))
+                let params = WebAppParameters(source: .button, peerId: peer.id, botId: peer.id, botName: botName, botVerified: botVerified, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false, fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen))
                 let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, forceUpdate, commit in
                     ChatControllerImpl.botOpenUrl(context: context, peerId: peer.id, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
                         presentImpl?(c, a)
@@ -472,7 +478,7 @@ public extension ChatControllerImpl {
                         return
                     }
                     let context = strongSelf.context
-                    let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize))
+                    let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen))
                     var presentImpl: ((ViewController, Any?) -> Void)?
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, forceUpdate, commit in
                         ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in

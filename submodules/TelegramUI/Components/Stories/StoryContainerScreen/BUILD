@@ -30,7 +30,6 @@ swift_library(
         "//submodules/MediaPickerUI",
         "//submodules/LegacyMediaPickerUI",
         "//submodules/LocationUI",
-        "//submodules/WebUI",
         "//submodules/TelegramUI/Components/ChatScheduleTimeController",
         "//submodules/TelegramUI/Components/ChatTimerScreen",
         "//submodules/TextFormat",

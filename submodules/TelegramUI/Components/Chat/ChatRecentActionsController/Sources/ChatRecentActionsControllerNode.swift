@@ -1290,7 +1290,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                                 id: subscriptionFormId,
                                                 canSaveCredentials: false,
                                                 passwordMissing: false,
-                                                invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil),
+                                                invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil, subscriptionPeriod: subscriptionPricing.period),
                                                 paymentBotId: channel.id,
                                                 providerId: nil,
                                                 url: nil,

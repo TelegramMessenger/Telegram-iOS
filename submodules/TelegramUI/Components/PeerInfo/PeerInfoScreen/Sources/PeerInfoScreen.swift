@@ -1209,6 +1209,7 @@ private enum InfoSection: Int, CaseIterable {
     case personalChannel
     case peerInfo
     case balances
+    case permissions
     case peerInfoTrailing
     case peerMembers
 }
@@ -1540,7 +1541,23 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 } else {
                     print()
                 }
-                   
+                
+                if let _ = user.botInfo {
+                    //TODO:localize
+                    items[.permissions]!.append(PeerInfoScreenHeaderItem(id: 30, text: "ALLOW ACCESS TO"))
+//                    items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 31, text: "Emoji Status", value: false, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
+//                      
+//                    }))
+                    
+                    if data.webAppPermissions?.location?.isRequested == true {
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: "Geolocation", value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
+                            let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
+                                return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: value))
+                            }.start()
+                        }))
+                    }
+                }
+                
                 if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                     items[currentPeerInfoSection]!.append(PeerInfoScreenDisclosureItem(id: 10, label: .none, text: presentationData.strings.Bot_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
                         interaction.openEditing()
