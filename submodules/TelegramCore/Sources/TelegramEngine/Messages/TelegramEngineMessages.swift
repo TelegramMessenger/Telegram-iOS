@@ -403,6 +403,10 @@ public extension TelegramEngine {
         public func messageReadStats(id: MessageId) -> Signal<MessageReadStats?, NoError> {
             return _internal_messageReadStats(account: self.account, id: id)
         }
+        
+        public func getPreparedInlineMessage(botId: EnginePeer.Id, id: String) -> Signal<PreparedInlineMessage?, NoError> {
+            return _internal_getPreparedInlineMessage(account: self.account, botId: botId, id: id)
+        }
 
         public func requestCancelLiveLocation(ids: [MessageId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
@@ -590,12 +594,12 @@ public extension TelegramEngine {
             return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, source: source, themeParams: themeParams)
         }
         
-        public func requestMainWebView(botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
-            return _internal_requestMainWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, source: source, themeParams: themeParams)
+        public func requestMainWebView(peerId: PeerId, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestMainWebView(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, source: source, themeParams: themeParams)
         }
         
-        public func requestAppWebView(peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
-            return _internal_requestAppWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, appReference: appReference, payload: payload, themeParams: themeParams, compact: compact, allowWrite: allowWrite)
+        public func requestAppWebView(peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, fullscreen: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestAppWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, appReference: appReference, payload: payload, themeParams: themeParams, compact: compact, fullscreen: fullscreen, allowWrite: allowWrite)
         }
                 
         public func sendWebViewData(botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {

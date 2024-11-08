@@ -449,6 +449,7 @@
         }
         
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:_context item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent:_intent != TGMediaAssetsControllerSetSignupProfilePhotoIntent] selectedTab:TGPhotoEditorCropTab];
+        controller.modalPresentationStyle = UIModalPresentationFullScreen;
         controller.stickersContext = self.stickersContext;
         controller.editingContext = self.editingContext;
         controller.didFinishRenderingFullSizeImage = ^(UIImage *resultImage)

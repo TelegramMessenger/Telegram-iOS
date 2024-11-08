@@ -549,7 +549,7 @@ extension ChatContextResultMessage {
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
-                self = .invoice(media: TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: currency, totalAmount: totalAmount, startParam: "", extendedMedia: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), replyMarkup: parsedReplyMarkup)
+                self = .invoice(media: TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: currency, totalAmount: totalAmount, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), replyMarkup: parsedReplyMarkup)
             case let .botInlineMessageMediaWebPage(flags, message, entities, url, replyMarkup):
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
                 if let replyMarkup = replyMarkup {

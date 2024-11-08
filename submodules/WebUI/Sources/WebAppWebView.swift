@@ -92,24 +92,16 @@ function tgBrowserDisconnectObserver() {
 final class WebAppWebView: WKWebView {
     var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
 
-    var customSideInset: CGFloat = 0.0 {
+    var customInsets: UIEdgeInsets = .zero {
         didSet {
-            if self.customSideInset != oldValue {
+            if self.customInsets != oldValue {
                 self.setNeedsLayout()
             }
         }
     }
-    
-    var customBottomInset: CGFloat = 0.0 {
-        didSet {
-            if self.customBottomInset != oldValue {
-                self.setNeedsLayout()
-            }
-        }
-    }
-    
+        
     override var safeAreaInsets: UIEdgeInsets {
-        return UIEdgeInsets(top: 0.0, left: self.customSideInset, bottom: self.customBottomInset, right: self.customSideInset)
+        return UIEdgeInsets(top: self.customInsets.top, left: self.customInsets.left, bottom: self.customInsets.bottom, right: self.customInsets.right)
     }
     
     init(account: Account) {
@@ -241,8 +233,11 @@ final class WebAppWebView: WKWebView {
     }
         
     func updateMetrics(height: CGFloat, isExpanded: Bool, isStable: Bool, transition: ContainedViewLayoutTransition) {
-        let data = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_state_stable:\(isStable ? "true" : "false")}"
-        self.sendEvent(name: "viewport_changed", data: data)
+        let viewportData = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_state_stable:\(isStable ? "true" : "false")}"
+        self.sendEvent(name: "viewport_changed", data: viewportData)
+        
+        let safeInsetsData = "{top:\(self.customInsets.top), bottom:\(self.customInsets.bottom), left:\(self.customInsets.left), right:\(self.customInsets.right)}"
+        self.sendEvent(name: "safe_area_changed", data: safeInsetsData)
     }
     
     var lastTouchTimestamp: Double?

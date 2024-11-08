@@ -48,7 +48,11 @@ public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDate
     }
     
     if let dotIndex = balanceText.range(of: dateTimeFormat.decimalSeparator) {
-        balanceText = String(balanceText[balanceText.startIndex ..< min(balanceText.endIndex, balanceText.index(dotIndex.upperBound, offsetBy: 2))])
+        if let endIndex = balanceText.index(dotIndex.upperBound, offsetBy: 2, limitedBy: balanceText.endIndex) {
+            balanceText = String(balanceText[balanceText.startIndex..<endIndex])
+        } else {
+            balanceText = String(balanceText[balanceText.startIndex..<balanceText.endIndex])
+        }
         
         let integerPartString = balanceText[..<dotIndex.lowerBound]
         if let integerPart = Int32(integerPartString) {

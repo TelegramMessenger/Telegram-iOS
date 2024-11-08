@@ -1,4 +1,50 @@
 public extension Api {
+    enum BusinessGreetingMessage: TypeConstructorDescription {
+        case businessGreetingMessage(shortcutId: Int32, recipients: Api.BusinessRecipients, noActivityDays: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
+                    if boxed {
+                        buffer.appendInt32(-451302485)
+                    }
+                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
+                    recipients.serialize(buffer, true)
+                    serializeInt32(noActivityDays, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
+                return ("businessGreetingMessage", [("shortcutId", shortcutId as Any), ("recipients", recipients as Any), ("noActivityDays", noActivityDays as Any)])
+    }
+    }
+    
+        public static func parse_businessGreetingMessage(_ reader: BufferReader) -> BusinessGreetingMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.BusinessRecipients?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
+            }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BusinessIntro: TypeConstructorDescription {
         case businessIntro(flags: Int32, title: String, description: String, sticker: Api.Document?)
     

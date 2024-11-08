@@ -41,6 +41,13 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/OverlayStatusController",
         "//submodules/TelegramUIPreferences",
+        "//submodules/Components/LottieAnimationComponent",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/Gifts/GiftAnimationComponent",
+        "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
+        "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
+        "//submodules/DeviceLocationManager",
     ],
     visibility = [
         "//visibility:public",

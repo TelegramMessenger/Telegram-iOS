@@ -30,6 +30,7 @@ public protocol MinimizableController: ViewController {
     var isMinimizable: Bool { get }
     var minimizedIcon: UIImage? { get }
     var minimizedProgress: Float? { get }
+    var isFullscreen: Bool { get }
     
     func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?)
     func makeContentSnapshotView() -> UIView?
@@ -41,6 +42,10 @@ public protocol MinimizableController: ViewController {
 }
 
 public extension MinimizableController {
+    var isFullscreen: Bool {
+        return false
+    }
+    
     var minimizedTopEdgeOffset: CGFloat? {
         return nil
     }

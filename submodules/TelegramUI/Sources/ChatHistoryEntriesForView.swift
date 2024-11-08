@@ -668,9 +668,9 @@ func chatHistoryEntriesForView(
     if reverse {
         return (entries.reversed(), currentState)
     } else {
-        #if DEBUG
-        assert(entries.map(\.stableId) == entries.sorted().map(\.stableId))
-        #endif
+//        #if DEBUG
+//        assert(entries.map(\.stableId) == entries.sorted().map(\.stableId))
+//        #endif
         return (entries, currentState)
     }
 }

@@ -282,6 +282,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let translationsDisabled = (userFullFlags & (1 << 23)) != 0
                                         let adsEnabled = (userFullFlags2 & (1 << 7)) != 0
                                         let canViewRevenue = (userFullFlags2 & (1 << 9)) != 0
+                                        let botCanManageEmojiStatus = (userFullFlags2 & (1 << 10)) != 0
 
                                         var flags: CachedUserFlags = previous.flags
                                         if premiumRequired {
@@ -308,6 +309,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             flags.insert(.canViewRevenue)
                                         } else {
                                             flags.remove(.canViewRevenue)
+                                        }
+                                        if botCanManageEmojiStatus {
+                                            flags.insert(.botCanManageEmojiStatus)
+                                        } else {
+                                            flags.remove(.botCanManageEmojiStatus)
                                         }
                                     
                                         let callsPrivate = (userFullFlags & (1 << 5)) != 0
@@ -446,7 +452,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 var botInfos: [CachedPeerBotInfo] = []
                                 for botInfo in chatFullBotInfo ?? [] {
                                     switch botInfo {
-                                    case let .botInfo(_, userId, _, _, _, _, _, _):
+                                    case let .botInfo(_, userId, _, _, _, _, _, _, _):
                                         if let userId = userId {
                                             let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                             let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
@@ -636,7 +642,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             var botInfos: [CachedPeerBotInfo] = []
                                             for botInfo in apiBotInfos {
                                                 switch botInfo {
-                                                case let .botInfo(_, userId, _, _, _, _, _, _):
+                                                case let .botInfo(_, userId, _, _, _, _, _, _, _):
                                                     if let userId = userId {
                                                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                                         let parsedBotInfo = BotInfo(apiBotInfo: botInfo)

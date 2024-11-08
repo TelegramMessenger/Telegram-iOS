@@ -1,4 +1,44 @@
 public extension Api {
+    enum BotCommand: TypeConstructorDescription {
+        case botCommand(command: String, description: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botCommand(let command, let description):
+                    if boxed {
+                        buffer.appendInt32(-1032140601)
+                    }
+                    serializeString(command, buffer: buffer, boxed: false)
+                    serializeString(description, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botCommand(let command, let description):
+                return ("botCommand", [("command", command as Any), ("description", description as Any)])
+    }
+    }
+    
+        public static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BotCommand.botCommand(command: _1!, description: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum BotCommandScope: TypeConstructorDescription {
         case botCommandScopeChatAdmins
         case botCommandScopeChats
@@ -136,13 +176,13 @@ public extension Api {
 }
 public extension Api {
     enum BotInfo: TypeConstructorDescription {
-        case botInfo(flags: Int32, userId: Int64?, description: String?, descriptionPhoto: Api.Photo?, descriptionDocument: Api.Document?, commands: [Api.BotCommand]?, menuButton: Api.BotMenuButton?, privacyPolicyUrl: String?)
+        case botInfo(flags: Int32, userId: Int64?, description: String?, descriptionPhoto: Api.Photo?, descriptionDocument: Api.Document?, commands: [Api.BotCommand]?, menuButton: Api.BotMenuButton?, privacyPolicyUrl: String?, appSettings: Api.BotAppSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton, let privacyPolicyUrl):
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton, let privacyPolicyUrl, let appSettings):
                     if boxed {
-                        buffer.appendInt32(-2109505932)
+                        buffer.appendInt32(912290611)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(userId!, buffer: buffer, boxed: false)}
@@ -156,14 +196,15 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 3) != 0 {menuButton!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 7) != 0 {serializeString(privacyPolicyUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {appSettings!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton, let privacyPolicyUrl):
-                return ("botInfo", [("flags", flags as Any), ("userId", userId as Any), ("description", description as Any), ("descriptionPhoto", descriptionPhoto as Any), ("descriptionDocument", descriptionDocument as Any), ("commands", commands as Any), ("menuButton", menuButton as Any), ("privacyPolicyUrl", privacyPolicyUrl as Any)])
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let descriptionDocument, let commands, let menuButton, let privacyPolicyUrl, let appSettings):
+                return ("botInfo", [("flags", flags as Any), ("userId", userId as Any), ("description", description as Any), ("descriptionPhoto", descriptionPhoto as Any), ("descriptionDocument", descriptionDocument as Any), ("commands", commands as Any), ("menuButton", menuButton as Any), ("privacyPolicyUrl", privacyPolicyUrl as Any), ("appSettings", appSettings as Any)])
     }
     }
     
@@ -192,6 +233,10 @@ public extension Api {
             } }
             var _8: String?
             if Int(_1!) & Int(1 << 7) != 0 {_8 = parseString(reader) }
+            var _9: Api.BotAppSettings?
+            if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.BotAppSettings
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -200,8 +245,9 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 3) == 0) || _7 != nil
             let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.BotInfo.botInfo(flags: _1!, userId: _2, description: _3, descriptionPhoto: _4, descriptionDocument: _5, commands: _6, menuButton: _7, privacyPolicyUrl: _8)
+            let _c9 = (Int(_1!) & Int(1 << 8) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.BotInfo.botInfo(flags: _1!, userId: _2, description: _3, descriptionPhoto: _4, descriptionDocument: _5, commands: _6, menuButton: _7, privacyPolicyUrl: _8, appSettings: _9)
             }
             else {
                 return nil
@@ -1156,52 +1202,6 @@ public extension Api {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.BusinessChatLink.businessChatLink(flags: _1!, link: _2!, message: _3!, entities: _4, title: _5, views: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum BusinessGreetingMessage: TypeConstructorDescription {
-        case businessGreetingMessage(shortcutId: Int32, recipients: Api.BusinessRecipients, noActivityDays: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
-                    if boxed {
-                        buffer.appendInt32(-451302485)
-                    }
-                    serializeInt32(shortcutId, buffer: buffer, boxed: false)
-                    recipients.serialize(buffer, true)
-                    serializeInt32(noActivityDays, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .businessGreetingMessage(let shortcutId, let recipients, let noActivityDays):
-                return ("businessGreetingMessage", [("shortcutId", shortcutId as Any), ("recipients", recipients as Any), ("noActivityDays", noActivityDays as Any)])
-    }
-    }
-    
-        public static func parse_businessGreetingMessage(_ reader: BufferReader) -> BusinessGreetingMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.BusinessRecipients?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.BusinessRecipients
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BusinessGreetingMessage.businessGreetingMessage(shortcutId: _1!, recipients: _2!, noActivityDays: _3!)
             }
             else {
                 return nil

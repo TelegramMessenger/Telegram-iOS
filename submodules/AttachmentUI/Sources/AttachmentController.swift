@@ -124,7 +124,7 @@ public protocol AttachmentContainable: ViewController, MinimizableController {
     var isInnerPanGestureEnabled: (() -> Bool)? { get }
     var mediaPickerContext: AttachmentMediaPickerContext? { get }
     var getCurrentSendMessageContextMediaPreview: (() -> ChatSendMessageContextScreenMediaPreview?)? { get }
-    
+        
     func isContainerPanningUpdated(_ panning: Bool)
     
     func resetForReuse()
@@ -163,6 +163,10 @@ public extension AttachmentContainable {
     
     var minimizedBounds: CGRect? {
         return nil
+    }
+    
+    var isFullscreen: Bool {
+        return false
     }
     
     var minimizedTopEdgeOffset: CGFloat? {
@@ -362,6 +366,10 @@ public class AttachmentController: ViewController, MinimizableController {
     public private(set) var minimizedBounds: CGRect?
     public var minimizedIcon: UIImage? {
         return self.mainController.minimizedIcon
+    }
+    
+    public var isFullscreen: Bool {
+        return self.mainController.isFullscreen
     }
         
     private final class Node: ASDisplayNode {
@@ -1268,6 +1276,10 @@ public class AttachmentController: ViewController, MinimizableController {
     
     public var ensureUnfocused = true
     
+    public func requestMinimize(topEdgeOffset: CGFloat?, initialVelocity: CGFloat?) {
+        self.node.minimize()
+    }
+    
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if self.ensureUnfocused {
             self.view.endEditing(true)
@@ -1397,7 +1409,9 @@ public class AttachmentController: ViewController, MinimizableController {
     public func makeContentSnapshotView() -> UIView? {
         let snapshotView = self.view.snapshotView(afterScreenUpdates: false)
         if let contentSnapshotView = self.mainController.makeContentSnapshotView() {
-            contentSnapshotView.frame = contentSnapshotView.frame.offsetBy(dx: 0.0, dy: 64.0 + 56.0)
+            if !self.mainController.isFullscreen {
+                contentSnapshotView.frame = contentSnapshotView.frame.offsetBy(dx: 0.0, dy: 64.0 + 56.0)
+            }
             snapshotView?.addSubview(contentSnapshotView)
         }
         return snapshotView

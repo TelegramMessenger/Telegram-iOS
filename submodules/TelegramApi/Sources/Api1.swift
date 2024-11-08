@@ -1113,6 +1113,64 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BotAppSettings: TypeConstructorDescription {
+        case botAppSettings(flags: Int32, placeholderDocument: Api.Document?, backgroundColor: Int32?, backgroundDarkColor: Int32?, headerColor: Int32?, headerDarkColor: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botAppSettings(let flags, let placeholderDocument, let backgroundColor, let backgroundDarkColor, let headerColor, let headerDarkColor):
+                    if boxed {
+                        buffer.appendInt32(-2103898979)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {placeholderDocument!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(backgroundColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(backgroundDarkColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(headerColor!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(headerDarkColor!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botAppSettings(let flags, let placeholderDocument, let backgroundColor, let backgroundDarkColor, let headerColor, let headerDarkColor):
+                return ("botAppSettings", [("flags", flags as Any), ("placeholderDocument", placeholderDocument as Any), ("backgroundColor", backgroundColor as Any), ("backgroundDarkColor", backgroundDarkColor as Any), ("headerColor", headerColor as Any), ("headerDarkColor", headerDarkColor as Any)])
+    }
+    }
+    
+        public static func parse_botAppSettings(_ reader: BufferReader) -> BotAppSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Document?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_6 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BotAppSettings.botAppSettings(flags: _1!, placeholderDocument: _2, backgroundColor: _3, backgroundDarkColor: _4, headerColor: _5, headerDarkColor: _6)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BotBusinessConnection: TypeConstructorDescription {
         case botBusinessConnection(flags: Int32, connectionId: String, userId: Int64, dcId: Int32, date: Int32)
     
@@ -1156,46 +1214,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.BotBusinessConnection.botBusinessConnection(flags: _1!, connectionId: _2!, userId: _3!, dcId: _4!, date: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum BotCommand: TypeConstructorDescription {
-        case botCommand(command: String, description: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .botCommand(let command, let description):
-                    if boxed {
-                        buffer.appendInt32(-1032140601)
-                    }
-                    serializeString(command, buffer: buffer, boxed: false)
-                    serializeString(description, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .botCommand(let command, let description):
-                return ("botCommand", [("command", command as Any), ("description", description as Any)])
-    }
-    }
-    
-        public static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.BotCommand.botCommand(command: _1!, description: _2!)
             }
             else {
                 return nil

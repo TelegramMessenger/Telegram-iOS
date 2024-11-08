@@ -524,7 +524,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             
             var containerTopInset: CGFloat
-            if isLandscape {
+            if isLandscape || controllers.last?.isFullscreen == true {
                 containerTopInset = 0.0
                 containerLayout = layout
                 

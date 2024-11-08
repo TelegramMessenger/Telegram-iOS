@@ -50,6 +50,7 @@ public enum UndoOverlayContent {
     case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)
     case messageTagged(context: AccountContext, isSingleMessage: Bool, customEmoji: TelegramMediaFile, isBuiltinReaction: Bool, customUndoText: String?)
     case media(context: AccountContext, file: FileMediaReference, title: String?, text: String, undoText: String?, customAction: (() -> Void)?)
+    case progress(progress: CGFloat, title: String, text: String, undoText: String?)
 }
 
 public enum UndoOverlayAction {

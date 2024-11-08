@@ -920,6 +920,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         }
         
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent:!_disableStickers] selectedTab:TGPhotoEditorCropTab];
+        controller.modalPresentationStyle = UIModalPresentationFullScreen;
         controller.editingContext = _editingContext;
         controller.stickersContext = _stickersContext;
         controller.dontHideStatusBar = true;

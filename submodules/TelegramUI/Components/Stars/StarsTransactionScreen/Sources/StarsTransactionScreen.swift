@@ -154,6 +154,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let table = Child(TableComponent.self)
         let additional = Child(BalancedTextComponent.self)
         let status = Child(BalancedTextComponent.self)
+        let cancelButton = Child(SolidRoundedButtonComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
         let transactionStatusBackgound = Child(RoundedRectangle.self)
@@ -201,7 +202,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var boostsText: String?
             let additionalText = strings.Stars_Transaction_Terms
             var buttonText: String? = strings.Common_OK
-            var buttonIsDestructive = false
+            
+            var cancelButtonText: String?
             var statusText: String?
             var statusIsDestructive = false
             
@@ -223,6 +225,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isSubscription = false
             var isSubscriber = false
             var isSubscriptionFee = false
+            var isBotSubscription = false
             var isCancelled = false
             var isReaction = false
             var giveawayMessageId: MessageId?
@@ -256,7 +259,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transactionPeer = .peer(peer)
                 isSubscriber = true
             case let .subscription(subscription):
-                titleText = strings.Stars_Transaction_Subscription_Title
+                if case let .user(user) = subscription.peer, user.botInfo != nil {
+                    isBotSubscription = true
+                }
+                if let title = subscription.title {
+                    titleText = title
+                } else {
+                    titleText = strings.Stars_Transaction_Subscription_Title
+                }
+                photo = subscription.photo
+                
                 descriptionText = ""
                 count = subscription.pricing.amount
                 date = subscription.untilDate
@@ -320,8 +332,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         }
                     } else {
                         statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
-                        buttonText = strings.Stars_Transaction_Subscription_Cancel
-                        buttonIsDestructive = true
+                        cancelButtonText = strings.Stars_Transaction_Subscription_Cancel
+                        buttonText = strings.Common_OK
                     }
                 }
             case let .transaction(transaction, parentPeer):
@@ -571,7 +583,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let imageSubject: StarsImageComponent.Subject
-            let imageIcon: StarsImageComponent.Icon?
+            var imageIcon: StarsImageComponent.Icon?
             if isGift {
                 imageSubject = .gift(count)
             } else if !media.isEmpty {
@@ -590,6 +602,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else {
                 imageIcon = nil
             }
+            
+            if isSubscription && "".isEmpty {
+                imageIcon = nil
+            }
+            
             var starChild: _UpdatedChildComponent
             if let giftAnimation {
                 starChild = gift.update(
@@ -690,7 +707,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else if let toPeer {
                 let title: String
                 if isSubscription {
-                    title = strings.Stars_Transaction_Subscription_Subscription
+                    if isBotSubscription {
+                        //TODO:localize
+                        title = "Bot"
+                    } else {
+                        title = strings.Stars_Transaction_Subscription_Subscription
+                    }
                 } else if isSubscriber {
                     title = strings.Stars_Transaction_Subscription_Subscriber
                 } else {
@@ -724,6 +746,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         )
                     )
                 ))
+                if case let .subscription(subscription) = component.subject, let title = subscription.title {
+                    //TODO:localize
+                    tableItems.append(.init(
+                        id: "subscription",
+                        title: "Subscription",
+                        component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: title, font: tableFont, textColor: tableTextColor)))
+                        )
+                    ))
+                }
             } else if let via {
                 tableItems.append(.init(
                     id: "via",
@@ -1069,12 +1101,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 originY += status.size.height + (statusIsDestructive ? 23.0 : 13.0)
             }
             
-            if let buttonText {
-                let button = button.update(
+            if let cancelButtonText {
+                let cancelButton = cancelButton.update(
                     component: SolidRoundedButtonComponent(
-                        title: buttonText,
-                        theme: buttonIsDestructive ? SolidRoundedButtonComponent.Theme(backgroundColor: .clear, foregroundColor: destructiveColor) : SolidRoundedButtonComponent.Theme(theme: theme),
-                        font: buttonIsDestructive ? .regular : .bold,
+                        title: cancelButtonText,
+                        theme: SolidRoundedButtonComponent.Theme(backgroundColor: .clear, foregroundColor: linkColor),
+                        font: .regular,
                         fontSize: 17.0,
                         height: 50.0,
                         cornerRadius: 10.0,
@@ -1086,6 +1118,39 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         action: {
                             component.cancel(true)
                             if isSubscription {
+                                component.updateSubscription()
+                            }
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+                
+                let cancelButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: cancelButton.size)
+                context.add(cancelButton
+                    .position(CGPoint(x: cancelButtonFrame.midX, y: cancelButtonFrame.midY))
+                )
+                originY += cancelButton.size.height
+                originY += 8.0
+            }
+            
+            if let buttonText {
+                let button = button.update(
+                    component: SolidRoundedButtonComponent(
+                        title: buttonText,
+                        theme: SolidRoundedButtonComponent.Theme(theme: theme),
+                        font: .bold,
+                        fontSize: 17.0,
+                        height: 50.0,
+                        cornerRadius: 10.0,
+                        gloss: false,
+                        iconName: nil,
+                        animationName: nil,
+                        iconPosition: .left,
+                        isLoading: state.inProgress,
+                        action: {
+                            component.cancel(true)
+                            if isSubscription && cancelButtonText == nil {
                                 component.updateSubscription()
                             }
                         }

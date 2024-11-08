@@ -1706,14 +1706,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateCachedPeerData(peer.peerId, { current in
                     if peer.peerId.namespace == Namespaces.Peer.CloudUser, let previous = current as? CachedUserData {
                         if let botInfo = previous.botInfo {
-                            return previous.withUpdatedBotInfo(BotInfo(description: botInfo.description, photo: botInfo.photo, video: botInfo.video, commands: commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl))
+                            return previous.withUpdatedBotInfo(BotInfo(description: botInfo.description, photo: botInfo.photo, video: botInfo.video, commands: commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl, appSettings: botInfo.appSettings))
                         }
                     } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup, let previous = current as? CachedGroupData {
                         if let index = previous.botInfos.firstIndex(where: { $0.peerId == botPeerId }) {
                             var updatedBotInfos = previous.botInfos
                             let previousBotInfo = updatedBotInfos[index]
                             updatedBotInfos.remove(at: index)
-                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, photo: previousBotInfo.botInfo.photo, video: previousBotInfo.botInfo.video, commands: commands, menuButton: previousBotInfo.botInfo.menuButton, privacyPolicyUrl: previousBotInfo.botInfo.privacyPolicyUrl)), at: index)
+                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, photo: previousBotInfo.botInfo.photo, video: previousBotInfo.botInfo.video, commands: commands, menuButton: previousBotInfo.botInfo.menuButton, privacyPolicyUrl: previousBotInfo.botInfo.privacyPolicyUrl, appSettings: previousBotInfo.botInfo.appSettings)), at: index)
                             return previous.withUpdatedBotInfos(updatedBotInfos)
                         }
                     } else if peer.peerId.namespace == Namespaces.Peer.CloudChannel, let previous = current as? CachedChannelData {
@@ -1721,7 +1721,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             var updatedBotInfos = previous.botInfos
                             let previousBotInfo = updatedBotInfos[index]
                             updatedBotInfos.remove(at: index)
-                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, photo: previousBotInfo.botInfo.photo, video: previousBotInfo.botInfo.video, commands: commands, menuButton: previousBotInfo.botInfo.menuButton, privacyPolicyUrl: previousBotInfo.botInfo.privacyPolicyUrl)), at: index)
+                            updatedBotInfos.insert(CachedPeerBotInfo(peerId: botPeerId, botInfo: BotInfo(description: previousBotInfo.botInfo.description, photo: previousBotInfo.botInfo.photo, video: previousBotInfo.botInfo.video, commands: commands, menuButton: previousBotInfo.botInfo.menuButton, privacyPolicyUrl: previousBotInfo.botInfo.privacyPolicyUrl, appSettings: previousBotInfo.botInfo.appSettings)), at: index)
                             return previous.withUpdatedBotInfos(updatedBotInfos)
                         }
                     }
@@ -1733,7 +1733,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateCachedPeerData(botPeerId, { current in
                     if let previous = current as? CachedUserData {
                         if let botInfo = previous.botInfo {
-                            return previous.withUpdatedBotInfo(BotInfo(description: botInfo.description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl))
+                            return previous.withUpdatedBotInfo(BotInfo(description: botInfo.description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl, appSettings: botInfo.appSettings))
                         }
                     }
                     return current

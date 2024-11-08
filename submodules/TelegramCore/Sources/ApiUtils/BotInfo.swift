@@ -13,10 +13,25 @@ extension BotMenuButton {
     }
 }
 
+extension BotAppSettings {
+    init(apiBotAppSettings: Api.BotAppSettings) {
+        switch apiBotAppSettings {
+        case let .botAppSettings(_, placeholderDocument, backgroundColor, backgroundDarkColor, headerColor, headerDarkColor):
+            self.init(
+                placeholder: placeholderDocument.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) },
+                backgroundColor: backgroundColor,
+                backgroundDarkColor: backgroundDarkColor,
+                headerColor: headerColor,
+                headerDarkColor: headerDarkColor
+            )
+        }
+    }
+}
+
 extension BotInfo {
     convenience init(apiBotInfo: Api.BotInfo) {
         switch apiBotInfo {
-            case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton, privacyPolicyUrl):
+            case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton, privacyPolicyUrl, appSettings):
                 let photo: TelegramMediaImage? = descriptionPhoto.flatMap(telegramMediaImageFromApiPhoto)
                 let video: TelegramMediaFile? = descriptionDocument.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }
                 var commands: [BotCommand] = []
@@ -32,7 +47,7 @@ extension BotInfo {
                 if let apiMenuButton = apiMenuButton {
                     menuButton = BotMenuButton(apiBotMenuButton: apiMenuButton)
                 }
-            self.init(description: description ?? "", photo: photo, video: video, commands: commands, menuButton: menuButton, privacyPolicyUrl: privacyPolicyUrl)
+            self.init(description: description ?? "", photo: photo, video: video, commands: commands, menuButton: menuButton, privacyPolicyUrl: privacyPolicyUrl, appSettings: appSettings.flatMap { BotAppSettings(apiBotAppSettings: $0) })
         }
     }
 }

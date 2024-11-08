@@ -71,7 +71,7 @@ public enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
-    case appStart(String, String?, Bool)
+    case appStart(String, String?, ResolvedStartAppMode)
     case story(Int32)
     case boost
     case text(String)
@@ -293,18 +293,25 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                     return .startAttach(peerName, value, choose)
                                  } else if queryItem.name == "startapp" {
-                                     var compact = false
+                                     var mode: ResolvedStartAppMode = .generic
                                      if let queryItems = components.queryItems {
                                          for queryItem in queryItems {
                                              if let value = queryItem.value {
-                                                 if queryItem.name == "mode", value == "compact" {
-                                                     compact = true
+                                                 if queryItem.name == "mode" {
+                                                     switch value {
+                                                     case "compact":
+                                                         mode = .compact
+                                                     case "fullscreen":
+                                                         mode = .fullscreen
+                                                     default:
+                                                         break
+                                                     }
                                                      break
                                                  }
                                              }
                                          }
                                      }
-                                     return .peer(.name(peerName), .appStart("", queryItem.value, compact))
+                                     return .peer(.name(peerName), .appStart("", queryItem.value, mode))
                                  } else if queryItem.name == "story" {
                                     if let id = Int32(value) {
                                         return .peer(.name(peerName), .story(id))
@@ -335,18 +342,25 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                             } else if queryItem.name == "profile" {
                                 return .peer(.name(peerName), .profile)
                             } else if queryItem.name == "startapp" {
-                                var compact = false
+                                var mode: ResolvedStartAppMode = .generic
                                 if let queryItems = components.queryItems {
                                     for queryItem in queryItems {
                                         if let value = queryItem.value {
-                                            if queryItem.name == "mode", value == "compact" {
-                                                compact = true
+                                            if queryItem.name == "mode" {
+                                                switch value {
+                                                case "compact":
+                                                    mode = .compact
+                                                case "fullscreen":
+                                                    mode = .fullscreen
+                                                default:
+                                                    break
+                                                }
                                                 break
                                             }
                                         }
                                     }
                                 }
-                                return .peer(.name(peerName), .appStart("", nil, compact))
+                                return .peer(.name(peerName), .appStart("", queryItem.value, mode))
                             }
                         }
                     }
@@ -615,19 +629,28 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                 } else if pathComponents.count == 2 {
                     let appName = pathComponents[1]
                     var startApp: String?
-                    var compact = false
+                    var mode: ResolvedStartAppMode = .generic
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "startapp" {
                                     startApp = value
-                                } else if queryItem.name == "mode", value == "compact" {
-                                    compact = true
+                                }
+                                if queryItem.name == "mode" {
+                                    switch value {
+                                    case "compact":
+                                        mode = .compact
+                                    case "fullscreen":
+                                        mode = .fullscreen
+                                    default:
+                                        break
+                                    }
+                                    break
                                 }
                             }
                         }
                     }
-                    return .peer(.name(peerName), .appStart(appName, startApp, compact))
+                    return .peer(.name(peerName), .appStart(appName, startApp, mode))
                 } else {
                     return nil
                 }
@@ -745,10 +768,10 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         }
                                     }
                                 }
-                            case let .appStart(name, payload, compact):
+                            case let .appStart(name, payload, mode):
                                 if name.isEmpty {
                                     if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
-                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: nil, payload: payload, justInstalled: false, compact: compact)))))
+                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: nil, payload: payload, justInstalled: false, mode: mode)))))
                                     } else {
                                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                     }
@@ -760,7 +783,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     }
                                     |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
                                         if let botApp {
-                                            return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, compact: compact)))))
+                                            return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false, mode: mode)))))
                                         } else {
                                             return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                         }

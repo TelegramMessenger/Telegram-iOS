@@ -56,6 +56,9 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }
         }
@@ -64,7 +67,7 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
     |> switchToLatest
 }
 
-func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestMainWebView(postbox: Postbox, network: Network, peerId: PeerId, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -73,7 +76,7 @@ func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: Pee
         guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
             return .fail(.generic)
         }
-        guard let peer = transaction.getPeer(botId), let inputPeer = apiInputPeer(peer) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
 
@@ -103,6 +106,9 @@ func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: Pee
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }
         }
@@ -128,6 +134,7 @@ public struct RequestWebViewResult {
         }
         
         public static let fullSize = Flags(rawValue: 1 << 0)
+        public static let fullScreen = Flags(rawValue: 1 << 1)
     }
     
     public let flags: Flags
@@ -237,6 +244,9 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
                 if (webViewFlags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
+                }
                 let keepAlive: Signal<Never, KeepWebViewError>?
                 if let queryId {
                     keepAlive = keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId, threadId: threadId, sendAs: nil)
@@ -276,7 +286,7 @@ func _internal_sendWebViewData(postbox: Postbox, network: Network, stateManager:
     |> switchToLatest
 }
 
-func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, fullscreen: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -311,6 +321,9 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
         if compact {
             flags |= (1 << 7)
         }
+        if fullscreen {
+            flags |= (1 << 8)
+        }
         
         return network.request(Api.functions.messages.requestAppWebView(flags: flags, peer: inputPeer, app: app, startParam: payload, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestWebViewError in
@@ -322,6 +335,9 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
                 var resultFlags: RequestWebViewResult.Flags = []
                 if (flags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
+                }
+                if (flags & (1 << 2)) != 0 {
+                    resultFlags.insert(.fullScreen)
                 }
                 return .single(RequestWebViewResult(flags: resultFlags, queryId: queryId, url: url, keepAliveSignal: nil))
             }

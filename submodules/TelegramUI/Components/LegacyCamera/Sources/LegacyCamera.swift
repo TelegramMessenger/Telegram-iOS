@@ -35,6 +35,7 @@ public func presentedLegacyCamera(context: AccountContext, peer: Peer?, chatLoca
     } else {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat)
     }
+    controller.modalPresentationStyle = .fullScreen
     controller.inhibitMultipleCapture = editingMedia
     
     if !initialCaption.string.isEmpty {

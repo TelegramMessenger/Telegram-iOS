@@ -1077,13 +1077,23 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 transition.updateTransform(node: itemNode, transform: CATransform3DIdentity)
                 
                 if let _ = itemNode.snapshotView {
-                    if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
+                    if itemNode.item.controller.isFullscreen {
+                        if layout.size.width < layout.size.height {
+                            let snapshotFrame = itemNode.snapshotContainerView.frame.offsetBy(dx: 0.0, dy: 64.0)
+                            transition.updateFrame(view: itemNode.snapshotContainerView, frame: snapshotFrame)
+                        }
+                    } else if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {
                         let snapshotFrame = snapshotView.frame.offsetBy(dx: 0.0, dy: 12.0)
                         transition.updateFrame(view: snapshotView, frame: snapshotFrame)
                     }
                 }
                 
-                transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + topInset + self.scrollView.contentOffset.y), completion: { _ in
+                var maximizeTopInset = 0.0
+                if !itemNode.item.controller.isFullscreen {
+                    maximizeTopInset = topInset
+                }
+                
+                transition.updatePosition(node: itemNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0 + maximizeTopInset + self.scrollView.contentOffset.y), completion: { _ in
                     self.isApplyingTransition = false
                     if self.currentTransition == currentTransition {
                         self.currentTransition = nil

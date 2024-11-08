@@ -12,11 +12,18 @@ public final class PremiumPeerShortcutComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peer: EnginePeer
+    let icon: TelegramMediaFile?
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        peer: EnginePeer,
+        icon: TelegramMediaFile? = nil
+    ) {
         self.context = context
         self.theme = theme
         self.peer = peer
+        self.icon = icon
     }
 
     public static func ==(lhs: PremiumPeerShortcutComponent, rhs: PremiumPeerShortcutComponent) -> Bool {
