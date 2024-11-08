@@ -247,6 +247,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 Queue.mainQueue().justDispatch {
                     if let backgroundColor = botAppSettings.backgroundColor {
                         self.appBackgroundColor = UIColor(rgb: UInt32(bitPattern: backgroundColor))
+                        self.placeholderBackgroundColor = self.appBackgroundColor
                         self.updateBackgroundColor(transition: .immediate)
                     }
                     if let headerColor = botAppSettings.headerColor {
@@ -482,7 +483,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let foregroundColor: UIColor
             let shimmeringColor: UIColor
-            if let backgroundColor = self.appBackgroundColor {
+            if let backgroundColor = self.placeholderBackgroundColor {
                 if backgroundColor.lightness > 0.705 {
                     foregroundColor = backgroundColor.mixedWith(UIColor(rgb: 0x000000), alpha: 0.05)
                     shimmeringColor = UIColor.white.withAlphaComponent(0.2)
@@ -1438,6 +1439,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         fileprivate var needDismissConfirmation = false
         
         fileprivate var appBackgroundColor: UIColor?
+        fileprivate var placeholderBackgroundColor: UIColor?
         fileprivate var headerColor: UIColor?
         fileprivate var headerPrimaryTextColor: UIColor?
         private var headerColorKey: String?
@@ -2280,10 +2282,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 },
                 completion: { [weak self] resultUrl, _ in
                     if let resultUrl, let self {
-                        if let tooltip = self.fileDownloadTooltip {
-                            tooltip.dismissWithCommitAction()
-                        }
-                         
+                        let tooltipContent: UndoOverlayContent = .actionSucceeded(title: fileName, text: isMedia ? "Saved to Photos" : "Saved to Files", cancel: nil, destructive: false)
                         if isMedia {
                             let saveToPhotos: (URL, Bool) -> Void = { url, isVideo in
                                 var fileExtension = (resultUrl.absoluteString as NSString).pathExtension
@@ -2303,18 +2302,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             }
                             let isVideo = fileName.lowercased().hasSuffix(".mp4") || fileName.lowercased().hasSuffix(".mov")
                             saveToPhotos(resultUrl, isVideo)
-                            
-                            let tooltipController = UndoOverlayController(
-                                presentationData: self.presentationData,
-                                content: .actionSucceeded(title: fileName, text: isMedia ? "Saved to Photos" : "Saved to Files", cancel: nil, destructive: false),
-                                elevatedLayout: false,
-                                position: .top,
-                                action: { _ in
-                                    return true
-                                }
-                            )
-                            controller.present(tooltipController, in: .current)
+                                               
+                            if let tooltip = self.fileDownloadTooltip {
+                                tooltip.content = tooltipContent
+                            } else {
+                                let tooltipController = UndoOverlayController(
+                                    presentationData: self.presentationData,
+                                    content: tooltipContent,
+                                    elevatedLayout: false,
+                                    position: .top,
+                                    action: { _ in
+                                        return true
+                                    }
+                                )
+                                controller.present(tooltipController, in: .current)
+                            }
                         } else {
+                            if let tooltip = self.fileDownloadTooltip {
+                                tooltip.dismissWithCommitAction()
+                            }
+                            
                             let tempFile = TempBox.shared.file(path: resultUrl.absoluteString, fileName: fileName)
                             let url = URL(fileURLWithPath: tempFile.path)
                             try? FileManager.default.copyItem(at: resultUrl, to: url)
@@ -2325,7 +2332,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 }
                                 let tooltipController = UndoOverlayController(
                                     presentationData: self.presentationData,
-                                    content: .actionSucceeded(title: fileName, text: isMedia ? "Saved to Photos" : "Saved to Files", cancel: nil, destructive: false),
+                                    content: tooltipContent,
                                     elevatedLayout: false,
                                     position: .top,
                                     action: { _ in
@@ -2335,11 +2342,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 controller.present(tooltipController, in: .current)
                             })
                             controller.present(pickerController, in: .window(.root))
-//
-//                            if let documentsUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-//                                let targetUrl = documentsUrl.appendingPathComponent(fileName)
-//                                try? FileManager.default.copyItem(at: resultUrl, to: targetUrl)
-//                            }
                         }
                     }
                 }
@@ -2404,6 +2406,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         if result {
                             let context = self.context
                             let botId = controller.botId
+                            
+                            if !context.isPremium {
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .emojiStatus, forceDark: false, action: {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .animatedEmoji, forceDark: false, dismissed: nil)
+                                    replaceImpl?(controller)
+                                }, dismissed: nil)
+                                replaceImpl = { [weak demoController] c in
+                                    demoController?.replace(with: c)
+                                }
+                                controller.parentController()?.push(demoController)
+                                self.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"cancelled\"}")
+                                return
+                            }
+                            
                             let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: botId, enabled: true)
                             |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                                 self?.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"allowed\"}")

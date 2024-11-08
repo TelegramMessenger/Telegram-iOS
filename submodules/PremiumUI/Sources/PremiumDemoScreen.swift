@@ -1276,6 +1276,9 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_MessagePrivacy_Proceed
                         case .folderTags:
                             buttonText = strings.Premium_FolderTags_Proceed
+                        case .emojiStatus:
+                            buttonText = strings.Premium_EmojiStatus_Proceed
+                            buttonAnimationName = "premium_unlock"
                         default:
                             buttonText = strings.Common_OK
                     }
