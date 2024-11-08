@@ -100,7 +100,7 @@ func _internal_updateBotDescription(account: Account, peerId: PeerId, descriptio
                                 if let botInfo = current.botInfo {
                                     var updatedBotInfo = botInfo
                                     if botInfo.description == editableBotInfo.description {
-                                        updatedBotInfo = BotInfo(description: description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl)
+                                        updatedBotInfo = BotInfo(description: description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl, appSettings: botInfo.appSettings)
                                     }
                                     return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedDescription(description)).withUpdatedBotInfo(updatedBotInfo)
                                 } else {
@@ -120,4 +120,44 @@ func _internal_updateBotDescription(account: Account, peerId: PeerId, descriptio
     }
     |> mapError { _ -> UpdateBotInfoError in }
     |> switchToLatest
+}
+
+public enum ToggleBotEmojiStatusAccessError {
+    case generic
+}
+
+func _internal_toggleBotEmojiStatusAccess(account: Account, peerId: PeerId, enabled: Bool) -> Signal<Never, ToggleBotEmojiStatusAccessError> {
+    return account.postbox.transaction { transaction -> Signal<Void, ToggleBotEmojiStatusAccessError> in
+        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
+            return account.network.request(Api.functions.bots.toggleUserEmojiStatusPermission(bot: inputUser, enabled: enabled ? .boolTrue : .boolFalse))
+            |> mapError { _ -> ToggleBotEmojiStatusAccessError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Void, ToggleBotEmojiStatusAccessError> in
+                return account.postbox.transaction { transaction -> Void in
+                    if case .boolTrue = result {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedUserData {
+                                var updatedFlags: CachedUserFlags = current.flags
+                                if enabled {
+                                    updatedFlags.insert(.botCanManageEmojiStatus)
+                                } else {
+                                    updatedFlags.remove(.botCanManageEmojiStatus)
+                                }
+                                return current.withUpdatedFlags(updatedFlags)
+                            } else {
+                                return current
+                            }
+                        })
+                    }
+                }
+                |> mapError { _ -> ToggleBotEmojiStatusAccessError in }
+            }
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> mapError { _ -> ToggleBotEmojiStatusAccessError in }
+    |> switchToLatest
+    |> ignoreValues
 }

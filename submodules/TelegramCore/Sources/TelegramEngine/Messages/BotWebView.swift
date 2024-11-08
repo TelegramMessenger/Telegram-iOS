@@ -67,7 +67,7 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
     |> switchToLatest
 }
 
-func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestMainWebView(postbox: Postbox, network: Network, peerId: PeerId, botId: PeerId, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -76,7 +76,7 @@ func _internal_requestMainWebView(postbox: Postbox, network: Network, botId: Pee
         guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
             return .fail(.generic)
         }
-        guard let peer = transaction.getPeer(botId), let inputPeer = apiInputPeer(peer) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
             return .fail(.generic)
         }
 
@@ -286,7 +286,7 @@ func _internal_sendWebViewData(postbox: Postbox, network: Network, stateManager:
     |> switchToLatest
 }
 
-func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, appReference: BotAppReference, payload: String?, themeParams: [String: Any]?, compact: Bool, fullscreen: Bool, allowWrite: Bool) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -320,6 +320,9 @@ func _internal_requestAppWebView(postbox: Postbox, network: Network, stateManage
         }
         if compact {
             flags |= (1 << 7)
+        }
+        if fullscreen {
+            flags |= (1 << 8)
         }
         
         return network.request(Api.functions.messages.requestAppWebView(flags: flags, peer: inputPeer, app: app, startParam: payload, themeParams: serializedThemeParams, platform: botWebViewPlatform))

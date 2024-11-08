@@ -2575,6 +2575,22 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func toggleUserEmojiStatusPermission(bot: Api.InputUser, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(115237778)
+                    bot.serialize(buffer, true)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.toggleUserEmojiStatusPermission", parameters: [("bot", String(describing: bot)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func toggleUsername(bot: Api.InputUser, username: String, active: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(87861619)
@@ -2582,6 +2598,22 @@ public extension Api.functions.bots {
                     serializeString(username, buffer: buffer, boxed: false)
                     active.serialize(buffer, true)
                     return (FunctionDescription(name: "bots.toggleUsername", parameters: [("bot", String(describing: bot)), ("username", String(describing: username)), ("active", String(describing: active))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func updateUserEmojiStatus(userId: Api.InputUser, emojiStatus: Api.EmojiStatus) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-308334395)
+                    userId.serialize(buffer, true)
+                    emojiStatus.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.updateUserEmojiStatus", parameters: [("userId", String(describing: userId)), ("emojiStatus", String(describing: emojiStatus))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -6494,6 +6526,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func getPreparedInlineMessage(bot: Api.InputUser, id: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.PreparedInlineMessage>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2055291464)
+                    bot.serialize(buffer, true)
+                    serializeString(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getPreparedInlineMessage", parameters: [("bot", String(describing: bot)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.PreparedInlineMessage? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.PreparedInlineMessage?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.PreparedInlineMessage
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func getQuickReplies(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.QuickReplies>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-729550168)
@@ -7603,6 +7651,28 @@ public extension Api.functions.messages {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func savePreparedInlineMessage(flags: Int32, result: Api.InputBotInlineResult, userId: Api.InputUser, peerTypes: [Api.InlineQueryPeerType]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.BotPreparedInlineMessage>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-232816849)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    result.serialize(buffer, true)
+                    userId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(peerTypes!.count))
+                    for item in peerTypes! {
+                        item.serialize(buffer, true)
+                    }}
+                    return (FunctionDescription(name: "messages.savePreparedInlineMessage", parameters: [("flags", String(describing: flags)), ("result", String(describing: result)), ("userId", String(describing: userId)), ("peerTypes", String(describing: peerTypes))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.BotPreparedInlineMessage? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.BotPreparedInlineMessage?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.BotPreparedInlineMessage
                         }
                         return result
                     })
@@ -8770,6 +8840,24 @@ public extension Api.functions.payments {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func botCancelStarsSubscription(flags: Int32, userId: Api.InputUser, invoiceSlug: String?, chargeId: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1475996902)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(invoiceSlug!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(chargeId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "payments.botCancelStarsSubscription", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("invoiceSlug", String(describing: invoiceSlug)), ("chargeId", String(describing: chargeId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

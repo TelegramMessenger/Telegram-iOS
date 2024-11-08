@@ -332,7 +332,6 @@ func webAppEmojiStatusAlertController(
     accountPeer: EnginePeer,
     botName: String,
     icons: [TelegramMediaFile],
-    expirationDate: Int32?,
     completion: @escaping (Bool) -> Void
 ) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

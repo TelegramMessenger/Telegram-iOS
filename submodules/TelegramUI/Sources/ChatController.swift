@@ -9856,16 +9856,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case let .withBotApp(botAppStart):
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId.id))
                     |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                        if let strongSelf = self, let peer {
-                            if let botApp = botAppStart.botApp {
-                                strongSelf.presentBotApp(botApp: botApp, botPeer: peer, payload: botAppStart.payload, compact: botAppStart.compact, concealed: concealed, commit: {
-                                    dismissWebAppControllers()
-                                    commit()
-                                })
-                            } else {
-                                strongSelf.context.sharedContext.openWebApp(context: strongSelf.context, parentController: strongSelf, updatedPresentationData: strongSelf.updatedPresentationData, peer: peer, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: botAppStart.payload)
+                        guard let self, let peer else {
+                            return
+                        }
+                        if let botApp = botAppStart.botApp {
+                            self.presentBotApp(botApp: botApp, botPeer: peer, payload: botAppStart.payload, mode: botAppStart.mode, concealed: concealed, commit: {
+                                dismissWebAppControllers()
                                 commit()
-                            }
+                            })
+                        } else {
+                            self.context.sharedContext.openWebApp(context: self.context, parentController: self, updatedPresentationData: self.updatedPresentationData, botPeer: peer, chatPeer: nil, threadId: nil, buttonText: "", url: "", simple: true, source: .generic, skipTermsOfService: false, payload: botAppStart.payload)
+                            commit()
                         }
                     })
                 default:

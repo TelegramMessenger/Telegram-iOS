@@ -400,7 +400,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 controller.dismiss()
                                 return
                             }
-                            let _ = (self.context.engine.messages.requestAppWebView(peerId: peer.id, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: appStart.payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), compact: appStart.compact, allowWrite: true)
+                            let _ = (self.context.engine.messages.requestAppWebView(peerId: peer.id, appReference: .id(id: botApp.id, accessHash: botApp.accessHash), payload: appStart.payload, themeParams: generateWebAppThemeParams(self.presentationData.theme), compact: appStart.mode == .compact, fullscreen: appStart.mode == .fullscreen, allowWrite: true)
                             |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                                 guard let self, let parsedUrl = URL(string: result.url) else {
                                     return
@@ -626,6 +626,69 @@ public final class WebAppController: ViewController, AttachmentContainable {
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
             transition.updateFrame(node: self.topOverscrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: layout.size.width, height: 1000.0)))
             
+            
+            var contentTopInset: CGFloat = 0.0
+            if controller.isFullscreen {
+                var added = false
+                let fullscreenControls: ComponentView<Empty>
+                if let current = self.fullscreenControls {
+                    fullscreenControls = current
+                } else {
+                    fullscreenControls = ComponentView<Empty>()
+                    self.fullscreenControls = fullscreenControls
+                    added = true
+                }
+                let controlsMargin: CGFloat = 8.0
+                let componentTransition: ComponentTransition = added ? .immediate : ComponentTransition(transition)
+                let controlsSize = fullscreenControls.update(
+                    transition: componentTransition,
+                    component: AnyComponent(
+                        FullscreenControlsComponent(
+                            context: self.context,
+                            title: controller.botName,
+                            isVerified: controller.botVerified,
+                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right),
+                            hasBack: self.hasBackButton,
+                            backPressed: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.controller?.cancelPressed()
+                            },
+                            minimizePressed: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.controller?.requestMinimize(topEdgeOffset: nil, initialVelocity: nil)
+                            },
+                            morePressed: { [weak self] node, gesture in
+                                guard let self else {
+                                    return
+                                }
+                                self.controller?.morePressed(node: node, gesture: gesture)
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: layout.size
+                )
+                if let view = fullscreenControls.view {
+                    if view.superview == nil {
+                        self.view.addSubview(view)
+                    }
+                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + controlsMargin), size: controlsSize))
+                    if added {
+                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    }
+                }
+                contentTopInset = controlsSize.height + controlsMargin * 2.0
+            } else if let fullscreenControls = self.fullscreenControls {
+                self.fullscreenControls = nil
+                fullscreenControls.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                    fullscreenControls.view?.removeFromSuperview()
+                })
+            }
+            
             if let webView = self.webView {
                 var scrollInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
                 var frameBottomInset: CGFloat = 0.0
@@ -683,6 +746,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 if let controller = self.controller {
                     webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
+                    
+                    let contentInsetsData = "{top:\(contentTopInset), bottom:0.0, left:0.0, right:0.0}"
+                    webView.sendEvent(name: "content_safe_area_changed", data: contentInsetsData)
+                    
                     if self.updateWebViewWhenStable && !controller.isContainerPanning() {
                         self.updateWebViewWhenStable = false
                         webView.setNeedsLayout()
@@ -708,66 +775,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
-            }
-            
-            if controller.isFullscreen {
-                var added = false
-                let fullscreenControls: ComponentView<Empty>
-                if let current = self.fullscreenControls {
-                    fullscreenControls = current
-                } else {
-                    fullscreenControls = ComponentView<Empty>()
-                    self.fullscreenControls = fullscreenControls
-                    added = true
-                }
-                
-                let componentTransition: ComponentTransition = added ? .immediate : ComponentTransition(transition)
-                let controlsSize = fullscreenControls.update(
-                    transition: componentTransition,
-                    component: AnyComponent(
-                        FullscreenControlsComponent(
-                            context: self.context,
-                            title: controller.botName,
-                            isVerified: controller.botVerified,
-                            insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right),
-                            hasBack: self.hasBackButton,
-                            backPressed: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.controller?.cancelPressed()
-                            },
-                            minimizePressed: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                self.controller?.requestMinimize(topEdgeOffset: nil, initialVelocity: nil)
-                            },
-                            morePressed: { [weak self] node, gesture in
-                                guard let self else {
-                                    return
-                                }
-                                self.controller?.morePressed(node: node, gesture: gesture)
-                            }
-                        )
-                    ),
-                    environment: {},
-                    containerSize: layout.size
-                )
-                if let view = fullscreenControls.view {
-                    if view.superview == nil {
-                        self.view.addSubview(view)
-                    }
-                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: (layout.statusBarHeight ?? 0.0) + 8.0), size: controlsSize))
-                    if added {
-                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-                    }
-                }
-            } else if let fullscreenControls = self.fullscreenControls {
-                self.fullscreenControls = nil
-                fullscreenControls.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                    fullscreenControls.view?.removeFromSuperview()
-                })
             }
             
             if let previousLayout = previousLayout, (previousLayout.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0 {
@@ -890,6 +897,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_request_viewport":
                     self.requestLayout(transition: .immediate)
                 case "web_app_request_safe_area":
+                    self.requestLayout(transition: .immediate)
+                case "web_app_request_content_safe_area":
                     self.requestLayout(transition: .immediate)
                 case "web_app_request_theme":
                     self.sendThemeChangedEvent()
@@ -1370,13 +1379,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_add_to_home_screen":
                     self.addToHomeScreen()
                 case "web_app_check_home_screen":
-                    self.webView?.sendEvent(name: "home_screen_checked", data: "{status: \"unknown\"}")
+                    let data: JSON = ["status": "unknown"]
+                    self.webView?.sendEvent(name: "home_screen_checked", data: data.string)
                 case "web_app_request_location":
                     self.requestLocation()
                 case "web_app_check_location":
                     self.checkLocation()
                 case "web_app_open_location_settings":
                     break
+                case "web_app_send_prepared_message":
+                    if let json = json, let id = json["id"] as? String {
+                        self.sendPreparedMessage(id: id)
+                    }
+                case "web_app_request_emoji_status_access":
+                    self.requestEmojiStatusAccess()
+                case "web_app_request_file_download":
+                    if let json = json, let url = json["url"] as? String, let fileName = json["file_name"] as? String {
+                        self.downloadFile(url: url, fileName: fileName)
+                    }
                 default:
                     break
             }
@@ -1612,13 +1632,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         fileprivate func shareAccountContact() {
-            if "".isEmpty, let controller = self.controller {
-                let previewController = WebAppMessagePreviewScreen(context: controller.context, completion: { _ in })
-                previewController.navigationPresentation = .flatModal
-                controller.parentController()?.push(previewController)
-                return
-            }
-            
             guard let context = self.controller?.context, let botId = self.controller?.botId, let botName = self.controller?.botName else {
                 return
             }
@@ -2120,68 +2133,147 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
-        fileprivate func setEmojiStatus(_ fileId: Int64, expirationDate: Int32? = nil) {
+        fileprivate func sendPreparedMessage(id: String) {
             guard let controller = self.controller else {
                 return
             }
-            
-            let botName = controller.botName
-            if let _ = expirationDate {
-                let _ = combineLatest(
-                    queue: Queue.mainQueue(),
-                    self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId]),
-                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)),
-                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
-                ).start(next: { [weak self] files, accountPeer, botPeer in
-                    guard let self, let accountPeer, let controller = self.controller else {
+            let _ = (self.context.engine.messages.getPreparedInlineMessage(botId: controller.botId, id: id)
+            |> deliverOnMainQueue).start(next: { [weak self, weak controller] preparedMessage in
+                guard let self, let controller, let preparedMessage else {
+                    self?.webView?.sendEvent(name: "prepared_message_failed", data: "{error: \"MESSAGE_EXPIRED\"}")
+                    return
+                }
+                let previewController = WebAppMessagePreviewScreen(context: controller.context, botName: controller.botName, preparedMessage: preparedMessage, completion: { [weak self] result in
+                    guard let self else {
                         return
                     }
-                    guard let file = files[fileId] else {
-                        self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"SUGGESTED_EMOJI_INVALID\"}")
-                        return
+                    if result {
+                        self.webView?.sendEvent(name: "prepared_message_sent", data: nil)
+                    } else {
+                        self.webView?.sendEvent(name: "prepared_message_failed", data: "{error: \"USER_DECLINED\"}")
                     }
-                    let confirmController = WebAppSetEmojiStatusScreen(
-                        context: self.context,
-                        botName: controller.botName,
-                        accountPeer: accountPeer,
-                        file: file,
-                        completion: { [weak self, weak controller] result in
-                            guard let self else {
-                                return
-                            }
-                            if result {
-                                let _ = (self.context.engine.accountData.setEmojiStatus(file: file, expirationDate: expirationDate)
-                                |> deliverOnMainQueue).start(completed: { [weak self] in
-                                    self?.webView?.sendEvent(name: "emoji_status_set", data: nil)
-                                })
-                                //TODO:localize
-                                let resultController = UndoOverlayController(
-                                    presentationData: self.presentationData,
-                                    content: .sticker(context: context, file: file, loop: false, title: nil, text: "Your emoji status updated.", undoText: nil, customAction: nil),
-                                    elevatedLayout: true,
-                                    action: { action in
-                                        if case .undo = action {
-                                            
-                                        }
-                                        return true
-                                    }
-                                )
-                                controller?.present(resultController, in: .window(.root))
-                            } else {
-                                self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"USER_DECLINED\"}")
-                            }
-                        }
-                    )
-                    controller.parentController()?.push(confirmController)
                 })
-
-                
+                previewController.navigationPresentation = .flatModal
+                controller.parentController()?.push(previewController)
+            })
+        }
+        
+        fileprivate func downloadFile(url: String, fileName: String) {
+            guard let controller = self.controller else {
                 return
             }
+            var title: String?
+            let photoExtensions = [".jpg", ".png", ".gif", ".tiff"]
+            let videoExtensions = [".mp4", ".mov"]
+            let lowercasedFilename = fileName.lowercased()
+            for ext in photoExtensions {
+                if lowercasedFilename.hasSuffix(ext) {
+                    title = "Download Photo"
+                    break
+                }
+            }
+            if title == nil {
+                for ext in videoExtensions {
+                    if lowercasedFilename.hasSuffix(ext) {
+                        title = "Download Video"
+                        break
+                    }
+                }
+            }
+            if title == nil {
+                title = "Download Document"
+            }
             
+            let _ = (FileDownload.getFileSize(url: url)
+            |> deliverOnMainQueue).start(next: { [weak self] fileSize in
+                guard let self else {
+                    return
+                }
+                
+                var fileSizeString = ""
+                if let fileSize {
+                    fileSizeString = " (\(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))))"
+                }
+                
+                let text: String = "**\(controller.botName)** suggests you to download **\(fileName)**\(fileSizeString)."
+                let alertController = standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [
+                    TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: { [weak self] in
+                        self?.webView?.sendEvent(name: "file_download_requested", data: "{status: \"cancelled\"}")
+                    }),
+                    TextAlertAction(type: .defaultAction, title: "Download", action: { [weak self] in
+                        self?.startDownload(url: url, fileName: fileName, fileSize: fileSize)
+                    })
+                ], parseMarkdown: true)
+                controller.present(alertController, in: .window(.root))
+            })
+        }
+        
+        private var fileDownload: FileDownload?
+        private weak var fileDownloadTooltip: UndoOverlayController?
+        fileprivate func startDownload(url: String, fileName: String, fileSize: Int64?) {
+            guard let controller = self.controller else {
+                return
+            }
+            self.webView?.sendEvent(name: "file_download_requested", data: "{status: \"downloading\"}")
+            
+            self.fileDownload = FileDownload(
+                from: URL(string: url)!,
+                fileSize: fileSize,
+                progressHandler: { [weak self] progress in
+                    guard let self else {
+                        return
+                    }
+                    let text: String
+                    if let fileSize {
+                        let downloadedSize = Int64(Double(fileSize) * progress)
+                        text = "\(dataSizeString(downloadedSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData))) / \(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))"
+                    } else {
+                        text = "\(Int32(progress))%"
+                    }
+                    
+                    self.fileDownloadTooltip?.content = .progress(
+                        progress: progress,
+                        title: fileName,
+                        text: text,
+                        undoText: "Cancel"
+                    )
+                },
+                completion: { resultUrl, _ in
+                    
+                }
+            )
+            
+            let text: String
+            if let fileSize {
+                text = "0 KB / \(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: self.presentationData)))"
+            } else {
+                text = "0%"
+            }
+            
+            let tooltipController = UndoOverlayController(
+                presentationData: self.presentationData,
+                content: .progress(
+                    progress: 0.0,
+                    title: fileName,
+                    text: text,
+                    undoText: "Cancel"
+                ),
+                elevatedLayout: false,
+                position: .top,
+                action: { _ in
+                    return true
+                }
+            )
+            controller.present(tooltipController, in: .window(.root))
+            self.fileDownloadTooltip = tooltipController
+        }
+        
+        fileprivate func requestEmojiStatusAccess() {
+            guard let controller = self.controller else {
+                return
+            }
             let _ = combineLatest(
                 queue: Queue.mainQueue(),
-                self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId]),
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)),
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId)),
                 self.context.engine.stickers.loadedStickerPack(reference: .iconStatusEmoji, forceActualized: false)
@@ -2194,7 +2286,62 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 }
                 |> take(1)
-            ).start(next: { [weak self] files, accountPeer, botPeer, iconStatusEmoji in
+            ).start(next: { [weak self] accountPeer, botPeer, iconStatusEmoji in
+                guard let self, let accountPeer, let controller = self.controller else {
+                    return
+                }
+                let alertController = webAppEmojiStatusAlertController(
+                    context: self.context,
+                    accountPeer: accountPeer,
+                    botName: controller.botName,
+                    icons: iconStatusEmoji,
+                    completion: { [weak self] result in
+                        guard let self, let controller = self.controller else {
+                            return
+                        }
+                        if result {
+                            let context = self.context
+                            let botId = controller.botId
+                            let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: botId, enabled: true)
+                            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                                self?.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"allowed\"}")
+                            })
+                            
+                            //TODO:localize
+                            if let botPeer {
+                                let resultController = UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .invitedToVoiceChat(context: self.context, peer: botPeer, title: nil, text: "**\(controller.botName)** can now set your emoji status anytime.", action: "Undo", duration: 5.0),
+                                    elevatedLayout: true,
+                                    action: { action in
+                                        if case .undo = action {
+                                            let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: botId, enabled: false)
+                                            |> deliverOnMainQueue).startStandalone()
+                                        }
+                                        return true
+                                    }
+                                )
+                                controller.present(resultController, in: .window(.root))
+                            }
+                        } else {
+                            self.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"cancelled\"}")
+                        }
+                    }
+                )
+                controller.present(alertController, in: .window(.root))
+            })
+        }
+        
+        fileprivate func setEmojiStatus(_ fileId: Int64, expirationDate: Int32? = nil) {
+            guard let controller = self.controller else {
+                return
+            }
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId]),
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)),
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
+            ).start(next: { [weak self] files, accountPeer, botPeer in
                 guard let self, let accountPeer, let controller = self.controller else {
                     return
                 }
@@ -2202,12 +2349,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"SUGGESTED_EMOJI_INVALID\"}")
                     return
                 }
-                let alertController = webAppEmojiStatusAlertController(
+                let confirmController = WebAppSetEmojiStatusScreen(
                     context: self.context,
+                    botName: controller.botName,
                     accountPeer: accountPeer,
-                    botName: botName,
-                    icons: iconStatusEmoji,
-                    expirationDate: expirationDate,
+                    file: file,
                     completion: { [weak self, weak controller] result in
                         guard let self else {
                             return
@@ -2218,26 +2364,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 self?.webView?.sendEvent(name: "emoji_status_set", data: nil)
                             })
                             //TODO:localize
-                            if let botPeer {
-                                let resultController = UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .invitedToVoiceChat(context: context, peer: botPeer, title: nil, text: "**\(botName)** can now set your emoji status anytime.", action: "Undo", duration: 5.0),
-                                    elevatedLayout: true,
-                                    action: { action in
-                                        if case .undo = action {
-                                            
-                                        }
-                                        return true
+                            let resultController = UndoOverlayController(
+                                presentationData: self.presentationData,
+                                content: .sticker(context: context, file: file, loop: false, title: nil, text: "Your emoji status updated.", undoText: nil, customAction: nil),
+                                elevatedLayout: true,
+                                action: { action in
+                                    if case .undo = action {
+                                        
                                     }
-                                )
-                                controller?.present(resultController, in: .window(.root))
-                            }
+                                    return true
+                                }
+                            )
+                            controller?.present(resultController, in: .window(.root))
                         } else {
                             self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"USER_DECLINED\"}")
                         }
                     }
                 )
-                controller.present(alertController, in: .window(.root))
+                controller.parentController()?.push(confirmController)
             })
         }
         

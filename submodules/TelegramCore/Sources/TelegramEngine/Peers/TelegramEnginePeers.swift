@@ -811,6 +811,10 @@ public extension TelegramEngine {
             return _internal_updateBotAbout(account: self.account, peerId: peerId, about: about)
         }
         
+        public func toggleBotEmojiStatusAccess(peerId: PeerId, enabled: Bool) -> Signal<Never, ToggleBotEmojiStatusAccessError> {
+            return _internal_toggleBotEmojiStatusAccess(account: self.account, peerId: peerId, enabled: enabled)
+        }
+        
         public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
             return _internal_updatePeerNameColorAndEmoji(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
         }

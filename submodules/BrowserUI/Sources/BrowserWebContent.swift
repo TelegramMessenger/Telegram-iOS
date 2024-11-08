@@ -1460,8 +1460,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 }
             }
             
-            if result.isEmpty, let webViewUrl = self.webView.url {
-                let schemeAndHostUrl = webViewUrl.deletingPathExtension()
+            if result.isEmpty, let webViewUrl = self.webView.url,  let schemeAndHostUrl = URL(string: "/", relativeTo: webViewUrl) {
                 let url = schemeAndHostUrl.appendingPathComponent("favicon.ico")
                 result.insert(Favicon(url: url.absoluteString, dimensions: nil))
             }

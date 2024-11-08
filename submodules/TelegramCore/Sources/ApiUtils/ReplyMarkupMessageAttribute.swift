@@ -2,6 +2,22 @@ import Foundation
 import Postbox
 import TelegramApi
 
+extension ReplyMarkupButtonAction.PeerTypes {
+    init?(apiType: Api.InlineQueryPeerType) {
+        switch apiType {
+        case .inlineQueryPeerTypePM:
+            self = .users
+        case .inlineQueryPeerTypeBotPM:
+            self = .bots
+        case .inlineQueryPeerTypeBroadcast:
+            self = .channels
+        case .inlineQueryPeerTypeChat, .inlineQueryPeerTypeMegagroup:
+            self = .groups
+        case .inlineQueryPeerTypeSameBotPM:
+            return nil
+        }
+    }
+}
 
 extension ReplyMarkupButton {
     init(apiButton: Api.KeyboardButton) {

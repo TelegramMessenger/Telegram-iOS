@@ -261,6 +261,46 @@ public extension Api.messages {
     }
 }
 public extension Api.messages {
+    enum BotPreparedInlineMessage: TypeConstructorDescription {
+        case botPreparedInlineMessage(id: String, expireDate: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botPreparedInlineMessage(let id, let expireDate):
+                    if boxed {
+                        buffer.appendInt32(-1899035375)
+                    }
+                    serializeString(id, buffer: buffer, boxed: false)
+                    serializeInt32(expireDate, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botPreparedInlineMessage(let id, let expireDate):
+                return ("botPreparedInlineMessage", [("id", id as Any), ("expireDate", expireDate as Any)])
+    }
+    }
+    
+        public static func parse_botPreparedInlineMessage(_ reader: BufferReader) -> BotPreparedInlineMessage? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.BotPreparedInlineMessage.botPreparedInlineMessage(id: _1!, expireDate: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum BotResults: TypeConstructorDescription {
         case botResults(flags: Int32, queryId: Int64, nextOffset: String?, switchPm: Api.InlineBotSwitchPM?, switchWebview: Api.InlineBotWebView?, results: [Api.BotInlineResult], cacheTime: Int32, users: [Api.User])
     
@@ -1394,64 +1434,6 @@ public extension Api.messages {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum FoundStickerSets: TypeConstructorDescription {
-        case foundStickerSets(hash: Int64, sets: [Api.StickerSetCovered])
-        case foundStickerSetsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .foundStickerSets(let hash, let sets):
-                    if boxed {
-                        buffer.appendInt32(-1963942446)
-                    }
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .foundStickerSetsNotModified:
-                    if boxed {
-                        buffer.appendInt32(223655517)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .foundStickerSets(let hash, let sets):
-                return ("foundStickerSets", [("hash", hash as Any), ("sets", sets as Any)])
-                case .foundStickerSetsNotModified:
-                return ("foundStickerSetsNotModified", [])
-    }
-    }
-    
-        public static func parse_foundStickerSets(_ reader: BufferReader) -> FoundStickerSets? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.FoundStickerSets.foundStickerSets(hash: _1!, sets: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_foundStickerSetsNotModified(_ reader: BufferReader) -> FoundStickerSets? {
-            return Api.messages.FoundStickerSets.foundStickerSetsNotModified
         }
     
     }

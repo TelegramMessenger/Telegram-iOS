@@ -26,13 +26,19 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let botName: String
+    let preparedMessage: PreparedInlineMessage
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
+        botName: String,
+        preparedMessage: PreparedInlineMessage,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
+        self.botName = botName
+        self.preparedMessage = preparedMessage
         self.dismiss = dismiss
     }
     
@@ -225,11 +231,17 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     private let context: AccountContext
+    private let botName: String
+    private let preparedMessage: PreparedInlineMessage
     
     init(
-        context: AccountContext
+        context: AccountContext,
+        botName: String,
+        preparedMessage: PreparedInlineMessage
     ) {
         self.context = context
+        self.botName = botName
+        self.preparedMessage = preparedMessage
     }
     
     static func ==(lhs: WebAppMessagePreviewSheetComponent, rhs: WebAppMessagePreviewSheetComponent) -> Bool {
@@ -252,6 +264,8 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
+                        botName: context.component.botName,
+                        preparedMessage: context.component.preparedMessage,
                         dismiss: {
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
@@ -307,6 +321,8 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
         
     public init(
         context: AccountContext,
+        botName: String,
+        preparedMessage: PreparedInlineMessage,
         completion: @escaping (Bool) -> Void
     ) {
         self.context = context
@@ -315,7 +331,9 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
         super.init(
             context: context,
             component: WebAppMessagePreviewSheetComponent(
-                context: context
+                context: context,
+                botName: botName,
+                preparedMessage: preparedMessage
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,

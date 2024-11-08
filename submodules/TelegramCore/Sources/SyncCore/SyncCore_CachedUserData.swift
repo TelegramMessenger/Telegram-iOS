@@ -299,6 +299,7 @@ public struct CachedUserFlags: OptionSet {
     public static let premiumRequired = CachedUserFlags(rawValue: 1 << 3)
     public static let adsEnabled = CachedUserFlags(rawValue: 1 << 4)
     public static let canViewRevenue = CachedUserFlags(rawValue: 1 << 5)
+    public static let botCanManageEmojiStatus = CachedUserFlags(rawValue: 1 << 6)
 }
 
 public final class EditableBotInfo: PostboxCoding, Equatable {
