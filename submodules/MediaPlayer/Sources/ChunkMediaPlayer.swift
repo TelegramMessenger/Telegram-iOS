@@ -230,45 +230,6 @@ private final class ChunkMediaPlayerContext {
         self.loadedState = ChunkMediaPlayerLoadedState()
         
         let queue = self.queue
-        let audioRendererContext = MediaPlayerAudioRenderer(
-            audioSession: .manager(self.audioSessionManager),
-            forAudioVideoMessage: self.isAudioVideoMessage,
-            playAndRecord: self.playAndRecord,
-            soundMuted: self.soundMuted,
-            ambient: self.ambient,
-            mixWithOthers: self.mixWithOthers,
-            forceAudioToSpeaker: self.forceAudioToSpeaker,
-            baseRate: self.baseRate,
-            audioLevelPipe: self.audioLevelPipe,
-            updatedRate: { [weak self] in
-                queue.async {
-                    guard let self else {
-                        return
-                    }
-                    self.tick()
-                }
-            },
-            audioPaused: { [weak self] in
-                queue.async {
-                    guard let self else {
-                        return
-                    }
-                    if self.enableSound {
-                        if self.continuePlayingWithoutSoundOnLostAudioSession {
-                            self.continuePlayingWithoutSound(seek: .start)
-                        } else {
-                            self.pause(lostAudioSession: true, faded: false)
-                        }
-                    } else {
-                        self.seek(timestamp: 0.0, action: .play, notify: true)
-                    }
-                }
-            }
-        )
-        self.audioRenderer = MediaPlayerAudioRendererContext(renderer: audioRendererContext)
-        
-        self.loadedState.controlTimebase = ChunkMediaPlayerControlTimebase(timebase: audioRendererContext.audioTimebase, isAudio: true)
-        
         self.videoRenderer.visibilityUpdated = { [weak self] value in
             assert(queue.isCurrent())
             
@@ -328,9 +289,6 @@ private final class ChunkMediaPlayerContext {
             return .noFrames
         })
         
-        audioRendererContext.start()
-        self.tick()
-        
         let tickTimer = SwiftSignalKit.Timer(timeout: 1.0 / 25.0, repeat: true, completion: { [weak self] in
             self?.tick()
         }, queue: self.queue)
@@ -344,6 +302,8 @@ private final class ChunkMediaPlayerContext {
             self.partsState = partsState
             self.tick()
         })
+        
+        self.tick()
     }
     
     deinit {
@@ -457,6 +417,7 @@ private final class ChunkMediaPlayerContext {
             } else {
                 timestamp = 0.0
             }
+            let _ = timestamp
             self.seek(timestamp: timestamp, action: .play, notify: true)
         } else {
             if case let .timecode(time) = seek {
@@ -598,18 +559,81 @@ private final class ChunkMediaPlayerContext {
         }
         timestamp = max(0.0, timestamp)
         
-        if let firstPart = self.loadedState.partStates.first, let mediaBuffers = firstPart.mediaBuffers, mediaBuffers.videoBuffer != nil, mediaBuffers.audioBuffer == nil {
-            // No audio
+        var disableAudio = false
+        if !self.enableSound {
+            disableAudio = true
+        }
+        var hasAudio = false
+        if let firstPart = self.loadedState.partStates.first, let mediaBuffers = firstPart.mediaBuffers, mediaBuffers.videoBuffer != nil {
+            if mediaBuffers.audioBuffer != nil {
+                hasAudio = true
+            } else {
+                disableAudio = true
+            }
+        }
+        
+        if disableAudio {
+            var resetTimebase = false
             if self.audioRenderer != nil {
                 self.audioRenderer?.renderer.stop()
                 self.audioRenderer = nil
-                
+                resetTimebase = true
+            }
+            if self.loadedState.controlTimebase == nil {
+                resetTimebase = true
+            }
+             
+            if resetTimebase {
                 var timebase: CMTimebase?
                 CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
                 let controlTimebase = ChunkMediaPlayerControlTimebase(timebase: timebase!, isAudio: false)
                 CMTimebaseSetTime(timebase!, time: CMTimeMakeWithSeconds(timestamp, preferredTimescale: 44000))
                 
                 self.loadedState.controlTimebase = controlTimebase
+            }
+        } else if hasAudio {
+            if self.audioRenderer == nil {
+                let queue = self.queue
+                let audioRendererContext = MediaPlayerAudioRenderer(
+                    audioSession: .manager(self.audioSessionManager),
+                    forAudioVideoMessage: self.isAudioVideoMessage,
+                    playAndRecord: self.playAndRecord,
+                    soundMuted: self.soundMuted,
+                    ambient: self.ambient,
+                    mixWithOthers: self.mixWithOthers,
+                    forceAudioToSpeaker: self.forceAudioToSpeaker,
+                    baseRate: self.baseRate,
+                    audioLevelPipe: self.audioLevelPipe,
+                    updatedRate: { [weak self] in
+                        queue.async {
+                            guard let self else {
+                                return
+                            }
+                            self.tick()
+                        }
+                    },
+                    audioPaused: { [weak self] in
+                        queue.async {
+                            guard let self else {
+                                return
+                            }
+                            if self.enableSound {
+                                if self.continuePlayingWithoutSoundOnLostAudioSession {
+                                    self.continuePlayingWithoutSound(seek: .start)
+                                } else {
+                                    self.pause(lostAudioSession: true, faded: false)
+                                }
+                            } else {
+                                self.seek(timestamp: 0.0, action: .play, notify: true)
+                            }
+                        }
+                    }
+                )
+                self.audioRenderer = MediaPlayerAudioRendererContext(renderer: audioRendererContext)
+                
+                self.loadedState.controlTimebase = ChunkMediaPlayerControlTimebase(timebase: audioRendererContext.audioTimebase, isAudio: true)
+                audioRendererContext.flushBuffers(at: CMTimeMakeWithSeconds(timestamp, preferredTimescale: 44000), completion: {})
+                audioRendererContext.start()
             }
         }
         

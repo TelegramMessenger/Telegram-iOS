@@ -1,6 +1,7 @@
 #!/bin/sh
 
-rm -rf ../HlsBundle
-mkdir ../HlsBundle
+mkdir -p ../HlsBundle
+rm -rf ../HlsBundle/index
+mkdir ../HlsBundle/index
 npm run build-$1
-cp ./dist/* ../HlsBundle/
+cp ./dist/* ../HlsBundle/index/

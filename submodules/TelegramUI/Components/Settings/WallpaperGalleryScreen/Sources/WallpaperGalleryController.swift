@@ -446,7 +446,7 @@ public class WallpaperGalleryController: ViewController {
         }, controller: { [weak self] in
             return self
         })
-        self.displayNode = WallpaperGalleryControllerNode(controllerInteraction: controllerInteraction, pageGap: 0.0, disableTapNavigation: true)
+        self.displayNode = WallpaperGalleryControllerNode(context: self.context, controllerInteraction: controllerInteraction, pageGap: 0.0, disableTapNavigation: true)
         self.displayNodeDidLoad()
 
         (self.displayNode as? WallpaperGalleryControllerNode)?.nativeStatusBar = self.statusBar

@@ -5,8 +5,11 @@ import Display
 import Postbox
 import SwipeToDismissGesture
 import AccountContext
+import UndoUI
 
 open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
+    private let context: AccountContext
+    
     public var statusBar: StatusBar?
     public var navigationBar: NavigationBar? {
         didSet {
@@ -48,7 +51,8 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         }
     }
     
-    public init(controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0, disableTapNavigation: Bool = false) {
+    public init(context: AccountContext, controllerInteraction: GalleryControllerInteraction, pageGap: CGFloat = 20.0, disableTapNavigation: Bool = false) {
+        self.context = context
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
@@ -471,6 +475,16 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
         let minimalDismissDistance = scrollView.contentSize.height / 12.0
         if abs(velocity.y) > 1.0 || abs(distanceFromEquilibrium) > minimalDismissDistance {
             if distanceFromEquilibrium > 1.0, let centralItemNode = self.pager.centralItemNode(), centralItemNode.maybePerformActionForSwipeDismiss() {
+                if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
+                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                    //TODO:localize
+                    chatController.present(UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .hidArchive(title: "Video Minimized", text: "Swipe down on a video to close it.", undo: false),
+                        elevatedLayout: false, action: { _ in true }
+                    ), in: .current)
+                }
+                
                 return
             }
             
