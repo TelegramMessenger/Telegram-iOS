@@ -474,11 +474,11 @@ private final class SharedHLSVideoJSContext: NSObject {
         
         self.isJsContextReady = false
         
-        /*#if DEBUG
+        //#if DEBUG
         self.jsContext = WebViewNativeJSContextImpl(handleScriptMessage: handleScriptMessage)
-        #else*/
+        /*#else
         self.jsContext = WebViewHLSJSContextImpl(handleScriptMessage: handleScriptMessage)
-        //#endif
+        #endif*/
     }
     
     private func disposeJsContext() {
