@@ -1555,7 +1555,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         |> deliverOnMainQueue).startStandalone()
                     }))
                     
-                    if data.webAppPermissions?.location?.isRequested == true {
+                    if data.webAppPermissions?.location?.isRequested == true || data.webAppPermissions?.location?.isAllowed == true {
                         items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: "Geolocation", value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
                             let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
                                 return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: value))
@@ -5459,6 +5459,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
+        var appSettings: BotAppSettings?
+        if let settings = self.data?.cachedData as? CachedUserData {
+            appSettings = settings.botInfo?.appSettings
+        }
+        
         let presentationData = self.presentationData
         let proceed: (Bool) -> Void = { [weak self] installed in
             guard let self else {
@@ -5466,7 +5471,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             let context = self.context
             let peerId = self.peerId
-            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
+            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, botAddress: bot.peer.addressName ?? "", url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true, appSettings: appSettings)
             
             var openUrlImpl: ((String, Bool, Bool, @escaping () -> Void) -> Void)?
             var presentImpl: ((ViewController, Any?) -> Void)?

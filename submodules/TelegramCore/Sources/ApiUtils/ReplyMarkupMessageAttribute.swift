@@ -3,19 +3,23 @@ import Postbox
 import TelegramApi
 
 extension ReplyMarkupButtonAction.PeerTypes {
-    init?(apiType: Api.InlineQueryPeerType) {
-        switch apiType {
-        case .inlineQueryPeerTypePM:
-            self = .users
-        case .inlineQueryPeerTypeBotPM:
-            self = .bots
-        case .inlineQueryPeerTypeBroadcast:
-            self = .channels
-        case .inlineQueryPeerTypeChat, .inlineQueryPeerTypeMegagroup:
-            self = .groups
-        case .inlineQueryPeerTypeSameBotPM:
-            return nil
+    init(apiType: [Api.InlineQueryPeerType]) {
+        var rawValue: Int32 = 0
+        for type in apiType {
+            switch type {
+            case .inlineQueryPeerTypePM:
+                rawValue |= ReplyMarkupButtonAction.PeerTypes.users.rawValue
+            case .inlineQueryPeerTypeBotPM:
+                rawValue |= ReplyMarkupButtonAction.PeerTypes.bots.rawValue
+            case .inlineQueryPeerTypeBroadcast:
+                rawValue |= ReplyMarkupButtonAction.PeerTypes.channels.rawValue
+            case .inlineQueryPeerTypeChat, .inlineQueryPeerTypeMegagroup:
+                rawValue |= ReplyMarkupButtonAction.PeerTypes.groups.rawValue
+            case .inlineQueryPeerTypeSameBotPM:
+                break
+            }
         }
+        self.init(rawValue: rawValue)
     }
 }
 

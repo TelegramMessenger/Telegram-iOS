@@ -27,17 +27,20 @@ private final class SheetContent: CombinedComponent {
     
     let context: AccountContext
     let botName: String
+    let botAddress: String
     let preparedMessage: PreparedInlineMessage
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
         botName: String,
+        botAddress: String,
         preparedMessage: PreparedInlineMessage,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
         self.botName = botName
+        self.botAddress = botAddress
         self.preparedMessage = preparedMessage
         self.dismiss = dismiss
     }
@@ -101,7 +104,7 @@ private final class SheetContent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
 
-            let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("Test Attach mini app suggests you to send this message to a chat you select.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+            let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("\(component.botName) mini app suggests you to send this message to a chat you select.", attributes: amountMarkdownAttributes, textAlignment: .natural))
             let amountFooter = AnyComponent(MultilineTextComponent(
                 text: .plain(amountInfoString),
                 maximumNumberOfLines: 0,
@@ -120,17 +123,45 @@ private final class SheetContent: CombinedComponent {
                     }
                 }
             ))
+                        
+            var text: String = ""
+            var entities: TextEntitiesMessageAttribute?
+            var media: [Media] = []
+            
+            switch component.preparedMessage.result {
+            case let .internalReference(reference):
+                switch reference.message {
+                case let .auto(textValue, entitiesValue, _):
+                    text = textValue
+                    entities = entitiesValue
+                    if let file = reference.file {
+                        media = [file]
+                    } else if let image = reference.image {
+                        media = [image]
+                    }
+                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, _):
+                    text = textValue
+                    entities = entitiesValue
+                    let _ = disableUrlPreview
+                    let _ = previewParameters
+                case let .contact(contact, _):
+                    media = [contact]
+                case let .mapLocation(map, _):
+                    media = [map]
+                case let .invoice(invoice, _):
+                    media = [invoice]
+                default:
+                    break
+                }
+            case let .externalReference(reference):
+                let _ = reference
+            }
             
             let messageItem = PeerNameColorChatPreviewItem.MessageItem(
-                outgoing: true,
-                peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)),
-                author: "",
-                photo: [],
-                nameColor: .blue,
-                backgroundEmojiId: nil,
-                reply: nil,
-                linkPreview: nil,
-                text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua"
+                text: text,
+                entities: entities,
+                media: media,
+                botAddress: component.botAddress
             )
                      
             let listItemParams = ListViewItemLayoutParams(width: context.availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
@@ -197,7 +228,7 @@ private final class SheetContent: CombinedComponent {
                     displaysProgress: false,
                     action: {
                         if let controller = controller() as? WebAppMessagePreviewScreen {
-                            let _ = controller
+                            controller.proceed()
                         }
                     }
                 ),
@@ -232,15 +263,18 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
     
     private let context: AccountContext
     private let botName: String
+    private let botAddress: String
     private let preparedMessage: PreparedInlineMessage
     
     init(
         context: AccountContext,
         botName: String,
+        botAddress: String,
         preparedMessage: PreparedInlineMessage
     ) {
         self.context = context
         self.botName = botName
+        self.botAddress = botAddress
         self.preparedMessage = preparedMessage
     }
     
@@ -265,6 +299,7 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
                         botName: context.component.botName,
+                        botAddress: context.component.botAddress,
                         preparedMessage: context.component.preparedMessage,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -290,12 +325,14 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in
-                                    if let controller = controller() {
+                                    if let controller = controller() as? WebAppMessagePreviewScreen {
+                                        controller.completeWithResult(false)
                                         controller.dismiss(completion: nil)
                                     }
                                 })
                             } else {
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppMessagePreviewScreen {
+                                    controller.completeWithResult(false)
                                     controller.dismiss(completion: nil)
                                 }
                             }
@@ -317,15 +354,18 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
 
 public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer {
     private let context: AccountContext
+    private let preparedMessage: PreparedInlineMessage
     fileprivate let completion: (Bool) -> Void
         
     public init(
         context: AccountContext,
         botName: String,
+        botAddress: String,
         preparedMessage: PreparedInlineMessage,
         completion: @escaping (Bool) -> Void
     ) {
         self.context = context
+        self.preparedMessage = preparedMessage
         self.completion = completion
         
         super.init(
@@ -333,6 +373,7 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
             component: WebAppMessagePreviewSheetComponent(
                 context: context,
                 botName: botName,
+                botAddress: botAddress,
                 preparedMessage: preparedMessage
             ),
             navigationBarAppearance: .none,
@@ -346,8 +387,43 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-            
+    
+    fileprivate func complete(peer: EnginePeer) {
+        self.completeWithResult(true)
+        self.dismiss()
+        
+        let _ = self.context.engine.messages.enqueueOutgoingMessage(
+            to: peer.id,
+            replyTo: nil,
+            storyId: nil,
+            content: .preparedInlineMessage(preparedMessage)
+        ).start()
+    }
+        
+    private var completed = false
+    fileprivate func completeWithResult(_ result: Bool) {
+        guard !self.completed else {
+            return
+        }
+        self.completion(result)
+    }
+    
+    fileprivate func proceed() {
+        let requestPeerType = self.preparedMessage.peerTypes.requestPeerTypes
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: requestPeerType, hasContactSelector: false))
+
+        controller.peerSelected = { [weak self, weak controller] peer, _ in
+            guard let self else {
+                return
+            }
+            self.complete(peer: peer)
+            controller?.dismiss()
+        }
+        self.push(controller)
+    }
+    
     public func dismissAnimated() {
+        self.completeWithResult(false)
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }

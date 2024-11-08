@@ -15,6 +15,7 @@ import PresentationDataUtils
 import HexColor
 import ShimmerEffect
 import PhotoResources
+import MediaResources
 import LegacyComponents
 import UrlHandling
 import MoreButtonNode
@@ -33,6 +34,7 @@ import OverlayStatusController
 import TelegramUIPreferences
 import CoreMotion
 import DeviceLocationManager
+import LegacyMediaPickerUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -60,6 +62,7 @@ public struct WebAppParameters {
     let botId: PeerId
     let botName: String
     let botVerified: Bool
+    let botAddress: String
     let url: String?
     let queryId: Int64?
     let payload: String?
@@ -68,6 +71,7 @@ public struct WebAppParameters {
     let forceHasSettings: Bool
     let fullSize: Bool
     let isFullscreen: Bool
+    let appSettings: BotAppSettings?
     
     public init(
         source: Source,
@@ -75,6 +79,7 @@ public struct WebAppParameters {
         botId: PeerId,
         botName: String,
         botVerified: Bool,
+        botAddress: String,
         url: String?,
         queryId: Int64?,
         payload: String?,
@@ -82,25 +87,24 @@ public struct WebAppParameters {
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         forceHasSettings: Bool,
         fullSize: Bool,
-        isFullscreen: Bool = false
+        isFullscreen: Bool = false,
+        appSettings: BotAppSettings? = nil
     ) {
         self.source = source
         self.peerId = peerId
         self.botId = botId
         self.botName = botName
         self.botVerified = botVerified
+        self.botAddress = botAddress
         self.url = url
         self.queryId = queryId
         self.payload = payload
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.forceHasSettings = forceHasSettings
-        self.fullSize = fullSize
-//        #if DEBUG
-//        self.isFullscreen = true
-//        #else
+        self.fullSize = fullSize || isFullscreen
         self.isFullscreen = isFullscreen
-//        #endif
+        self.appSettings = appSettings
     }
 }
 
@@ -239,7 +243,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.placeholderNode = placeholderNode
             
             let placeholder: Signal<(FileMediaReference, Bool)?, NoError>
-            if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
+            if let botAppSettings = controller.botAppSettings {
+                Queue.mainQueue().justDispatch {
+                    if let backgroundColor = botAppSettings.backgroundColor {
+                        self.appBackgroundColor = UIColor(rgb: UInt32(bitPattern: backgroundColor))
+                        self.updateBackgroundColor(transition: .immediate)
+                    }
+                    if let headerColor = botAppSettings.headerColor {
+                        self.headerColor = UIColor(rgb: UInt32(bitPattern: headerColor))
+                        self.updateHeaderBackgroundColor(transition: .immediate)
+                    }
+                }
+            }
+            if let placeholderFile = controller.botAppSettings?.placeholder {
+                placeholder = .single((.standalone(media: placeholderFile), false))
+            } else if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
                 placeholder = .single(nil)
                 |> delay(0.05, queue: Queue.mainQueue())
             } else {
@@ -289,7 +307,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let fileReference = fileReference {
                     let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
                 }
-                strongSelf.placeholderDisposable.set((svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
+                let _ = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
                 |> deliverOnMainQueue).start(next: { [weak self] transform in
                     if let strongSelf = self {
                         let imageSize: CGSize
@@ -309,7 +327,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
-                }))
+                })
             }))
             
             self.iconDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
@@ -461,9 +479,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 shapes = [.image(image: image, rect: CGRect(origin: CGPoint(), size: image.size))]
                 placeholderSize = image.size
             }
-         
-            let theme = self.presentationData.theme
-            self.placeholderNode?.update(backgroundColor: .clear, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: placeholderSize, mask: true)
+            
+            let foregroundColor: UIColor
+            let shimmeringColor: UIColor
+            if let backgroundColor = self.appBackgroundColor {
+                if backgroundColor.lightness > 0.705 {
+                    foregroundColor = backgroundColor.mixedWith(UIColor(rgb: 0x000000), alpha: 0.05)
+                    shimmeringColor = UIColor.white.withAlphaComponent(0.2)
+                } else {
+                    foregroundColor = backgroundColor.mixedWith(UIColor(rgb: 0xffffff), alpha: 0.05)
+                    shimmeringColor = UIColor.white.withAlphaComponent(0.4)
+                }
+            } else {
+                let theme = self.presentationData.theme
+                foregroundColor = theme.list.mediaPlaceholderColor
+                shimmeringColor = theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4)
+            }
+            
+            self.placeholderNode?.update(backgroundColor: .clear, foregroundColor: foregroundColor, shimmeringColor: shimmeringColor, shapes: shapes, horizontal: true, size: placeholderSize, mask: true)
             
             return placeholderSize
         }
@@ -1097,8 +1130,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_set_background_color":
                     if let json = json, let colorValue = json["color"] as? String, let color = UIColor(hexString: colorValue) {
-                        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-                        transition.updateBackgroundColor(node: self.backgroundNode, color: color)
+                        self.appBackgroundColor = color
+                        self.updateBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
                     }
                 case "web_app_set_header_color":
                     if let json = json {
@@ -1403,7 +1436,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         fileprivate var needDismissConfirmation = false
-                
+        
+        fileprivate var appBackgroundColor: UIColor?
         fileprivate var headerColor: UIColor?
         fileprivate var headerPrimaryTextColor: UIColor?
         private var headerColorKey: String?
@@ -1414,6 +1448,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         fileprivate let bottomPanelColorPromise = Promise<UIColor?>(nil)
+        
+        private func updateBackgroundColor(transition: ContainedViewLayoutTransition) {
+            transition.updateBackgroundColor(node: self.backgroundNode, color: self.appBackgroundColor ?? .clear)
+        }
         
         private func updateHeaderBackgroundColor(transition: ContainedViewLayoutTransition) {
             guard let controller = self.controller else {
@@ -2143,7 +2181,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self?.webView?.sendEvent(name: "prepared_message_failed", data: "{error: \"MESSAGE_EXPIRED\"}")
                     return
                 }
-                let previewController = WebAppMessagePreviewScreen(context: controller.context, botName: controller.botName, preparedMessage: preparedMessage, completion: { [weak self] result in
+                let previewController = WebAppMessagePreviewScreen(context: controller.context, botName: controller.botName, botAddress: controller.botAddress, preparedMessage: preparedMessage, completion: { [weak self] result in
                     guard let self else {
                         return
                     }
@@ -2162,6 +2200,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            var isMedia = true
             var title: String?
             let photoExtensions = [".jpg", ".png", ".gif", ".tiff"]
             let videoExtensions = [".mp4", ".mov"]
@@ -2182,6 +2221,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             if title == nil {
                 title = "Download Document"
+                isMedia = false
             }
             
             let _ = (FileDownload.getFileSize(url: url)
@@ -2201,7 +2241,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self?.webView?.sendEvent(name: "file_download_requested", data: "{status: \"cancelled\"}")
                     }),
                     TextAlertAction(type: .defaultAction, title: "Download", action: { [weak self] in
-                        self?.startDownload(url: url, fileName: fileName, fileSize: fileSize)
+                        self?.startDownload(url: url, fileName: fileName, fileSize: fileSize, isMedia: isMedia)
                     })
                 ], parseMarkdown: true)
                 controller.present(alertController, in: .window(.root))
@@ -2210,7 +2250,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         private var fileDownload: FileDownload?
         private weak var fileDownloadTooltip: UndoOverlayController?
-        fileprivate func startDownload(url: String, fileName: String, fileSize: Int64?) {
+        fileprivate func startDownload(url: String, fileName: String, fileSize: Int64?, isMedia: Bool) {
             guard let controller = self.controller else {
                 return
             }
@@ -2238,8 +2278,70 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         undoText: "Cancel"
                     )
                 },
-                completion: { resultUrl, _ in
-                    
+                completion: { [weak self] resultUrl, _ in
+                    if let resultUrl, let self {
+                        if let tooltip = self.fileDownloadTooltip {
+                            tooltip.dismissWithCommitAction()
+                        }
+                         
+                        if isMedia {
+                            let saveToPhotos: (URL, Bool) -> Void = { url, isVideo in
+                                var fileExtension = (resultUrl.absoluteString as NSString).pathExtension
+                                if fileExtension.isEmpty {
+                                    fileExtension = "mp4"
+                                }
+                                PHPhotoLibrary.shared().performChanges({
+                                    if isVideo {
+                                        PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+                                    } else {
+                                        if let fileData = try? Data(contentsOf: url) {
+                                            PHAssetCreationRequest.forAsset().addResource(with: .photo, data: fileData, options: nil)
+                                        }
+                                    }
+                                }, completionHandler: { _, error in
+                                })
+                            }
+                            let isVideo = fileName.lowercased().hasSuffix(".mp4") || fileName.lowercased().hasSuffix(".mov")
+                            saveToPhotos(resultUrl, isVideo)
+                            
+                            let tooltipController = UndoOverlayController(
+                                presentationData: self.presentationData,
+                                content: .actionSucceeded(title: fileName, text: isMedia ? "Saved to Photos" : "Saved to Files", cancel: nil, destructive: false),
+                                elevatedLayout: false,
+                                position: .top,
+                                action: { _ in
+                                    return true
+                                }
+                            )
+                            controller.present(tooltipController, in: .current)
+                        } else {
+                            let tempFile = TempBox.shared.file(path: resultUrl.absoluteString, fileName: fileName)
+                            let url = URL(fileURLWithPath: tempFile.path)
+                            try? FileManager.default.copyItem(at: resultUrl, to: url)
+                            
+                            let pickerController = legacyICloudFilePicker(theme: self.presentationData.theme, mode: .export, url: url, documentTypes: [], forceDarkTheme: false, dismissed: {}, completion: { [weak self, weak controller] urls in
+                                guard let self, let controller, !urls.isEmpty else {
+                                    return
+                                }
+                                let tooltipController = UndoOverlayController(
+                                    presentationData: self.presentationData,
+                                    content: .actionSucceeded(title: fileName, text: isMedia ? "Saved to Photos" : "Saved to Files", cancel: nil, destructive: false),
+                                    elevatedLayout: false,
+                                    position: .top,
+                                    action: { _ in
+                                        return true
+                                    }
+                                )
+                                controller.present(tooltipController, in: .current)
+                            })
+                            controller.present(pickerController, in: .window(.root))
+//
+//                            if let documentsUrl = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+//                                let targetUrl = documentsUrl.appendingPathComponent(fileName)
+//                                try? FileManager.default.copyItem(at: resultUrl, to: targetUrl)
+//                            }
+                        }
+                    }
                 }
             )
             
@@ -2264,7 +2366,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     return true
                 }
             )
-            controller.present(tooltipController, in: .window(.root))
+            controller.present(tooltipController, in: .current)
             self.fileDownloadTooltip = tooltipController
         }
         
@@ -2551,6 +2653,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public let botId: PeerId
     fileprivate let botName: String
     fileprivate let botVerified: Bool
+    fileprivate let botAppSettings: BotAppSettings?
+    fileprivate let botAddress: String
     private let url: String?
     private let queryId: Int64?
     private let payload: String?
@@ -2579,6 +2683,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.botId = params.botId
         self.botName = params.botName
         self.botVerified = params.botVerified
+        self.botAppSettings = params.appSettings
+        self.botAddress = params.botAddress
         self.url = params.url
         self.queryId = params.queryId
         self.payload = params.payload
@@ -2605,6 +2711,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        self.automaticallyControlPresentationContextLayout = false
         
         if !self.isFullscreen {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
@@ -2905,6 +3012,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.validLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         
+        var presentationLayout = layout
+        if self.isFullscreen {
+            presentationLayout.intrinsicInsets.top = (presentationLayout.statusBarHeight ?? 0.0) + 36.0
+        } else {
+            presentationLayout.intrinsicInsets.top = 56.0
+        }
+        self.presentationContext.containerLayoutUpdated(presentationLayout, transition: transition)
+        
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
@@ -3014,6 +3129,30 @@ public final class WebAppController: ViewController, AttachmentContainable {
             imageView.image = image
         })
         return imageView
+    }
+    
+    public static func preloadAppPlaceholder(context: AccountContext, appSettings: BotAppSettings) -> Signal<Never, NoError> {
+        guard let file = appSettings.placeholder else {
+            return .complete()
+        }
+        let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+        if !FileManager.default.fileExists(atPath: path) {
+            let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                
+                let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file), reference: .standalone(resource: file.resource))
+                let fetchedFullSizeDisposable = fetchedFullSize.start()
+                let fullSizeDisposable = accountResource.start()
+                
+                return ActionDisposable {
+                    fetchedFullSizeDisposable.dispose()
+                    fullSizeDisposable.dispose()
+                }
+            }
+            return accountFullSizeData
+            |> ignoreValues
+        }
+        return .complete()
     }
 }
 

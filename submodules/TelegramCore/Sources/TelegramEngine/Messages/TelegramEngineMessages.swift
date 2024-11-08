@@ -7,6 +7,7 @@ public enum EngineOutgoingMessageContent {
     case text(String, [MessageTextEntity])
     case file(FileMediaReference)
     case contextResult(ChatContextResultCollection, ChatContextResult)
+    case preparedInlineMessage(PreparedInlineMessage)
 }
 
 public final class StoryPreloadInfo {
@@ -249,7 +250,9 @@ public extension TelegramEngine {
             scheduleTime: Int32? = nil
         ) -> Signal<[MessageId?], NoError> {
             var message: EnqueueMessage?
-            if case let .contextResult(results, result) = content {
+            if case let .preparedInlineMessage(preparedInlineMessage) = content {
+                message = self.outgoingMessageWithChatContextResult(to: peerId, threadId: nil, botId: preparedInlineMessage.botId, result: preparedInlineMessage.result, replyToMessageId: replyToMessageId, replyToStoryId: storyId, hideVia: true, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: nil)
+            } else if case let .contextResult(results, result) = content {
                 message = self.outgoingMessageWithChatContextResult(to: peerId, threadId: nil, botId: results.botId, result: result, replyToMessageId: replyToMessageId, replyToStoryId: storyId, hideVia: true, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: nil)
             } else {
                 var attributes: [MessageAttribute] = []

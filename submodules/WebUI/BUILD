@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/MediaResources",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/UrlHandling:UrlHandling",
