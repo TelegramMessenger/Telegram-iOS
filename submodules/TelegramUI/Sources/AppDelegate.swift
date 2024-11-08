@@ -42,7 +42,6 @@ import MediaEditor
 import TelegramUIDeclareEncodables
 import ContextMenuScreen
 import MetalEngine
-import TranslateUI
 
 #if canImport(AppCenter)
 import AppCenter
@@ -362,13 +361,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         if !UIDevice.current.isBatteryMonitoringEnabled {
             UIDevice.current.isBatteryMonitoringEnabled = true
         }
-        
-        #if DEBUG
-        if #available(iOS 18.0, *) {
-            let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
-            engineExperimentalInternalTranslationService = translationService
-        }
-        #endif
         
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {

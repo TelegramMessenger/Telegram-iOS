@@ -188,7 +188,7 @@ public final class HLSVideoContent: UniversalVideoContent {
     }
     
     public let id: AnyHashable
-    public let nativeId: PlatformVideoContentId
+    public let nativeId: NativeVideoContentId
     let userLocation: MediaResourceUserLocation
     public let fileReference: FileMediaReference
     public let dimensions: CGSize
@@ -199,7 +199,7 @@ public final class HLSVideoContent: UniversalVideoContent {
     let baseRate: Double
     let fetchAutomatically: Bool
     
-    public init(id: PlatformVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
+    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
         self.id = id
         self.userLocation = userLocation
         self.nativeId = id
@@ -218,9 +218,9 @@ public final class HLSVideoContent: UniversalVideoContent {
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {
-        if let other = other as? HLSVideoContent {
-            if case let .message(_, stableId, _) = self.nativeId {
-                if case .message(_, stableId, _) = other.nativeId {
+        if let other = other as? NativeVideoContent {
+            if case let .message(stableId, _) = self.nativeId {
+                if case .message(stableId, _) = other.nativeId {
                     if self.fileReference.media.isInstantVideo {
                         return true
                     }

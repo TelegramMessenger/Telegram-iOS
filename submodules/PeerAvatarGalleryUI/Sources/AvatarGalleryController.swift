@@ -633,7 +633,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         }, controller: { [weak self] in
             return self
         })
-        self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
+        self.displayNode = GalleryControllerNode(context: self.context, controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
         
         self.galleryNode.pager.updateOnReplacement = true

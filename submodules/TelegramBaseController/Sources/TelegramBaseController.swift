@@ -472,8 +472,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         let controller = UndoOverlayController(
                             presentationData: presentationData,
                             content: .universal(
-                                animation: "anim_profileunmute",
-                                scale: 0.075,
+                                animation: "anim_set_notification",
+                                scale: 0.06,
                                 colors: [
                                     "Middle.Group 1.Fill 1": UIColor.white,
                                     "Top.Group 1.Fill 1": UIColor.white,

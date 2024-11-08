@@ -126,6 +126,19 @@ import AdsInfoScreen
 
 extension ChatControllerImpl {
     func loadDisplayNodeImpl() {
+        if #available(iOS 18.0, *) {
+            if self.context.sharedContext.immediateExperimentalUISettings.enableLocalTranslation {
+                if engineExperimentalInternalTranslationService == nil, let hostView = self.context.sharedContext.mainWindow?.hostView {
+                    let translationService = ExperimentalInternalTranslationServiceImpl(view: hostView.containerView)
+                    engineExperimentalInternalTranslationService = translationService
+                }
+            } else {
+                if engineExperimentalInternalTranslationService != nil {
+                    engineExperimentalInternalTranslationService = nil
+                }
+            }
+        }
+        
         self.displayNode = ChatControllerNode(context: self.context, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, subject: self.subject, controllerInteraction: self.controllerInteraction!, chatPresentationInterfaceState: self.presentationInterfaceState, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, navigationBar: self.navigationBar, statusBar: self.statusBar, backgroundNode: self.chatBackgroundNode, controller: self)
         
         if let currentItem = self.tempVoicePlaylistCurrentItem {

@@ -1,7 +1,59 @@
-import Hls from "hls.js";
+import "event-target-polyfill";
+import {decode, encode} from "base-64";
+
 import { VideoElementStub } from "./VideoElementStub.js"
 import { MediaSourceStub, SourceBufferStub } from "./MediaSourceStub.js"
 import { XMLHttpRequestStub } from "./XMLHttpRequestStub.js"
+
+global.isJsCore = false;
+
+if (!global.btoa) {
+    global.btoa = encode;
+}
+
+if (!global.atob) {
+    global.atob = decode;
+}
+
+if (typeof window === 'undefined') {
+    global.isJsCore = true;
+
+    global.navigator = {
+        userAgent: "Telegram"
+    };
+
+    global.now = function() {
+        return _JsCorePolyfills.performanceNow();
+    };
+    
+    global.window = {
+    };
+
+    global.URL = {
+    };
+
+    window.webkit = {
+    };
+    window.webkit.messageHandlers = {
+    };
+    window.webkit.messageHandlers.performAction = {
+    };
+    window.webkit.messageHandlers.performAction.postMessage = function(dict) {
+        _JsCorePolyfills.postMessage(dict);
+    };
+
+    global.self.location = {
+        href: "http://127.0.0.1"
+    };
+    global.self.setTimeout = global.setTimeout;
+    global.self.setInterval = global.setInterval;
+    global.self.clearTimeout = global.clearTimeout;
+    global.self.clearInterval = global.clearTimeout;
+    global.self.URL = global.URL;
+    global.self.Date = global.Date;
+}
+
+import Hls from "hls.js";
 
 window.bridgeObjectMap = {};
 window.bridgeCallbackMap = {};
@@ -50,12 +102,25 @@ if (typeof window !== 'undefined') {
     window.ManagedMediaSource = MediaSourceStub;
     window.SourceBuffer = SourceBufferStub;
     window.XMLHttpRequest = XMLHttpRequestStub;
-    
+
     URL.createObjectURL = function(ms) {
         const url = "blob:mock-media-source:" + ms.internalId;
         window.mediaSourceMap[url] = ms;
         return url;
     };
+
+    URL.revokeObjectURL = function(url) {
+    };
+
+    if (global.isJsCore) {
+        global.HTMLVideoElement = VideoElementStub;
+
+        global.self.MediaSource = window.MediaSource;
+        global.self.ManagedMediaSource = window.ManagedMediaSource;
+        global.self.SourceBuffer = window.SourceBuffer;
+        global.self.XMLHttpRequest = window.XMLHttpRequest;
+        global.self.HTMLVideoElement = VideoElementStub;
+    }
 }
 
 function postPlayerEvent(id, eventName, eventData) {
@@ -135,6 +200,15 @@ export class HlsPlayerInstance {
         if (level >= 0) {
             this.hls.currentLevel = level;
         } else {
+            this.hls.currentLevel = -1;
+        }
+    }
+
+    playerSetCapAutoLevel(level) {
+        if (level >= 0) {
+            this.hls.autoLevelCapping = level;
+        } else {
+            this.hls.autoLevelCapping = -1;
             this.hls.currentLevel = -1;
         }
     }
@@ -236,3 +310,7 @@ window.hlsPlayer_destroyInstance = function(id) {
 }
 
 window.bridgeInvokeCallback = bridgeInvokeCallback;
+
+if (global.isJsCore) {
+    window.onload();
+}
