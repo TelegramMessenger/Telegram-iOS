@@ -2246,6 +2246,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self?.startDownload(url: url, fileName: fileName, fileSize: fileSize, isMedia: isMedia)
                     })
                 ], parseMarkdown: true)
+                alertController.dismissed = { [weak self] byOutsideTap in
+                    self?.webView?.sendEvent(name: "file_download_requested", data: "{status: \"cancelled\"}")
+                }
                 controller.present(alertController, in: .window(.root))
             })
         }
@@ -2447,6 +2450,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     }
                 )
+                alertController.dismissed = { [weak self] byOutsideTap in
+                    self?.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"cancelled\"}")
+                }
                 controller.present(alertController, in: .window(.root))
             })
         }
@@ -2477,7 +2483,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         guard let self else {
                             return
                         }
-                        if result {
+                        if result, let controller {
+                            let context = self.context
+                            if !context.isPremium {
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .emojiStatus, forceDark: false, action: {
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .animatedEmoji, forceDark: false, dismissed: nil)
+                                    replaceImpl?(controller)
+                                }, dismissed: nil)
+                                replaceImpl = { [weak demoController] c in
+                                    demoController?.replace(with: c)
+                                }
+                                controller.parentController()?.push(demoController)
+                                self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"USER_DECLINED\"}")
+                                return
+                            }
+                            
                             let _ = (self.context.engine.accountData.setEmojiStatus(file: file, expirationDate: expirationDate)
                             |> deliverOnMainQueue).start(completed: { [weak self] in
                                 self?.webView?.sendEvent(name: "emoji_status_set", data: nil)
@@ -2494,7 +2515,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     return true
                                 }
                             )
-                            controller?.present(resultController, in: .window(.root))
+                            controller.present(resultController, in: .window(.root))
                         } else {
                             self.webView?.sendEvent(name: "emoji_status_failed", data: "{error: \"USER_DECLINED\"}")
                         }

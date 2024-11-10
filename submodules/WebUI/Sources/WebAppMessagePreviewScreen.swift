@@ -154,7 +154,24 @@ private final class SheetContent: CombinedComponent {
                     break
                 }
             case let .externalReference(reference):
-                let _ = reference
+                switch reference.message {
+                case let .auto(textValue, entitiesValue, _):
+                    text = textValue
+                    entities = entitiesValue
+                case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, _):
+                    text = textValue
+                    entities = entitiesValue
+                    let _ = disableUrlPreview
+                    let _ = previewParameters
+                case let .contact(contact, _):
+                    media = [contact]
+                case let .mapLocation(map, _):
+                    media = [map]
+                case let .invoice(invoice, _):
+                    media = [invoice]
+                default:
+                    break
+                }
             }
             
             let messageItem = PeerNameColorChatPreviewItem.MessageItem(
