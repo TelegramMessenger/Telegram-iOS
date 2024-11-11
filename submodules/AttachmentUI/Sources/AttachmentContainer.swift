@@ -506,6 +506,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let containerFrame: CGRect
         let clipFrame: CGRect
         let containerScale: CGFloat
+        
+        let isFullscreen = controllers.last?.isFullscreen == true
         if case .compact = layout.metrics.widthClass {
             self.clipNode.clipsToBounds = true
             
@@ -524,7 +526,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             
             var containerTopInset: CGFloat
-            if isLandscape || controllers.last?.isFullscreen == true {
+            if isLandscape || isFullscreen {
                 containerTopInset = 0.0
                 containerLayout = layout
                 
@@ -560,7 +562,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 clipFrame = CGRect(x: containerFrame.minX + overflowInset, y: containerFrame.minY, width: containerFrame.width - overflowInset * 2.0, height: containerFrame.height)
             }
         } else {
-            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver)
+            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: isFullscreen ? layout.statusBarHeight : nil, inputHeight: isFullscreen ? layout.inputHeight : nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver)
             
             let unscaledFrame = CGRect(origin: CGPoint(), size: containerLayout.size)
             containerScale = 1.0

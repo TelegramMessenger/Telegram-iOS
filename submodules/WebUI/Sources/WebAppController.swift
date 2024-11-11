@@ -1423,7 +1423,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_check_location":
                     self.checkLocation()
                 case "web_app_open_location_settings":
-                    break
+                    if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
+                        self.webView?.lastTouchTimestamp = nil
+                        
+                        self.openLocationSettings()
+                    }
                 case "web_app_send_prepared_message":
                     if let json = json, let id = json["id"] as? String {
                         self.sendPreparedMessage(id: id)
@@ -2409,10 +2413,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         guard let self, let controller = self.controller else {
                             return
                         }
+                        let context = self.context
+                        let botId = controller.botId
                         if result {
-                            let context = self.context
-                            let botId = controller.botId
-                            
                             if !context.isPremium {
                                 var replaceImpl: ((ViewController) -> Void)?
                                 let demoController = context.sharedContext.makePremiumDemoController(context: context, subject: .emojiStatus, forceDark: false, action: {
@@ -2431,7 +2434,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                                 self?.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"allowed\"}")
                             })
-                            
+                                                        
                             //TODO:localize
                             if let botPeer {
                                 let resultController = UndoOverlayController(
@@ -2451,6 +2454,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         } else {
                             self.webView?.sendEvent(name: "emoji_status_access_requested", data: "{status: \"cancelled\"}")
                         }
+                        
+                        let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: botId) { current in
+                            return WebAppPermissionsState(location: current?.location, emojiStatus: WebAppPermissionsState.EmojiStatus(isRequested: true))
+                        }.startStandalone()
                     }
                 )
                 alertController.dismissed = { [weak self] byOutsideTap in
@@ -2547,6 +2554,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 UIApplication.shared.open(url)
                 
                 controller.dismiss()
+            })
+        }
+        
+        fileprivate func openLocationSettings() {
+            guard let controller = self.controller else {
+                return
+            }
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let controller = self.controller, let peer else {
+                    return
+                }
+                if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                    controller.parentController()?.push(infoController)
+                }
             })
         }
         
@@ -2671,7 +2693,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     self.webView?.sendEvent(name: "location_requested", data: JSON(dictionary: data)?.string)
                                 }
                                 let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: botId) { current in
-                                    return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: result))
+                                    return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: result), emojiStatus: current?.emojiStatus)
                                 }.start()
                             }
                         )
@@ -2960,6 +2982,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 self?.controllerNode.webView?.reload()
             })))
+            
+            //TODO:localize
+            if let _ = self?.appName {
+                items.append(.action(ContextMenuActionItem(text: "Add to Home Screen", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    
+                    self?.controllerNode.addToHomeScreen()
+                })))
+            }
                         
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_TermsOfUse, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor)
@@ -3002,18 +3035,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: self.presentationData.strings.WebApp_PrivacyPolicy_URL, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: {})
                 }
             })))
-            
-            #if DEBUG
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Add to Home Screen", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
-                c?.dismiss(completion: nil)
-                
-                self?.controllerNode.addToHomeScreen()
-            })))
-            #endif
-            
+                        
             if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)

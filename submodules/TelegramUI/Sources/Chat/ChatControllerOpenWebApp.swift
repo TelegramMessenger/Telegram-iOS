@@ -222,7 +222,7 @@ func openWebAppImpl(
                     } else {
                         source = url.isEmpty ? .generic : .simple
                     }
-                    let params = WebAppParameters(source: source, peerId: chatPeer?.id ?? botId, botId: botId, botName: botName, botVerified: botVerified, botAddress: botPeer.addressName ?? "", appName: nil, url: result.url, queryId: nil, payload: payload, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen), appSettings: appSettings)
+                    let params = WebAppParameters(source: source, peerId: chatPeer?.id ?? botId, botId: botId, botName: botName, botVerified: botVerified, botAddress: botPeer.addressName ?? "", appName: "", url: result.url, queryId: nil, payload: payload, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false, fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen), appSettings: appSettings)
                     let controller = standaloneWebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, threadId: threadId, openUrl: { [weak parentController] url, concealed, forceUpdate, commit in
                         ChatControllerImpl.botOpenUrl(context: context, peerId: chatPeer?.id ?? botId, controller: parentController as? ChatControllerImpl, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
                             presentImpl?(c, a)
