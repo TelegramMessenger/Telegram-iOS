@@ -63,6 +63,7 @@ public struct WebAppParameters {
     let botName: String
     let botVerified: Bool
     let botAddress: String
+    let appName: String?
     let url: String?
     let queryId: Int64?
     let payload: String?
@@ -80,6 +81,7 @@ public struct WebAppParameters {
         botName: String,
         botVerified: Bool,
         botAddress: String,
+        appName: String?,
         url: String?,
         queryId: Int64?,
         payload: String?,
@@ -96,6 +98,7 @@ public struct WebAppParameters {
         self.botName = botName
         self.botVerified = botVerified
         self.botAddress = botAddress
+        self.appName = appName
         self.url = url
         self.queryId = queryId
         self.payload = payload
@@ -2529,19 +2532,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            
             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
             |> deliverOnMainQueue
             ).start(next: { [weak controller] peer in
-                guard let peer, let addressName = peer.addressName else {
+                guard let controller, let peer, let addressName = peer.addressName else {
                     return
                 }
-                let encodedName = peer.compactDisplayTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                let encodedUsername = addressName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                
-                let url = URL(string: "http://64.225.73.234/?name=\(encodedName)&username=\(encodedUsername)")!
+                var appName: String = ""
+                if let name = controller.appName {
+                    appName = "/\(name)"
+                }
+                let url = URL(string: "x-safari-https://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
                 UIApplication.shared.open(url)
                 
-                controller?.dismiss()
+                controller.dismiss()
             })
         }
         
@@ -2693,6 +2698,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let botVerified: Bool
     fileprivate let botAppSettings: BotAppSettings?
     fileprivate let botAddress: String
+    fileprivate let appName: String?
     private let url: String?
     private let queryId: Int64?
     private let payload: String?
@@ -2723,6 +2729,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.botVerified = params.botVerified
         self.botAppSettings = params.appSettings
         self.botAddress = params.botAddress
+        self.appName = params.appName
         self.url = params.url
         self.queryId = params.queryId
         self.payload = params.payload
