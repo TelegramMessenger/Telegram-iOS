@@ -172,7 +172,8 @@ private final class SheetContent: CombinedComponent {
                 component: PremiumPeerShortcutComponent(
                     context: component.context,
                     theme: theme,
-                    peer: component.accountPeer
+                    peer: component.accountPeer,
+                    icon: component.file
                 ),
                 availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.height),
                 transition: .immediate
@@ -272,7 +273,8 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
                         file: context.component.file,
                         dismiss: {
                             animateOut.invoke(Action { _ in
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                    controller.complete(result: false)
                                     controller.dismiss(completion: nil)
                                 }
                             })
@@ -293,12 +295,14 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in
-                                    if let controller = controller() {
+                                    if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                        controller.complete(result: false)
                                         controller.dismiss(completion: nil)
                                     }
                                 })
                             } else {
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                    controller.complete(result: false)
                                     controller.dismiss(completion: nil)
                                 }
                             }

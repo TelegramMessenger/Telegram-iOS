@@ -772,7 +772,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if controller.isFullscreen {
                     customInsets.top = layout.statusBarHeight ?? 0.0
                 }
-                if layout.intrinsicInsets.bottom > 44.0 {
+                if layout.intrinsicInsets.bottom > 44.0 || (layout.inputHeight ?? 0.0) > 0.0 {
                     customInsets.bottom = 0.0
                 } else {
                     customInsets.bottom = layout.intrinsicInsets.bottom

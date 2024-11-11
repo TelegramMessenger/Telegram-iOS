@@ -158,6 +158,9 @@ private final class SheetContent: CombinedComponent {
                 case let .auto(textValue, entitiesValue, _):
                     text = textValue
                     entities = entitiesValue
+                    if let content = reference.content {
+                        media = [content]
+                    }
                 case let .text(textValue, entitiesValue, disableUrlPreview, previewParameters, _):
                     text = textValue
                     entities = entitiesValue
