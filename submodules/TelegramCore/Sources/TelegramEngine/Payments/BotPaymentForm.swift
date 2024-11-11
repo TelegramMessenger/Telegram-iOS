@@ -296,13 +296,13 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         }
         
         var inputPurposeFlags: Int32 = 0
-        var textWithEntities: Api.TextWithEntities?
-        if let text, let entities {
+        var message: Api.TextWithEntities?
+        if let text, !text.isEmpty {
             inputPurposeFlags |= (1 << 1)
-            textWithEntities = .textWithEntities(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))
+            message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
         
-        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: inputPurposeFlags, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: textWithEntities)
+        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: inputPurposeFlags, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: message)
         
         var flags: Int32 = 0
         if let _ = option.storeProductId {
