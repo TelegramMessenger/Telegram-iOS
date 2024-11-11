@@ -2758,22 +2758,20 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.automaticallyControlPresentationContextLayout = false
         
-        if !self.isFullscreen {
-            self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
-            self.navigationItem.leftBarButtonItem?.action = #selector(self.cancelPressed)
-            self.navigationItem.leftBarButtonItem?.target = self
-            
-            self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
-            self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
-            self.navigationItem.rightBarButtonItem?.target = self
-            
-            self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-            
-            let titleView = WebAppTitleView(context: self.context, theme: self.presentationData.theme)
-            titleView.title = WebAppTitle(title: params.botName, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: params.botVerified)
-            self.navigationItem.titleView = titleView
-            self.titleView = titleView
-        }
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
+        self.navigationItem.leftBarButtonItem?.action = #selector(self.cancelPressed)
+        self.navigationItem.leftBarButtonItem?.target = self
+        
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
+        self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
+        self.navigationItem.rightBarButtonItem?.target = self
+        
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
+        let titleView = WebAppTitleView(context: self.context, theme: self.presentationData.theme)
+        titleView.title = WebAppTitle(title: params.botName, counter: self.presentationData.strings.WebApp_Miniapp, isVerified: params.botVerified)
+        self.navigationItem.titleView = titleView
+        self.titleView = titleView
         
         self.moreButtonNode.action = { [weak self] _, gesture in
             if let strongSelf = self {
