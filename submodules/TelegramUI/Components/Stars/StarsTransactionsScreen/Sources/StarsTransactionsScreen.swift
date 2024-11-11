@@ -708,10 +708,10 @@ final class StarsTransactionsScreenComponent: Component {
                             ))
                         ))
                         var nameGroupComponent: AnyComponent<Empty>
-                        if let _ = subscription.photo {
+                        if let photo = subscription.photo {
                             nameGroupComponent = AnyComponent(
                                 HStack([
-                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(RoundedRectangle(color: .lightGray, cornerRadius: 3.0, size: CGSize(width: 19.0, height: 19.0)))),
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: nil, photo: photo, media: [], backgroundColor: .clear, size: CGSize(width: 19.0, height: 19.0)))),
                                     AnyComponentWithIdentity(id: AnyHashable(1), component: nameComponent)
                                 ], spacing: 6.0)
                             )
@@ -1055,6 +1055,10 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                         let _ = self.context.engine.payments.fulfillStarsSubscription(peerId: context.account.peerId, subscriptionId: subscription.id).startStandalone()
                         updated = true
                     }
+                    if let _ = subscription.inviteHash, !subscription.flags.contains(.isCancelledByBot) {
+                        let _ = self.context.engine.payments.fulfillStarsSubscription(peerId: context.account.peerId, subscriptionId: subscription.id).startStandalone()
+                        updated = true
+                    }
                     if !updated {
                         if subscription.flags.contains(.isCancelled) {
                             self.subscriptionsContext.updateSubscription(id: subscription.id, cancel: false)
@@ -1065,6 +1069,8 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 } else {
                     if let inviteHash = subscription.inviteHash {
                         self.context.sharedContext.handleTextLinkAction(context: self.context, peerId: nil, navigateDisposable: self.navigateDisposable, controller: self, action: .tap, itemLink: .url(url: "https://t.me/+\(inviteHash)", concealed: false))
+                    } else if let invoiceSlug = subscription.invoiceSlug {
+                        self.context.sharedContext.handleTextLinkAction(context: self.context, peerId: nil, navigateDisposable: self.navigateDisposable, controller: self, action: .tap, itemLink: .url(url: "https://t.me/$\(invoiceSlug)", concealed: false))
                     }
                 }
             })

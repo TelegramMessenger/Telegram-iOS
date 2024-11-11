@@ -149,6 +149,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+            } else if let _ = media as? TelegramMediaWebFile {
+                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let story = media as? TelegramMediaStory {
                 if story.isMention {
                     if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {

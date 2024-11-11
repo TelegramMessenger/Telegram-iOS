@@ -1920,6 +1920,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     imageDimensions = dimensions.cgSize
                                 } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
                                     imageDimensions = dimensions.cgSize
+                                } else if let file = media as? TelegramMediaWebFile, let dimensions = file.dimensions {
+                                    imageDimensions = dimensions.cgSize
                                 }
 
                                 if let imageDimensions = imageDimensions {

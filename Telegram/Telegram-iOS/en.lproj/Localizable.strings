@@ -13223,3 +13223,6 @@ Sorry for the inconvenience.";
 "Gift.Send.SendShort" = "Send";
 
 "Premium.EmojiStatus.Proceed" = "Unlock Emoji Statuses";
+
+"Stars.Transaction.Subscription.CancelledByBot" = "Your subscription was cancelled by the bot.";
+"Stars.Transaction.Subscription.CancelledByBusiness" = "Your subscription was cancelled by the business.";

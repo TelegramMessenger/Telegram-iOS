@@ -568,6 +568,9 @@ private extension StarsContext.State.Subscription {
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.missingBalance)
             }
+            if (apiFlags & (1 << 7)) != 0 {
+                flags.insert(.isCancelledByBot)
+            }
             self.init(flags: flags, id: id, peer: EnginePeer(peer), untilDate: untilDate, pricing: StarsSubscriptionPricing(apiStarsSubscriptionPricing: pricing), inviteHash: inviteHash, title: title, photo: photo.flatMap(TelegramMediaWebFile.init), invoiceSlug: invoiceSlug)
         }
     }
@@ -719,6 +722,7 @@ public final class StarsContext {
                 public static let isCancelled = Flags(rawValue: 1 << 0)
                 public static let canRefulfill = Flags(rawValue: 1 << 1)
                 public static let missingBalance = Flags(rawValue: 1 << 2)
+                public static let isCancelledByBot = Flags(rawValue: 1 << 3)
             }
             
             public let flags: Flags
