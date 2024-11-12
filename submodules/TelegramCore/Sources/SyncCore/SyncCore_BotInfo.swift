@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public struct BotCommand: PostboxCoding, Hashable {
@@ -46,14 +47,14 @@ public enum BotMenuButton: PostboxCoding, Hashable {
 }
 
 public struct BotAppSettings: PostboxCoding, Equatable {
-    public let placeholder: TelegramMediaFile?
+    public let placeholderData: Data?
     public let backgroundColor: Int32?
     public let backgroundDarkColor: Int32?
     public let headerColor: Int32?
     public let headerDarkColor: Int32?
     
-    public init(placeholder: TelegramMediaFile?, backgroundColor: Int32?, backgroundDarkColor: Int32?, headerColor: Int32?, headerDarkColor: Int32?) {
-        self.placeholder = placeholder
+    public init(placeholderData: Data?, backgroundColor: Int32?, backgroundDarkColor: Int32?, headerColor: Int32?, headerDarkColor: Int32?) {
+        self.placeholderData = placeholderData
         self.backgroundColor = backgroundColor
         self.backgroundDarkColor = backgroundDarkColor
         self.headerColor = headerColor
@@ -61,11 +62,7 @@ public struct BotAppSettings: PostboxCoding, Equatable {
     }
     
     public init(decoder: PostboxDecoder) {
-        if let placeholder = decoder.decodeObjectForKey("p", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile {
-            self.placeholder = placeholder
-        } else {
-            self.placeholder = nil
-        }
+        self.placeholderData = decoder.decodeDataForKey("pd")
         self.backgroundColor = decoder.decodeOptionalInt32ForKey("b")
         self.backgroundDarkColor = decoder.decodeOptionalInt32ForKey("bd")
         self.headerColor = decoder.decodeOptionalInt32ForKey("h")
@@ -73,10 +70,10 @@ public struct BotAppSettings: PostboxCoding, Equatable {
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        if let placeholder = self.placeholder {
-            encoder.encodeObject(placeholder, forKey: "p")
+        if let placeholderData = self.placeholderData {
+            encoder.encodeData(placeholderData, forKey: "pd")
         } else {
-            encoder.encodeNil(forKey: "p")
+            encoder.encodeNil(forKey: "pd")
         }
         if let backgroundColor = self.backgroundColor {
             encoder.encodeInt32(backgroundColor, forKey: "b")

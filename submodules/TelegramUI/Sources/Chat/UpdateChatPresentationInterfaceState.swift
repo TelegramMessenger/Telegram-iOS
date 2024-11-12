@@ -601,9 +601,5 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    if let cachedData = selfController.peerView?.cachedData as? CachedUserData, let appSettings = cachedData.botInfo?.appSettings {
-        let _ = WebAppController.preloadAppPlaceholder(context: selfController.context, appSettings: appSettings).startStandalone()
-    }
-    
     selfController.stateUpdated?(transition)
 }

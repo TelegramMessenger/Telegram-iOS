@@ -1462,6 +1462,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             }
             
             let height = adPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            if let adMessage = self.chatPresentationInterfaceState.adMessage, let opaqueId = adMessage.adAttribute?.opaqueId {
+                self.historyNode.markAdAsSeen(opaqueId: opaqueId)
+            }
+            
             adPanelHeight = height
             if transition.isAnimated && animateAppearance {
                 adPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

@@ -35,6 +35,7 @@ import TelegramUIPreferences
 import CoreMotion
 import DeviceLocationManager
 import LegacyMediaPickerUI
+import GenerateStickerPlaceholderImage
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -259,8 +260,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 }
             }
-            if let placeholderFile = controller.botAppSettings?.placeholder {
-                placeholder = .single((.standalone(media: placeholderFile), false))
+            if let _ = controller.botAppSettings?.placeholderData {
+                placeholder = .single(nil)
             } else if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
                 placeholder = .single(nil)
                 |> delay(0.05, queue: Queue.mainQueue())
@@ -293,46 +294,58 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             }
             
-            self.placeholderDisposable.set((placeholder
-            |> deliverOnMainQueue).start(next: { [weak self] fileReferenceAndIsPlaceholder in
-                guard let strongSelf = self else {
-                    return
-                }
-                let fileReference: FileMediaReference?
-                let isPlaceholder: Bool
-                if let (maybeFileReference, maybeIsPlaceholder) = fileReferenceAndIsPlaceholder {
-                    fileReference = maybeFileReference
-                    isPlaceholder = maybeIsPlaceholder
-                } else {
-                    fileReference = nil
-                    isPlaceholder = true
-                }
-                
-                if let fileReference = fileReference {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
-                }
-                let _ = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
-                |> deliverOnMainQueue).start(next: { [weak self] transform in
-                    if let strongSelf = self {
-                        let imageSize: CGSize
-                        if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                            let minSize = min(layout.size.width, layout.size.height)
-                            imageSize = CGSize(width: minSize, height: minSize * 2.0)
-                        } else {
-                            imageSize = CGSize(width: 75.0, height: 75.0)
+            if let placeholderData = controller.botAppSettings?.placeholderData {
+                Queue.mainQueue().justDispatch {
+                    let size = CGSize(width: 75.0, height: 75.0)
+                    if let image = generateStickerPlaceholderImage(data: placeholderData, size: size, scale: min(2.0, UIScreenScale), imageSize: CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: .white) {
+                        self.placeholderIcon = (image.withRenderingMode(.alwaysTemplate), false)
+                        if let (layout, navigationBarHeight) = self.validLayout {
+                            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }
-                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                        let drawingContext = transform(arguments)
-                        if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                            strongSelf.placeholderIcon = (image, isPlaceholder)
-                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                            }
-                        }
-                        strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
-                })
-            }))
+                }
+            } else {
+                self.placeholderDisposable.set((placeholder
+                |> deliverOnMainQueue).start(next: { [weak self] fileReferenceAndIsPlaceholder in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let fileReference: FileMediaReference?
+                    let isPlaceholder: Bool
+                    if let (maybeFileReference, maybeIsPlaceholder) = fileReferenceAndIsPlaceholder {
+                        fileReference = maybeFileReference
+                        isPlaceholder = maybeIsPlaceholder
+                    } else {
+                        fileReference = nil
+                        isPlaceholder = true
+                    }
+                    
+                    if let fileReference = fileReference {
+                        let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
+                    }
+                    let _ = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
+                             |> deliverOnMainQueue).start(next: { [weak self] transform in
+                        if let strongSelf = self {
+                            let imageSize: CGSize
+                            if isPlaceholder, let (layout, _) = strongSelf.validLayout {
+                                let minSize = min(layout.size.width, layout.size.height)
+                                imageSize = CGSize(width: minSize, height: minSize * 2.0)
+                            } else {
+                                imageSize = CGSize(width: 75.0, height: 75.0)
+                            }
+                            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                            let drawingContext = transform(arguments)
+                            if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
+                                strongSelf.placeholderIcon = (image, isPlaceholder)
+                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                }
+                            }
+                            strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        }
+                    })
+                }))
+            }
             
             self.iconDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId))
             |> mapToSignal { peer -> Signal<UIImage?, NoError> in
@@ -766,6 +779,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 } else {
                     transition.updateFrame(view: webView, frame: webViewFrame)
+                }
+                
+                if let snapshotView = self.fullscreenSwitchSnapshotView {
+                    self.fullscreenSwitchSnapshotView = nil
+                
+                    transition.updatePosition(layer: snapshotView.layer, position: webViewFrame.center)
+                    transition.updateTransform(layer: snapshotView.layer, transform: CATransform3DMakeScale(webViewFrame.width / snapshotView.frame.width, webViewFrame.height / snapshotView.frame.height, 1.0))
+                    transition.updateAlpha(layer: snapshotView.layer, alpha: 0.0, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
                 }
                 
                 var customInsets: UIEdgeInsets = .zero
@@ -1410,8 +1433,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.setIsGyroscopeActive(false)
                 case "web_app_set_emoji_status":
                     if let json = json, let emojiIdString = json["custom_emoji_id"] as? String, let emojiId = Int64(emojiIdString) {
-                        let expirationDate = json["expiration_date"] as? Double
-                        self.setEmojiStatus(emojiId, expirationDate: expirationDate.flatMap { Int32($0) })
+                        let duration = json["duration"] as? Double
+                        self.setEmojiStatus(emojiId, duration: duration.flatMap { Int32($0) })
                     }
                 case "web_app_add_to_home_screen":
                     self.addToHomeScreen()
@@ -2066,6 +2089,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        private var fullscreenSwitchSnapshotView: UIView?
         fileprivate func setIsFullscreen(_ isFullscreen: Bool) {
             guard let controller = self.controller else {
                 return
@@ -2079,6 +2103,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "fullscreen_changed", data: paramsString)
             
             controller.isFullscreen = isFullscreen
+            
+            if let (layout, _) = self.validLayout, case .regular = layout.metrics.widthClass {
+                if let snapshotView = self.webView?.snapshotView(afterScreenUpdates: false) {
+                    self.webView?.superview?.addSubview(snapshotView)
+                    self.fullscreenSwitchSnapshotView = snapshotView
+                }
+            }
+            
             (controller.parentController() as? AttachmentController)?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
         }
         
@@ -2467,7 +2499,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             })
         }
         
-        fileprivate func setEmojiStatus(_ fileId: Int64, expirationDate: Int32? = nil) {
+        fileprivate func setEmojiStatus(_ fileId: Int64, duration: Int32? = nil) {
             guard let controller = self.controller else {
                 return
             }
@@ -2489,6 +2521,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     botName: controller.botName,
                     accountPeer: accountPeer,
                     file: file,
+                    duration: duration,
                     completion: { [weak self, weak controller] result in
                         guard let self else {
                             return
@@ -2509,6 +2542,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 return
                             }
                             
+                            var expirationDate: Int32?
+                            if let duration {
+                                expirationDate = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) + duration
+                            }
                             let _ = (self.context.engine.accountData.setEmojiStatus(file: file, expirationDate: expirationDate)
                             |> deliverOnMainQueue).start(completed: { [weak self] in
                                 self?.webView?.sendEvent(name: "emoji_status_set", data: nil)
@@ -2550,7 +2587,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let name = controller.appName {
                     appName = "/\(name)"
                 }
-                let url = URL(string: "x-safari-https://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
+                let scheme: String
+                if #available(iOS 18.0, *) {
+                    scheme = "x-safari-https"
+                } else {
+                    scheme = "https"
+                }
+                let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
                 UIApplication.shared.open(url)
                 
                 controller.dismiss()
@@ -2986,7 +3029,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             //TODO:localize
             if let _ = self?.appName {
                 items.append(.action(ContextMenuActionItem(text: "Add to Home Screen", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddCircle"), color: theme.contextMenu.primaryColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddSquare"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
                     c?.dismiss(completion: nil)
                     
@@ -3141,7 +3184,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.controllerNode.webView?.setNeedsLayout()
                 }
                 
-                self.controllerNode.webView?.sendEvent(name: "visibility_changed", data: "{is_visible: \"\(self.isMinimized ? "false" : "true")\"}")
+                self.controllerNode.webView?.sendEvent(name: "visibility_changed", data: "{is_visible: \(self.isMinimized ? "false" : "true")}")
             }
         }
     }
@@ -3194,30 +3237,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             imageView.image = image
         })
         return imageView
-    }
-    
-    public static func preloadAppPlaceholder(context: AccountContext, appSettings: BotAppSettings) -> Signal<Never, NoError> {
-        guard let file = appSettings.placeholder else {
-            return .complete()
-        }
-        let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
-        if !FileManager.default.fileExists(atPath: path) {
-            let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
-                let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
-                
-                let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file), reference: .standalone(resource: file.resource))
-                let fetchedFullSizeDisposable = fetchedFullSize.start()
-                let fullSizeDisposable = accountResource.start()
-                
-                return ActionDisposable {
-                    fetchedFullSizeDisposable.dispose()
-                    fullSizeDisposable.dispose()
-                }
-            }
-            return accountFullSizeData
-            |> ignoreValues
-        }
-        return .complete()
     }
 }
 

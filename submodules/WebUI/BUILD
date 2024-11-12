@@ -49,6 +49,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
         "//submodules/DeviceLocationManager",
+        "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
     ],
     visibility = [
         "//visibility:public",

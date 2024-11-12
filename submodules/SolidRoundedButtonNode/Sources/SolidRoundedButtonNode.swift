@@ -737,7 +737,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         var nextContentOrigin = floor((buttonFrame.width - contentWidth) / 2.0)
         
         let iconFrame: CGRect
-        let titleFrame: CGRect
+        var titleFrame: CGRect
         switch self.iconPosition {
             case .left:
                 iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
@@ -757,7 +757,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         if let animationNode = self.animationNode {
             transition.updateFrame(node: animationNode, frame: iconFrame)
         }
-        transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if let badge = self.badge {
             let badgeNode: BadgeNode
@@ -770,11 +769,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             }
             badgeNode.text = badge
             let badgeSize = badgeNode.update(CGSize(width: 100.0, height: 100.0))
-            transition.updateFrame(node: badgeNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: titleFrame.minY + floor((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize))
+            titleFrame.origin.x -= badgeSize.width / 2.0
+            transition.updateFrame(node: badgeNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 6.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize))
         } else if let badgeNode = self.badgeNode {
             self.badgeNode = nil
             badgeNode.removeFromSupernode()
         }
+        
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if self.subtitle != self.subtitleNode.attributedText?.string {
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)

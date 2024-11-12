@@ -21,6 +21,7 @@ import PresentationDataUtils
 import ListSectionComponent
 import ListItemComponentAdaptor
 import TelegramStringFormatting
+import UndoUI
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -408,16 +409,45 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
         fatalError("init(coder:) has not been implemented")
     }
     
-    fileprivate func complete(peer: EnginePeer) {
+    fileprivate func complete(peers: [EnginePeer]) {
+        for peer in peers {
+            let _ = self.context.engine.messages.enqueueOutgoingMessage(
+                to: peer.id,
+                replyTo: nil,
+                storyId: nil,
+                content: .preparedInlineMessage(self.preparedMessage)
+            ).start()
+        }
+        
+        let text: String
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        if peers.count == 1, let peer = peers.first {
+            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
+        } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+            let firstPeerName = firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            let secondPeerName = secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+        } else if let peer = peers.first {
+            let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+            text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+        } else {
+            text = ""
+        }
+        
+        if let navigationController = self.navigationController as? NavigationController {
+            Queue.mainQueue().after(1.0) {
+                guard let lastController = navigationController.viewControllers.last as? ViewController else {
+                    return
+                }
+                lastController.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, position: .top, animateInAsReplacement: true, action: { action in
+                    return false
+                }), in: .window(.root))
+            }
+        }
+        
         self.completeWithResult(true)
         self.dismiss()
-        
-        let _ = self.context.engine.messages.enqueueOutgoingMessage(
-            to: peer.id,
-            replyTo: nil,
-            storyId: nil,
-            content: .preparedInlineMessage(preparedMessage)
-        ).start()
     }
         
     private var completed = false
@@ -430,15 +460,17 @@ public final class WebAppMessagePreviewScreen: ViewControllerComponentContainer 
     
     fileprivate func proceed() {
         let requestPeerType = self.preparedMessage.peerTypes.requestPeerTypes
-        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: requestPeerType, hasContactSelector: false))
-
-        controller.peerSelected = { [weak self, weak controller] peer, _ in
+        
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: requestPeerType, hasContactSelector: false, multipleSelection: true, immediatelyActivateMultipleSelection: true))
+        
+        controller.multiplePeersSelected = { [weak self, weak controller] peers, _, _, _, _, _ in
             guard let self else {
                 return
             }
-            self.complete(peer: peer)
+            self.complete(peers: peers)
             controller?.dismiss()
         }
+        
         self.push(controller)
     }
     
