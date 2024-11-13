@@ -1079,7 +1079,7 @@ public class MinimizedContainerImpl: ASDisplayNode, MinimizedContainer, ASScroll
                 if let _ = itemNode.snapshotView {
                     if itemNode.item.controller.isFullscreen {
                         if layout.size.width < layout.size.height {
-                            let snapshotFrame = itemNode.snapshotContainerView.frame.offsetBy(dx: 0.0, dy: 64.0)
+                            let snapshotFrame = itemNode.snapshotContainerView.frame.offsetBy(dx: 0.0, dy: (layout.statusBarHeight ?? 0.0) + 10.0)
                             transition.updateFrame(view: itemNode.snapshotContainerView, frame: snapshotFrame)
                         }
                     } else if itemNode.item.controller.minimizedTopEdgeOffset == nil, let snapshotView = itemNode.snapshotView, snapshotView.frame.origin.y == -12.0 {

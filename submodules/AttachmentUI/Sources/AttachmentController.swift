@@ -1417,7 +1417,9 @@ public class AttachmentController: ViewController, MinimizableController {
         let snapshotView = self.view.snapshotView(afterScreenUpdates: false)
         if let contentSnapshotView = self.mainController.makeContentSnapshotView() {
             if !self.mainController.isFullscreen {
-                contentSnapshotView.frame = contentSnapshotView.frame.offsetBy(dx: 0.0, dy: 64.0 + 56.0)
+                if let layout = self.validLayout {
+                    contentSnapshotView.frame = contentSnapshotView.frame.offsetBy(dx: 0.0, dy: (layout.statusBarHeight ?? 0.0) + 10.0 + 56.0)
+                }
             }
             snapshotView?.addSubview(contentSnapshotView)
         }
