@@ -463,7 +463,10 @@ func openResolvedUrlImpl(
             }
             
             if let to = to {
-                if to.hasPrefix("@") {
+                if to == "me" {
+                    context.sharedContext.applicationBindings.dismissNativeController()
+                    continueWithPeer(context.account.peerId)
+                } else if to.hasPrefix("@") {
                     let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
                     |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                         guard case let .result(result) = result else {
