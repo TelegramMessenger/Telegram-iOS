@@ -28,6 +28,16 @@ public final class StarGiftsList: Codable, Equatable {
 }
 
 public struct StarGift: Equatable, Codable, PostboxCoding {
+    public struct Flags: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let isBirthdayGift = Flags(rawValue: 1 << 0)
+    }
+    
     enum CodingKeys: String, CodingKey {
         case id
         case file
@@ -35,6 +45,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         case convertStars
         case availability
         case soldOut
+        case flags
     }
     
     public struct Availability: Equatable, Codable, PostboxCoding {
@@ -97,14 +108,16 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
     public let convertStars: Int64
     public let availability: Availability?
     public let soldOut: SoldOut?
+    public let flags: Flags
     
-    public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?) {
+    public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?, flags: Flags) {
         self.id = id
         self.file = file
         self.price = price
         self.convertStars = convertStars
         self.availability = availability
         self.soldOut = soldOut
+        self.flags = flags
     }
     
     public init(from decoder: Decoder) throws {
@@ -121,6 +134,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         self.convertStars = try container.decodeIfPresent(Int64.self, forKey: .convertStars) ?? 0
         self.availability = try container.decodeIfPresent(Availability.self, forKey: .availability)
         self.soldOut = try container.decodeIfPresent(SoldOut.self, forKey: .soldOut)
+        self.flags = Flags(rawValue: try container .decodeIfPresent(Int32.self, forKey: .flags) ?? 0)
     }
     
     public init(decoder: PostboxDecoder) {
@@ -130,6 +144,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         self.convertStars = decoder.decodeInt64ForKey(CodingKeys.convertStars.rawValue, orElse: 0)
         self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { StarGift.Availability(decoder: $0) }) as? StarGift.Availability
         self.soldOut = decoder.decodeObjectForKey(CodingKeys.soldOut.rawValue, decoder: { StarGift.SoldOut(decoder: $0) }) as? StarGift.SoldOut
+        self.flags = Flags(rawValue: decoder.decodeInt32ForKey(CodingKeys.flags.rawValue, orElse: 0))
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -145,6 +160,7 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         try container.encode(self.convertStars, forKey: .convertStars)
         try container.encodeIfPresent(self.availability, forKey: .availability)
         try container.encodeIfPresent(self.soldOut, forKey: .soldOut)
+        try container.encode(self.flags.rawValue, forKey: .flags)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -162,13 +178,19 @@ public struct StarGift: Equatable, Codable, PostboxCoding {
         } else {
             encoder.encodeNil(forKey: CodingKeys.soldOut.rawValue)
         }
+        encoder.encodeInt32(self.flags.rawValue, forKey: CodingKeys.flags.rawValue)
     }
 }
 
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(_, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale):
+        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale):
+            var flags = Flags()
+            if (apiFlags & (1 << 2)) != 0 {
+                flags.insert(.isBirthdayGift)
+            }
+            
             var availability: Availability?
             if let availabilityRemains, let availabilityTotal {
                 availability = Availability(remains: availabilityRemains, total: availabilityTotal)
@@ -180,7 +202,7 @@ extension StarGift {
             guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
-            self.init(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut)
+            self.init(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags)
         }
     }
 }

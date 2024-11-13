@@ -2264,6 +2264,23 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func checkDownloadFileParams(bot: Api.InputUser, fileName: String, url: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1342666121)
+                    bot.serialize(buffer, true)
+                    serializeString(fileName, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "bots.checkDownloadFileParams", parameters: [("bot", String(describing: bot)), ("fileName", String(describing: fileName)), ("url", String(describing: url))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func deletePreviewMedia(bot: Api.InputUser, langCode: String, media: [Api.InputMedia]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(755054003)

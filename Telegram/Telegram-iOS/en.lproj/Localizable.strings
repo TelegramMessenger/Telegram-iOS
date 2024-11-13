@@ -13226,3 +13226,8 @@ Sorry for the inconvenience.";
 
 "Stars.Transaction.Subscription.CancelledByBot" = "Your subscription was cancelled by the bot.";
 "Stars.Transaction.Subscription.CancelledByBusiness" = "Your subscription was cancelled by the business.";
+
+"Gift.View.BotDescription" = "You can keep this gift in your Profile or hide it.";
+
+"Notification.StarGift.Bot.Subtitle" = "Display this gift on your page.";
+"Notification.StarGift.Bot.Subtitle.Displaying" = "You are displaying this gift on your page.";

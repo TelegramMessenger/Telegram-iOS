@@ -182,7 +182,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             let titleString: String
             let animationFile: TelegramMediaFile?
             let stars: Int64
-            let convertStars: Int64
+            let convertStars: Int64?
             let text: String?
             let entities: [MessageTextEntity]?
             let limitTotal: Int32?
@@ -199,7 +199,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 text = nil
                 entities = nil
                 limitTotal = gift.availability?.total
-                convertStars = 0
+                convertStars = nil
                 soldOut = true
                 titleString = strings.Gift_View_UnavailableTitle
             } else if let arguments = component.subject.arguments {
@@ -222,7 +222,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 text = nil
                 entities = nil
                 limitTotal = nil
-                convertStars = 0
+                convertStars = nil
                 titleString = ""
             }
             
@@ -230,13 +230,17 @@ private final class GiftViewSheetContent: CombinedComponent {
             if soldOut {
                 descriptionText = strings.Gift_View_UnavailableDescription
             } else if incoming {
-                if !converted {
-                    descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                if let convertStars {
+                    if !converted {
+                        descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                    } else {
+                        descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
+                    }
                 } else {
-                    descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
+                    descriptionText = strings.Gift_View_BotDescription
                 }
             } else if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
-                if case .message = component.subject {
+                if case .message = component.subject, let convertStars {
                     descriptionText = strings.Gift_View_OtherDescription(peer.compactDisplayTitle, strings.Gift_View_OtherDescription_Stars(Int32(convertStars))).string
                 } else {
                     descriptionText = ""
@@ -494,7 +498,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
                         
             let valueComponent: AnyComponent<Empty>
-            if incoming && !converted {
+            if let convertStars, incoming && !converted {
                 valueComponent = AnyComponent(
                     HStack([
                         AnyComponentWithIdentity(
@@ -881,14 +885,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         case soldOutGift(StarGift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
                     return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars ?? 0, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
             case .soldOutGift:
                 return nil
             }
@@ -1018,7 +1022,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         convertToStarsImpl = { [weak self] in
-            guard let self, let arguments = subject.arguments, let messageId = arguments.messageId, let fromPeerName = arguments.fromPeerName, let navigationController = self.navigationController as? NavigationController else {
+            guard let self, let arguments = subject.arguments, let messageId = arguments.messageId, let fromPeerName = arguments.fromPeerName, let convertStars = arguments.convertStars, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             
@@ -1043,7 +1047,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 let delta = starsConvertMaxDate - currentTime
                 let days: Int32 = Int32(ceil(Float(delta) / 86400.0))
                 
-                let text = presentationData.strings.Gift_Convert_Period_Text(fromPeerName, presentationData.strings.Gift_Convert_Period_Stars(Int32(arguments.convertStars)), presentationData.strings.Gift_Convert_Period_Days(days)).string
+                let text = presentationData.strings.Gift_Convert_Period_Text(fromPeerName, presentationData.strings.Gift_Convert_Period_Stars(Int32(convertStars)), presentationData.strings.Gift_Convert_Period_Days(days)).string
                 let controller = textAlertController(
                     context: self.context,
                     title: presentationData.strings.Gift_Convert_Title,
@@ -1073,7 +1077,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                                 scale: 0.066,
                                                 colors: [:],
                                                 title: presentationData.strings.Gift_Convert_Success_Title,
-                                                text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(arguments.convertStars))).string,
+                                                text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(convertStars))).string,
                                                 customUndoText: nil,
                                                 timeout: nil
                                             ),
