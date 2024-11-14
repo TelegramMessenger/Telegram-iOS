@@ -1030,7 +1030,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     private var contextDisposable: Disposable?
     
-    init(accountId: AccountRecordId, postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool) {
+    init(accountId: AccountRecordId, postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, onlyFullSizeThumbnail: Bool, useLargeThumbnail: Bool, autoFetchFullSizeThumbnail: Bool) {
         self.instanceId = HLSVideoJSNativeContentNode.nextInstanceId
         HLSVideoJSNativeContentNode.nextInstanceId += 1
         
@@ -1071,8 +1071,21 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         intrinsicDimensions.height = floor(intrinsicDimensions.height / UIScreenScale)
         self.intrinsicDimensions = intrinsicDimensions
         
+        self.playerNode = MediaPlayerNode()
+        
         var onSeeked: (() -> Void)?
-        self.player = ChunkMediaPlayer(
+        /*self.player = ChunkMediaPlayerV2(
+            audioSessionManager: audioSessionManager,
+            partsState: self.chunkPlayerPartsState.get(),
+            video: true,
+            enableSound: self.enableSound,
+            baseRate: baseRate,
+            onSeeked: {
+                onSeeked?()
+            },
+            playerNode: self.playerNode
+        )*/
+        self.player = ChunkMediaPlayerImpl(
             postbox: postbox,
             audioSessionManager: audioSessionManager,
             partsState: self.chunkPlayerPartsState.get(),
@@ -1081,11 +1094,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             baseRate: baseRate,
             onSeeked: {
                 onSeeked?()
-            }
+            },
+            playerNode: self.playerNode
         )
-        
-        self.playerNode = MediaPlayerNode()
-        self.player.attachPlayerNode(self.playerNode)
         
         super.init()
         
@@ -1093,9 +1104,9 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
 
-        let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
+        //let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: self.userLocation, videoReference: thumbnailVideoReference, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: fileReference, previewSourceFileReference: nil, imageReference: nil, onlyFullSize: onlyFullSizeThumbnail, useLargeThumbnail: useLargeThumbnail, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail || fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {
@@ -1298,7 +1309,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     }
     
     fileprivate func onSetCurrentTime(timestamp: Double) {
-        self.player.seek(timestamp: timestamp)
+        self.player.seek(timestamp: timestamp, play: nil)
     }
     
     fileprivate func onSetPlaybackRate(playbackRate: Double) {
@@ -1449,7 +1460,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     func togglePlayPause() {
         assert(Queue.mainQueue().isCurrent())
-        self.player.togglePlayPause()
+        self.player.togglePlayPause(faded: false)
     }
     
     func setSoundEnabled(_ value: Bool) {
@@ -1802,7 +1813,7 @@ private final class SourceBuffer {
                 return
             }
             
-            if let fragmentInfo = extractFFMpegMediaInfo(path: tempFile.path) {
+            if let fragmentInfoSet = extractFFMpegMediaInfo(path: tempFile.path), let fragmentInfo = fragmentInfoSet.audio ?? fragmentInfoSet.video {
                 Queue.mainQueue().async {
                     guard let self else {
                         completion(RangeSet())
@@ -1818,10 +1829,13 @@ private final class SourceBuffer {
                         
                         completion(self.ranges)
                     } else {
+                        let videoCodecName: String? = fragmentInfoSet.video?.codecName
+                        
                         let item = ChunkMediaPlayerPart(
                             startTime: fragmentInfo.startTime.seconds,
                             endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
-                            file: tempFile
+                            file: tempFile,
+                            codecName: videoCodecName
                         )
                         self.items.append(item)
                         self.updateRanges()
@@ -1852,7 +1866,7 @@ private final class SourceBuffer {
     
     func remove(start: Double, end: Double, completion: @escaping (RangeSet<Double>) -> Void) {
         self.items.removeAll(where: { item in
-            if item.startTime >= start && item.endTime <= end {
+            if item.startTime + 0.5 >= start && item.endTime - 0.5 <= end {
                 return true
             } else {
                 return false

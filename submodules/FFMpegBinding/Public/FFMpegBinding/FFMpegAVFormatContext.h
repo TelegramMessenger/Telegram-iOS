@@ -28,6 +28,7 @@ extern int FFMpegCodecIdH264;
 extern int FFMpegCodecIdHEVC;
 extern int FFMpegCodecIdMPEG4;
 extern int FFMpegCodecIdVP9;
+extern int FFMpegCodecIdAV1;
 
 @class FFMpegAVCodecContext;
 

@@ -469,20 +469,19 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                         }
                     }
                 }
-            } else if codecId == FFMpegCodecIdMPEG4 {
-                if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromMpeg4CodecData(UInt32(kCMVideoCodecType_MPEG4Video), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
-                    break
+            } else {
+                var videoFormatData: FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData?
+                if codecId == FFMpegCodecIdMPEG4 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_MPEG4Video, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdH264 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_H264, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdHEVC {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_HEVC, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdAV1 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_AV1, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
                 }
-            } else if codecId == FFMpegCodecIdH264 {
-                if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromAVCCodecData(UInt32(kCMVideoCodecType_H264), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
-                    break
-                }
-            } else if codecId == FFMpegCodecIdHEVC {
-                if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromHEVCCodecData(UInt32(kCMVideoCodecType_HEVC), metrics.width, metrics.height, metrics.extradata, metrics.extradataSize) {
-                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormat: videoFormat, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
-                    break
+                if let videoFormatData {
+                    videoStream = StreamContext(index: Int(streamIndex), codecContext: nil, fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormatData: videoFormatData, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
                 }
             }
         }

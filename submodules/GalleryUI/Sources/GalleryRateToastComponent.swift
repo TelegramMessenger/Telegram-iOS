@@ -177,7 +177,7 @@ final class GalleryRateToastComponent: Component {
                         content: LottieComponent.AppBundleContent(name: "video_toast_speedup"),
                         color: .white,
                         startingPosition: .begin,
-                        loop: true
+                        loop: false
                     )),
                     environment: {},
                     containerSize: CGSize(width: 60.0, height: 60.0)

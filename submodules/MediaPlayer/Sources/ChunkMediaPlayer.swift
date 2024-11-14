@@ -120,16 +120,18 @@ public final class ChunkMediaPlayerPart {
     public let endTime: Double
     public let file: TempBoxFile
     public let clippedStartTime: Double?
+    public let codecName: String?
     
     public var id: Id {
         return Id(rawValue: self.file.path)
     }
     
-    public init(startTime: Double, clippedStartTime: Double? = nil, endTime: Double, file: TempBoxFile) {
+    public init(startTime: Double, clippedStartTime: Double? = nil, endTime: Double, file: TempBoxFile, codecName: String?) {
         self.startTime = startTime
         self.clippedStartTime = clippedStartTime
         self.endTime = endTime
         self.file = file
+        self.codecName = codecName
     }
 }
 
@@ -666,7 +668,8 @@ private final class ChunkMediaPlayerContext {
                     startTime: part.startTime,
                     clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
                     endTime: part.endTime,
-                    file: part.file
+                    file: part.file,
+                    codecName: part.codecName
                 ))
                 minStartTime = max(minStartTime, partEndTime)
             }
@@ -687,7 +690,8 @@ private final class ChunkMediaPlayerContext {
                         startTime: part.startTime,
                         clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
                         endTime: part.endTime,
-                        file: part.file
+                        file: part.file,
+                        codecName: part.codecName
                     ))
                     minStartTime = max(minStartTime, partEndTime)
                     break
@@ -1040,7 +1044,26 @@ private final class ChunkMediaPlayerContext {
     }
 }
 
-public final class ChunkMediaPlayer {
+public protocol ChunkMediaPlayer: AnyObject {
+    var status: Signal<MediaPlayerStatus, NoError> { get }
+    var audioLevelEvents: Signal<Float, NoError> { get }
+    var actionAtEnd: ChunkMediaPlayerActionAtEnd { get set }
+    
+    func play()
+    func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek)
+    func setSoundMuted(soundMuted: Bool)
+    func continueWithOverridingAmbientMode(isAmbient: Bool)
+    func continuePlayingWithoutSound(seek: MediaPlayerSeek)
+    func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool)
+    func setForceAudioToSpeaker(_ value: Bool)
+    func setKeepAudioSessionWhilePaused(_ value: Bool)
+    func pause()
+    func togglePlayPause(faded: Bool)
+    func seek(timestamp: Double, play: Bool?)
+    func setBaseRate(_ baseRate: Double)
+}
+
+public final class ChunkMediaPlayerImpl: ChunkMediaPlayer {
     private let queue = Queue()
     private var contextRef: Unmanaged<ChunkMediaPlayerContext>?
     
@@ -1081,7 +1104,8 @@ public final class ChunkMediaPlayer {
         keepAudioSessionWhilePaused: Bool = false,
         continuePlayingWithoutSoundOnLostAudioSession: Bool = false,
         isAudioVideoMessage: Bool = false,
-        onSeeked: (() -> Void)? = nil
+        onSeeked: (() -> Void)? = nil,
+        playerNode: MediaPlayerNode
     ) {
         let audioLevelPipe = self.audioLevelPipe
         self.queue.async {
@@ -1109,6 +1133,8 @@ public final class ChunkMediaPlayer {
             )
             self.contextRef = Unmanaged.passRetained(context)
         }
+        
+        self.attachPlayerNode(playerNode)
     }
     
     deinit {
@@ -1126,7 +1152,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek = .start) {
+    public func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.playOnceWithSound(playAndRecord: playAndRecord, seek: seek)
@@ -1150,7 +1176,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func continuePlayingWithoutSound(seek: MediaPlayerSeek = .start) {
+    public func continuePlayingWithoutSound(seek: MediaPlayerSeek) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.continuePlayingWithoutSound(seek: seek)
@@ -1190,7 +1216,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func togglePlayPause(faded: Bool = false) {
+    public func togglePlayPause(faded: Bool) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.togglePlayPause(faded: faded)
@@ -1198,7 +1224,7 @@ public final class ChunkMediaPlayer {
         }
     }
     
-    public func seek(timestamp: Double, play: Bool? = nil) {
+    public func seek(timestamp: Double, play: Bool?) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 if let play {

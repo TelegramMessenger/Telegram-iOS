@@ -19,6 +19,10 @@ private final class MediaPlayerNodeLayer: AVSampleBufferDisplayLayer {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        assert(Queue.mainQueue().isCurrent())
+    }
+    
     override func action(forKey event: String) -> CAAction? {
         return MediaPlayerNodeLayerNullAction()
     }
@@ -66,7 +70,7 @@ public final class MediaPlayerNode: ASDisplayNode {
     
     private var videoNode: MediaPlayerNodeDisplayNode
     
-    private var videoLayer: AVSampleBufferDisplayLayer?
+    public private(set) var videoLayer: AVSampleBufferDisplayLayer?
     
     private let videoQueue: Queue
     

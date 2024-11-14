@@ -81,14 +81,22 @@ public final class HLSVideoContent: UniversalVideoContent {
         guard let qualitySet = HLSQualitySet(baseFile: file) else {
             return nil
         }
-        for (quality, qualityFile) in qualitySet.qualityFiles.sorted(by: { $0.key < $1.key }) {
-            if quality >= 400 {
+        let sortedQualities = qualitySet.qualityFiles.sorted(by: { $0.key < $1.key })
+        for (quality, qualityFile) in sortedQualities {
+            if quality >= 600 {
                 guard let playlistFile = qualitySet.playlistFiles[quality] else {
                     return nil
                 }
                 return (playlistFile, qualityFile)
             }
         }
+        if let (quality, qualityFile) = sortedQualities.first {
+            guard let playlistFile = qualitySet.playlistFiles[quality] else {
+                return nil
+            }
+            return (playlistFile, qualityFile)
+        }
+        
         return nil
     }
     
@@ -198,8 +206,11 @@ public final class HLSVideoContent: UniversalVideoContent {
     let enableSound: Bool
     let baseRate: Double
     let fetchAutomatically: Bool
+    let onlyFullSizeThumbnail: Bool
+    let useLargeThumbnail: Bool
+    let autoFetchFullSizeThumbnail: Bool
     
-    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true) {
+    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, useLargeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false) {
         self.id = id
         self.userLocation = userLocation
         self.nativeId = id
@@ -211,10 +222,13 @@ public final class HLSVideoContent: UniversalVideoContent {
         self.enableSound = enableSound
         self.baseRate = baseRate
         self.fetchAutomatically = fetchAutomatically
+        self.onlyFullSizeThumbnail = onlyFullSizeThumbnail
+        self.useLargeThumbnail = useLargeThumbnail
+        self.autoFetchFullSizeThumbnail = autoFetchFullSizeThumbnail
     }
     
     public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return HLSVideoJSNativeContentNode(accountId: accountId, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
+        return HLSVideoJSNativeContentNode(accountId: accountId, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {

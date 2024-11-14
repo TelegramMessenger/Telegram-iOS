@@ -26,7 +26,7 @@ public enum NativeVideoContentId: Hashable {
     case profileVideo(Int64, String?)
 }
 
-private let isAv1Supported: Bool = {
+private let isHadrwareAv1Supported: Bool = {
     let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
     return value
 }()
@@ -70,11 +70,11 @@ public final class NativeVideoContent: UniversalVideoContent {
             return true
         }
         
-        /*if videoCodec == "av1" {
-            if isAv1Supported {
+        if videoCodec == "av1" {
+            if isHadrwareAv1Supported {
                 return true
             }
-        }*/
+        }
         
         return false
     }
