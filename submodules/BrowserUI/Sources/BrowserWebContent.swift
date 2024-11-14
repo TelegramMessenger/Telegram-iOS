@@ -809,7 +809,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-        if navigationResponse.canShowMIMEType {
+        if navigationResponse.canShowMIMEType || navigationResponse.response.url?.scheme == "tonsite" {
             decisionHandler(.allow)
         } else if #available(iOS 14.5, *) {
             if navigationResponse.response.suggestedFilename?.lowercased().hasSuffix(".pkpass") == true {

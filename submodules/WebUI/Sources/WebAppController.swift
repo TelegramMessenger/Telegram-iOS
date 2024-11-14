@@ -281,7 +281,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 placeholder = self.context.engine.messages.getAttachMenuBot(botId: controller.botId, cached: true)
                 |> map(Optional.init)
                 |> `catch` { error -> Signal<AttachMenuBot?, NoError> in
-                    return .complete()
+                    return .single(nil)
                 }
                 |> mapToSignal { bot -> Signal<(FileMediaReference, Bool)?, NoError> in
                     if let bot = bot, let peerReference = PeerReference(bot.peer._asPeer()) {
@@ -301,14 +301,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             return .complete()
                         }
                     } else {
-                        return .complete()
+                        return .single(nil)
                     }
                 }
             }
             
             if let placeholderData = controller.botAppSettings?.placeholderData {
                 Queue.mainQueue().justDispatch {
-                    let size = CGSize(width: 75.0, height: 75.0)
+                    let size = CGSize(width: 78.0, height: 78.0)
                     if let image = generateStickerPlaceholderImage(data: placeholderData, size: size, scale: min(2.0, UIScreenScale), imageSize: CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: .white) {
                         self.placeholderIcon = (image.withRenderingMode(.alwaysTemplate), false)
                         if let (layout, navigationBarHeight) = self.validLayout {
@@ -334,28 +334,41 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     
                     if let fileReference = fileReference {
                         let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
-                    }
-                    let _ = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
-                             |> deliverOnMainQueue).start(next: { [weak self] transform in
-                        if let strongSelf = self {
-                            let imageSize: CGSize
-                            if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                let minSize = min(layout.size.width, layout.size.height)
-                                imageSize = CGSize(width: minSize, height: minSize * 2.0)
-                            } else {
-                                imageSize = CGSize(width: 75.0, height: 75.0)
-                            }
-                            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                            let drawingContext = transform(arguments)
-                            if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                                strongSelf.placeholderIcon = (image, isPlaceholder)
-                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                        let _ = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
+                        |> deliverOnMainQueue).start(next: { [weak self] transform in
+                            if let strongSelf = self {
+                                let imageSize: CGSize
+                                if isPlaceholder, let (layout, _) = strongSelf.validLayout {
+                                    let minSize = min(layout.size.width, layout.size.height)
+                                    imageSize = CGSize(width: minSize, height: minSize * 2.0)
+                                } else {
+                                    imageSize = CGSize(width: 78.0, height: 78.0)
                                 }
+                                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                let drawingContext = transform(arguments)
+                                if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
+                                    strongSelf.placeholderIcon = (image, isPlaceholder)
+                                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                    }
+                                }
+                                strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
-                            strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        }
-                    })
+                        })
+                    } else {
+                        let image = generateImage(CGSize(width: 78.0, height: 78.0), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: .zero, size: size))
+                            context.setFillColor(UIColor.white.cgColor)
+                            
+                            let squareSize = CGSize(width: 36.0, height: 36.0)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: squareSize), cornerRadius: 5.0).cgPath)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: size.width - squareSize.width, y: 0.0), size: squareSize), cornerRadius: 5.0).cgPath)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: size.height - squareSize.height), size: squareSize), cornerRadius: 5.0).cgPath)
+                            context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: size.width - squareSize.width, y: size.height - squareSize.height), size: squareSize), cornerRadius: 5.0).cgPath)
+                            context.fillPath()
+                        })!
+                        strongSelf.placeholderIcon = (image.withRenderingMode(.alwaysTemplate), false)
+                    }
                 }))
             }
             
@@ -680,13 +693,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             
-            self.controller?.navigationBar?.alpha = controller.isFullscreen ? 0.0 : 1.0
+            self.updateStatusBarStyle()
+            
+            controller.navigationBar?.alpha = controller.isFullscreen ? 0.0 : 1.0
             transition.updateAlpha(node: self.headerBackgroundNode, alpha: controller.isFullscreen ? 0.0 : 1.0)
             
             transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: layout.size))
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
             transition.updateFrame(node: self.topOverscrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: layout.size.width, height: 1000.0)))
-            
             
             var contentTopInset: CGFloat = 0.0
             if controller.isFullscreen {
@@ -706,9 +720,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     component: AnyComponent(
                         FullscreenControlsComponent(
                             context: self.context,
+                            strings: self.presentationData.strings,
                             title: controller.botName,
                             isVerified: controller.botVerified,
                             insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right),
+                            statusBarStyle: self.fullScreenStatusBarStyle,
                             hasBack: self.hasBackButton,
                             backPressed: { [weak self] in
                                 guard let self else {
@@ -1472,6 +1488,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let json = json, let url = json["url"] as? String, let fileName = json["file_name"] as? String {
                         self.downloadFile(url: url, fileName: fileName)
                     }
+                case "web_app_toggle_orientation_lock":
+                    if let json = json, let lock = json["locked"] as? Bool {
+                        controller.parentController()?.lockOrientation = lock
+                    }
                 default:
                     break
             }
@@ -1479,6 +1499,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         fileprivate var needDismissConfirmation = false
         
+        fileprivate var fullScreenStatusBarStyle: StatusBarStyle = .White
         fileprivate var appBackgroundColor: UIColor?
         fileprivate var placeholderBackgroundColor: UIColor?
         fileprivate var headerColor: UIColor?
@@ -1534,11 +1555,43 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.updateNavigationBarAlpha(transition: transition)
             controller.updateNavigationBarTheme(transition: transition)
             
+            let statusBarStyle: StatusBarStyle
+            if let primaryTextColor {
+                if primaryTextColor.lightness < 0.5 {
+                    statusBarStyle = .Black
+                } else {
+                    statusBarStyle = .White
+                }
+            } else {
+                statusBarStyle = .White
+            }
+            
+            if statusBarStyle != self.fullScreenStatusBarStyle {
+                self.fullScreenStatusBarStyle = statusBarStyle
+                self.updateStatusBarStyle()
+                self.requestLayout(transition: .immediate)
+            }
+            
             controller.titleView?.updateTextColors(primary: primaryTextColor, secondary: secondaryTextColor, transition: transition)
             controller.cancelButtonNode.updateColor(primaryTextColor, transition: transition)
             controller.moreButtonNode.updateColor(primaryTextColor, transition: transition)
             transition.updateBackgroundColor(node: self.headerBackgroundNode, color: color ?? .clear)
             transition.updateBackgroundColor(node: self.topOverscrollNode, color: color ?? .clear)
+        }
+        
+        private func updateStatusBarStyle() {
+            guard let controller = self.controller, let parentController = controller.parentController() else {
+                return
+            }
+            if controller.isFullscreen {
+                if parentController.statusBar.statusBarStyle != self.fullScreenStatusBarStyle {
+                    parentController.setStatusBarStyle(self.fullScreenStatusBarStyle, animated: true)
+                }
+            } else {
+                if parentController.statusBar.statusBarStyle != .Ignore {
+                    parentController.setStatusBarStyle(.Ignore, animated: true)
+                }
+            }
         }
         
         private func handleSendData(data string: String) {
@@ -2176,14 +2229,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let refreshRate {
                     self.motionManager.deviceMotionUpdateInterval = refreshRate * 0.001
                 }
-                self.motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] data, error in
+                self.motionManager.startDeviceMotionUpdates(using: .xTrueNorthZVertical, to: OperationQueue.main) { [weak self] data, error in
                     guard let self, let data else {
                         return
                     }
                     self.webView?.sendEvent(
                         name: "device_orientation_changed",
-                        data: "{alpha: \(data.attitude.roll), beta: \(data.attitude.pitch), gamma: \(data.attitude.yaw)}"
+                        data: "{alpha: \(data.attitude.yaw), beta: \(data.attitude.pitch), gamma: \(data.attitude.roll)}"
                     )
+                    print("{alpha: \(data.attitude.yaw), beta: \(data.attitude.pitch), gamma: \(data.attitude.roll)}")
                 }
             } else {
                 if self.motionManager.isDeviceMotionActive {
