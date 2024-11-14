@@ -2239,22 +2239,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.motionManager.deviceMotionUpdateInterval = 1.0
                 }
                 
+                var effectiveIsAbsolute = false
                 let referenceFrame: CMAttitudeReferenceFrame
                 if absolute && CMMotionManager.availableAttitudeReferenceFrames().contains(.xMagneticNorthZVertical) {
                     referenceFrame = .xMagneticNorthZVertical
+                    effectiveIsAbsolute = true
                 } else {
                     if CMMotionManager.availableAttitudeReferenceFrames().contains(.xArbitraryCorrectedZVertical) {
                         referenceFrame = .xArbitraryCorrectedZVertical
                     } else {
                         referenceFrame = .xArbitraryZVertical
                     }
+                    effectiveIsAbsolute = false
                 }
                 self.motionManager.startDeviceMotionUpdates(using: referenceFrame, to: OperationQueue.main) { [weak self] data, error in
                     guard let self, let data else {
                         return
                     }
                     var alpha: Double
-                    if absolute {
+                    if effectiveIsAbsolute {
                         alpha = data.heading * .pi / 180.0
                         if alpha > .pi {
                             alpha -= 2.0 * .pi
@@ -2266,7 +2269,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                     self.webView?.sendEvent(
                         name: "device_orientation_changed",
-                        data: "{absolute: true, alpha: \(alpha), beta: \(data.attitude.pitch), gamma: \(data.attitude.roll)}"
+                        data: "{absolute: \(effectiveIsAbsolute ? "true" : "false"), alpha: \(alpha), beta: \(data.attitude.pitch), gamma: \(data.attitude.roll)}"
                     )
                 }
             } else {
