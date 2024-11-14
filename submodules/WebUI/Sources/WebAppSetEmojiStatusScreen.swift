@@ -25,6 +25,7 @@ private final class SheetContent: CombinedComponent {
     let botName: String
     let accountPeer: EnginePeer
     let file: TelegramMediaFile
+    let duration: Int32?
     let dismiss: () -> Void
     
     init(
@@ -32,12 +33,14 @@ private final class SheetContent: CombinedComponent {
         botName: String,
         accountPeer: EnginePeer,
         file: TelegramMediaFile,
+        duration: Int32?,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
         self.botName = botName
         self.accountPeer = accountPeer
         self.file = file
+        self.duration = duration
         self.dismiss = dismiss
     }
     
@@ -148,11 +151,19 @@ private final class SheetContent: CombinedComponent {
             let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             })
+            
+            var textString: String
+            if let _ = component.duration {
+                //TODO:localize
+                textString = "Do you want to set this emoji status suggested by **\(component.botName)** for **5 minutes**?"
+            } else {
+                textString = "Do you want to set this emoji status suggested by **\(component.botName)**?"
+            }
                         
             let text = text.update(
                 component: BalancedTextComponent(
                     text: .markdown(
-                        text: "Do you want to set this emoji status suggested by **\(component.botName)**?",
+                        text: textString,
                         attributes: markdownAttributes
                     ),
                     horizontalAlignment: .center,
@@ -172,7 +183,8 @@ private final class SheetContent: CombinedComponent {
                 component: PremiumPeerShortcutComponent(
                     context: component.context,
                     theme: theme,
-                    peer: component.accountPeer
+                    peer: component.accountPeer,
+                    icon: component.file
                 ),
                 availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.height),
                 transition: .immediate
@@ -228,17 +240,20 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
     private let botName: String
     private let accountPeer: EnginePeer
     private let file: TelegramMediaFile
+    private let duration: Int32?
     
     init(
         context: AccountContext,
         botName: String,
         accountPeer: EnginePeer,
-        file: TelegramMediaFile
+        file: TelegramMediaFile,
+        duration: Int32?
     ) {
         self.context = context
         self.botName = botName
         self.accountPeer = accountPeer
         self.file = file
+        self.duration = duration
     }
     
     static func ==(lhs: WebAppSetEmojiStatusSheetComponent, rhs: WebAppSetEmojiStatusSheetComponent) -> Bool {
@@ -249,6 +264,9 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
             return false
         }
         if lhs.accountPeer != rhs.accountPeer {
+            return false
+        }
+        if lhs.duration != rhs.duration {
             return false
         }
         return true
@@ -270,9 +288,11 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
                         botName: context.component.botName,
                         accountPeer: context.component.accountPeer,
                         file: context.component.file,
+                        duration: context.component.duration,
                         dismiss: {
                             animateOut.invoke(Action { _ in
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                    controller.complete(result: false)
                                     controller.dismiss(completion: nil)
                                 }
                             })
@@ -293,12 +313,14 @@ private final class WebAppSetEmojiStatusSheetComponent: CombinedComponent {
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in
-                                    if let controller = controller() {
+                                    if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                        controller.complete(result: false)
                                         controller.dismiss(completion: nil)
                                     }
                                 })
                             } else {
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppSetEmojiStatusScreen {
+                                    controller.complete(result: false)
                                     controller.dismiss(completion: nil)
                                 }
                             }
@@ -327,6 +349,7 @@ public final class WebAppSetEmojiStatusScreen: ViewControllerComponentContainer 
         botName: String,
         accountPeer: EnginePeer,
         file: TelegramMediaFile,
+        duration: Int32?,
         completion: @escaping (Bool) -> Void
     ) {
         self.context = context
@@ -338,7 +361,8 @@ public final class WebAppSetEmojiStatusScreen: ViewControllerComponentContainer 
                 context: context,
                 botName: botName,
                 accountPeer: accountPeer,
-                file: file
+                file: file,
+                duration: duration
             ),
             navigationBarAppearance: .none,
             statusBarStyle: .ignore,

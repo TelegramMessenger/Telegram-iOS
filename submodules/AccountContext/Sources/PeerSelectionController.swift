@@ -63,6 +63,7 @@ public final class PeerSelectionControllerParams {
     public let hasTypeHeaders: Bool
     public let selectForumThreads: Bool
     public let hasCreation: Bool
+    public let immediatelyActivateMultipleSelection: Bool
     
     public init(
         context: AccountContext,
@@ -82,7 +83,8 @@ public final class PeerSelectionControllerParams {
         forwardedMessageIds: [EngineMessage.Id] = [],
         hasTypeHeaders: Bool = false,
         selectForumThreads: Bool = false,
-        hasCreation: Bool = false
+        hasCreation: Bool = false,
+        immediatelyActivateMultipleSelection: Bool = false
     ) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
@@ -102,6 +104,7 @@ public final class PeerSelectionControllerParams {
         self.hasTypeHeaders = hasTypeHeaders
         self.selectForumThreads = selectForumThreads
         self.hasCreation = hasCreation
+        self.immediatelyActivateMultipleSelection = immediatelyActivateMultipleSelection
     }
 }
 
@@ -162,4 +165,5 @@ public enum SelectivePrivacySettingsKind {
     case voiceMessages
     case bio
     case birthday
+    case giftsAutoSave
 }

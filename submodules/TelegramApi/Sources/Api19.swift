@@ -1105,6 +1105,7 @@ public extension Api {
         case privacyKeyPhoneNumber
         case privacyKeyPhoneP2P
         case privacyKeyProfilePhoto
+        case privacyKeyStarGiftsAutoSave
         case privacyKeyStatusTimestamp
         case privacyKeyVoiceMessages
     
@@ -1164,6 +1165,12 @@ public extension Api {
                     }
                     
                     break
+                case .privacyKeyStarGiftsAutoSave:
+                    if boxed {
+                        buffer.appendInt32(749010424)
+                    }
+                    
+                    break
                 case .privacyKeyStatusTimestamp:
                     if boxed {
                         buffer.appendInt32(-1137792208)
@@ -1199,6 +1206,8 @@ public extension Api {
                 return ("privacyKeyPhoneP2P", [])
                 case .privacyKeyProfilePhoto:
                 return ("privacyKeyProfilePhoto", [])
+                case .privacyKeyStarGiftsAutoSave:
+                return ("privacyKeyStarGiftsAutoSave", [])
                 case .privacyKeyStatusTimestamp:
                 return ("privacyKeyStatusTimestamp", [])
                 case .privacyKeyVoiceMessages:
@@ -1232,6 +1241,9 @@ public extension Api {
         }
         public static func parse_privacyKeyProfilePhoto(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyProfilePhoto
+        }
+        public static func parse_privacyKeyStarGiftsAutoSave(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyStarGiftsAutoSave
         }
         public static func parse_privacyKeyStatusTimestamp(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyStatusTimestamp

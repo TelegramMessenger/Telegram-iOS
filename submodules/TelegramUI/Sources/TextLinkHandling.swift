@@ -100,7 +100,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         let sourceLocation = InstantPageSourceLocation(userLocation: peerId.flatMap(MediaResourceUserLocation.peer) ?? .other, peerType: .group)
                         let browserController = context.sharedContext.makeInstantPageController(context: context, webPage: webPage, anchor: anchor, sourceLocation: sourceLocation)
                         (controller.navigationController as? NavigationController)?.pushViewController(browserController, animated: true)
-                    case .boost, .chatFolder, .join:
+                    case .boost, .chatFolder, .join, .invoice:
                         if let navigationController = controller.navigationController as? NavigationController {
                             openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, message: nil, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, forceUpdate: false, openPeer: { peer, navigateToPeer in
                                 openResolvedPeerImpl(peer, navigateToPeer)

@@ -866,13 +866,13 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum PreparedInlineMessage: TypeConstructorDescription {
-        case preparedInlineMessage(queryId: Int64, result: Api.BotInlineResult, peerTypes: [Api.InlineQueryPeerType], users: [Api.User])
+        case preparedInlineMessage(queryId: Int64, result: Api.BotInlineResult, peerTypes: [Api.InlineQueryPeerType], cacheTime: Int32, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .preparedInlineMessage(let queryId, let result, let peerTypes, let users):
+                case .preparedInlineMessage(let queryId, let result, let peerTypes, let cacheTime, let users):
                     if boxed {
-                        buffer.appendInt32(1636301421)
+                        buffer.appendInt32(-11046771)
                     }
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     result.serialize(buffer, true)
@@ -881,6 +881,7 @@ public extension Api.messages {
                     for item in peerTypes {
                         item.serialize(buffer, true)
                     }
+                    serializeInt32(cacheTime, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
@@ -892,8 +893,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .preparedInlineMessage(let queryId, let result, let peerTypes, let users):
-                return ("preparedInlineMessage", [("queryId", queryId as Any), ("result", result as Any), ("peerTypes", peerTypes as Any), ("users", users as Any)])
+                case .preparedInlineMessage(let queryId, let result, let peerTypes, let cacheTime, let users):
+                return ("preparedInlineMessage", [("queryId", queryId as Any), ("result", result as Any), ("peerTypes", peerTypes as Any), ("cacheTime", cacheTime as Any), ("users", users as Any)])
     }
     }
     
@@ -908,16 +909,19 @@ public extension Api.messages {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InlineQueryPeerType.self)
             }
-            var _4: [Api.User]?
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: [Api.User]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.messages.PreparedInlineMessage.preparedInlineMessage(queryId: _1!, result: _2!, peerTypes: _3!, users: _4!)
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.PreparedInlineMessage.preparedInlineMessage(queryId: _1!, result: _2!, peerTypes: _3!, cacheTime: _4!, users: _5!)
             }
             else {
                 return nil

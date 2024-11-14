@@ -8,6 +8,7 @@ import TelegramUIPreferences
 public struct WebAppPermissionsState: Codable {
     enum CodingKeys: String, CodingKey {
         case location
+        case emojiStatus
     }
     
     public struct Location: Codable {
@@ -41,25 +42,56 @@ public struct WebAppPermissionsState: Codable {
             try container.encode(self.isAllowed, forKey: .isAllowed)
         }
     }
+    
+    public struct EmojiStatus: Codable {
+        enum CodingKeys: String, CodingKey {
+            case isRequested
+        }
+        
+        public let isRequested: Bool
+        
+        public init(
+            isRequested: Bool
+        ) {
+            self.isRequested = isRequested
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.isRequested = try container.decode(Bool.self, forKey: .isRequested)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.isRequested, forKey: .isRequested)
+        }
+    }
         
     public let location: Location?
+    public let emojiStatus: EmojiStatus?
     
     public init(
-        location: Location?
+        location: Location?,
+        emojiStatus: EmojiStatus?
     ) {
         self.location = location
+        self.emojiStatus = emojiStatus
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        self.location = try container.decode(WebAppPermissionsState.Location.self, forKey: .location)
+        self.location = try container.decodeIfPresent(WebAppPermissionsState.Location.self, forKey: .location)
+        self.emojiStatus = try container.decodeIfPresent(WebAppPermissionsState.EmojiStatus.self, forKey: .emojiStatus)
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encodeIfPresent(self.location, forKey: .location)
+        try container.encodeIfPresent(self.emojiStatus, forKey: .emojiStatus)
     }
 }
 

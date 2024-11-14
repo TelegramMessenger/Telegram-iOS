@@ -782,6 +782,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     startChannel = ""
                                 } else if queryItem.name == "profile" {
                                     profile = true
+                                } else if queryItem.name == "startapp" {
+                                    startApp = ""
                                 }
                             }
                         }

@@ -244,7 +244,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
                 if (webViewFlags & (1 << 1)) != 0 {
                     resultFlags.insert(.fullSize)
                 }
-                if (flags & (1 << 2)) != 0 {
+                if (webViewFlags & (1 << 2)) != 0 {
                     resultFlags.insert(.fullScreen)
                 }
                 let keepAlive: Signal<Never, KeepWebViewError>?

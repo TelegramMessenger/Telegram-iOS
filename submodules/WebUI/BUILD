@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/MediaResources",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/UrlHandling:UrlHandling",
@@ -48,6 +49,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
         "//submodules/DeviceLocationManager",
+        "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
     ],
     visibility = [
         "//visibility:public",

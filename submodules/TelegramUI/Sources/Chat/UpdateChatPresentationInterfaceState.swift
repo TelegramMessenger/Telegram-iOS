@@ -13,6 +13,7 @@ import TelegramNotices
 import PresentationDataUtils
 import TelegramCallsUI
 import AttachmentUI
+import WebUI
 
 func updateChatPresentationInterfaceStateImpl(
     selfController: ChatControllerImpl,
@@ -591,7 +592,7 @@ func updateChatPresentationInterfaceStateImpl(
     if selfController.presentationInterfaceState.hasBirthdayToday {
         selfController.displayBirthdayTooltip()
     }
-    
+        
     if case .standard(.embedded) = selfController.presentationInterfaceState.mode, let controllerInteraction = selfController.controllerInteraction, let interfaceInteraction = selfController.interfaceInteraction {
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(selfController.presentationInterfaceState, context: selfController.context, currentPanel: selfController.customNavigationPanelNode as? ChatTitleAccessoryPanelNode, controllerInteraction: controllerInteraction, interfaceInteraction: interfaceInteraction, force: true) {
             selfController.customNavigationPanelNode = titleAccessoryPanelNode as? ChatControllerCustomNavigationPanelNode

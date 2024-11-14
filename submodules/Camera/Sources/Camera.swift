@@ -257,6 +257,7 @@ private final class CameraContext {
             
             mainDeviceContext.output.markPositionChange(position: targetPosition)
         } else {
+            self.session.session.stopRunning()
             self.configure {
                 let isRoundVideo = self.initialConfiguration.isRoundVideo
                 self.mainDeviceContext?.invalidate(switchAudio: !isRoundVideo)
@@ -284,6 +285,7 @@ private final class CameraContext {
                     self.modeChange = .none
                 }
             }
+            self.session.session.startRunning()
         }
     }
     
@@ -320,6 +322,7 @@ private final class CameraContext {
             self.modeChange = .dualCamera
         }
         
+        self.session.session.stopRunning()
         if enabled {
             self.configure {
                 self.mainDeviceContext?.invalidate()
@@ -432,6 +435,7 @@ private final class CameraContext {
                 self?.detectedCodesPipe.putNext(codes)
             }
         }
+        self.session.session.startRunning()
         
         if change {
             if #available(iOS 13.0, *), let previewView = self.simplePreviewView {

@@ -223,8 +223,12 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     
     func safeInsets(inLandscape: Bool) -> UIEdgeInsets {
         switch self {
-            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMax, .iPhone14ProMaxZoomed, .iPhone16Pro, .iPhone16ProMax:
+            case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone14ProZoomed, .iPhone14ProMaxZoomed:
                 return inLandscape ? UIEdgeInsets(top: 0.0, left: 44.0, bottom: 0.0, right: 44.0) : UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
+            case .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax:
+                return inLandscape ? UIEdgeInsets(top: 0.0, left: 47.0, bottom: 0.0, right: 47.0) : UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
+            case .iPhone14Pro, .iPhone14ProMax, .iPhone16Pro, .iPhone16ProMax:
+                return inLandscape ? UIEdgeInsets(top: 0.0, left: 59.0, bottom: 0.0, right: 59.0) : UIEdgeInsets(top: 44.0, left: 0.0, bottom: 0.0, right: 0.0)
             default:
                 return UIEdgeInsets.zero
         }

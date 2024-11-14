@@ -459,6 +459,7 @@ public extension Api {
         case inputPrivacyKeyPhoneNumber
         case inputPrivacyKeyPhoneP2P
         case inputPrivacyKeyProfilePhoto
+        case inputPrivacyKeyStarGiftsAutoSave
         case inputPrivacyKeyStatusTimestamp
         case inputPrivacyKeyVoiceMessages
     
@@ -518,6 +519,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputPrivacyKeyStarGiftsAutoSave:
+                    if boxed {
+                        buffer.appendInt32(-512548031)
+                    }
+                    
+                    break
                 case .inputPrivacyKeyStatusTimestamp:
                     if boxed {
                         buffer.appendInt32(1335282456)
@@ -553,6 +560,8 @@ public extension Api {
                 return ("inputPrivacyKeyPhoneP2P", [])
                 case .inputPrivacyKeyProfilePhoto:
                 return ("inputPrivacyKeyProfilePhoto", [])
+                case .inputPrivacyKeyStarGiftsAutoSave:
+                return ("inputPrivacyKeyStarGiftsAutoSave", [])
                 case .inputPrivacyKeyStatusTimestamp:
                 return ("inputPrivacyKeyStatusTimestamp", [])
                 case .inputPrivacyKeyVoiceMessages:
@@ -587,6 +596,9 @@ public extension Api {
         public static func parse_inputPrivacyKeyProfilePhoto(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyProfilePhoto
         }
+        public static func parse_inputPrivacyKeyStarGiftsAutoSave(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyStarGiftsAutoSave
+        }
         public static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyStatusTimestamp
         }
@@ -599,12 +611,14 @@ public extension Api {
 public extension Api {
     enum InputPrivacyRule: TypeConstructorDescription {
         case inputPrivacyValueAllowAll
+        case inputPrivacyValueAllowBots
         case inputPrivacyValueAllowChatParticipants(chats: [Int64])
         case inputPrivacyValueAllowCloseFriends
         case inputPrivacyValueAllowContacts
         case inputPrivacyValueAllowPremium
         case inputPrivacyValueAllowUsers(users: [Api.InputUser])
         case inputPrivacyValueDisallowAll
+        case inputPrivacyValueDisallowBots
         case inputPrivacyValueDisallowChatParticipants(chats: [Int64])
         case inputPrivacyValueDisallowContacts
         case inputPrivacyValueDisallowUsers(users: [Api.InputUser])
@@ -614,6 +628,12 @@ public extension Api {
                 case .inputPrivacyValueAllowAll:
                     if boxed {
                         buffer.appendInt32(407582158)
+                    }
+                    
+                    break
+                case .inputPrivacyValueAllowBots:
+                    if boxed {
+                        buffer.appendInt32(1515179237)
                     }
                     
                     break
@@ -661,6 +681,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputPrivacyValueDisallowBots:
+                    if boxed {
+                        buffer.appendInt32(-991594219)
+                    }
+                    
+                    break
                 case .inputPrivacyValueDisallowChatParticipants(let chats):
                     if boxed {
                         buffer.appendInt32(-380694650)
@@ -694,6 +720,8 @@ public extension Api {
         switch self {
                 case .inputPrivacyValueAllowAll:
                 return ("inputPrivacyValueAllowAll", [])
+                case .inputPrivacyValueAllowBots:
+                return ("inputPrivacyValueAllowBots", [])
                 case .inputPrivacyValueAllowChatParticipants(let chats):
                 return ("inputPrivacyValueAllowChatParticipants", [("chats", chats as Any)])
                 case .inputPrivacyValueAllowCloseFriends:
@@ -706,6 +734,8 @@ public extension Api {
                 return ("inputPrivacyValueAllowUsers", [("users", users as Any)])
                 case .inputPrivacyValueDisallowAll:
                 return ("inputPrivacyValueDisallowAll", [])
+                case .inputPrivacyValueDisallowBots:
+                return ("inputPrivacyValueDisallowBots", [])
                 case .inputPrivacyValueDisallowChatParticipants(let chats):
                 return ("inputPrivacyValueDisallowChatParticipants", [("chats", chats as Any)])
                 case .inputPrivacyValueDisallowContacts:
@@ -717,6 +747,9 @@ public extension Api {
     
         public static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueAllowAll
+        }
+        public static func parse_inputPrivacyValueAllowBots(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueAllowBots
         }
         public static func parse_inputPrivacyValueAllowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
             var _1: [Int64]?
@@ -755,6 +788,9 @@ public extension Api {
         }
         public static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueDisallowAll
+        }
+        public static func parse_inputPrivacyValueDisallowBots(_ reader: BufferReader) -> InputPrivacyRule? {
+            return Api.InputPrivacyRule.inputPrivacyValueDisallowBots
         }
         public static func parse_inputPrivacyValueDisallowChatParticipants(_ reader: BufferReader) -> InputPrivacyRule? {
             var _1: [Int64]?

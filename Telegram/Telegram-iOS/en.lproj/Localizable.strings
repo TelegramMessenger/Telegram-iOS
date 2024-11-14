@@ -13221,3 +13221,24 @@ Sorry for the inconvenience.";
 
 "Gift.Send.TitleTo" = "Gift to %@";
 "Gift.Send.SendShort" = "Send";
+
+"Premium.EmojiStatus.Proceed" = "Unlock Emoji Statuses";
+
+"Stars.Transaction.Subscription.CancelledByBot" = "Your subscription was cancelled by the bot.";
+"Stars.Transaction.Subscription.CancelledByBusiness" = "Your subscription was cancelled by the business.";
+
+"Gift.View.BotDescription" = "You can keep this gift in your Profile or hide it.";
+
+"Notification.StarGift.Bot.Subtitle" = "Display this gift on your page.";
+"Notification.StarGift.Bot.Subtitle.Displaying" = "You are displaying this gift on your page.";
+
+"Privacy.Gifts" = "Gifts";
+"Privacy.Gifts.WhoCanSeeMyBio" = "WHO CAN DISPLAY GIFTS ON MY PROFILE";
+"Privacy.Gifts.CustomHelp" = "Choose whether gifts from specific senders need your approval before they’re visible to others on your profile.";
+"Privacy.Gifts.AlwaysAllow.Title" = "Always Allow";
+"Privacy.Gifts.NeverAllow.Title" = "Never Allow";
+
+"PrivacySettings.ValueBots" = "Mini Apps";
+"PrivacySettings.ValueBotsPlus" = "Mini Apps +%@";
+
+"PrivacySettings.CategoryBots" = "Mini Apps";

@@ -226,6 +226,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isSubscriber = false
             var isSubscriptionFee = false
             var isBotSubscription = false
+            var isBusinessSubscription = false
             var isCancelled = false
             var isReaction = false
             var giveawayMessageId: MessageId?
@@ -259,8 +260,12 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 transactionPeer = .peer(peer)
                 isSubscriber = true
             case let .subscription(subscription):
-                if case let .user(user) = subscription.peer, user.botInfo != nil {
-                    isBotSubscription = true
+                if case let .user(user) = subscription.peer {
+                    if user.botInfo != nil {
+                        isBotSubscription = true
+                    } else {
+                        isBusinessSubscription = true
+                    }
                 }
                 if let title = subscription.title {
                     titleText = title
@@ -318,18 +323,30 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                     isCancelled = true
                 } else {
-                    if subscription.flags.contains(.isCancelled) {
+                    if subscription.flags.contains(.isCancelledByBot) {
+                        if case let .user(user) = subscription.peer, user.botInfo == nil {
+                            statusText = strings.Stars_Transaction_Subscription_CancelledByBusiness
+                        } else {
+                            statusText = strings.Stars_Transaction_Subscription_CancelledByBot
+                        }
+                        statusIsDestructive = true
+                        buttonText = strings.Common_OK
+                        isCancelled = true
+                    } else if subscription.flags.contains(.isCancelled) {
                         statusText = strings.Stars_Transaction_Subscription_Cancelled
                         statusIsDestructive = true
                         if date > Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) {
                             buttonText = strings.Stars_Transaction_Subscription_Renew
                         } else {
-                            if let _ = subscription.inviteHash, !isKicked {
+                            if let _ = subscription.invoiceSlug {
+                                buttonText = strings.Stars_Transaction_Subscription_Renew
+                            } else if let _ = subscription.inviteHash, !isKicked {
                                 buttonText = strings.Stars_Transaction_Subscription_JoinAgainChannel
                             } else {
                                 buttonText = strings.Common_OK
                             }
                         }
+                        isCancelled = true
                     } else {
                         statusText = strings.Stars_Transaction_Subscription_Active(stringForMediumDate(timestamp: subscription.untilDate, strings: strings, dateTimeFormat: dateTimeFormat, withTime: false)).string
                         cancelButtonText = strings.Stars_Transaction_Subscription_Cancel
@@ -710,6 +727,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     if isBotSubscription {
                         //TODO:localize
                         title = "Bot"
+                    } else if isBusinessSubscription {
+                        title = "Business"
                     } else {
                         title = strings.Stars_Transaction_Subscription_Subscription
                     }

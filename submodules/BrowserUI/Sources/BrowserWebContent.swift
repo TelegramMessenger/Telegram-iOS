@@ -809,7 +809,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
     }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-        if navigationResponse.canShowMIMEType {
+        if navigationResponse.canShowMIMEType || navigationResponse.response.url?.scheme == "tonsite" {
             decisionHandler(.allow)
         } else if #available(iOS 14.5, *) {
             if navigationResponse.response.suggestedFilename?.lowercased().hasSuffix(".pkpass") == true {
@@ -905,7 +905,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 }
             } else {
                 let controller = legacyICloudFilePicker(theme: self.presentationData.theme, mode: .export, url: url, documentTypes: [], forceDarkTheme: false, dismissed: {}, completion: { _ in
-                    
+                    let _ = tempFile
                 })
                 self.present(controller, nil)
             }

@@ -172,6 +172,7 @@ extension BotPaymentMethod {
 
 public enum BotPaymentFormRequestError {
     case generic
+    case alreadyActive
 }
 
 extension BotPaymentInvoice {
@@ -296,13 +297,13 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         }
         
         var inputPurposeFlags: Int32 = 0
-        var textWithEntities: Api.TextWithEntities?
-        if let text, let entities {
+        var message: Api.TextWithEntities?
+        if let text, !text.isEmpty {
             inputPurposeFlags |= (1 << 1)
-            textWithEntities = .textWithEntities(text: text, entities: apiEntitiesFromMessageTextEntities(entities, associatedPeers: SimpleDictionary()))
+            message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
         
-        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: inputPurposeFlags, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: textWithEntities)
+        let inputPurpose: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: inputPurposeFlags, users: inputUsers, boostPeer: nil, currency: currency, amount: amount, message: message)
         
         var flags: Int32 = 0
         if let _ = option.storeProductId {
@@ -385,8 +386,12 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
         let flags: Int32 = 0
 
         return network.request(Api.functions.payments.getPaymentForm(flags: flags, invoice: invoice, themeParams: nil))
-        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
-            return .fail(.generic)
+        |> `catch` { error -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+            if error.errorDescription == "SUBSCRIPTION_ALREADY_ACTIVE" {
+                return .fail(.alreadyActive)
+            } else {
+                return .fail(.generic)
+            }
         }
         |> mapToSignal { result -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> TelegramMediaInvoice in

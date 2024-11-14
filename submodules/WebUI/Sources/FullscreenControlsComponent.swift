@@ -12,9 +12,11 @@ import LottieAnimationComponent
 
 final class FullscreenControlsComponent: Component {
     let context: AccountContext
+    let strings: PresentationStrings
     let title: String
     let isVerified: Bool
     let insets: UIEdgeInsets
+    let statusBarStyle: StatusBarStyle
     var hasBack: Bool
     let backPressed: () -> Void
     let minimizePressed: () -> Void
@@ -22,18 +24,22 @@ final class FullscreenControlsComponent: Component {
 
     init(
         context: AccountContext,
+        strings: PresentationStrings,
         title: String,
         isVerified: Bool,
         insets: UIEdgeInsets,
+        statusBarStyle: StatusBarStyle,
         hasBack: Bool,
         backPressed: @escaping () -> Void,
         minimizePressed: @escaping () -> Void,
         morePressed: @escaping (ASDisplayNode, ContextGesture?) -> Void
     ) {
         self.context = context
+        self.strings = strings
         self.title = title
         self.isVerified = isVerified
         self.insets = insets
+        self.statusBarStyle = statusBarStyle
         self.hasBack = hasBack
         self.backPressed = backPressed
         self.minimizePressed = minimizePressed
@@ -51,6 +57,9 @@ final class FullscreenControlsComponent: Component {
             return false
         }
         if lhs.insets != rhs.insets {
+            return false
+        }
+        if lhs.statusBarStyle != rhs.statusBarStyle {
             return false
         }
         if lhs.hasBack != rhs.hasBack {
@@ -161,8 +170,8 @@ final class FullscreenControlsComponent: Component {
             let leftBackgroundSize = CGSize(width: 30.0, height: 30.0)
             let rightBackgroundSize = CGSize(width: 72.0, height: 30.0)
             
-            self.leftBackgroundView.updateColor(color: UIColor(white: 0.67, alpha: 0.35), transition: transition.containedViewLayoutTransition)
-            self.rightBackgroundView.updateColor(color: UIColor(white: 0.67, alpha: 0.35), transition: transition.containedViewLayoutTransition)
+            self.leftBackgroundView.updateColor(color: UIColor(white: 0.7, alpha: 0.35), transition: transition.containedViewLayoutTransition)
+            self.rightBackgroundView.updateColor(color: UIColor(white: 0.7, alpha: 0.35), transition: transition.containedViewLayoutTransition)
                         
             let rightBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - component.insets.right - sideInset - rightBackgroundSize.width, y: 0.0), size: rightBackgroundSize)
             self.rightBackgroundView.update(size: rightBackgroundSize, cornerRadius: rightBackgroundFrame.height / 2.0, transition: transition.containedViewLayoutTransition)
@@ -170,10 +179,13 @@ final class FullscreenControlsComponent: Component {
             
             var isAnimatingTextTransition = false
             
+            let textColor: UIColor = component.statusBarStyle == .Black ? UIColor(rgb: 0x808080) : .white
+            self.moreNode.updateColor(textColor, transition: .immediate)
+            
             var additionalLeftWidth: CGFloat = 0.0
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.title, font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: .white)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.title, font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: textColor)))),
                 environment: {},
                 containerSize: availableSize
             )
@@ -207,7 +219,7 @@ final class FullscreenControlsComponent: Component {
                         
             let buttonTitleSize = self.buttonTitle.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.hasBack ? "Back" : "Close", font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: .white)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.hasBack ? component.strings.Common_Back : component.strings.Common_Close, font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: textColor)))),
                 environment: {},
                 containerSize: availableSize
             )
@@ -233,7 +245,7 @@ final class FullscreenControlsComponent: Component {
             if component.isVerified {
                 let credibilitySize = self.credibility.update(
                     transition: .immediate,
-                    component: AnyComponent(BundleIconComponent(name: "Instant View/Verified", tintColor: .white)),
+                    component: AnyComponent(BundleIconComponent(name: "Instant View/Verified", tintColor: textColor)),
                     environment: {},
                     containerSize: availableSize
                 )
@@ -284,7 +296,7 @@ final class FullscreenControlsComponent: Component {
                             mode: .animating(loop: false),
                             range: component.hasBack ? (0.5, 1.0) : (0.0, 0.5)
                         ),
-                        colors: ["__allcolors__": .white],
+                        colors: ["__allcolors__": textColor],
                         size: CGSize(width: 30.0, height: 30.0)
                     )
                 ),
@@ -304,7 +316,7 @@ final class FullscreenControlsComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(Button(
                     content: AnyComponent(
-                        BundleIconComponent(name: "Instant View/MinimizeArrow", tintColor: .white)
+                        BundleIconComponent(name: "Instant View/MinimizeArrow", tintColor: textColor)
                     ),
                     action: { [weak self] in
                         guard let self, let component = self.component else {

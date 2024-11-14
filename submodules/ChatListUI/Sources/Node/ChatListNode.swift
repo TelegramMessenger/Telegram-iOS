@@ -644,13 +644,17 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         status: status,
                         requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                         enabled: true,
-                        selection: .none,
+                        selection: editing ? .selectable(selected: selected) : .none,
                         editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                         index: nil,
                         header: nil,
                         action: { _ in
                             if let chatPeer = chatPeer {
-                                nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                if editing {
+                                    nodeInteraction.togglePeerSelected(chatPeer, nil)
+                                } else {
+                                    nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                }
                             }
                         }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
                             if let chatPeer {
@@ -984,13 +988,17 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             status: status,
                             requiresPremiumForMessaging: peerEntry.requiresPremiumForMessaging,
                             enabled: true,
-                            selection: .none,
+                            selection: editing ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                             index: nil,
                             header: nil,
                             action: { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                    if editing {
+                                        nodeInteraction.togglePeerSelected(chatPeer, nil)
+                                    } else {
+                                        nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                    }
                                 }
                             }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
                                 if let chatPeer {

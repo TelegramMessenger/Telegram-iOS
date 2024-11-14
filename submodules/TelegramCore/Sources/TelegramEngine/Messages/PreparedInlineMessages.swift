@@ -5,9 +5,10 @@ import TelegramApi
 import MtProtoKit
 
 public struct PreparedInlineMessage: Equatable {
-    let queryId: Int64
-    let result: ChatContextResult
-    let peerTypes: [ReplyMarkupButtonAction.PeerTypes]
+    public let botId: EnginePeer.Id
+    public let queryId: Int64
+    public let result: ChatContextResult
+    public let peerTypes: ReplyMarkupButtonAction.PeerTypes
 }
 
 func _internal_getPreparedInlineMessage(account: Account, botId: EnginePeer.Id, id: String) -> Signal<PreparedInlineMessage?, NoError> {
@@ -29,10 +30,15 @@ func _internal_getPreparedInlineMessage(account: Account, botId: EnginePeer.Id, 
             }
             return account.postbox.transaction { transaction -> PreparedInlineMessage? in
                 switch result {
-                case let .preparedInlineMessage(queryId, result, peerTypes, users):
+                case let .preparedInlineMessage(queryId, result, apiPeerTypes, cacheTime, users):
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: users))
-                    
-                    return PreparedInlineMessage(queryId: queryId, result: ChatContextResult(apiResult: result, queryId: queryId), peerTypes: peerTypes.compactMap { ReplyMarkupButtonAction.PeerTypes(apiType: $0) })
+                    let _ = cacheTime
+                    return PreparedInlineMessage(
+                        botId: botId,
+                        queryId: queryId,
+                        result: ChatContextResult(apiResult: result, queryId: queryId),
+                        peerTypes: ReplyMarkupButtonAction.PeerTypes(apiType: apiPeerTypes)
+                    )
                 }
             }
         }

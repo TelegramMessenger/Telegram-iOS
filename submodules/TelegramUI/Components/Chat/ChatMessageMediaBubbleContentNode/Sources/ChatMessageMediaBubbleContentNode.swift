@@ -183,14 +183,18 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if let invoice = media as? TelegramMediaInvoice {
                         selectedMedia = invoice
                         extendedMedia = invoice.extendedMedia
-                    } 
-                    else if let paidContent = media as? TelegramMediaPaidContent {
+                    } else if let paidContent = media as? TelegramMediaPaidContent {
                         selectedMedia = paidContent
                         if case let .mosaic(_, _, index) = preparePosition, let index {
                             extendedMedia = paidContent.extendedMedia[index]
                             selectedMediaIndex = index
                         } else {
                             extendedMedia = paidContent.extendedMedia.first
+                        }
+                    } else if let webFile = media as? TelegramMediaWebFile {
+                        selectedMedia = webFile
+                        if item.presentationData.isPreview {
+                            automaticDownload = .full
                         }
                     }
                 }

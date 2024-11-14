@@ -149,6 +149,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+            } else if let _ = media as? TelegramMediaWebFile {
+                result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let story = media as? TelegramMediaStory {
                 if story.isMention {
                     if let storyItem = message.associatedStories[story.storyId], storyItem.data.isEmpty {
@@ -1608,6 +1610,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let subject = item.associatedData.subject, case let .customChatContents(contents) = subject, case .hashTagSearch = contents.kind {
                 hasAvatar = true
             }
+        }
+        
+        if isPreview, let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramUser, peer.firstName == nil {
+            hasAvatar = false
+            effectiveAuthor = nil
         }
         
         var isInstantVideo = false

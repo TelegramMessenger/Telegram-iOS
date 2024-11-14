@@ -16,9 +16,9 @@ extension BotMenuButton {
 extension BotAppSettings {
     init(apiBotAppSettings: Api.BotAppSettings) {
         switch apiBotAppSettings {
-        case let .botAppSettings(_, placeholderDocument, backgroundColor, backgroundDarkColor, headerColor, headerDarkColor):
+        case let .botAppSettings(_, placeholder, backgroundColor, backgroundDarkColor, headerColor, headerDarkColor):
             self.init(
-                placeholder: placeholderDocument.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) },
+                placeholderData: placeholder.flatMap { $0.makeData() },
                 backgroundColor: backgroundColor,
                 backgroundDarkColor: backgroundDarkColor,
                 headerColor: headerColor,

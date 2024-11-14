@@ -38,7 +38,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private var multiAvatarsSize: CGSize?
     private var iconImageSize: CGSize?
     private let iconCheckNode: RadialStatusNode?
-    private let animationNode: AnimationNode?
+    private var animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
     private var slotMachineNode: SlotMachineAnimationNode?
     private var stillStickerNode: TransformImageNode?
@@ -1625,6 +1625,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     }
     
     func updateContent(_ content: UndoOverlayContent) {
+        let previousContent = self.content
         self.content = content
         
         var undoTextColor = self.presentationData.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)
@@ -1651,6 +1652,35 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
             self.renewWithCurrentContent()
         case let .actionSucceeded(title, text, _, destructive):
+            if case .progress = previousContent {
+                self.remainingSeconds = 5.0
+                
+                if let snapshotView = self.textNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = self.textNode.frame
+                    self.textNode.view.superview?.addSubview(snapshotView)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
+                    self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                
+                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
+                
+                if let iconNode = self.iconNode, let statusNode = self.statusNode {
+                    iconNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                    iconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                    statusNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.25, removeOnCompletion: false)
+                    statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                }
+                
+                self.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                Queue.mainQueue().justDispatch {
+                    self.animationNode?.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                    self.animationNode?.play()
+                }
+            }
+            
             if destructive {
                 undoTextColor = UIColor(rgb: 0xff7b74)
             }
@@ -1717,6 +1747,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var leftInset: CGFloat = 50.0
         if let iconImageSize = self.iconImageSize {
             if case .progress = self.content {
+            } else if case .actionSucceeded = self.content {
             } else {
                 leftInset = 9.0 + iconImageSize.width + 9.0
             }
@@ -1856,6 +1887,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             
             var isProgress = false
             if case .progress = self.content {
+                isProgress = true
+            } else if case .actionSucceeded = self.content {
                 isProgress = true
             }
             

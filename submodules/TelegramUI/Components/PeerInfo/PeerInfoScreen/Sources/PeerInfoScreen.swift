@@ -1545,22 +1545,32 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 
                 if let _ = user.botInfo {
                     //TODO:localize
-                    items[.permissions]!.append(PeerInfoScreenHeaderItem(id: 30, text: "ALLOW ACCESS TO"))
                     var canManageEmojiStatus = false
                     if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.botCanManageEmojiStatus) {
                         canManageEmojiStatus = true
                     }
-                    items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 31, text: "Emoji Status", value: canManageEmojiStatus, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
-                        let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: user.id, enabled: value)
-                        |> deliverOnMainQueue).startStandalone()
-                    }))
                     
-                    if data.webAppPermissions?.location?.isRequested == true {
-                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: "Geolocation", value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
+                    if canManageEmojiStatus || data.webAppPermissions?.emojiStatus?.isRequested == true {
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 31, text: "Emoji Status", value: canManageEmojiStatus, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
+                            let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: user.id, enabled: value)
+                                     |> deliverOnMainQueue).startStandalone()
+                            
                             let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
-                                return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: value))
+                                return WebAppPermissionsState(location: current?.location, emojiStatus: WebAppPermissionsState.EmojiStatus(isRequested: true))
                             }.startStandalone()
                         }))
+                    }
+                    
+                    if data.webAppPermissions?.location?.isRequested == true || data.webAppPermissions?.location?.isAllowed == true {
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: "Geolocation", value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
+                            let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
+                                return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: value), emojiStatus: current?.emojiStatus)
+                            }.startStandalone()
+                        }))
+                    }
+                    
+                    if !items[.permissions]!.isEmpty {
+                        items[.permissions]!.insert(PeerInfoScreenHeaderItem(id: 30, text: "ALLOW ACCESS TO"), at: 0)
                     }
                 }
                 
@@ -5459,6 +5469,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }
         
+        var appSettings: BotAppSettings?
+        if let settings = self.data?.cachedData as? CachedUserData {
+            appSettings = settings.botInfo?.appSettings
+        }
+        
         let presentationData = self.presentationData
         let proceed: (Bool) -> Void = { [weak self] installed in
             guard let self else {
@@ -5466,7 +5481,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             let context = self.context
             let peerId = self.peerId
-            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true)
+            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, botVerified: bot.peer.isVerified, botAddress: bot.peer.addressName ?? "", appName: "", url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings), fullSize: true, appSettings: appSettings)
             
             var openUrlImpl: ((String, Bool, Bool, @escaping () -> Void) -> Void)?
             var presentImpl: ((ViewController, Any?) -> Void)?

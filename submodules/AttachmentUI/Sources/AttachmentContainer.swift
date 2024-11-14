@@ -506,6 +506,8 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
         let containerFrame: CGRect
         let clipFrame: CGRect
         let containerScale: CGFloat
+        
+        let isFullscreen = controllers.last?.isFullscreen == true
         if case .compact = layout.metrics.widthClass {
             self.clipNode.clipsToBounds = true
             
@@ -524,9 +526,12 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             
             var containerTopInset: CGFloat
-            if isLandscape || controllers.last?.isFullscreen == true {
+            if isLandscape || isFullscreen {
                 containerTopInset = 0.0
-                containerLayout = layout
+                
+                var safeInsets = layout.safeInsets
+                safeInsets.top = isFullscreen ? 0.000001 : 0.0
+                containerLayout = layout.withUpdatedSafeInsets(safeInsets)
                 
                 let unscaledFrame = CGRect(origin: CGPoint(), size: containerLayout.size)
                 containerScale = 1.0
@@ -548,7 +553,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 
                 var additionalInsets = layout.additionalInsets
                 additionalInsets.bottom = topInset
-                
+                                
                 containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: additionalInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
@@ -560,7 +565,7 @@ final class AttachmentContainer: ASDisplayNode, ASGestureRecognizerDelegate {
                 clipFrame = CGRect(x: containerFrame.minX + overflowInset, y: containerFrame.minY, width: containerFrame.width - overflowInset * 2.0, height: containerFrame.height)
             }
         } else {
-            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver)
+            containerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: .zero, additionalInsets: .zero, statusBarHeight: isFullscreen ? layout.statusBarHeight : nil, inputHeight: isFullscreen ? layout.inputHeight : nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: layout.inVoiceOver)
             
             let unscaledFrame = CGRect(origin: CGPoint(), size: containerLayout.size)
             containerScale = 1.0

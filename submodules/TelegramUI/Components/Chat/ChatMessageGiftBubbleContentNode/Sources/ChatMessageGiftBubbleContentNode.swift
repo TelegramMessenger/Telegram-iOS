@@ -416,11 +416,19 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             } else {
                                 if incoming {
                                     if converted {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars))).string
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
                                     } else if savedToProfile {
-                                        text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
+                                        if let convertStars {
+                                            text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
+                                        } else {
+                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
+                                        }
                                     } else {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                        if let convertStars {
+                                            text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                        } else {
+                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
+                                        }
                                     }
                                 } else {
                                     var peerName = ""
@@ -428,9 +436,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         peerName = EnginePeer(peer).compactDisplayTitle
                                     }
                                     if peerName.isEmpty {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                        if let convertStars {
+                                            text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                        } else {
+                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
+                                        }
                                     } else {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars))).string
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0))).string
                                     }
                                 }
                             }
