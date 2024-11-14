@@ -681,7 +681,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             self.controller?.navigationBar?.alpha = controller.isFullscreen ? 0.0 : 1.0
-            transition.updateAlpha(node: self.topOverscrollNode, alpha: controller.isFullscreen ? 0.0 : 1.0)
             transition.updateAlpha(node: self.headerBackgroundNode, alpha: controller.isFullscreen ? 0.0 : 1.0)
             
             transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: layout.size))
