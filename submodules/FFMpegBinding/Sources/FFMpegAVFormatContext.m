@@ -11,6 +11,7 @@ int FFMpegCodecIdH264 = AV_CODEC_ID_H264;
 int FFMpegCodecIdHEVC = AV_CODEC_ID_HEVC;
 int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
 int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
+int FFMpegCodecIdAV1 = AV_CODEC_ID_AV1;
 
 @interface FFMpegAVFormatContext () {
     AVFormatContext *_impl;
