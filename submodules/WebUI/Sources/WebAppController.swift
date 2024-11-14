@@ -249,12 +249,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let placeholder: Signal<(FileMediaReference, Bool)?, NoError>
             if let botAppSettings = controller.botAppSettings {
                 Queue.mainQueue().justDispatch {
-                    if let backgroundColor = botAppSettings.backgroundColor {
+                    let backgroundColor: Int32?
+                    let headerColor: Int32?
+                    if let backgroundDarkColor = botAppSettings.backgroundDarkColor, self.presentationData.theme.overallDarkAppearance {
+                        backgroundColor = backgroundDarkColor
+                    } else {
+                        backgroundColor = botAppSettings.backgroundColor
+                    }
+                    if let headerDarkColor = botAppSettings.headerDarkColor, self.presentationData.theme.overallDarkAppearance {
+                        headerColor = headerDarkColor
+                    } else {
+                        headerColor = botAppSettings.headerColor
+                    }
+                    if let backgroundColor {
                         self.appBackgroundColor = UIColor(rgb: UInt32(bitPattern: backgroundColor))
                         self.placeholderBackgroundColor = self.appBackgroundColor
                         self.updateBackgroundColor(transition: .immediate)
                     }
-                    if let headerColor = botAppSettings.headerColor {
+                    if let headerColor {
                         self.headerColor = UIColor(rgb: UInt32(bitPattern: headerColor))
                         self.updateHeaderBackgroundColor(transition: .immediate)
                     }
@@ -2131,14 +2143,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let refreshRate {
                     self.motionManager.accelerometerUpdateInterval = refreshRate * 0.001
                 }
-                self.motionManager.startAccelerometerUpdates(to: OperationQueue.main) { data, error in
-                    if let data = data {
-                        let gravityConstant = 9.81
-                        self.webView?.sendEvent(
-                            name: "accelerometer_changed",
-                            data: "{x: \(data.acceleration.x * gravityConstant), y: \(data.acceleration.y * gravityConstant), z: \(data.acceleration.z * gravityConstant)}"
-                        )
+                self.motionManager.startAccelerometerUpdates(to: OperationQueue.main) { [weak self] data, error in
+                    guard let self, let data else {
+                        return
                     }
+                    let gravityConstant = 9.81
+                    self.webView?.sendEvent(
+                        name: "accelerometer_changed",
+                        data: "{x: \(data.acceleration.x * gravityConstant), y: \(data.acceleration.y * gravityConstant), z: \(data.acceleration.z * gravityConstant)}"
+                    )
                 }
             } else {
                 if self.motionManager.isAccelerometerActive {
@@ -2164,13 +2177,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let refreshRate {
                     self.motionManager.deviceMotionUpdateInterval = refreshRate * 0.001
                 }
-                self.motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { data, error in
-                    if let data {
-                        self.webView?.sendEvent(
-                            name: "device_orientation_changed",
-                            data: "{alpha: \(data.attitude.roll), beta: \(data.attitude.pitch), gamma: \(data.attitude.yaw)}"
-                        )
+                self.motionManager.startDeviceMotionUpdates(to: OperationQueue.main) { [weak self] data, error in
+                    guard let self, let data else {
+                        return
                     }
+                    self.webView?.sendEvent(
+                        name: "device_orientation_changed",
+                        data: "{alpha: \(data.attitude.roll), beta: \(data.attitude.pitch), gamma: \(data.attitude.yaw)}"
+                    )
                 }
             } else {
                 if self.motionManager.isDeviceMotionActive {
@@ -2196,13 +2210,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let refreshRate {
                     self.motionManager.gyroUpdateInterval = refreshRate * 0.001
                 }
-                self.motionManager.startGyroUpdates(to: OperationQueue.main) { data, error in
-                    if let data {
-                        self.webView?.sendEvent(
-                            name: "gyroscope_changed",
-                            data: "{x: \(data.rotationRate.x), y: \(data.rotationRate.y), z: \(data.rotationRate.z)}"
-                        )
+                self.motionManager.startGyroUpdates(to: OperationQueue.main) { [weak self] data, error in
+                    guard let self, let data else {
+                        return
                     }
+                    self.webView?.sendEvent(
+                        name: "gyroscope_changed",
+                        data: "{x: \(data.rotationRate.x), y: \(data.rotationRate.y), z: \(data.rotationRate.z)}"
+                    )
                 }
             } else {
                 if self.motionManager.isGyroActive {

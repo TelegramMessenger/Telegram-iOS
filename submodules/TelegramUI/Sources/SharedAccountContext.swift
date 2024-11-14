@@ -2458,7 +2458,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     let presence = current.presence
                     var disabledFor: [PeerId: SelectivePrivacyPeer] = [:]
                     switch presence {
-                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue, _):
+                    case let .enableEveryone(disabledForValue), let .enableContacts(_, disabledForValue, _, _):
                         disabledFor = disabledForValue
                     default:
                         break

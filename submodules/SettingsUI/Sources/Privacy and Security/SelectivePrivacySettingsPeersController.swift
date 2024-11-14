@@ -10,6 +10,7 @@ import PresentationDataUtils
 import AccountContext
 import ItemListPeerItem
 import ItemListPeerActionItem
+import AvatarNode
 
 private final class SelectivePrivacyPeersControllerArguments {
     let context: AccountContext
@@ -20,8 +21,9 @@ private final class SelectivePrivacyPeersControllerArguments {
     let openPeer: (EnginePeer) -> Void
     let deleteAll: () -> Void
     let removePremiumUsers: () -> Void
+    let removeBots: () -> Void
     
-    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, deleteAll: @escaping () -> Void, removePremiumUsers: @escaping () -> Void) {
+    init(context: AccountContext, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, addPeer: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, deleteAll: @escaping () -> Void, removePremiumUsers: @escaping () -> Void, removeBots: @escaping () -> Void) {
         self.context = context
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
@@ -29,6 +31,7 @@ private final class SelectivePrivacyPeersControllerArguments {
         self.openPeer = openPeer
         self.deleteAll = deleteAll
         self.removePremiumUsers = removePremiumUsers
+        self.removeBots = removeBots
     }
 }
 
@@ -41,6 +44,7 @@ private enum SelectivePrivacyPeersEntryStableId: Hashable {
     case header
     case add
     case premiumUsers
+    case bots
     case peer(EnginePeer.Id)
     case delete
 }
@@ -49,8 +53,13 @@ private let premiumAvatarIcon: UIImage? = {
     return generatePremiumCategoryIcon(size: CGSize(width: 31.0, height: 31.0), cornerRadius: 8.0)
 }()
 
+private let botsIcon: UIImage? = {
+    return generateAvatarImage(size: CGSize(width: 31.0, height: 31.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), cornerRadius: 8.0, color: .violet)
+}()
+
 private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     case premiumUsersItem(ItemListPeerItemEditing, Bool)
+    case botsItem(ItemListPeerItemEditing, Bool)
     case peerItem(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, SelectivePrivacyPeer, ItemListPeerItemEditing, Bool)
     case addItem(String, Bool)
     case headerItem(String)
@@ -58,7 +67,7 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .addItem, .premiumUsersItem, .peerItem, .headerItem:
+        case .addItem, .premiumUsersItem, .botsItem, .peerItem, .headerItem:
             return SelectivePrivacyPeersSection.peers.rawValue
         case .deleteItem:
             return SelectivePrivacyPeersSection.delete.rawValue
@@ -69,6 +78,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
         switch self {
         case .premiumUsersItem:
             return .premiumUsers
+        case .botsItem:
+            return .bots
         case let .peerItem(_, _, _, peer, _, _):
             return .peer(peer.peer.id)
         case .addItem:
@@ -84,6 +95,12 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
         switch lhs {
         case let .premiumUsersItem(editing, isEnabled):
             if case .premiumUsersItem(editing, isEnabled) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .botsItem(editing, isEnabled):
+            if case .botsItem(editing, isEnabled) = rhs {
                 return true
             } else {
                 return false
@@ -143,26 +160,33 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                 return true
             case let .peerItem(rhsIndex, _, _, _, _, _):
                 return index < rhsIndex
-            case .addItem, .headerItem, .premiumUsersItem:
+            case .addItem, .headerItem, .premiumUsersItem, .botsItem:
                 return false
             }
         case .premiumUsersItem:
             switch rhs {
-            case .peerItem, .deleteItem:
+            case .peerItem, .deleteItem, .botsItem:
                 return true
             case .premiumUsersItem, .addItem, .headerItem:
                 return false
             }
+        case .botsItem:
+            switch rhs {
+            case .peerItem, .deleteItem:
+                return true
+            case .botsItem, .premiumUsersItem, .addItem, .headerItem:
+                return false
+            }
         case .addItem:
             switch rhs {
-            case .peerItem, .deleteItem, .premiumUsersItem:
+            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem:
                 return true
             case .addItem, .headerItem:
                 return false
             }
         case .headerItem:
             switch rhs {
-            case .peerItem, .deleteItem, .premiumUsersItem, .addItem:
+            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem, .addItem:
                 return true
             case .headerItem:
                 return false
@@ -181,6 +205,15 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                 arguments.setPeerIdWithRevealedOptions(previousId, id)
             }, removePeer: { peerId in
                 arguments.removePremiumUsers()
+            })
+        case let .botsItem(editing, enabled):
+            let peer: EnginePeer = .user(TelegramUser(
+                id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(2)), accessHash: nil, firstName: presentationData.strings.PrivacySettings_CategoryBots, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil))
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer, customAvatarIcon: botsIcon, presence: nil, text: .none, label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: {
+            }, setPeerIdWithRevealedOptions: { previousId, id in
+                arguments.setPeerIdWithRevealedOptions(previousId, id)
+            }, removePeer: { peerId in
+                arguments.removeBots()
             })
         case let .peerItem(_, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
             var text: ItemListPeerItemText = .none
@@ -221,11 +254,13 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
 
 private struct SelectivePrivacyPeersControllerState: Equatable {
     var enableForPremium: Bool
+    var enableForBots: Bool
     var editing: Bool
     var peerIdWithRevealedOptions: EnginePeer.Id?
     
-    init(enableForPremium: Bool, editing: Bool, peerIdWithRevealedOptions: EnginePeer.Id?) {
+    init(enableForPremium: Bool, enableForBots: Bool, editing: Bool, peerIdWithRevealedOptions: EnginePeer.Id?) {
         self.enableForPremium = enableForPremium
+        self.enableForBots = enableForBots
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
     }
@@ -247,6 +282,10 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
         entries.append(.premiumUsersItem(ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: state.peerIdWithRevealedOptions?.id._internalGetInt64Value() == 1), true))
     }
     
+    if state.enableForBots {
+        entries.append(.botsItem(ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: state.peerIdWithRevealedOptions?.id._internalGetInt64Value() == 2), true))
+    }
+    
     var index: Int32 = 0
     for peer in peers {
         entries.append(.peerItem(index, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: state.editing, revealed: peer.peer.id == state.peerIdWithRevealedOptions), true))
@@ -260,8 +299,8 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool) -> Void) -> ViewController {
-    let initialState = SelectivePrivacyPeersControllerState(enableForPremium: initialEnableForPremium, editing: false, peerIdWithRevealedOptions: nil)
+public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, initialEnableForBots: Bool, displayBotsCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool, Bool) -> Void) -> ViewController {
+    let initialState = SelectivePrivacyPeersControllerState(enableForPremium: initialEnableForPremium, enableForBots: initialEnableForBots, editing: false, peerIdWithRevealedOptions: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((SelectivePrivacyPeersControllerState) -> SelectivePrivacyPeersControllerState) -> Void = { f in
@@ -311,7 +350,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             for peer in updatedPeers {
                 updatedPeerDict[peer.peer.id] = peer
             }
-            updated(updatedPeerDict, stateValue.with({ $0 }).enableForPremium)
+            updated(updatedPeerDict, stateValue.with({ $0 }).enableForPremium, stateValue.with({ $0 }).enableForBots)
             
             if updatedPeerDict.isEmpty {
                 dismissImpl?()
@@ -324,6 +363,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
     }, addPeer: {
         enum AdditionalCategoryId: Int {
             case premiumUsers
+            case bots
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -337,6 +377,17 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
                     icon: generatePremiumCategoryIcon(size: CGSize(width: 40.0, height: 40.0), cornerRadius: 12.0),
                     smallIcon: generatePremiumCategoryIcon(size: CGSize(width: 22.0, height: 22.0), cornerRadius: 6.0),
                     title: presentationData.strings.PrivacySettings_CategoryPremiumUsers,
+                    appearance: .option(sectionTitle: presentationData.strings.PrivacySettings_SearchUserTypesHeader)
+                )
+            ]
+        }
+        if displayBotsCategory {
+            additionalCategories = [
+                ChatListNodeAdditionalCategory(
+                    id: AdditionalCategoryId.bots.rawValue,
+                    icon: generateAvatarImage(size: CGSize(width: 40.0, height: 40.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), cornerRadius: 12.0, color: .violet),
+                    smallIcon: generateAvatarImage(size: CGSize(width: 22.0, height: 22.0), icon: generateTintedImage(image: UIImage(bundleImageName: "Chat List/Filters/Bot"), color: .white), iconScale: 0.6, cornerRadius: 6.0, circleCorners: true, color: .violet),
+                    title: presentationData.strings.PrivacySettings_CategoryBots,
                     appearance: .option(sectionTitle: presentationData.strings.PrivacySettings_SearchUserTypesHeader)
                 )
             ]
@@ -361,9 +412,11 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         |> deliverOnMainQueue).start(next: { [weak controller] result in
             var peerIds: [ContactListPeerId] = []
             var premiumSelected = false
+            var botsSelected = false
             if case let .result(peerIdsValue, additionalOptionIds) = result {
                 peerIds = peerIdsValue
                 premiumSelected = additionalOptionIds.contains(AdditionalCategoryId.premiumUsers.rawValue)
+                botsSelected = additionalOptionIds.contains(AdditionalCategoryId.bots.rawValue)
             } else {
                 return
             }
@@ -412,11 +465,12 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
                 for peer in updatedPeers {
                     updatedPeerDict[peer.peer.id] = peer
                 }
-                updated(updatedPeerDict, premiumSelected)
+                updated(updatedPeerDict, premiumSelected, botsSelected)
                 
                 updateState { state in
                     var state = state
                     state.enableForPremium = premiumSelected
+                    state.enableForBots = botsSelected
                     return state
                 }
                 
@@ -451,7 +505,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
                     }
                     
                     peersPromise.set(.single([]))
-                    updated([:], false)
+                    updated([:], false, false)
                     
                     dismissImpl?()
 
@@ -483,9 +537,36 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             for peer in updatedPeers {
                 updatedPeerDict[peer.peer.id] = peer
             }
-            updated(updatedPeerDict, false)
+            updated(updatedPeerDict, stateValue.with({ $0 }).enableForPremium, stateValue.with({ $0 }).enableForBots)
             
-            if updatedPeerDict.isEmpty && !stateValue.with({ $0 }).enableForPremium {
+            if updatedPeerDict.isEmpty && !stateValue.with({ $0 }).enableForPremium && !stateValue.with({ $0 }).enableForBots {
+                dismissImpl?()
+            }
+            
+            return .complete()
+        }
+        
+        removePeerDisposable.set(applyPeers.start())
+    }, removeBots: {
+        updateState { state in
+            var state = state
+            state.enableForBots = false
+            return state
+        }
+        let applyPeers: Signal<Void, NoError> = peersPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue
+        |> mapToSignal { peers -> Signal<Void, NoError> in
+            let updatedPeers = peers
+            peersPromise.set(.single(updatedPeers))
+            
+            var updatedPeerDict: [EnginePeer.Id: SelectivePrivacyPeer] = [:]
+            for peer in updatedPeers {
+                updatedPeerDict[peer.peer.id] = peer
+            }
+            updated(updatedPeerDict, stateValue.with({ $0 }).enableForPremium, stateValue.with({ $0 }).enableForBots)
+            
+            if updatedPeerDict.isEmpty && !stateValue.with({ $0 }).enableForPremium && !stateValue.with({ $0 }).enableForBots {
                 dismissImpl?()
             }
             

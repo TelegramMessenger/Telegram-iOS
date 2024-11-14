@@ -1,12 +1,14 @@
 public extension Api {
     enum PrivacyRule: TypeConstructorDescription {
         case privacyValueAllowAll
+        case privacyValueAllowBots
         case privacyValueAllowChatParticipants(chats: [Int64])
         case privacyValueAllowCloseFriends
         case privacyValueAllowContacts
         case privacyValueAllowPremium
         case privacyValueAllowUsers(users: [Int64])
         case privacyValueDisallowAll
+        case privacyValueDisallowBots
         case privacyValueDisallowChatParticipants(chats: [Int64])
         case privacyValueDisallowContacts
         case privacyValueDisallowUsers(users: [Int64])
@@ -16,6 +18,12 @@ public extension Api {
                 case .privacyValueAllowAll:
                     if boxed {
                         buffer.appendInt32(1698855810)
+                    }
+                    
+                    break
+                case .privacyValueAllowBots:
+                    if boxed {
+                        buffer.appendInt32(558242653)
                     }
                     
                     break
@@ -63,6 +71,12 @@ public extension Api {
                     }
                     
                     break
+                case .privacyValueDisallowBots:
+                    if boxed {
+                        buffer.appendInt32(-156895185)
+                    }
+                    
+                    break
                 case .privacyValueDisallowChatParticipants(let chats):
                     if boxed {
                         buffer.appendInt32(1103656293)
@@ -96,6 +110,8 @@ public extension Api {
         switch self {
                 case .privacyValueAllowAll:
                 return ("privacyValueAllowAll", [])
+                case .privacyValueAllowBots:
+                return ("privacyValueAllowBots", [])
                 case .privacyValueAllowChatParticipants(let chats):
                 return ("privacyValueAllowChatParticipants", [("chats", chats as Any)])
                 case .privacyValueAllowCloseFriends:
@@ -108,6 +124,8 @@ public extension Api {
                 return ("privacyValueAllowUsers", [("users", users as Any)])
                 case .privacyValueDisallowAll:
                 return ("privacyValueDisallowAll", [])
+                case .privacyValueDisallowBots:
+                return ("privacyValueDisallowBots", [])
                 case .privacyValueDisallowChatParticipants(let chats):
                 return ("privacyValueDisallowChatParticipants", [("chats", chats as Any)])
                 case .privacyValueDisallowContacts:
@@ -119,6 +137,9 @@ public extension Api {
     
         public static func parse_privacyValueAllowAll(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowAll
+        }
+        public static func parse_privacyValueAllowBots(_ reader: BufferReader) -> PrivacyRule? {
+            return Api.PrivacyRule.privacyValueAllowBots
         }
         public static func parse_privacyValueAllowChatParticipants(_ reader: BufferReader) -> PrivacyRule? {
             var _1: [Int64]?
@@ -157,6 +178,9 @@ public extension Api {
         }
         public static func parse_privacyValueDisallowAll(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueDisallowAll
+        }
+        public static func parse_privacyValueDisallowBots(_ reader: BufferReader) -> PrivacyRule? {
+            return Api.PrivacyRule.privacyValueDisallowBots
         }
         public static func parse_privacyValueDisallowChatParticipants(_ reader: BufferReader) -> PrivacyRule? {
             var _1: [Int64]?
