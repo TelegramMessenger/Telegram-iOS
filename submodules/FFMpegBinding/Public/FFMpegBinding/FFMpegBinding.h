@@ -12,3 +12,4 @@
 #import <FFMpegBinding/FFMpegRemuxer.h>
 #import <FFMpegBinding/FFMpegLiveMuxer.h>
 #import <FFMpegBinding/FrameConverter.h>
+#import <FFMpegBinding/Dav1dBinding.h>

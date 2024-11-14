@@ -18,6 +18,10 @@ objc_library(
     ],
     deps = [
         "//submodules/ffmpeg",
+        "//third-party/dav1d",
+    ],
+    sdk_frameworks = [
+        "CoreMedia",
     ],
     visibility = [
         "//visibility:public",
