@@ -477,10 +477,9 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
             if distanceFromEquilibrium > 1.0, let centralItemNode = self.pager.centralItemNode(), centralItemNode.maybePerformActionForSwipeDismiss() {
                 if let chatController = self.baseNavigationController()?.topViewController as? ChatController {
                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                    //TODO:localize
                     chatController.present(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .hidArchive(title: "Video Minimized", text: "Swipe down on a video to close it.", undo: false),
+                        content: .hidArchive(title: presentationData.strings.MediaGallery_ToastVideoPip_Title, text: presentationData.strings.MediaGallery_ToastVideoPip_Text, undo: false),
                         elevatedLayout: false, action: { _ in true }
                     ), in: .current)
                 }

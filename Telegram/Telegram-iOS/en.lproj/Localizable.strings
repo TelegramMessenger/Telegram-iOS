@@ -13242,3 +13242,9 @@ Sorry for the inconvenience.";
 "PrivacySettings.ValueBotsPlus" = "Mini Apps +%@";
 
 "PrivacySettings.CategoryBots" = "Mini Apps";
+
+"MediaGallery.ToastVideoPip.Title" = "Video Minimized";
+"MediaGallery.ToastVideoPip.Text" = "Swipe down on a video to close it.";
+
+"Chat.ToastSubscribedToScheduledLiveStream.Text" = "You will be notified when the liver stream starts.";
+"Chat.TitleVideochatPanel.NotifyScheduledButton" = "Notify Me";

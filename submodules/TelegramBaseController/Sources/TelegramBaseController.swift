@@ -468,7 +468,6 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if groupCallPanelData.info.scheduleTimestamp != nil && !groupCallPanelData.info.subscribedToScheduled {
                         let _ = self.context.engine.calls.toggleScheduledGroupCallSubscription(peerId: groupCallPanelData.peerId, callId: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, subscribe: true).startStandalone()
                         
-                        //TODO:localize
                         let controller = UndoOverlayController(
                             presentationData: presentationData,
                             content: .universal(
@@ -482,7 +481,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                     "Line.Group 1.Stroke 1": UIColor.white
                                 ],
                                 title: nil,
-                                text: "You will be notified when the liver stream starts.",
+                                text: presentationData.strings.Chat_ToastSubscribedToScheduledLiveStream_Text,
                                 customUndoText: nil,
                                 timeout: nil
                             ),
