@@ -109,6 +109,10 @@ open class GalleryItemNode: ASDisplayNode {
         return false
     }
     
+    open func maybePerformActionForSwipeDownDismiss() -> Bool {
+        return false
+    }
+    
     open func contentSize() -> CGSize? {
         return nil
     }

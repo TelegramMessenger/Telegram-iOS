@@ -4,4 +4,5 @@ protocol MediaTrackFrameDecoder {
     func takeQueuedFrame() -> MediaTrackFrame?
     func takeRemainingFrame() -> MediaTrackFrame?
     func reset()
+    func sendEndToDecoder() -> Bool
 }

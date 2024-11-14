@@ -209,7 +209,7 @@ export class HlsPlayerInstance {
             this.hls.autoLevelCapping = level;
         } else {
             this.hls.autoLevelCapping = -1;
-            this.hls.currentLevel = -1;
+            //this.hls.currentLevel = -1;
         }
     }
 

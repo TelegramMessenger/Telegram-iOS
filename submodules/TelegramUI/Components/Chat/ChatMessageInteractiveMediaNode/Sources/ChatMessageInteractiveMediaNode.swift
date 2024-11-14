@@ -796,7 +796,12 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         return { [weak self] context, presentationData, dateTimeFormat, message, associatedData, attributes, media, mediaIndex, dateAndStatus, automaticDownload, peerType, peerId, sizeCalculation, layoutConstants, contentMode, presentationContext in
             let _ = peerType
             
-            let useInlineHLS = "".isEmpty
+            var useInlineHLS = true
+            if let data = context.currentAppConfiguration.with({ $0 }).data {
+                if let value = data["ios_inline_hls"] as? Double {
+                    useInlineHLS = value != 0.0
+                }
+            }
             
             var nativeSize: CGSize
             
@@ -1790,7 +1795,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                             fileReference: .message(message: MessageReference(message), media: updatedVideoFile),
                                             loopVideo: loopVideo,
                                             enableSound: false,
-                                            fetchAutomatically: false
+                                            fetchAutomatically: false,
+                                            onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false),
+                                            autoFetchFullSizeThumbnail: true
                                         )
                                     } else {
                                         videoContent = NativeVideoContent(

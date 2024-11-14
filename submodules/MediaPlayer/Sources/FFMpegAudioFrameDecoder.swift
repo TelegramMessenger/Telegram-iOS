@@ -151,4 +151,8 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true
     }
+    
+    func sendEndToDecoder() -> Bool {
+        return true
+    }
 }

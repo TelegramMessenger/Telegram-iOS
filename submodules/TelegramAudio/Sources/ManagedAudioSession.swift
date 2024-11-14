@@ -903,8 +903,17 @@ public final class ManagedAudioSessionImpl: NSObject, ManagedAudioSession {
                     break
                 }
                 
-                try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
-                try AVAudioSession.sharedInstance().setMode(mode)
+                if #available(iOS 13.0, *) {
+                    #if DEBUG && false
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, mode: mode, policy: .longFormVideo, options: options)
+                    #else
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
+                    try AVAudioSession.sharedInstance().setMode(mode)
+                    #endif
+                } else {
+                    try AVAudioSession.sharedInstance().setCategory(nativeCategory, options: options)
+                    try AVAudioSession.sharedInstance().setMode(mode)
+                }
                 if AVAudioSession.sharedInstance().categoryOptions != options {
                     switch type {
                     case .voiceCall, .videoCall:

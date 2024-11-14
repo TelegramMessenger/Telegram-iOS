@@ -1783,7 +1783,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let item = strongSelf.item, let _ = item.content as? PlatformVideoContent {
                             strongSelf.videoNode?.play()
                         } else {
-                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
+                            strongSelf.videoNode?.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: isAnimated ? .loop : strongSelf.actionAtEnd)
                         }
 
                         if let playbackRate = strongSelf.playbackRate {
@@ -1837,7 +1837,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             return
                         }
 
-                        if let status = status, status.duration >= 60.0 * 10.0 {
+                        if let status = status {
+                            let shouldStorePlaybacksState: Bool
+                            #if DEBUG
+                            shouldStorePlaybacksState = status.duration >= 10.0
+                            #else
+                            shouldStorePlaybacksState = status.duration >= 60.0 * 10.0
+                            #endif
+                            
                             var timestamp: Double?
                             if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
                                 timestamp = status.timestamp
@@ -2763,16 +2770,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func maybePerformActionForSwipeDismiss() -> Bool {
-        if let data = self.context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_swipe_pip"] {
-            return false
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data {
+            if let _ = data["ios_killswitch_disable_swipe_pip"] {
+                return false
+            }
+            if let value = data["video_swipe_up_to_close"] as? Double, value == 1.0 {
+                addAppLogEvent(postbox: self.context.account.postbox, type: "swipe_up_close", peerId: self.context.account.peerId)
+                
+                return false
+            }
         }
         
         if #available(iOS 15.0, *) {
             if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                addAppLogEvent(postbox: self.context.account.postbox, type: "swipe_up_pip", peerId: self.context.account.peerId)
                 nativePictureInPictureContent.beginPictureInPicture()
                 return true
             }
         }
+        return false
+    }
+    
+    override func maybePerformActionForSwipeDownDismiss() -> Bool {
+        addAppLogEvent(postbox: self.context.account.postbox, type: "swipe_down_close", peerId: self.context.account.peerId)
         return false
     }
     
@@ -2981,6 +3001,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 if !didExpand {
                     self.activePictureInPictureController = nil
                     self.activePictureInPictureNavigationController = nil
+                    
+                    addAppLogEvent(postbox: self.context.account.postbox, type: "pip_close_btn", peerId: self.context.account.peerId)
                 }
             }, expand: { [weak self] completion in
                 didExpand = true
@@ -3013,6 +3035,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     @objc func pictureInPictureButtonPressed() {
         if #available(iOS 15.0, *) {
             if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                addAppLogEvent(postbox: self.context.account.postbox, type: "pip_btn", peerId: self.context.account.peerId)
                 nativePictureInPictureContent.beginPictureInPicture()
                 return
             }

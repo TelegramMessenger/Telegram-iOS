@@ -40,11 +40,11 @@ private final class SoftwareVideoStream {
     let timebase: CMTime
     let startTime: CMTime
     let duration: CMTime
-    let decoder: FFMpegMediaVideoFrameDecoder
+    let decoder: MediaTrackFrameDecoder
     let rotationAngle: Double
     let aspect: Double
     
-    init(index: Int, fps: CMTime, timebase: CMTime, startTime: CMTime, duration: CMTime, decoder: FFMpegMediaVideoFrameDecoder, rotationAngle: Double, aspect: Double) {
+    init(index: Int, fps: CMTime, timebase: CMTime, startTime: CMTime, duration: CMTime, decoder: MediaTrackFrameDecoder, rotationAngle: Double, aspect: Double) {
         self.index = index
         self.fps = fps
         self.timebase = timebase
@@ -73,7 +73,11 @@ public final class SoftwareVideoSource {
     
     public private(set) var reportedDuration: CMTime = .invalid
     
-    public init(path: String, hintVP9: Bool, unpremultiplyAlpha: Bool) {
+    public var hasStream: Bool {
+        return self.videoStream != nil
+    }
+    
+    public init(path: String, hintVP9: Bool, unpremultiplyAlpha: Bool, passthroughDecoder: Bool = false) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         self.hintVP9 = hintVP9
@@ -142,12 +146,30 @@ public final class SoftwareVideoSource {
             let rotationAngle: Double = metrics.rotationAngle
             let aspect = Double(metrics.width) / Double(metrics.height)
             
-            if let codec = FFMpegAVCodec.find(forId: codecId) {
-                let codecContext = FFMpegAVCodecContext(codec: codec)
-                if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
-                    if codecContext.open() {
-                        videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
-                        break
+            if passthroughDecoder {
+                var videoFormatData: FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData?
+                if codecId == FFMpegCodecIdMPEG4 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_MPEG4Video, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdH264 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_H264, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdHEVC {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_HEVC, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdAV1 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_AV1, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                }
+                
+                if let videoFormatData {
+                    videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormatData: videoFormatData, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                    break
+                }
+            } else {
+                if let codec = FFMpegAVCodec.find(forId: codecId) {
+                    let codecContext = FFMpegAVCodecContext(codec: codec)
+                    if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
+                        if codecContext.open() {
+                            videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
+                            break
+                        }
                     }
                 }
             }
@@ -255,15 +277,25 @@ public final class SoftwareVideoSource {
             if let maxPts = maxPts, CMTimeCompare(decodableFrame.pts, maxPts) < 0 {
                 ptsOffset = maxPts
             }
-            result = (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9, unpremultiplyAlpha: self.unpremultiplyAlpha), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                result = (decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9, unpremultiplyAlpha: self.unpremultiplyAlpha), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            } else {
+                result = (videoStream.decoder.decode(frame: decodableFrame), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            }
         } else {
             result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
         }
         if loop {
             let _ = videoStream.decoder.sendEndToDecoder()
-            let remainingFrames = videoStream.decoder.receiveRemainingFrames(ptsOffset: maxPts)
-            for i in 0 ..< remainingFrames.count {
-                self.enqueuedFrames.append((remainingFrames[i], CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), i == remainingFrames.count - 1))
+            if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                let remainingFrames = decoder.receiveRemainingFrames(ptsOffset: maxPts)
+                for i in 0 ..< remainingFrames.count {
+                    self.enqueuedFrames.append((remainingFrames[i], CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), i == remainingFrames.count - 1))
+                }
+            } else {
+                if let remainingFrame = videoStream.decoder.takeRemainingFrame() {
+                    self.enqueuedFrames.append((remainingFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true))
+                }
             }
             videoStream.decoder.reset()
             avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
@@ -277,10 +309,14 @@ public final class SoftwareVideoSource {
     
     public func readImage() -> (UIImage?, CGFloat, CGFloat, Bool) {
         if let videoStream = self.videoStream {
+            guard let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder else {
+                return (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), true)
+            }
+            
             for _ in 0 ..< 10 {
                 let (decodableFrame, loop) = self.readDecodableFrame()
                 if let decodableFrame = decodableFrame {
-                    if let renderedFrame = videoStream.decoder.render(frame: decodableFrame) {
+                    if let renderedFrame = decoder.render(frame: decodableFrame) {
                         return (renderedFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
                     }
                 }
@@ -326,6 +362,10 @@ public final class SoftwareAudioSource {
     fileprivate let size: Int32
     
     private var hasReadToEnd: Bool = false
+    
+    public var hasStream: Bool {
+        return self.audioStream != nil
+    }
     
     public init(path: String) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
@@ -507,13 +547,240 @@ public final class SoftwareAudioSource {
     }
 }
 
-public final class FFMpegMediaInfo {
-    public let startTime: CMTime
-    public let duration: CMTime
+final class SoftwareVideoReader {
+    private var readingError = false
+    private var videoStream: SoftwareVideoStream?
+    private var avIoContext: FFMpegAVIOContext?
+    private var avFormatContext: FFMpegAVFormatContext?
+    private let path: String
+    fileprivate let fd: Int32?
+    fileprivate let size: Int32
     
-    public init(startTime: CMTime, duration: CMTime) {
-        self.startTime = startTime
-        self.duration = duration
+    private var didSendEndToEncoder: Bool = false
+    private var hasReadToEnd: Bool = false
+    private var enqueuedFrames: [(MediaTrackFrame, CGFloat, CGFloat)] = []
+    
+    public private(set) var reportedDuration: CMTime = .invalid
+    
+    public var hasStream: Bool {
+        return self.videoStream != nil
+    }
+    
+    public init(path: String, hintVP9: Bool, passthroughDecoder: Bool = false) {
+        let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+        
+        var s = stat()
+        stat(path, &s)
+        self.size = Int32(s.st_size)
+        
+        let fd = open(path, O_RDONLY, S_IRUSR)
+        if fd >= 0 {
+            self.fd = fd
+        } else {
+            self.fd = nil
+        }
+        
+        self.path = path
+        
+        let avFormatContext = FFMpegAVFormatContext()
+        if hintVP9 {
+            avFormatContext.forceVideoCodecId(FFMpegCodecIdVP9)
+        }
+        let ioBufferSize = 64 * 1024
+        
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
+        self.avIoContext = avIoContext
+        
+        avFormatContext.setIO(self.avIoContext!)
+        
+        if !avFormatContext.openInput() {
+            self.readingError = true
+            return
+        }
+        
+        if !avFormatContext.findStreamInfo() {
+            self.readingError = true
+            return
+        }
+        
+        self.avFormatContext = avFormatContext
+        
+        var videoStream: SoftwareVideoStream?
+        
+        for streamIndexNumber in avFormatContext.streamIndices(for: FFMpegAVFormatStreamTypeVideo) {
+            let streamIndex = streamIndexNumber.int32Value
+            if avFormatContext.isAttachedPic(atStreamIndex: streamIndex) {
+                continue
+            }
+            
+            let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
+            
+            let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
+            let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
+            
+            let startTime: CMTime
+            let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+            if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                startTime = CMTime(value: 0, timescale: timebase.timescale)
+            } else {
+                startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+            }
+            let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+            
+            let metrics = avFormatContext.metricsForStream(at: streamIndex)
+            
+            let rotationAngle: Double = metrics.rotationAngle
+            let aspect = Double(metrics.width) / Double(metrics.height)
+            
+            if passthroughDecoder {
+                var videoFormatData: FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData?
+                if codecId == FFMpegCodecIdMPEG4 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_MPEG4Video, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdH264 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_H264, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdHEVC {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_HEVC, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                } else if codecId == FFMpegCodecIdAV1 {
+                    videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_AV1, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                }
+                
+                if let videoFormatData {
+                    videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaPassthroughVideoFrameDecoder(videoFormatData: videoFormatData, rotationAngle: rotationAngle), rotationAngle: rotationAngle, aspect: aspect)
+                    break
+                }
+            } else {
+                if let codec = FFMpegAVCodec.find(forId: codecId) {
+                    let codecContext = FFMpegAVCodecContext(codec: codec)
+                    if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
+                        if codecContext.open() {
+                            videoStream = SoftwareVideoStream(index: Int(streamIndex), fps: fps, timebase: timebase, startTime: startTime, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext), rotationAngle: rotationAngle, aspect: aspect)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        self.reportedDuration = CMTime(seconds: avFormatContext.duration(), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        
+        self.videoStream = videoStream
+        
+        if let videoStream = self.videoStream {
+            avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
+        }
+    }
+    
+    deinit {
+        if let fd = self.fd {
+            close(fd)
+        }
+    }
+    
+    private func readPacketInternal() -> FFMpegPacket? {
+        guard let avFormatContext = self.avFormatContext else {
+            return nil
+        }
+        
+        let packet = FFMpegPacket()
+        if avFormatContext.readFrame(into: packet) {
+            return packet
+        } else {
+            return nil
+        }
+    }
+    
+    func readDecodableFrame() -> MediaTrackDecodableFrame? {
+        if self.hasReadToEnd {
+            return nil
+        }
+        
+        while !self.readingError && !self.hasReadToEnd {
+            if let packet = self.readPacketInternal() {
+                if let videoStream = self.videoStream, Int(packet.streamIndex) == videoStream.index {
+                    let packetPts = packet.pts
+                    
+                    let pts = CMTimeMake(value: packetPts, timescale: videoStream.timebase.timescale)
+                    let dts = CMTimeMake(value: packet.dts, timescale: videoStream.timebase.timescale)
+                    
+                    let duration: CMTime
+                    
+                    let frameDuration = packet.duration
+                    if frameDuration != 0 {
+                        duration = CMTimeMake(value: frameDuration * videoStream.timebase.value, timescale: videoStream.timebase.timescale)
+                    } else {
+                        duration = videoStream.fps
+                    }
+                    
+                    let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
+                    return frame
+                }
+            } else {
+                self.hasReadToEnd = true
+            }
+        }
+        
+        return nil
+    }
+    
+    public func readFrame() -> MediaTrackFrame? {
+        guard let videoStream = self.videoStream else {
+            return nil
+        }
+        
+        while !self.readingError && !self.hasReadToEnd {
+            if let decodableFrame = self.readDecodableFrame() {
+                var result: (MediaTrackFrame?, CGFloat, CGFloat)
+                if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                    result = (decoder.decode(frame: decodableFrame, ptsOffset: nil, forceARGB: false, unpremultiplyAlpha: false, displayImmediately: false), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                } else {
+                    result = (videoStream.decoder.decode(frame: decodableFrame), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                }
+                if let frame = result.0 {
+                    return frame
+                }
+            } else {
+                break
+            }
+        }
+        
+        if !self.readingError && self.hasReadToEnd && !self.didSendEndToEncoder {
+            self.didSendEndToEncoder = true
+            let _ = videoStream.decoder.sendEndToDecoder()
+            
+            if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                let remainingFrames = decoder.receiveRemainingFrames(ptsOffset: nil)
+                for i in 0 ..< remainingFrames.count {
+                    self.enqueuedFrames.append((remainingFrames[i], CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect)))
+                }
+            } else {
+                if let remainingFrame = videoStream.decoder.takeRemainingFrame() {
+                    self.enqueuedFrames.append((remainingFrame, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect)))
+                }
+            }
+        }
+        
+        if !self.enqueuedFrames.isEmpty {
+            let result = self.enqueuedFrames.removeFirst()
+            return result.0
+        } else {
+            return nil
+        }
+    }
+}
+
+public final class FFMpegMediaInfo {
+    public struct Info {
+        public let startTime: CMTime
+        public let duration: CMTime
+        public let codecName: String?
+    }
+    
+    public let audio: Info?
+    public let video: Info?
+    
+    public init(audio: Info?, video: Info?) {
+        self.audio = audio
+        self.video = video
     }
 }
 
@@ -580,7 +847,7 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
         return nil
     }
     
-    var streamInfos: [(isVideo: Bool, info: FFMpegMediaInfo)] = []
+    var streamInfos: [(isVideo: Bool, info: FFMpegMediaInfo.Info)] = []
     
     for typeIndex in 0 ..< 1 {
         let isVideo = typeIndex == 0
@@ -604,15 +871,21 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
             var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
             duration = CMTimeMaximum(CMTime(value: 0, timescale: duration.timescale), CMTimeSubtract(duration, startTime))
             
-            streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo(startTime: startTime, duration: duration)))
+            var codecName: String?
+            let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
+            if codecId == FFMpegCodecIdMPEG4 {
+                codecName = "mpeg4"
+            } else if codecId == FFMpegCodecIdH264 {
+                codecName = "h264"
+            } else if codecId == FFMpegCodecIdHEVC {
+                codecName = "hevc"
+            } else if codecId == FFMpegCodecIdAV1 {
+                codecName = "av1"
+            }
+            
+            streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo.Info(startTime: startTime, duration: duration, codecName: codecName)))
         }
     }
     
-    if let video = streamInfos.first(where: \.isVideo) {
-        return video.info
-    } else if let stream = streamInfos.first {
-        return stream.info
-    } else {
-        return nil
-    }
+    return FFMpegMediaInfo(audio: streamInfos.first(where: { !$0.isVideo })?.info, video: streamInfos.first(where: { $0.isVideo })?.info)
 }
