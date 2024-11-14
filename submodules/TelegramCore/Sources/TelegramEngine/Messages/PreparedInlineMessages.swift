@@ -44,3 +44,27 @@ func _internal_getPreparedInlineMessage(account: Account, botId: EnginePeer.Id, 
         }
     }
 }
+
+func _internal_checkBotDownload(account: Account, botId: EnginePeer.Id, fileName: String, url: String) -> Signal<Bool, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(botId).flatMap(apiInputUser)
+    }
+    |> mapToSignal { inputBot -> Signal<Bool, NoError> in
+        guard let inputBot else {
+            return .single(false)
+        }
+        return account.network.request(Api.functions.bots.checkDownloadFileParams(bot: inputBot, fileName: fileName, url: url))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> map { value in
+            switch value {
+            case .boolTrue:
+                return true
+            case .boolFalse:
+                return false
+            }
+        }
+    }
+}
+

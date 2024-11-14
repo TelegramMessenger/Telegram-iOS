@@ -265,16 +265,15 @@ private final class WebAppLocationAlertContentNode: AlertContentNode {
 func webAppLocationAlertController(context: AccountContext, accountPeer: EnginePeer, botPeer: EnginePeer, completion: @escaping (Bool) -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
-    
-    //TODO:localize
-    let text = "**\(botPeer.compactDisplayTitle)** requests access to your **location**. You will be able to revoke this access in the profile page of **\(botPeer.compactDisplayTitle)**."
-    
+        
+    let text = strings.WebApp_LocationPermission_Text(botPeer.compactDisplayTitle, botPeer.compactDisplayTitle).string
+
     var dismissImpl: ((Bool) -> Void)?
     var contentNode: WebAppLocationAlertContentNode?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: "Decline", action: {
+    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: strings.WebApp_LocationPermission_Decline, action: {
         dismissImpl?(true)
         completion(false)
-    }), TextAlertAction(type: .defaultAction, title: "Allow", action: {
+    }), TextAlertAction(type: .defaultAction, title: strings.WebApp_LocationPermission_Allow, action: {
         dismissImpl?(true)
         completion(true)
     })]

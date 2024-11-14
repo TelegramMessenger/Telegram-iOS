@@ -192,8 +192,7 @@ private final class WebAppEmojiStatusAlertContentNode: AlertContentNode {
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        //TODO:localize
-        let string = "**\(self.botName)** requests access to set your **emoji status**. You will be able to revoke this access in the profile page of **\(self.botName)**."
+        let string = self.strings.WebApp_EmojiPermission_Text(self.botName, self.botName).string
         let attributedText = parseMarkdownIntoAttributedString(string, attributes: MarkdownAttributes(
             body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor),
             bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor),
@@ -340,11 +339,11 @@ func webAppEmojiStatusAlertController(
     
     var dismissImpl: ((Bool) -> Void)?
     var contentNode: WebAppEmojiStatusAlertContentNode?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: "Decline", action: {
+    let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: strings.WebApp_EmojiPermission_Decline, action: {
         dismissImpl?(true)
         
         completion(false)
-    }), TextAlertAction(type: .defaultAction, title: "Allow", action: {
+    }), TextAlertAction(type: .defaultAction, title: strings.WebApp_EmojiPermission_Allow, action: {
         dismissImpl?(true)
         
         completion(true)

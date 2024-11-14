@@ -410,6 +410,10 @@ public extension TelegramEngine {
         public func getPreparedInlineMessage(botId: EnginePeer.Id, id: String) -> Signal<PreparedInlineMessage?, NoError> {
             return _internal_getPreparedInlineMessage(account: self.account, botId: botId, id: id)
         }
+        
+        public func checkBotDownload(botId: EnginePeer.Id, fileName: String, url: String) -> Signal<Bool, NoError> {
+            return _internal_checkBotDownload(account: self.account, botId: botId, fileName: fileName, url: url)
+        }
 
         public func requestCancelLiveLocation(ids: [MessageId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in

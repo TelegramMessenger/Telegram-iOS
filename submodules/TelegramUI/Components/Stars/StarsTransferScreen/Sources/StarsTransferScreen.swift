@@ -362,7 +362,7 @@ private final class SheetContent: CombinedComponent {
             let titleString: String
             if isSubscription {
                 if isBot {
-                    titleString = "Subscription Name"
+                    titleString = component.invoice.title
                 } else {
                     titleString = strings.Stars_Transfer_Subscribe_Channel_Title
                 }
@@ -412,7 +412,7 @@ private final class SheetContent: CombinedComponent {
             if case .starsChatSubscription = context.component.source {
                 infoText = strings.Stars_Transfer_SubscribeInfo(state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_Info_Stars(Int32(amount))).string
             } else if let _ = component.invoice.subscriptionPeriod {
-                infoText = "Do you want to subscribe to **\(component.invoice.title)** in **\(state.botPeer?.compactDisplayTitle ?? "")** for **\(strings.Stars_Transfer_Info_Stars(Int32(amount)))** per month?"
+                infoText = strings.Stars_Transfer_BotSubscribeInfo(component.invoice.title, state.botPeer?.compactDisplayTitle ?? "", strings.Stars_Transfer_BotSubscribeInfo_Stars(Int32(amount))).string
             } else if !component.extendedMedia.isEmpty {
                 var description: String = ""
                 var photoCount: Int32 = 0
@@ -534,11 +534,10 @@ private final class SheetContent: CombinedComponent {
             let amountString = presentationStringsFormattedNumber(Int32(amount), presentationData.dateTimeFormat.groupingSeparator)
             let buttonAttributedString: NSMutableAttributedString
             if case .starsChatSubscription = component.source {
-                //TODO:localize
-                buttonAttributedString = NSMutableAttributedString(string: "Subscribe for   #  \(amountString) / month", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
-                //buttonAttributedString = NSMutableAttributedString(string: strings.Stars_Transfer_Subscribe, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_SubscribeFor)   #  \(amountString) \(strings.Stars_Transfer_SubscribePerMonth)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                
             } else if let _ = component.invoice.subscriptionPeriod {
-                buttonAttributedString = NSMutableAttributedString(string: "Subscribe for   #  \(amountString) / month", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_SubscribeFor)   #  \(amountString) \(strings.Stars_Transfer_SubscribePerMonth)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             } else {
                 buttonAttributedString = NSMutableAttributedString(string: "\(strings.Stars_Transfer_Pay)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             }

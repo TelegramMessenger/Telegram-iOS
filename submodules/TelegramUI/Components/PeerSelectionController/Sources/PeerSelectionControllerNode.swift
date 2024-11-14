@@ -1792,8 +1792,7 @@ private final class PeersCountPanelNode: ASDisplayNode {
     var count: Int = 0 {
         didSet {
             if self.count != oldValue && self.count > 0 {
-                //TODO:localize
-                self.button.title = "Send"
+                self.button.title = self.strings.ShareMenu_Send
                 self.button.badge = "\(self.count)"
                 
                 if let (width, sideInset, bottomInset) = self.validLayout {

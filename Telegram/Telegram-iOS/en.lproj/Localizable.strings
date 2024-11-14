@@ -7525,9 +7525,6 @@ Sorry for the inconvenience.";
 "WebApp.OpenWebViewAlertTitle" = "Open Web App";
 "WebApp.OpenWebViewAlertText" = "**%@** would like to open its web app to proceed.\n\nIt will be able to access your **IP address** and basic device info.";
 
-"WebApp.MessagePreview" = "Message Preview";
-"WebApp.Send" = "Send";
-
 "WebApp.RemoveConfirmationTitle" = "Remove Bot";
 "WebApp.RemoveConfirmationText" = "Remove **%@** from the attachment menu?";
 
@@ -13242,3 +13239,50 @@ Sorry for the inconvenience.";
 "PrivacySettings.ValueBotsPlus" = "Mini Apps +%@";
 
 "PrivacySettings.CategoryBots" = "Mini Apps";
+
+"PeerInfo.Permissions.Title" = "ALLOW ACCESS TO";
+"PeerInfo.Permissions.EmojiStatus" = "Emoji Status";
+"PeerInfo.Permissions.Geolocation" = "Geolocation";
+"PeerInfo.Permissions.Biometry" = "Biometry";
+
+"Stars.Transaction.Subscription" = "Subscription";
+"Stars.Transaction.Subscription.Bot" = "Bot";
+"Stars.Transaction.Subscription.Business" = "Business";
+
+"Stars.Transfer.BotSubscribeInfo" = "Do you want to subscribe to **%1$@** in **%2$@** for **%3$@** per month?";
+"Stars.Transfer.BotSubscribeInfo.Stars_1" = "%@ Star";
+"Stars.Transfer.BotSubscribeInfo.Stars_any" = "%@ Stars";
+"Stars.Transfer.SubscribeFor" = "Subscribe for";
+"Stars.Transfer.SubscribePerMonth" = "/ month";
+
+"WebApp.AddToHomeScreen" = "Add to Home Screen";
+
+"WebApp.Emoji.Title" = "Set Emoji Status";
+"WebApp.Emoji.Text" = "Do you want to set this emoji status suggested by **%@**?";
+"WebApp.Emoji.DurationText" = "Do you want to set this emoji status suggested by **%1$@** for **%2$@**?";
+"WebApp.Emoji.Confirm" = "Confirm";
+
+"WebApp.Emoji.Succeed" = "Your emoji status updated.";
+"WebApp.Emoji.DurationSucceed" = "Your emoji status set for %@.";
+
+"WebApp.EmojiPermission.Text" = "**%1$@** requests access to set your **emoji status**. You will be able to revoke this access in the profile page of **%2$@**.";
+"WebApp.EmojiPermission.Allow" = "Allow";
+"WebApp.EmojiPermission.Decline" = "Decline";
+"WebApp.EmojiPermission.Succeed" = "**%@** can now set your emoji status anytime.";
+"WebApp.EmojiPermission.Undo" = "Undo";
+
+"WebApp.LocationPermission.Text" = "**%1$@** requests access to your **location**. You will be able to revoke this access in the profile page of **%2$@**.";
+"WebApp.LocationPermission.Allow" = "Allow";
+"WebApp.LocationPermission.Decline" = "Decline";
+"WebApp.LocationPermission.Succeed" = "**%@** can now have access to your location.";
+"WebApp.LocationPermission.Undo" = "Undo";
+
+"WebApp.Download.Photo" = "Download Photo";
+"WebApp.Download.Video" = "Download Video";
+"WebApp.Download.Document" = "Download Document";
+"WebApp.Download.Text" = "**%1$@** suggests you to download **%2$@**%3$@.";
+"WebApp.Download.Download" = "Download";
+"WebApp.Download.Cancel" = "Cancel";
+
+"WebApp.Download.SavedToPhotos" = "Saved to Photos.";
+"WebApp.Download.SavedToFiles" = "Saved to Files.";

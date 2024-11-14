@@ -83,6 +83,7 @@ private final class SheetContent: CombinedComponent {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let theme = presentationData.theme
+            let strings = presentationData.strings
                         
             var contentSize = CGSize(width: context.availableSize.width, height: 18.0)
                         
@@ -134,7 +135,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 128.0
             
             let title = title.update(
-                component: Text(text: "Set Emoji Status", font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: strings.WebApp_Emoji_Title, font: Font.bold(24.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -153,11 +154,11 @@ private final class SheetContent: CombinedComponent {
             })
             
             var textString: String
-            if let _ = component.duration {
-                //TODO:localize
-                textString = "Do you want to set this emoji status suggested by **\(component.botName)** for **5 minutes**?"
+            if let duration = component.duration {
+                let durationString = scheduledTimeIntervalString(strings: strings, value: duration)
+                textString = strings.WebApp_Emoji_DurationText(component.botName, durationString).string
             } else {
-                textString = "Do you want to set this emoji status suggested by **\(component.botName)**?"
+                textString = strings.WebApp_Emoji_Text(component.botName).string
             }
                         
             let text = text.update(
@@ -207,7 +208,7 @@ private final class SheetContent: CombinedComponent {
                     ),
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
-                        component: AnyComponent(MultilineTextComponent(text: .plain(NSMutableAttributedString(string: "Confirm", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSMutableAttributedString(string: strings.WebApp_Emoji_Confirm, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
                     ),
                     isEnabled: true,
                     displaysProgress: false,

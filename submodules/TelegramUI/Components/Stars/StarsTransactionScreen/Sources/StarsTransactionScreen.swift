@@ -725,10 +725,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 let title: String
                 if isSubscription {
                     if isBotSubscription {
-                        //TODO:localize
-                        title = "Bot"
+                        title = strings.Stars_Transaction_Subscription_Bot
                     } else if isBusinessSubscription {
-                        title = "Business"
+                        title = strings.Stars_Transaction_Subscription_Business
                     } else {
                         title = strings.Stars_Transaction_Subscription_Subscription
                     }
@@ -766,10 +765,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     )
                 ))
                 if case let .subscription(subscription) = component.subject, let title = subscription.title {
-                    //TODO:localize
                     tableItems.append(.init(
                         id: "subscription",
-                        title: "Subscription",
+                        title: strings.Stars_Transaction_Subscription,
                         component: AnyComponent(
                             MultilineTextComponent(text: .plain(NSAttributedString(string: title, font: tableFont, textColor: tableTextColor)))
                         )

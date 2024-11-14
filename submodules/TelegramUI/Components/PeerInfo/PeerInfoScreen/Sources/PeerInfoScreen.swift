@@ -1544,14 +1544,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
                 
                 if let _ = user.botInfo {
-                    //TODO:localize
                     var canManageEmojiStatus = false
                     if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.botCanManageEmojiStatus) {
                         canManageEmojiStatus = true
                     }
-                    
                     if canManageEmojiStatus || data.webAppPermissions?.emojiStatus?.isRequested == true {
-                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 31, text: "Emoji Status", value: canManageEmojiStatus, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 31, text: presentationData.strings.PeerInfo_Permissions_EmojiStatus, value: canManageEmojiStatus, icon: UIImage(bundleImageName: "Chat/Info/Status"), isLocked: false, toggled: { value in
                             let _ = (context.engine.peers.toggleBotEmojiStatusAccess(peerId: user.id, enabled: value)
                                      |> deliverOnMainQueue).startStandalone()
                             
@@ -1560,17 +1558,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             }.startStandalone()
                         }))
                     }
-                    
                     if data.webAppPermissions?.location?.isRequested == true || data.webAppPermissions?.location?.isAllowed == true {
-                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: "Geolocation", value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 32, text: presentationData.strings.PeerInfo_Permissions_Geolocation, value: data.webAppPermissions?.location?.isAllowed ?? false, icon: UIImage(bundleImageName: "Chat/Info/Location"), isLocked: false, toggled: { value in
                             let _ = updateWebAppPermissionsStateInteractively(context: context, peerId: user.id) { current in
                                 return WebAppPermissionsState(location: WebAppPermissionsState.Location(isRequested: true, isAllowed: value), emojiStatus: current?.emojiStatus)
                             }.startStandalone()
                         }))
                     }
+                    if !"".isEmpty {
+                        items[.permissions]!.append(PeerInfoScreenSwitchItem(id: 33, text: presentationData.strings.PeerInfo_Permissions_Biometry, value: true, icon: UIImage(bundleImageName: "Settings/Menu/TouchId"), isLocked: false, toggled: { value in
+                          
+                        }))
+                    }
                     
                     if !items[.permissions]!.isEmpty {
-                        items[.permissions]!.insert(PeerInfoScreenHeaderItem(id: 30, text: "ALLOW ACCESS TO"), at: 0)
+                        items[.permissions]!.insert(PeerInfoScreenHeaderItem(id: 30, text: presentationData.strings.PeerInfo_Permissions_Title), at: 0)
                     }
                 }
                 
