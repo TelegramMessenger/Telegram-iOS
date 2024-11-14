@@ -13286,3 +13286,9 @@ Sorry for the inconvenience.";
 
 "WebApp.Download.SavedToPhotos" = "Saved to Photos.";
 "WebApp.Download.SavedToFiles" = "Saved to Files.";
+
+"MediaGallery.ToastVideoPip.Title" = "Video Minimized";
+"MediaGallery.ToastVideoPip.Text" = "Swipe down on a video to close it.";
+
+"Chat.ToastSubscribedToScheduledLiveStream.Text" = "You will be notified when the liver stream starts.";
+"Chat.TitleVideochatPanel.NotifyScheduledButton" = "Notify Me";
