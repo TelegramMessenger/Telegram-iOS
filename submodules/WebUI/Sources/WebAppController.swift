@@ -369,6 +369,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             context.fillPath()
                         })!
                         strongSelf.placeholderIcon = (image.withRenderingMode(.alwaysTemplate), false)
+                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                        }
                     }
                 }))
             }
