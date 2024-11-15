@@ -1110,7 +1110,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             |> filter { !$0.isEmpty }
             |> deliverOnMainQueue).start(next: { giftOptions in
                 let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                let controller = context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions)
+                let controller = context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false)
                 self.push(controller)
             })
         }
