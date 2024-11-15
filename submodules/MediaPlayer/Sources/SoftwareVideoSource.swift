@@ -107,7 +107,7 @@ public final class SoftwareVideoSource {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -392,7 +392,7 @@ public final class SoftwareAudioSource {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -593,7 +593,7 @@ final class SoftwareVideoReader {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -839,7 +839,7 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
     
     avFormatContext.setIO(avIoContext)
     
-    if !avFormatContext.openInput() {
+    if !avFormatContext.openInput(withDirectFilePath: nil) {
         return nil
     }
     

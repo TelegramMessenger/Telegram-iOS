@@ -23,11 +23,15 @@ final class FFMpegMediaDataReader: MediaDataReader {
         return self.audioSource != nil
     }
     
-    init(filePath: String, isVideo: Bool) {
+    init(filePath: String, isVideo: Bool, codecName: String?) {
         self.isVideo = isVideo
         
         if self.isVideo {
-            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: true)
+            var passthroughDecoder = true
+            if codecName == "av1" && !isHardwareAv1Supported {
+                passthroughDecoder = false
+            }
+            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder)
             if videoSource.hasStream {
                 self.videoSource = videoSource
             } else {

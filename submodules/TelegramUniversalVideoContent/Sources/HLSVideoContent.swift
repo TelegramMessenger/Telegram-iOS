@@ -15,6 +15,14 @@ import TelegramVoip
 import ManagedFile
 import AppBundle
 
+let isHighPerformanceDevice: Bool = {
+    var length: Int = 4
+    var cpuCount: UInt32 = 0
+    sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+    
+    return cpuCount >= 6
+}()
+
 public final class HLSQualitySet {
     public let qualityFiles: [Int: FileMediaReference]
     public let playlistFiles: [Int: FileMediaReference]
@@ -25,7 +33,7 @@ public final class HLSQualitySet {
             if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec) {
+                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHighPerformanceDevice: isHighPerformanceDevice) {
                             let key = Int(min(size.width, size.height))
                             if let currentFile = qualityFiles[key] {
                                 var currentCodec: String?

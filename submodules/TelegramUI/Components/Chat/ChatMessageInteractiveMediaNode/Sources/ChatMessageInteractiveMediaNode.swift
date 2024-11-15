@@ -1024,6 +1024,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             return (nativeSize, maxWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
                 var resultWidth: CGFloat
                 
+                var automaticPlayback = automaticPlayback
+                if let file = media as? TelegramMediaFile, NativeVideoContent.isHLSVideo(file: file) {
+                    if automaticDownload != .full {
+                        automaticPlayback = false
+                    }
+                }
+                
                 isInlinePlayableVideo = isInlinePlayableVideo && automaticPlayback
                 
                 switch sizeCalculation {

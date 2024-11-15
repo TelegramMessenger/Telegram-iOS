@@ -79,7 +79,10 @@
     
     _stream = avformat_new_stream(_formatContext, codec);
     if (!_stream) {
+        #if LIBAVFORMAT_VERSION_MAJOR >= 59
+        #else
         avcodec_close(_codecContext);
+        #endif
         avcodec_free_context(&_codecContext);
         _codecContext = nil;
         avio_closep(&_formatContext->pb);
@@ -97,7 +100,10 @@
     
     int ret = avcodec_parameters_from_context(_stream->codecpar, _codecContext);
     if (ret < 0) {
+        #if LIBAVFORMAT_VERSION_MAJOR >= 59
+        #else
         avcodec_close(_codecContext);
+        #endif
         avcodec_free_context(&_codecContext);
         _codecContext = nil;
         avio_closep(&_formatContext->pb);
@@ -108,7 +114,10 @@
     
     ret = avformat_write_header(_formatContext, nil);
     if (ret < 0) {
+        #if LIBAVFORMAT_VERSION_MAJOR >= 59
+        #else
         avcodec_close(_codecContext);
+        #endif
         avcodec_free_context(&_codecContext);
         _codecContext = nil;
         avio_closep(&_formatContext->pb);
@@ -139,29 +148,30 @@
         return false;
     }
     
-    AVPacket pkt;
-    av_init_packet(&pkt);
-    pkt.data = nil;
-    pkt.size = 0;
+    AVPacket *pkt = nil;
+    pkt = av_packet_alloc();
+    pkt->data = nil;
+    pkt->size = 0;
     
     while (sendRet >= 0) {
-        int recvRet = avcodec_receive_packet(_codecContext, &pkt);
+        int recvRet = avcodec_receive_packet(_codecContext, pkt);
         if (recvRet == AVERROR(EAGAIN) || recvRet == AVERROR_EOF) {
             break;
         } else if (recvRet < 0) {
-            av_packet_unref(&pkt);
+            av_packet_unref(pkt);
             break;
         }
         
-        av_packet_rescale_ts(&pkt, _codecContext->time_base, _stream->time_base);
-        pkt.stream_index = _stream->index;
+        av_packet_rescale_ts(pkt, _codecContext->time_base, _stream->time_base);
+        pkt->stream_index = _stream->index;
         
-        int ret = av_interleaved_write_frame(_formatContext, &pkt);
-        av_packet_unref(&pkt);
+        int ret = av_interleaved_write_frame(_formatContext, pkt);
+        av_packet_unref(pkt);
         if (ret < 0) {
             return false;
         }
     }
+    av_packet_free(&pkt);
     
     return true;
 }
@@ -173,18 +183,20 @@
     
     int sendRet = avcodec_send_frame(_codecContext, NULL);
     if (sendRet >= 0) {
-        AVPacket pkt;
-        av_init_packet(&pkt);
-        pkt.data = nil;
-        pkt.size = 0;
+        AVPacket *pkt = nil;
+        pkt = av_packet_alloc();
+        pkt->data = nil;
+        pkt->size = 0;
         
-        while (avcodec_receive_packet(_codecContext, &pkt) == 0) {
-            av_packet_rescale_ts(&pkt, _codecContext->time_base, _stream->time_base);
-            pkt.stream_index = _stream->index;
+        while (avcodec_receive_packet(_codecContext, pkt) == 0) {
+            av_packet_rescale_ts(pkt, _codecContext->time_base, _stream->time_base);
+            pkt->stream_index = _stream->index;
 
-            av_interleaved_write_frame(_formatContext, &pkt);
-            av_packet_unref(&pkt);
+            av_interleaved_write_frame(_formatContext, pkt);
+            av_packet_unref(pkt);
         }
+        
+        av_packet_free(&pkt);
     }
     
     if (_formatContext) {
@@ -196,7 +208,10 @@
     }
     
     if (_codecContext) {
+        #if LIBAVFORMAT_VERSION_MAJOR >= 59
+        #else
         avcodec_close(_codecContext);
+        #endif
         avcodec_free_context(&_codecContext);
         _codecContext = nil;
     }

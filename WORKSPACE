@@ -33,6 +33,18 @@ http_file(
     sha256 = "f794ed92ccb4e9b6619a77328f313497d7decf8fb7e047ba35a348b838e0e1e2",
 )
 
+http_file(
+    name = "meson_tar_gz",
+    urls = ["https://github.com/mesonbuild/meson/releases/download/1.6.0/meson-1.6.0.tar.gz"],
+    sha256 = "999b65f21c03541cf11365489c1fad22e2418bb0c3d50ca61139f2eec09d5496",
+)
+
+http_file(
+    name = "ninja-mac_zip",
+    urls = ["https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-mac.zip"],
+    sha256 = "89a287444b5b3e98f88a945afa50ce937b8ffd1dcc59c555ad9b1baf855298c9",
+)
+
 http_archive(
     name = "appcenter_sdk",
     urls = ["https://github.com/microsoft/appcenter-sdk-apple/releases/download/4.1.1/AppCenter-SDK-Apple-4.1.1.zip"],
