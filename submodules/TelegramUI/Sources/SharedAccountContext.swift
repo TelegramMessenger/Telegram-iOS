@@ -2336,7 +2336,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         .startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
                 let premiumOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions)
+                let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions, hasBirthday: true)
                 giftController.navigationPresentation = .modal
                 controller?.push(giftController)
             }
@@ -2406,7 +2406,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         guard let starsContext = context.starsContext else {
             fatalError()
         }
-        let controller = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peerId, premiumOptions: premiumOptions)
+        let controller = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false)
         controller.navigationPresentation = .modal
         return controller
     }
