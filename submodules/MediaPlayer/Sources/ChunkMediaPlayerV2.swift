@@ -4,6 +4,12 @@ import TelegramCore
 import TelegramAudio
 import SwiftSignalKit
 import Postbox
+import VideoToolbox
+
+public let isHardwareAv1Supported: Bool = {
+    let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
+    return value
+}()
 
 public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private final class LoadedPart {
@@ -33,10 +39,10 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             
             func load() {
                 let reader: MediaDataReader
-                if self.mediaType == .video && self.codecName == "av1" {
+                if self.mediaType == .video && self.codecName == "av1" && isHardwareAv1Supported {
                     reader = AVAssetVideoDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video)
                 } else {
-                    reader = FFMpegMediaDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video)
+                    reader = FFMpegMediaDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video, codecName: self.codecName)
                 }
                 if self.mediaType == .video {
                     if reader.hasVideo {

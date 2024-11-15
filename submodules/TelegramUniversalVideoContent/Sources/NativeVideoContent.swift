@@ -26,11 +26,6 @@ public enum NativeVideoContentId: Hashable {
     case profileVideo(Int64, String?)
 }
 
-private let isHadrwareAv1Supported: Bool = {
-    let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
-    return value
-}()
-
 public final class NativeVideoContent: UniversalVideoContent {
     public let id: AnyHashable
     public let nativeId: NativeVideoContentId
@@ -65,14 +60,16 @@ public final class NativeVideoContent: UniversalVideoContent {
     let displayImage: Bool
     let hasSentFramesToDisplay: (() -> Void)?
     
-    public static func isVideoCodecSupported(videoCodec: String) -> Bool {
+    public static func isVideoCodecSupported(videoCodec: String, isHighPerformanceDevice: Bool) -> Bool {
         if videoCodec == "h264" || videoCodec == "h265" || videoCodec == "avc" || videoCodec == "hevc" {
             return true
         }
         
         if videoCodec == "av1" {
-            if isHadrwareAv1Supported {
+            if isHardwareAv1Supported {
                 return true
+            } else {
+                return isHighPerformanceDevice
             }
         }
         
@@ -98,7 +95,7 @@ public final class NativeVideoContent: UniversalVideoContent {
             if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        if let videoCodec, isVideoCodecSupported(videoCodec: videoCodec) {
+                        if let videoCodec, isVideoCodecSupported(videoCodec: videoCodec, isHighPerformanceDevice: isHighPerformanceDevice) {
                             if size.height == qualityHeight {
                                 return alternativeFile
                             }
@@ -306,11 +303,13 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         super.init()
         
         var didProcessFramesToDisplay = false
+        self.playerNode.isHidden = true
         self.playerNode.hasSentFramesToDisplay = { [weak self] in
             guard let self, !didProcessFramesToDisplay else {
                 return
             }
             didProcessFramesToDisplay = true
+            self.playerNode.isHidden = false
             self.hasSentFramesToDisplay?()
         }
         
@@ -436,7 +435,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
         
         var processedSentFramesToDisplay = false
-        self.playerNode.hasSentFramesToDisplay = { [weak self] in
+        thumbnailNode.hasSentFramesToDisplay = { [weak self] in
             guard !processedSentFramesToDisplay, let strongSelf = self else {
                 return
             }

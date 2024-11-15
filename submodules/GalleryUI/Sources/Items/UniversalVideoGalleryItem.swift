@@ -1839,7 +1839,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
                         if let status = status {
                             let shouldStorePlaybacksState: Bool
-                            #if DEBUG
+                            #if DEBUG && false
                             shouldStorePlaybacksState = status.duration >= 10.0
                             #else
                             shouldStorePlaybacksState = status.duration >= 60.0 * 10.0
@@ -3562,14 +3562,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             } else {
                                 return nil
                             }
-                        }, action: { [weak self] _, f in
+                        }, action: { [weak strongSelf] _, f in
                             f(.default)
                             
-                            guard let self, let videoNode = self.videoNode else {
+                            guard let strongSelf, let videoNode = strongSelf.videoNode else {
                                 return
                             }
                             videoNode.setVideoQuality(.auto)
-                            self.videoQualityPromise.set(.auto)
+                            strongSelf.videoQualityPromise.set(.auto)
                         })))
                     }
                     
@@ -3588,7 +3588,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             } else {
                                 qualityTitle = strongSelf.presentationData.strings.Gallery_VideoSettings_QualityQHD
                             }
-                            items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p"), icon: { _ in
+                            var qualityDebugText = ""
+                            var displayDebugInfo = false
+                            if strongSelf.context.sharedContext.applicationBindings.appBuildType == .internal {
+                                displayDebugInfo = true
+                            } else {
+                                #if DEBUG
+                                displayDebugInfo = true
+                                #endif
+                            }
+                            if displayDebugInfo, let content = item.content as? HLSVideoContent, let qualitySet = HLSQualitySet(baseFile: content.fileReference), let qualityFile = qualitySet.qualityFiles[quality] {
+                                for attribute in qualityFile.media.attributes {
+                                    if case let .Video(_, _, _, _, _, videoCodec) = attribute, let videoCodec {
+                                        qualityDebugText += " \(videoCodec)"
+                                        if videoCodec == "av1" {
+                                            qualityDebugText += isHardwareAv1Supported ? " (HW)" : " (SW)"
+                                        }
+                                    }
+                                }
+                                if let size = qualityFile.media.size {
+                                    qualityDebugText += ", \(dataSizeString(size, formatting: DataSizeStringFormatting(presentationData: strongSelf.presentationData)))"
+                                }
+                            }
+                            items.append(.action(ContextMenuActionItem(text: qualityTitle, textLayout: .secondLineWithValue("\(quality)p\(qualityDebugText)"), icon: { _ in
                                 if isSelected {
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
                                 } else {

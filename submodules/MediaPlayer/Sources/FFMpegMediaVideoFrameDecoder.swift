@@ -135,19 +135,19 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         if status == 0 {
             self.defaultDuration = frame.duration
             self.defaultTimescale = frame.pts.timescale
-            
-            if self.codecContext.receive(into: self.videoFrame) == .success {
-                if self.videoFrame.width * self.videoFrame.height > 4 * 1024 * 4 * 1024 {
-                    self.isError = true
-                    return nil
-                }
-                
-                var pts = CMTimeMake(value: self.videoFrame.pts, timescale: frame.pts.timescale)
-                if let ptsOffset = ptsOffset {
-                    pts = CMTimeAdd(pts, ptsOffset)
-                }
-                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB, unpremultiplyAlpha: unpremultiplyAlpha, displayImmediately: displayImmediately)
+        }
+        
+        if self.codecContext.receive(into: self.videoFrame) == .success {
+            if self.videoFrame.width * self.videoFrame.height > 4 * 1024 * 4 * 1024 {
+                self.isError = true
+                return nil
             }
+            
+            var pts = CMTimeMake(value: self.videoFrame.pts, timescale: frame.pts.timescale)
+            if let ptsOffset = ptsOffset {
+                pts = CMTimeAdd(pts, ptsOffset)
+            }
+            return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB, unpremultiplyAlpha: unpremultiplyAlpha, displayImmediately: displayImmediately)
         }
         
         return nil

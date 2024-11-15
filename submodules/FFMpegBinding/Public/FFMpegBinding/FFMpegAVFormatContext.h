@@ -37,7 +37,7 @@ extern int FFMpegCodecIdAV1;
 - (instancetype)init;
 
 - (void)setIOContext:(FFMpegAVIOContext *)ioContext;
-- (bool)openInput;
+- (bool)openInputWithDirectFilePath:(NSString * _Nullable)directFilePath;
 - (bool)findStreamInfo;
 - (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts positionOnKeyframe:(bool)positionOnKeyframe;
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet;

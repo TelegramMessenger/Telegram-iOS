@@ -19,6 +19,9 @@ objc_library(
     deps = [
         "//submodules/ffmpeg",
     ],
+    sdk_frameworks = [
+        "CoreMedia",
+    ],
     visibility = [
         "//visibility:public",
     ]
