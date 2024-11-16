@@ -76,7 +76,7 @@ private final class SheetContent: CombinedComponent {
             
             let closeButton = closeButton.update(
                 component: Button(
-                    content: AnyComponent(Text(text: "Cancel", font: Font.regular(17.0), color: theme.actionSheet.controlAccentColor)),
+                    content: AnyComponent(Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: theme.actionSheet.controlAccentColor)),
                     action: {
                         component.dismiss()
                     }
@@ -89,7 +89,7 @@ private final class SheetContent: CombinedComponent {
             )
                     
             let title = title.update(
-                component: Text(text: "Share Message", font: Font.bold(17.0), color: theme.list.itemPrimaryTextColor),
+                component: Text(text: environment.strings.WebApp_ShareMessage_Title, font: Font.bold(17.0), color: theme.list.itemPrimaryTextColor),
                 availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
                 transition: .immediate
             )
@@ -105,7 +105,7 @@ private final class SheetContent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
 
-            let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString("\(component.botName) mini app suggests you to send this message to a chat you select.", attributes: amountMarkdownAttributes, textAlignment: .natural))
+            let amountInfoString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(environment.strings.WebApp_ShareMessage_Info(component.botName).string, attributes: amountMarkdownAttributes, textAlignment: .natural))
             let amountFooter = AnyComponent(MultilineTextComponent(
                 text: .plain(amountInfoString),
                 maximumNumberOfLines: 0,
@@ -192,7 +192,7 @@ private final class SheetContent: CombinedComponent {
                     theme: theme,
                     header: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: "Message Preview".uppercased(),
+                            string: environment.strings.WebApp_ShareMessage_PreviewTitle.uppercased(),
                             font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                             textColor: theme.list.freeTextColor
                         )),
@@ -230,7 +230,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += amountSection.size.height
             contentSize.height += 32.0
             
-            let buttonString: String = "Share With..."
+            let buttonString: String = environment.strings.WebApp_ShareMessage_Share
             let buttonAttributedString = NSMutableAttributedString(string: buttonString, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             
             let button = button.update(
