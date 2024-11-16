@@ -283,8 +283,15 @@ public final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                                         if let video = streamDescriptions.video {
                                             videoBuffer = MediaTrackFrameBuffer(frameSource: strongSelf, decoder: video.decoder, type: .video, startTime: video.startTime, duration: video.duration, rotationAngle: video.rotationAngle, aspect: video.aspect, stallDuration: strongSelf.stallDuration, lowWaterDuration: strongSelf.lowWaterDuration, highWaterDuration: strongSelf.highWaterDuration)
                                             for videoFrame in streamDescriptions.extraVideoFrames {
-                                                if let decodedFrame = video.decoder.decode(frame: videoFrame) {
+                                                if !video.decoder.send(frame: videoFrame) {
+                                                    break
+                                                }
+                                            }
+                                            while true {
+                                                if let decodedFrame = video.decoder.decode() {
                                                     extraDecodedVideoFrames.append(decodedFrame)
+                                                } else {
+                                                    break
                                                 }
                                             }
                                         }

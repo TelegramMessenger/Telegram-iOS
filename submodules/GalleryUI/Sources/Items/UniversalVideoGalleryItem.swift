@@ -3597,7 +3597,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                 displayDebugInfo = true
                                 #endif
                             }
-                            if displayDebugInfo, let content = item.content as? HLSVideoContent, let qualitySet = HLSQualitySet(baseFile: content.fileReference), let qualityFile = qualitySet.qualityFiles[quality] {
+                            if displayDebugInfo, let content = item.content as? HLSVideoContent, let qualitySet = HLSQualitySet(baseFile: content.fileReference, codecConfiguration: HLSCodecConfiguration(context: strongSelf.context)), let qualityFile = qualitySet.qualityFiles[quality] {
                                 for attribute in qualityFile.media.attributes {
                                     if case let .Video(_, _, _, _, _, videoCodec) = attribute, let videoCodec {
                                         qualityDebugText += " \(videoCodec)"
@@ -3647,7 +3647,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             if qualityState.available.isEmpty {
                                 return
                             }
-                            guard let qualitySet = HLSQualitySet(baseFile: content.fileReference) else {
+                            guard let qualitySet = HLSQualitySet(baseFile: content.fileReference, codecConfiguration: HLSCodecConfiguration(context: self.context)) else {
                                 return
                             }
                             

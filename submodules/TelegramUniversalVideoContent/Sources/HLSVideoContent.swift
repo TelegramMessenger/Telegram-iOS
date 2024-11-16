@@ -15,25 +15,31 @@ import TelegramVoip
 import ManagedFile
 import AppBundle
 
-let isHighPerformanceDevice: Bool = {
-    var length: Int = 4
-    var cpuCount: UInt32 = 0
-    sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+public struct HLSCodecConfiguration {
+    public var isSoftwareAv1Supported: Bool
     
-    return cpuCount >= 6
-}()
+    public init(isSoftwareAv1Supported: Bool) {
+        self.isSoftwareAv1Supported = isSoftwareAv1Supported
+    }
+}
+
+public extension HLSCodecConfiguration {
+    init(context: AccountContext) {
+        self.init(isSoftwareAv1Supported: false)
+    }
+}
 
 public final class HLSQualitySet {
     public let qualityFiles: [Int: FileMediaReference]
     public let playlistFiles: [Int: FileMediaReference]
     
-    public init?(baseFile: FileMediaReference) {
+    public init?(baseFile: FileMediaReference, codecConfiguration: HLSCodecConfiguration) {
         var qualityFiles: [Int: FileMediaReference] = [:]
         for alternativeRepresentation in baseFile.media.alternativeRepresentations {
             if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHighPerformanceDevice: isHighPerformanceDevice) {
+                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
                             let key = Int(min(size.width, size.height))
                             if let currentFile = qualityFiles[key] {
                                 var currentCodec: String?
@@ -85,8 +91,8 @@ public final class HLSQualitySet {
 }
 
 public final class HLSVideoContent: UniversalVideoContent {
-    public static func minimizedHLSQuality(file: FileMediaReference) -> (playlist: FileMediaReference, file: FileMediaReference)? {
-        guard let qualitySet = HLSQualitySet(baseFile: file) else {
+    public static func minimizedHLSQuality(file: FileMediaReference, codecConfiguration: HLSCodecConfiguration) -> (playlist: FileMediaReference, file: FileMediaReference)? {
+        guard let qualitySet = HLSQualitySet(baseFile: file, codecConfiguration: codecConfiguration) else {
             return nil
         }
         let sortedQualities = qualitySet.qualityFiles.sorted(by: { $0.key < $1.key })
@@ -108,8 +114,8 @@ public final class HLSVideoContent: UniversalVideoContent {
         return nil
     }
     
-    public static func minimizedHLSQualityPreloadData(postbox: Postbox, file: FileMediaReference, userLocation: MediaResourceUserLocation, prefixSeconds: Int, autofetchPlaylist: Bool) -> Signal<(FileMediaReference, Range<Int64>)?, NoError> {
-        guard let fileSet = minimizedHLSQuality(file: file) else {
+    public static func minimizedHLSQualityPreloadData(postbox: Postbox, file: FileMediaReference, userLocation: MediaResourceUserLocation, prefixSeconds: Int, autofetchPlaylist: Bool, codecConfiguration: HLSCodecConfiguration) -> Signal<(FileMediaReference, Range<Int64>)?, NoError> {
+        guard let fileSet = minimizedHLSQuality(file: file, codecConfiguration: codecConfiguration) else {
             return .single(nil)
         }
         
@@ -217,8 +223,9 @@ public final class HLSVideoContent: UniversalVideoContent {
     let onlyFullSizeThumbnail: Bool
     let useLargeThumbnail: Bool
     let autoFetchFullSizeThumbnail: Bool
+    let codecConfiguration: HLSCodecConfiguration
     
-    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, useLargeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false) {
+    public init(id: NativeVideoContentId, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool = false, loopVideo: Bool = false, enableSound: Bool = true, baseRate: Double = 1.0, fetchAutomatically: Bool = true, onlyFullSizeThumbnail: Bool = false, useLargeThumbnail: Bool = false, autoFetchFullSizeThumbnail: Bool = false, codecConfiguration: HLSCodecConfiguration) {
         self.id = id
         self.userLocation = userLocation
         self.nativeId = id
@@ -233,10 +240,11 @@ public final class HLSVideoContent: UniversalVideoContent {
         self.onlyFullSizeThumbnail = onlyFullSizeThumbnail
         self.useLargeThumbnail = useLargeThumbnail
         self.autoFetchFullSizeThumbnail = autoFetchFullSizeThumbnail
+        self.codecConfiguration = codecConfiguration
     }
     
     public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return HLSVideoJSNativeContentNode(accountId: accountId, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail)
+        return HLSVideoJSNativeContentNode(accountId: accountId, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, codecConfiguration: self.codecConfiguration)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {

@@ -20,12 +20,24 @@ final class FFMpegMediaPassthroughVideoFrameDecoder: MediaTrackFrameDecoder {
     private let rotationAngle: Double
     private var resetDecoderOnNextFrame = true
     
+    private var sentFrameQueue: [MediaTrackDecodableFrame] = []
+    
     init(videoFormatData: VideoFormatData, rotationAngle: Double) {
         self.videoFormatData = videoFormatData
         self.rotationAngle = rotationAngle
     }
     
-    func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
+    func send(frame: MediaTrackDecodableFrame) -> Bool {
+        self.sentFrameQueue.append(frame)
+        return true
+    }
+    
+    func decode() -> MediaTrackFrame? {
+        guard let frame = self.sentFrameQueue.first else {
+            return nil
+        }
+        self.sentFrameQueue.removeFirst()
+        
         if self.videoFormat == nil {
             if self.videoFormatData.codecType == kCMVideoCodecType_MPEG4Video {
                 self.videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromMpeg4CodecData(UInt32(kCMVideoCodecType_MPEG4Video), self.videoFormatData.width, self.videoFormatData.height, self.videoFormatData.extraData)
