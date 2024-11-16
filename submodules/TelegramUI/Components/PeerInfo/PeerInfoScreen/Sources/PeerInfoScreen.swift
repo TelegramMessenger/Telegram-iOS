@@ -9907,7 +9907,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let controller = self.context.sharedContext.makeGiftOptionsController(
             context: self.context,
             peerId: self.peerId,
-            premiumOptions: premiumOptions
+            premiumOptions: premiumOptions,
+            hasBirthday: false
         )
         self.controller?.push(controller)
     }

@@ -1727,7 +1727,7 @@ public final class ChatListNode: ListView {
                 |> filter { !$0.isEmpty }
                 |> deliverOnMainQueue).start(next: { giftOptions in
                     let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions)
+                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: true)
                     controller.navigationPresentation = .modal
                     self.push?(controller)
                 })

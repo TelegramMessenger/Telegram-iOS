@@ -2,24 +2,39 @@ import Foundation
 import SwiftSignalKit
 
 final class FileDownload: NSObject, URLSessionDownloadDelegate {
-    private let fileSize: Int64?
+    let fileName: String
+    let fileSize: Int64?
+    let isMedia: Bool
+    
     private var urlSession: URLSession!
     private var completion: ((URL?, Error?) -> Void)?
     private var progressHandler: ((Double) -> Void)?
+    private var task: URLSessionDownloadTask!
     
-    init(from url: URL, fileSize: Int64?, progressHandler: @escaping (Double) -> Void, completion: @escaping (URL?, Error?) -> Void) {
-        self.progressHandler = progressHandler
+    private let progressPromise = ValuePromise<Double>(0.0)
+    var progressSignal: Signal<Double,  NoError> {
+        return self.progressPromise.get()
+    }
+    
+    init(from url: URL, fileName: String, fileSize: Int64?, isMedia: Bool, progressHandler: @escaping (Double) -> Void, completion: @escaping (URL?, Error?) -> Void) {
+        self.fileName = fileName
         self.fileSize = fileSize
+        self.isMedia = isMedia
         self.completion = completion
-        
+        self.progressHandler = progressHandler
         
         super.init()
         
         let configuration = URLSessionConfiguration.default
-        urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue.main)
+        self.urlSession = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue.main)
         
         let downloadTask = self.urlSession.downloadTask(with: url)
         downloadTask.resume()
+        self.task = downloadTask
+    }
+    
+    func cancel() {
+        self.task.cancel()
     }
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
@@ -27,17 +42,18 @@ final class FileDownload: NSObject, URLSessionDownloadDelegate {
         if totalBytesExpectedToWrite == -1, let fileSize = self.fileSize {
             totalBytesExpectedToWrite = fileSize
         }
-        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-        progressHandler?(progress)
+        let progress = max(0.0, min(1.0, Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)))
+        self.progressHandler?(progress)
+        self.progressPromise.set(progress)
     }
     
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        completion?(location, nil)
+        self.completion?(location, nil)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            completion?(nil, error)
+            self.completion?(nil, error)
         }
     }
     
