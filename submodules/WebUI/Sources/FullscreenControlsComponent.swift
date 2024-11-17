@@ -205,7 +205,7 @@ final class FullscreenControlsComponent: Component {
             
             let buttonTitleUpdated = (previousComponent?.hasBack ?? false) != component.hasBack
             let animationMultiplier = !component.hasBack ? -1.0 : 1.0
-            if buttonTitleUpdated {
+            if buttonTitleUpdated && !self.displayTitle {
                 isAnimatingTextTransition = true
                 
                 if let view = self.buttonTitle.view, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
