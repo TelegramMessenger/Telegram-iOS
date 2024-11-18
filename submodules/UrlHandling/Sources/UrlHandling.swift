@@ -645,7 +645,6 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     default:
                                         break
                                     }
-                                    break
                                 }
                             }
                         }
