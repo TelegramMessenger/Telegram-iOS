@@ -335,7 +335,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             component.openStarsIntro()
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
                 context.add(description
