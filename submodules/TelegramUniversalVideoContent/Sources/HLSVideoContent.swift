@@ -25,7 +25,20 @@ public struct HLSCodecConfiguration {
 
 public extension HLSCodecConfiguration {
     init(context: AccountContext) {
-        self.init(isSoftwareAv1Supported: false)
+        var isSoftwareAv1Supported = false
+        
+        var length: Int = 4
+        var cpuCount: UInt32 = 0
+        sysctlbyname("hw.ncpu", &cpuCount, &length, nil, 0)
+        if cpuCount >= 6 {
+            isSoftwareAv1Supported = true
+        }
+        
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_software_av1"] as? Double {
+            isSoftwareAv1Supported = value != 0.0
+        }
+        
+        self.init(isSoftwareAv1Supported: isSoftwareAv1Supported)
     }
 }
 
@@ -48,7 +61,7 @@ public final class HLSQualitySet {
                                         currentCodec = videoCodec
                                     }
                                 }
-                                if let currentCodec, currentCodec == "av1" {
+                                if let currentCodec, (currentCodec == "av1" || currentCodec == "av01") {
                                 } else {
                                     qualityFiles[key] = baseFile.withMedia(alternativeFile)
                                 }
