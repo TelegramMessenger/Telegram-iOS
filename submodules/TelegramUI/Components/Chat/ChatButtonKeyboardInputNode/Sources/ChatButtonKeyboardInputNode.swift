@@ -378,7 +378,7 @@ public final class ChatButtonKeyboardInputNode: ChatInputNode {
                     self.controllerInteraction.sendMessage(markupButton.title)
                     dismissIfOnce = true
                 case let .url(url):
-                self.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: true))
+                    self.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: true, progress: Promise()))
                 case .requestMap:
                     self.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

@@ -503,9 +503,9 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                 }
                 self.interaction.messageSelected(peer, threadId, message, peerData.promoInfo)
             } else if let peer = peerData.peer.peer {
-                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo)
+                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo, false)
             } else if let peer = peerData.peer.peers[peerData.peer.peerId] {
-                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo)
+                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo, false)
             }
         case let .groupReference(groupReferenceData):
             self.interaction.groupSelected(groupReferenceData.groupId)

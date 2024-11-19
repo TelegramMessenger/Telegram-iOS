@@ -130,7 +130,7 @@ final class GreetingMessageListItemComponent: Component {
                     animationRenderer: component.context.animationRenderer,
                     activateSearch: {
                     },
-                    peerSelected: { _, _, _, _ in
+                    peerSelected: { _, _, _, _, _ in
                     },
                     disabledPeerSelected: { _, _, _ in
                     },

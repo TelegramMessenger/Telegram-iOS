@@ -1256,6 +1256,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
+        self.chatListDisplayNode.dismissSearch = { [weak self] in
+            if let self {
+                self.deactivateSearch(animated: true)
+            }
+        }
+        
         self.chatListDisplayNode.requestOpenRecentPeerOptions = { [weak self] peer in
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)

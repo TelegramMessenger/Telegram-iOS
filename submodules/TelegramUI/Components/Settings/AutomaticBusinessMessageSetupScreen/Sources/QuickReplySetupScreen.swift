@@ -119,7 +119,7 @@ final class QuickReplySetupScreenComponent: Component {
                     animationRenderer: listNode.context.animationRenderer,
                     activateSearch: {
                     },
-                    peerSelected: { [weak listNode] _, _, _, _ in
+                    peerSelected: { [weak listNode] _, _, _, _, _ in
                         guard let listNode, let parentView = listNode.parentView else {
                             return
                         }

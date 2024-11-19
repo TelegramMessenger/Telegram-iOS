@@ -1095,7 +1095,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     var isEmptyUpdated: ((Bool) -> Void)?
     var emptyListAction: ((EnginePeer.Id?) -> Void)?
     var cancelEditing: (() -> Void)?
-
+    var dismissSearch: (() -> Void)?
+    
     let debugListView = ListView()
     
     init(context: AccountContext, location: ChatListControllerLocation, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, controller: ChatListControllerImpl) {
@@ -1668,6 +1669,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }, navigationController: navigationController, parentController: { [weak self] in
             return self?.controller
         })
+        contentNode.dismissSearch = { [weak self] in
+            self?.dismissSearch?()
+        }
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: contentNode, cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {

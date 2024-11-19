@@ -253,7 +253,8 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setAlpha(view: topSeparator, alpha: topPanelAlpha)
             }
             
-            let topInset: CGFloat = environment.navigationHeight - 56.0
+            let topInset: CGFloat = 0.0
+            let headerTopInset: CGFloat = environment.navigationHeight - 56.0
             
             let premiumTitleInitialPosition = (topInset + 160.0)
             let premiumTitleOffsetDelta = premiumTitleInitialPosition - (environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
@@ -278,7 +279,11 @@ final class GiftOptionsScreenComponent: Component {
             }
             let starsTitleScale = 1.0 - starsTitleFraction * 0.36
             if let starsTitleView = self.starsTitle.view {
-                transition.setPosition(view: starsTitleView, position: CGPoint(x: availableWidth / 2.0, y: max(topInset + 455.0 - starsTitleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
+                var starsTitlePosition: CGFloat = 455.0
+                if let descriptionPosition = self.starsDescription.view?.frame.minY {
+                    starsTitlePosition = descriptionPosition - 28.0
+                }
+                transition.setPosition(view: starsTitleView, position: CGPoint(x: availableWidth / 2.0, y: max(topInset + starsTitlePosition - starsTitleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 transition.setScale(view: starsTitleView, scale: starsTitleScale)
             }
             
@@ -288,7 +293,7 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             if let headerView = self.header.view {
-                transition.setPosition(view: headerView, position: CGPoint(x: availableWidth / 2.0, y: topInset + headerView.bounds.height / 2.0 - 30.0 - premiumTitleOffset * premiumTitleScale))
+                transition.setPosition(view: headerView, position: CGPoint(x: availableWidth / 2.0, y: headerTopInset + headerView.bounds.height / 2.0 - 30.0 - premiumTitleOffset * premiumTitleScale))
                 transition.setScale(view: headerView, scale: premiumTitleScale)
             }
             
