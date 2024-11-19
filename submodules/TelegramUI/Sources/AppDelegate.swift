@@ -1552,6 +1552,48 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         //self.addBackgroundDownloadTask()
         
+        let reflectorBenchmarkDisposable = MetaDisposable()
+        let runReflectorBenchmarkDisposable = MetaDisposable()
+        let _ = (self.context.get()
+        |> deliverOnMainQueue).startStandalone(next: { context in
+            reflectorBenchmarkDisposable.set(nil)
+            runReflectorBenchmarkDisposable.set(nil)
+            
+            guard let context = context?.context else {
+                return
+            }
+            var defaultAutoBenchmarkReflectors = false
+            if case .internal = context.sharedContext.applicationBindings.appBuildType {
+                defaultAutoBenchmarkReflectors = true
+            }
+            if context.sharedContext.immediateExperimentalUISettings.autoBenchmarkReflectors ?? defaultAutoBenchmarkReflectors {
+                reflectorBenchmarkDisposable.set((context.sharedContext.applicationBindings.applicationInForeground
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).startStrict(next: { value in
+                    if value {
+                        let signal: Signal<ReflectorBenchmark.Results, NoError> = Signal { subscriber in
+                            var reflectorBenchmark: ReflectorBenchmark? = ReflectorBenchmark(address: "91.108.13.35", port: 599)
+                            reflectorBenchmark?.start(completion: { results in
+                                subscriber.putNext(results)
+                                subscriber.putCompletion()
+                            })
+                            
+                            return ActionDisposable {
+                                reflectorBenchmark = nil
+                            }
+                        }
+                        |> runOn(.mainQueue())
+                        |> delay(Double.random(in: 1.0 ..< 5.0), queue: Queue.mainQueue())
+                        runReflectorBenchmarkDisposable.set(signal.startStrict(next: { results in
+                            print("Reflector banchmark:\nBandwidth: \(results.bandwidthBytesPerSecond * 8 / 1024) kbit/s (expected \(results.expectedBandwidthBytesPerSecond * 8 / 1024) kbit/s)\nAvg latency: \(Int(results.averageDelay * 1000.0)) ms")
+                        }))
+                    } else {
+                        runReflectorBenchmarkDisposable.set(nil)
+                    }
+                }))
+            }
+        })
+        
         return true
     }
     
