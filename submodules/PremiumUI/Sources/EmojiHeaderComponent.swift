@@ -108,7 +108,10 @@ class EmojiHeaderComponent: Component {
                         
             self.statusView.isHidden = false
             if containerView.subviews.count > 1 && containerView.subviews[1].subviews.count > 1 {
-                containerView = containerView.subviews[1].subviews[1]
+                let candidateView = containerView.subviews[1].subviews[1]
+                if !(candidateView is UIVisualEffectView) {
+                    containerView = candidateView
+                }
             }
             
             let initialPosition = self.statusView.center

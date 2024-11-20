@@ -2728,8 +2728,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
                 UIApplication.shared.open(url)
-                
-                controller.dismiss()
             })
         }
         
