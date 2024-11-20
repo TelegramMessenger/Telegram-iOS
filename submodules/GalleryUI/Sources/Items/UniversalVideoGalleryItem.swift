@@ -2774,7 +2774,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let _ = data["ios_killswitch_disable_swipe_pip"] {
                 return false
             }
+            var swipeUpToClose = false
             if let value = data["video_swipe_up_to_close"] as? Double, value == 1.0 {
+                swipeUpToClose = true
+            } else if let value = data["video_swipe_up_to_close"] as? Bool, value {
+                swipeUpToClose = true
+            }
+            
+            if swipeUpToClose {
                 addAppLogEvent(postbox: self.context.account.postbox, type: "swipe_up_close", peerId: self.context.account.peerId)
                 
                 return false
