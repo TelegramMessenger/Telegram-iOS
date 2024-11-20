@@ -35,6 +35,7 @@ final class GiftOptionsScreenComponent: Component {
     let starsContext: StarsContext
     let peerId: EnginePeer.Id
     let premiumOptions: [CachedPremiumGiftOption]
+    let hasBirthday: Bool
     let completion: (() -> Void)?
     
     init(
@@ -42,12 +43,14 @@ final class GiftOptionsScreenComponent: Component {
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
         premiumOptions: [CachedPremiumGiftOption],
+        hasBirthday: Bool,
         completion: (() -> Void)?
     ) {
         self.context = context
         self.starsContext = starsContext
         self.peerId = peerId
         self.premiumOptions = premiumOptions
+        self.hasBirthday = hasBirthday
         self.completion = completion
     }
 
@@ -59,6 +62,9 @@ final class GiftOptionsScreenComponent: Component {
             return false
         }
         if lhs.premiumOptions != rhs.premiumOptions {
+            return false
+        }
+        if lhs.hasBirthday != rhs.hasBirthday {
             return false
         }
         return true
@@ -127,32 +133,43 @@ final class GiftOptionsScreenComponent: Component {
         private var _effectiveStarGifts: ([StarGift], StarsFilter)?
         private var effectiveStarGifts: [StarGift]? {
             get {
-                if case .all = self.starsFilter {
-                    return self.state?.starGifts
-                } else {
-                    if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
-                        return currentGifts
-                    } else if let allGifts = self.state?.starGifts {
-                        let filteredGifts: [StarGift] = allGifts.filter {
-                            switch self.starsFilter {
-                            case .all:
-                                return true
-                            case .limited:
-                                if $0.availability != nil {
-                                    return true
-                                }
-                            case let .stars(stars):
-                                if $0.price == stars {
-                                    return true
-                                }
+                if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
+                    return currentGifts
+                } else if let allGifts = self.state?.starGifts {
+                    var sortedGifts = allGifts
+                    if self.component?.hasBirthday == true {
+                        var updatedGifts: [StarGift] = []
+                        for gift in allGifts {
+                            if gift.flags.contains(.isBirthdayGift) {
+                                updatedGifts.append(gift)
                             }
-                            return false
                         }
-                        self._effectiveStarGifts = (filteredGifts, self.starsFilter)
-                        return filteredGifts
-                    } else {
-                        return nil
+                        for gift in allGifts {
+                            if !gift.flags.contains(.isBirthdayGift) {
+                                updatedGifts.append(gift)
+                            }
+                        }
+                        sortedGifts = updatedGifts
                     }
+                    let filteredGifts: [StarGift] = sortedGifts.filter {
+                        switch self.starsFilter {
+                        case .all:
+                            return true
+                        case .limited:
+                            if $0.availability != nil {
+                                return true
+                            }
+                        case let .stars(stars):
+                            if $0.price == stars {
+                                return true
+                            }
+                        }
+                        return false
+                    }
+                    self._effectiveStarGifts = (filteredGifts, self.starsFilter)
+                    return filteredGifts
+                } else {
+                    return nil
                 }
             }
         }
@@ -236,7 +253,8 @@ final class GiftOptionsScreenComponent: Component {
                 transition.setAlpha(view: topSeparator, alpha: topPanelAlpha)
             }
             
-            let topInset: CGFloat = environment.navigationHeight - 56.0
+            let topInset: CGFloat = 0.0
+            let headerTopInset: CGFloat = environment.navigationHeight - 56.0
             
             let premiumTitleInitialPosition = (topInset + 160.0)
             let premiumTitleOffsetDelta = premiumTitleInitialPosition - (environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
@@ -261,7 +279,11 @@ final class GiftOptionsScreenComponent: Component {
             }
             let starsTitleScale = 1.0 - starsTitleFraction * 0.36
             if let starsTitleView = self.starsTitle.view {
-                transition.setPosition(view: starsTitleView, position: CGPoint(x: availableWidth / 2.0, y: max(topInset + 455.0 - starsTitleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
+                var starsTitlePosition: CGFloat = 455.0
+                if let descriptionPosition = self.starsDescription.view?.frame.minY {
+                    starsTitlePosition = descriptionPosition - 28.0
+                }
+                transition.setPosition(view: starsTitleView, position: CGPoint(x: availableWidth / 2.0, y: max(topInset + starsTitlePosition - starsTitleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 transition.setScale(view: starsTitleView, scale: starsTitleScale)
             }
             
@@ -271,7 +293,7 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             if let headerView = self.header.view {
-                transition.setPosition(view: headerView, position: CGPoint(x: availableWidth / 2.0, y: topInset + headerView.bounds.height / 2.0 - 30.0 - premiumTitleOffset * premiumTitleScale))
+                transition.setPosition(view: headerView, position: CGPoint(x: availableWidth / 2.0, y: headerTopInset + headerView.bounds.height / 2.0 - 30.0 - premiumTitleOffset * premiumTitleScale))
                 transition.setScale(view: headerView, scale: premiumTitleScale)
             }
             
@@ -1073,6 +1095,7 @@ open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScree
         starsContext: StarsContext,
         peerId: EnginePeer.Id,
         premiumOptions: [CachedPremiumGiftOption],
+        hasBirthday: Bool,
         completion: (() -> Void)? = nil
     ) {
         self.context = context
@@ -1082,6 +1105,7 @@ open class GiftOptionsScreen: ViewControllerComponentContainer, GiftOptionsScree
             starsContext: starsContext,
             peerId: peerId,
             premiumOptions: premiumOptions,
+            hasBirthday: hasBirthday,
             completion: completion
         ), navigationBarAppearance: .none, theme: .default, updatedPresentationData: nil)
         

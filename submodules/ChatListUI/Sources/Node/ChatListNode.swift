@@ -73,7 +73,7 @@ public final class ChatListNodeInteraction {
     }
     
     let activateSearch: () -> Void
-    let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void
+    let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?, Bool) -> Void
     let disabledPeerSelected: (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void
     let togglePeerSelected: (EnginePeer, Int64?) -> Void
     let togglePeersSelection: ([PeerEntry], Bool) -> Void
@@ -129,7 +129,7 @@ public final class ChatListNodeInteraction {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         activateSearch: @escaping () -> Void,
-        peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void,
+        peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?, Bool) -> Void,
         disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
         togglePeerSelected: @escaping (EnginePeer, Int64?) -> Void,
         togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
@@ -613,7 +613,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                     if editing {
                                         nodeInteraction.togglePeerSelected(chatPeer, threadId)
                                     } else {
-                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
+                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil, false)
                                     }
                                 }
                             }, disabledAction: (isForum && editing) && !peerEntry.requiresPremiumForMessaging ? nil : { _ in
@@ -653,7 +653,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 if editing {
                                     nodeInteraction.togglePeerSelected(chatPeer, nil)
                                 } else {
-                                    nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                    nodeInteraction.peerSelected(chatPeer, nil, nil, nil, false)
                                 }
                             }
                         }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
@@ -719,7 +719,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     index: nil,
                     header: header,
                     action: { _ in
-                        nodeInteraction.peerSelected(contactEntry.peer, nil, nil, nil)
+                        nodeInteraction.peerSelected(contactEntry.peer, nil, nil, nil, false)
                     },
                     disabledAction: nil,
                     animationCache: nodeInteraction.animationCache,
@@ -957,7 +957,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                     if editing {
                                         nodeInteraction.togglePeerSelected(chatPeer, threadId)
                                     } else {
-                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
+                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil, false)
                                     }
                                 }
                             }, disabledAction: (isForum && editing) && !peerEntry.requiresPremiumForMessaging ? nil : { _ in
@@ -997,7 +997,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                     if editing {
                                         nodeInteraction.togglePeerSelected(chatPeer, nil)
                                     } else {
-                                        nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                        nodeInteraction.peerSelected(chatPeer, nil, nil, nil, false)
                                     }
                                 }
                             }, disabledAction: peerEntry.requiresPremiumForMessaging ? { _ in
@@ -1063,7 +1063,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     index: nil,
                     header: header,
                     action: { _ in
-                        nodeInteraction.peerSelected(contactEntry.peer, nil, nil, nil)
+                        nodeInteraction.peerSelected(contactEntry.peer, nil, nil, nil, false)
                     },
                     disabledAction: nil,
                     animationCache: nodeInteraction.animationCache,
@@ -1395,7 +1395,7 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
-        }, peerSelected: { [weak self] peer, _, threadId, promoInfo in
+        }, peerSelected: { [weak self] peer, _, threadId, promoInfo, _ in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }
@@ -1727,7 +1727,7 @@ public final class ChatListNode: ListView {
                 |> filter { !$0.isEmpty }
                 |> deliverOnMainQueue).start(next: { giftOptions in
                     let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions)
+                    let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: true)
                     controller.navigationPresentation = .modal
                     self.push?(controller)
                 })

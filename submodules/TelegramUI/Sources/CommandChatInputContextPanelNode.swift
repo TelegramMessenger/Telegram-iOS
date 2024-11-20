@@ -98,7 +98,7 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     animationRenderer: context.animationRenderer,
                     activateSearch: {
                     },
-                    peerSelected: { _, _, _, _ in
+                    peerSelected: { _, _, _, _, _ in
                         commandSelected(.shortcut(shortcut), true)
                     },
                     disabledPeerSelected: { _, _, _ in

@@ -145,6 +145,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
     
+    static var activeDownloads: [FileDownload] = []
+    
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, ASScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -369,6 +371,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             context.fillPath()
                         })!
                         strongSelf.placeholderIcon = (image.withRenderingMode(.alwaysTemplate), false)
+                        if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                            strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                        }
                     }
                 }))
             }
@@ -2400,17 +2405,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             })
         }
         
-        private var fileDownload: FileDownload?
-        private weak var fileDownloadTooltip: UndoOverlayController?
+        fileprivate weak var fileDownloadTooltip: UndoOverlayController?
         fileprivate func startDownload(url: String, fileName: String, fileSize: Int64?, isMedia: Bool) {
             guard let controller = self.controller else {
                 return
             }
             self.webView?.sendEvent(name: "file_download_requested", data: "{status: \"downloading\"}")
             
-            self.fileDownload = FileDownload(
+            var removeImpl: (() -> Void)?
+            let fileDownload = FileDownload(
                 from: URL(string: url)!,
+                fileName: fileName,
                 fileSize: fileSize,
+                isMedia: isMedia,
                 progressHandler: { [weak self] progress in
                     guard let self else {
                         return
@@ -2432,6 +2439,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 },
                 completion: { [weak self] resultUrl, _ in
                     if let resultUrl, let self {
+                        removeImpl?()
+                        
                         let tooltipContent: UndoOverlayContent = .actionSucceeded(title: fileName, text: isMedia ? self.presentationData.strings.WebApp_Download_SavedToPhotos : self.presentationData.strings.WebApp_Download_SavedToFiles, cancel: nil, destructive: false)
                         if isMedia {
                             let saveToPhotos: (URL, Bool) -> Void = { url, isVideo in
@@ -2496,6 +2505,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 }
             )
+            WebAppController.activeDownloads.append(fileDownload)
+            
+            removeImpl = { [weak fileDownload] in
+                if let fileDownload {
+                    WebAppController.activeDownloads.removeAll(where: { $0 === fileDownload })
+                }
+            }
             
             let text: String
             if let fileSize {
@@ -2514,7 +2530,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 ),
                 elevatedLayout: false,
                 position: .top,
-                action: { _ in
+                action: { [weak fileDownload] action in
+                    if case .undo = action, let fileDownload {
+                        fileDownload.cancel()
+                        removeImpl?()
+                    }
                     return true
                 }
             )
@@ -2708,8 +2728,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
                 UIApplication.shared.open(url)
-                
-                controller.dismiss()
             })
         }
         
@@ -3072,18 +3090,55 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let hasSettings = self.hasSettings
         
+        let activeDownload = WebAppController.activeDownloads.first
+        let activeDownloadProgress: Signal<Double?, NoError>
+        if let activeDownload {
+            activeDownloadProgress = activeDownload.progressSignal
+            |> map(Optional.init)
+            |> mapToThrottled { next -> Signal<Double?, NoError> in
+                return .single(next) |> then(.complete() |> delay(0.2, queue: Queue.mainQueue()))
+            }
+        } else {
+            activeDownloadProgress = .single(nil)
+        }
+        
         let items = combineLatest(queue: Queue.mainQueue(),
-            context.engine.messages.attachMenuBots(),
+            context.engine.messages.attachMenuBots() |> take(1),
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.botId)),
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotCommands(id: self.botId)),
-            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotPrivacyPolicyUrl(id: self.botId))
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotPrivacyPolicyUrl(id: self.botId)),
+            activeDownloadProgress
         )
-        |> take(1)
-        |> map { [weak self] attachMenuBots, botPeer, botCommands, privacyPolicyUrl -> ContextController.Items in
+        |> map { [weak self] attachMenuBots, botPeer, botCommands, privacyPolicyUrl, activeDownloadProgress -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
-            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
+            if let activeDownload, let progress = activeDownloadProgress {
+                let isActive = progress < 1.0 - .ulpOfOne
+                let progressString: String
+                if isActive {
+                    if let fileSize = activeDownload.fileSize {
+                        let downloadedSize = Int64(Double(fileSize) * progress)
+                        progressString = "\(dataSizeString(downloadedSize, formatting: DataSizeStringFormatting(presentationData: presentationData))) / \(dataSizeString(fileSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))"
+                    } else {
+                        progressString = "\(Int32(progress))%"
+                    }
+                } else {
+                    progressString = activeDownload.isMedia ? presentationData.strings.WebApp_Download_SavedToPhotos : presentationData.strings.WebApp_Download_SavedToFiles
+                }
+                items.append(.action(ContextMenuActionItem(text: activeDownload.fileName, textLayout: .secondLineWithValue(progressString), icon: { theme in return isActive ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor) : nil }, iconPosition: .right, action: isActive ? { [weak self, weak activeDownload] _, f in
+                    f(.default)
+                    
+                    WebAppController.activeDownloads.removeAll(where: { $0 === activeDownload })
+                    activeDownload?.cancel()
+                    
+                    if let fileDownloadTooltip = self?.controllerNode.fileDownloadTooltip {
+                        fileDownloadTooltip.dismissWithCommitAction()
+                    }
+                } : nil)))
+                items.append(.separator)
+            }
             
+            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
             if hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)

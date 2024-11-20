@@ -614,7 +614,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 })
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: .firstLast, displayOrder: .firstLast, context: context, peerMode: .generalSearch(isSavedMessages: false), peer: .thread(peer: peer, title: threadInfo.info.title, icon: threadInfo.info.icon, color: threadInfo.info.iconColor), status: .none, badge: nil, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
-                    interaction.peerSelected(peer, nil, threadInfo.id, nil)
+                    interaction.peerSelected(peer, nil, threadInfo.id, nil, false)
                 }, contextAction: nil, animationCache: interaction.animationCache, animationRenderer: interaction.animationRenderer)
             case let .recentlySearchedPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, storyStats, requiresPremiumForMessaging):
                 let primaryPeer: EnginePeer
@@ -667,6 +667,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     badge = ContactsPeerItemBadge(count: unreadBadge.0, type: unreadBadge.1 ? .inactive : .active)
                 }
                 
+                var buttonAction: ContactsPeerItemButtonAction?
                 let header: ChatListSearchItemHeader?
                 if filter.contains(.removeSearchHeader) {
                     header = nil
@@ -676,15 +677,24 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         headerType = .chats
                     } else {
                         headerType = .recentPeers
+                        
+                        if case .chats = key, case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                            buttonAction = ContactsPeerItemButtonAction(
+                                title: presentationData.strings.ChatList_Search_Open,
+                                action: { peer, _, _ in
+                                    interaction.peerSelected(primaryPeer, nil, nil, nil, true)
+                                }
+                            )
+                        }
                     }
                     header = ChatListSearchItemHeader(type: headerType, theme: theme, strings: strings, actionTitle: nil, action: nil)
                 }
-                
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: false), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { contactPeer in
+            
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: false), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: .none, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), buttonAction: buttonAction, index: nil, header: header, action: { contactPeer in
                     if case let .peer(maybePeer, maybeChatPeer) = contactPeer, let peer = maybePeer, let chatPeer = maybeChatPeer {
-                        interaction.peerSelected(chatPeer, peer, nil, nil)
+                        interaction.peerSelected(chatPeer, peer, nil, nil, false)
                     } else {
-                        interaction.peerSelected(peer, nil, nil, nil)
+                        interaction.peerSelected(peer, nil, nil, nil, false)
                     }
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(peer, nil, requiresPremiumForMessaging ? .premiumRequired : .generic)
@@ -803,12 +813,22 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         status = .custom(string: presentationData.strings.Bot_GenericBotStatus, multiline: false, isActive: false, icon: nil)
                     }
                 }
+            
+                var buttonAction: ContactsPeerItemButtonAction?
+                if case .chats = key, case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                    buttonAction = ContactsPeerItemButtonAction(
+                        title: presentationData.strings.ChatList_Search_Open,
+                        action: { peer, _, _ in
+                            interaction.peerSelected(primaryPeer, nil, nil, nil, true)
+                        }
+                    )
+                }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { contactPeer in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: primaryPeer, chatPeer: chatPeer), status: status, badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), buttonAction: buttonAction, index: nil, header: header, action: { contactPeer in
                     if case let .peer(maybePeer, maybeChatPeer) = contactPeer, let peer = maybePeer, let chatPeer = maybeChatPeer {
-                        interaction.peerSelected(chatPeer, peer, nil, nil)
+                        interaction.peerSelected(chatPeer, peer, nil, nil, false)
                     } else {
-                        interaction.peerSelected(peer, nil, nil, nil)
+                        interaction.peerSelected(peer, nil, nil, nil, false)
                     }
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(peer, nil, requiresPremiumForMessaging ? .premiumRequired : .generic)
@@ -891,7 +911,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: EnginePeer(peer.peer), chatPeer: EnginePeer(peer.peer)), status: .addressName(suffixString), badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, searchQuery: query, action: { _ in
-                    interaction.peerSelected(EnginePeer(peer.peer), nil, nil, nil)
+                    interaction.peerSelected(EnginePeer(peer.peer), nil, nil, nil, false)
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(EnginePeer(peer.peer), nil, requiresPremiumForMessaging ? .premiumRequired : .generic)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in
@@ -2883,9 +2903,29 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         let chatListInteraction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
-        }, peerSelected: { [weak self] peer, chatPeer, threadId, _ in
+        }, peerSelected: { [weak self] peer, chatPeer, threadId, _, openApp in
             interaction.dismissInput()
-            interaction.openPeer(peer, chatPeer, threadId, false)
+            if openApp, let self {
+                if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
+                    context.sharedContext.openWebApp(
+                        context: context,
+                        parentController: parentController,
+                        updatedPresentationData: nil,
+                        botPeer: peer,
+                        chatPeer: nil,
+                        threadId: nil,
+                        buttonText: "",
+                        url: "",
+                        simple: true,
+                        source: .generic,
+                        skipTermsOfService: true,
+                        payload: nil
+                    )
+                    interaction.dismissSearch()
+                }
+            } else {
+                interaction.openPeer(peer, chatPeer, threadId, false)
+            }
             switch location {
             case .chatList, .forum:
                 let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
@@ -3851,6 +3891,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 skipTermsOfService: true,
                                 payload: nil
                             )
+                            interaction.dismissSearch()
                         } else {
                             interaction.openPeer(peer, nil, threadId, true)
                         }
@@ -4853,7 +4894,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             let timestamp1: Int32 = 100000
             var peers: [EnginePeer.Id: EnginePeer] = [:]
             peers[peer1.id] = peer1
-            let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+            let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _, _ in }, disabledPeerSelected: { _, _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
             }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openPremiumGift: { _, _ in }, openPremiumManagement: {}, openActiveSessions: {

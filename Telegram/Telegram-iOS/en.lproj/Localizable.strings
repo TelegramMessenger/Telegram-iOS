@@ -13290,5 +13290,10 @@ Sorry for the inconvenience.";
 "MediaGallery.ToastVideoPip.Title" = "Video Minimized";
 "MediaGallery.ToastVideoPip.Text" = "Swipe down on a video to close it.";
 
-"Chat.ToastSubscribedToScheduledLiveStream.Text" = "You will be notified when the liver stream starts.";
+"Chat.ToastSubscribedToScheduledLiveStream.Text" = "You will be notified when the live stream starts.";
 "Chat.TitleVideochatPanel.NotifyScheduledButton" = "Notify Me";
+
+"WebApp.ShareMessage.Title" = "Share Message";
+"WebApp.ShareMessage.PreviewTitle" = "MESSAGE PREVIEW";
+"WebApp.ShareMessage.Info" = "%@ mini app suggests you to send this message to a chat you select.";
+"WebApp.ShareMessage.Share" = "Share With...";
