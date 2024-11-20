@@ -28,7 +28,7 @@ final class FFMpegMediaDataReader: MediaDataReader {
         
         if self.isVideo {
             var passthroughDecoder = true
-            if codecName == "av1" && !isHardwareAv1Supported {
+            if (codecName == "av1" || codecName == "av01") && !isHardwareAv1Supported {
                 passthroughDecoder = false
             }
             let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder)

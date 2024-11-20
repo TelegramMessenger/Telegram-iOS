@@ -39,7 +39,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             
             func load() {
                 let reader: MediaDataReader
-                if self.mediaType == .video && self.codecName == "av1" && isHardwareAv1Supported {
+                if self.mediaType == .video && (self.codecName == "av1" || self.codecName == "av01") && isHardwareAv1Supported {
                     reader = AVAssetVideoDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video)
                 } else {
                     reader = FFMpegMediaDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video, codecName: self.codecName)
