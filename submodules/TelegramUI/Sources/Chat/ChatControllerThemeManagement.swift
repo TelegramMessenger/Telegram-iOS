@@ -294,14 +294,14 @@ extension ChatControllerImpl {
         })
     }
     
-    func presentEmojiList(references: [StickerPackReference]) {
+    func presentEmojiList(references: [StickerPackReference], previewIconFile: TelegramMediaFile? = nil) {
         guard let packReference = references.first else {
             return
         }
         self.chatDisplayNode.dismissTextInput()
         
         let presentationData = self.presentationData
-        let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), parentNavigationController: self.effectiveNavigationController, sendEmoji: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] text, attribute in
+        let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), previewIconFile: previewIconFile, parentNavigationController: self.effectiveNavigationController, sendEmoji: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] text, attribute in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.sendEmoji(text, attribute, false)
             }

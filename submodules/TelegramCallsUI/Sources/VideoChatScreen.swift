@@ -119,6 +119,8 @@ final class VideoChatScreenComponent: Component {
         let updateAvatarDisposable = MetaDisposable()
         var currentUpdatingAvatar: (TelegramMediaImageRepresentation, Float)?
         
+        var maxVideoQuality: Int = Int.max
+        
         override init(frame: CGRect) {
             self.containerView = UIView()
             self.containerView.clipsToBounds = true
@@ -1506,6 +1508,7 @@ final class VideoChatScreenComponent: Component {
                     participants: mappedParticipants,
                     speakingParticipants: self.members?.speakingParticipants ?? Set(),
                     expandedVideoState: self.expandedParticipantsVideoState,
+                    maxVideoQuality: self.maxVideoQuality,
                     theme: environment.theme,
                     strings: environment.strings,
                     layout: participantsLayout,

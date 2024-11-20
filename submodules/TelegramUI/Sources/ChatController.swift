@@ -9026,7 +9026,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let stickerPackReference = stickerPackReference {
-            self.presentEmojiList(references: [stickerPackReference])
+            self.presentEmojiList(references: [stickerPackReference], previewIconFile: file)
             
             /*let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
             |> deliverOnMainQueue).startStandalone(next: { [weak self] stickerPack in

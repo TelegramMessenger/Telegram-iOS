@@ -112,6 +112,7 @@ public final class ChatListNodeInteraction {
     let openStarsTopup: (Int64?) -> Void
     let dismissNotice: (ChatListNotice) -> Void
     let editPeer: (ChatListItem) -> Void
+    let openWebApp: (TelegramUser) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -167,7 +168,8 @@ public final class ChatListNodeInteraction {
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void,
         openStarsTopup: @escaping (Int64?) -> Void,
         dismissNotice: @escaping (ChatListNotice) -> Void,
-        editPeer: @escaping (ChatListItem) -> Void
+        editPeer: @escaping (ChatListItem) -> Void,
+        openWebApp: @escaping (TelegramUser) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -211,6 +213,7 @@ public final class ChatListNodeInteraction {
         self.openStarsTopup = openStarsTopup
         self.dismissNotice = dismissNotice
         self.editPeer = editPeer
+        self.openWebApp = openWebApp
     }
 }
 
@@ -1220,6 +1223,7 @@ public final class ChatListNode: ListView {
     public var openBirthdaySetup: (() -> Void)?
     public var openPremiumManagement: (() -> Void)?
     public var openStarsTopup: ((Int64?) -> Void)?
+    public var openWebApp: ((TelegramUser) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1867,6 +1871,11 @@ public final class ChatListNode: ListView {
                 break
             }
         }, editPeer: { _ in
+        }, openWebApp: { [weak self] user in
+            guard let self else {
+                return
+            }
+            self.openWebApp?(user)
         })
         nodeInteraction.isInlineMode = isInlineMode
         

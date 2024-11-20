@@ -3013,6 +3013,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openStarsTopup: { _ in
         }, dismissNotice: { _ in
         }, editPeer: { _ in
+        }, openWebApp: { _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -4905,6 +4906,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, openStarsTopup: { _ in
             }, dismissNotice: { _ in
             }, editPeer: { _ in
+            }, openWebApp: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

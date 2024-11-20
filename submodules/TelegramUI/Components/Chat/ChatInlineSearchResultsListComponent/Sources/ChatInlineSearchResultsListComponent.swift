@@ -669,6 +669,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         dismissNotice: { _ in
                         },
                         editPeer: { _ in
+                        },
+                        openWebApp: { _ in
                         }
                     )
                     self.chatListNodeInteraction = chatListNodeInteraction

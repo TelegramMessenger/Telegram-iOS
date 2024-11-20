@@ -45,6 +45,7 @@ final class VideoChatParticipantVideoComponent: Component {
     let isMyPeer: Bool
     let isPresentation: Bool
     let isSpeaking: Bool
+    let maxVideoQuality: Int
     let isExpanded: Bool
     let isUIHidden: Bool
     let contentInsets: UIEdgeInsets
@@ -63,6 +64,7 @@ final class VideoChatParticipantVideoComponent: Component {
         isMyPeer: Bool,
         isPresentation: Bool,
         isSpeaking: Bool,
+        maxVideoQuality: Int,
         isExpanded: Bool,
         isUIHidden: Bool,
         contentInsets: UIEdgeInsets,
@@ -80,6 +82,7 @@ final class VideoChatParticipantVideoComponent: Component {
         self.isMyPeer = isMyPeer
         self.isPresentation = isPresentation
         self.isSpeaking = isSpeaking
+        self.maxVideoQuality = maxVideoQuality
         self.isExpanded = isExpanded
         self.isUIHidden = isUIHidden
         self.contentInsets = contentInsets
@@ -102,6 +105,9 @@ final class VideoChatParticipantVideoComponent: Component {
             return false
         }
         if lhs.isSpeaking != rhs.isSpeaking {
+            return false
+        }
+        if lhs.maxVideoQuality != rhs.maxVideoQuality {
             return false
         }
         if lhs.isExpanded != rhs.isExpanded {
@@ -413,7 +419,7 @@ final class VideoChatParticipantVideoComponent: Component {
                 alphaTransition.setAlpha(view: titleView, alpha: controlsAlpha)
             }
             
-            let videoDescription = component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription
+            let videoDescription: GroupCallParticipantsContext.Participant.VideoDescription? = component.maxVideoQuality == 0 ? nil : (component.isPresentation ? component.participant.presentationDescription : component.participant.videoDescription)
             
             var isEffectivelyPaused = false
             if let videoDescription, videoDescription.isPaused {
