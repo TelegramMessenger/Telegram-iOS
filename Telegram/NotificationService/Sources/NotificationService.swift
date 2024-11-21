@@ -16,6 +16,7 @@ import CallKit
 import AppLockState
 import NotificationsPresentationData
 import RangeSet
+import ConvertOpusToAAC
 
 private let queue = Queue()
 
@@ -1249,7 +1250,7 @@ private final class NotificationServiceHandler {
                             if let stateManager = strongSelf.stateManager {
                                 let shouldKeepConnection = stateManager.network.shouldKeepConnection
                                 
-                                let pollCompletion: (NotificationContent) -> Void = { content in
+                                let pollCompletion: (NotificationContent, Media?) -> Void = { content, customMedia in
                                     var content = content
 
                                     queue.async {
@@ -1259,6 +1260,8 @@ private final class NotificationServiceHandler {
                                             completed()
                                             return
                                         }
+                                        
+                                        let mediaAttachment = mediaAttachment ?? customMedia
 
                                         var fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
                                         if let mediaAttachment = mediaAttachment {
@@ -1538,8 +1541,17 @@ private final class NotificationServiceHandler {
                                                         if let mediaData = mediaData {
                                                             stateManager.postbox.mediaBox.storeResourceData(file.resource.id, data: mediaData, synchronous: true)
                                                         }
-                                                        if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(file.resource, pathExtension: "ogg") {
-                                                            if let attachment = try? UNNotificationAttachment(identifier: "audio", url: URL(fileURLWithPath: storedPath), options: nil) {
+                                                        if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(file.resource, pathExtension: nil) {
+                                                            let semaphore = DispatchSemaphore(value: 0)
+                                                            let tempFile = TempBox.shared.tempFile(fileName: "audio.m4a")
+                                                            let _ = (convertOpusToAAC(sourcePath: storedPath, allocateTempFile: {
+                                                                return tempFile.path
+                                                            })
+                                                            |> timeout(5.0, queue: .concurrentDefaultQueue(), alternate: .single(nil))).startStandalone(next: { _ in
+                                                                semaphore.signal()
+                                                            })
+                                                            semaphore.wait()
+                                                            if let attachment = try? UNNotificationAttachment(identifier: "audio", url: URL(fileURLWithPath: tempFile.path), options: nil) {
                                                                 content.attachments.append(attachment)
                                                             }
                                                         }
@@ -1601,9 +1613,9 @@ private final class NotificationServiceHandler {
                                     }
                                 }
 
-                                let pollWithUpdatedContent: Signal<NotificationContent, NoError>
+                                let pollWithUpdatedContent: Signal<(NotificationContent, Media?), NoError>
                                 if interactionAuthorId != nil || messageId != nil {
-                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
+                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> (NotificationContent, Media?) in
                                         var content = initialContent
                                         
                                         if let interactionAuthorId = interactionAuthorId {
@@ -1648,22 +1660,37 @@ private final class NotificationServiceHandler {
                                             }
                                         }
 
-                                        return content
+                                        return (content, nil)
                                     }
                                     |> then(
                                         pollSignal
-                                        |> map { _ -> NotificationContent in }
+                                        |> map { _ -> (NotificationContent, Media?) in }
                                     )
+                                    |> takeLast
+                                    |> mapToSignal { content, _ -> Signal<(NotificationContent, Media?), NoError> in
+                                        return stateManager.postbox.transaction { transaction -> (NotificationContent, Media?) in
+                                            var parsedMedia: Media?
+                                            if let messageId, let message = transaction.getMessage(messageId) {
+                                                if let media = message.media.first {
+                                                    parsedMedia = media
+                                                }
+                                            }
+                                            
+                                            return (content, parsedMedia)
+                                        }
+                                    }
                                 } else {
                                     pollWithUpdatedContent = pollSignal
-                                    |> map { _ -> NotificationContent in }
+                                    |> map { _ -> (NotificationContent, Media?) in }
                                 }
 
                                 var updatedContent = initialContent
-                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in
+                                var updatedMedia: Media?
+                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content, media in
                                     updatedContent = content
+                                    updatedMedia = media
                                 }, completed: {
-                                    pollCompletion(updatedContent)
+                                    pollCompletion(updatedContent, updatedMedia)
                                 }))
                             } else {
                                 completed()
