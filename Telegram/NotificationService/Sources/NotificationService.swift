@@ -1534,6 +1534,15 @@ private final class NotificationServiceHandler {
                                                                 content.attachments.append(attachment)
                                                             }
                                                         }
+                                                    } else if file.isVoice {
+                                                        if let mediaData = mediaData {
+                                                            stateManager.postbox.mediaBox.storeResourceData(file.resource.id, data: mediaData, synchronous: true)
+                                                        }
+                                                        if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(file.resource, pathExtension: "ogg") {
+                                                            if let attachment = try? UNNotificationAttachment(identifier: "audio", url: URL(fileURLWithPath: storedPath), options: nil) {
+                                                                content.attachments.append(attachment)
+                                                            }
+                                                        }
                                                     }
                                                 }
 
