@@ -2332,6 +2332,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 sendMessageImpl?(peer)
             }
         ))
+        controller.navigationPresentation = .modal
+        
         let _ = combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
         .startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
