@@ -607,6 +607,7 @@ private final class PeerInfoInteraction {
     let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBirthdayContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let editingOpenAffiliateProgram: () -> Void
     let getController: () -> ViewController?
     
     init(
@@ -675,6 +676,7 @@ private final class PeerInfoInteraction {
         openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBirthdayContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        editingOpenAffiliateProgram: @escaping () -> Void,
         getController: @escaping () -> ViewController?
     ) {
         self.openUsername = openUsername
@@ -742,6 +744,7 @@ private final class PeerInfoInteraction {
         self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
         self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
         self.openBirthdayContextMenu = openBirthdayContextMenu
+        self.editingOpenAffiliateProgram = editingOpenAffiliateProgram
         self.getController = getController
     }
 }
@@ -1906,6 +1909,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemInfo = 3
             let ItemDelete = 4
             let ItemUsername = 5
+            let ItemAffiliateProgram = 6
             
             let ItemIntro = 7
             let ItemCommands = 8
@@ -1915,6 +1919,10 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
+                }))
+                //TODO:localize
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: .text("Off"), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.bot, action: {
+                    interaction.editingOpenAffiliateProgram()
                 }))
                                 
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
@@ -3012,6 +3020,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openBirthdayContextMenu(node: node, gesture: gesture)
+            }, editingOpenAffiliateProgram: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.editingOpenAffiliateProgram()
             },
             getController: { [weak self] in
                 return self?.controller
@@ -8545,6 +8558,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
                 }
             }
+        }
+    }
+    
+    private func editingOpenAffiliateProgram() {
+        if let peer = self.data?.peer as? TelegramUser, peer.botInfo != nil {
+            let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makeAffiliateProgramSetupScreen(context: self.context, initialData: initialData)
+                self.controller?.push(controller)
+            })
         }
     }
     

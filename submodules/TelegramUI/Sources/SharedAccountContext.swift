@@ -74,6 +74,7 @@ import GiftOptionsScreen
 import GiftViewScreen
 import StarsIntroScreen
 import ContentReportScreen
+import AffiliateProgramSetupScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2827,6 +2828,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?) {
         openWebAppImpl(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, botPeer: botPeer, chatPeer: chatPeer, threadId: threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: skipTermsOfService, payload: payload)
+    }
+    
+    public func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id) -> Signal<AffiliateProgramSetupScreenInitialData, NoError> {
+        return AffiliateProgramSetupScreen.content(context: context, peerId: peerId)
+    }
+    
+    public func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController {
+        return AffiliateProgramSetupScreen(context: context, initialContent: initialData as! AffiliateProgramSetupScreen.Content)
     }
 }
 

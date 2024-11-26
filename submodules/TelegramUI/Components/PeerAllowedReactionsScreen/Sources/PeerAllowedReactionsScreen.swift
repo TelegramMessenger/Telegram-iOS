@@ -1281,20 +1281,22 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         items: [
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
                                 theme: environment.theme,
-                                values: reactionCountValueList.map { item in
-                                    return item
-                                },
-                                markPositions: false,
-                                selectedIndex: max(0, min(reactionCountValueList.count - 1, self.allowedReactionCount - 1)),
-                                title: sliderTitle,
-                                selectedIndexUpdated: { [weak self] index in
-                                    guard let self else {
-                                        return
+                                content: .discrete(ListItemSliderSelectorComponent.Discrete(
+                                    values: reactionCountValueList.map { item in
+                                        return item
+                                    },
+                                    markPositions: false,
+                                    selectedIndex: max(0, min(reactionCountValueList.count - 1, self.allowedReactionCount - 1)),
+                                    title: sliderTitle,
+                                    selectedIndexUpdated: { [weak self] index in
+                                        guard let self else {
+                                            return
+                                        }
+                                        let index = max(1, min(reactionCountValueList.count, index + 1))
+                                        self.allowedReactionCount = index
+                                        self.state?.updated(transition: .immediate)
                                     }
-                                    let index = max(1, min(reactionCountValueList.count, index + 1))
-                                    self.allowedReactionCount = index
-                                    self.state?.updated(transition: .immediate)
-                                }
+                                ))
                             )))
                         ],
                         displaySeparators: false

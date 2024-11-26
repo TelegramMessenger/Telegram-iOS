@@ -1363,42 +1363,44 @@ private final class ChatSendStarsScreenComponent: Component {
             let sliderSize = self.slider.update(
                 transition: transition,
                 component: AnyComponent(SliderComponent(
-                    valueCount: self.amount.maxSliderValue + 1,
-                    value: self.amount.sliderValue,
-                    markPositions: false,
+                    content: .discrete(SliderComponent.Discrete(
+                        valueCount: self.amount.maxSliderValue + 1,
+                        value: self.amount.sliderValue,
+                        markPositions: false,
+                        valueUpdated: { [weak self] value in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            self.amount = self.amount.withSliderValue(value)
+                            self.didChangeAmount = true
+                            
+                            self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
+                            
+                            let sliderValue = Float(value) / Float(component.maxAmount)
+                            let currentTimestamp = CACurrentMediaTime()
+                            
+                            if let previousTimestamp {
+                                let deltaTime = currentTimestamp - previousTimestamp
+                                let delta = sliderValue - self.previousSliderValue
+                                let deltaValue = abs(sliderValue - self.previousSliderValue)
+                                
+                                let speed = deltaValue / Float(deltaTime)
+                                let newSpeed = max(0, min(65.0, speed * 70.0))
+                                
+                                if newSpeed < 0.01 && deltaValue < 0.001 {
+                                } else {
+                                    self.badgeStars.update(speed: newSpeed, delta: delta)
+                                }
+                            }
+                            
+                            self.previousSliderValue = sliderValue
+                            self.previousTimestamp = currentTimestamp
+                        }
+                    )),
                     trackBackgroundColor: .clear,
                     trackForegroundColor: .clear,
                     knobSize: 26.0,
                     knobColor: .white,
-                    valueUpdated: { [weak self] value in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        self.amount = self.amount.withSliderValue(value)
-                        self.didChangeAmount = true
-                        
-                        self.state?.updated(transition: ComponentTransition(animation: .none).withUserData(IsAdjustingAmountHint()))
-                        
-                        let sliderValue = Float(value) / Float(component.maxAmount)
-                        let currentTimestamp = CACurrentMediaTime()
-                        
-                        if let previousTimestamp {
-                            let deltaTime = currentTimestamp - previousTimestamp
-                            let delta = sliderValue - self.previousSliderValue
-                            let deltaValue = abs(sliderValue - self.previousSliderValue)
-                            
-                            let speed = deltaValue / Float(deltaTime)
-                            let newSpeed = max(0, min(65.0, speed * 70.0))
-                            
-                            if newSpeed < 0.01 && deltaValue < 0.001 {
-                            } else {
-                                self.badgeStars.update(speed: newSpeed, delta: delta)
-                            }
-                        }
-                        
-                        self.previousSliderValue = sliderValue
-                        self.previousTimestamp = currentTimestamp
-                    },
                     isTrackingUpdated: { [weak self] isTracking in
                         guard let self else {
                             return
