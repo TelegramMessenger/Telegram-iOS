@@ -944,8 +944,9 @@ final class GiftOptionsScreenComponent: Component {
                 self.starsItemsOrigin = contentHeight
 
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
-                contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * starsOptionSize.height
-                contentHeight += 66.0
+                let optionSpacing: CGFloat = 10.0
+                contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * (starsOptionSize.height + optionSpacing)
+                contentHeight += -optionSpacing + 66.0
             }
             
             contentHeight += bottomContentInset

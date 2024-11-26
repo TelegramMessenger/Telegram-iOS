@@ -3218,6 +3218,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if case .business = context.component.mode {
                 header = coin.update(
                     component: PremiumCoinComponent(
+                        mode: .business,
                         isIntro: isIntro,
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
