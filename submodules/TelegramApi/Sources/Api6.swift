@@ -1,4 +1,234 @@
 public extension Api {
+    enum DocumentAttribute: TypeConstructorDescription {
+        case documentAttributeAnimated
+        case documentAttributeAudio(flags: Int32, duration: Int32, title: String?, performer: String?, waveform: Buffer?)
+        case documentAttributeCustomEmoji(flags: Int32, alt: String, stickerset: Api.InputStickerSet)
+        case documentAttributeFilename(fileName: String)
+        case documentAttributeHasStickers
+        case documentAttributeImageSize(w: Int32, h: Int32)
+        case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
+        case documentAttributeVideo(flags: Int32, duration: Double, w: Int32, h: Int32, preloadPrefixSize: Int32?, videoStartTs: Double?, videoCodec: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .documentAttributeAnimated:
+                    if boxed {
+                        buffer.appendInt32(297109817)
+                    }
+                    
+                    break
+                case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
+                    if boxed {
+                        buffer.appendInt32(-1739392570)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(duration, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(performer!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeBytes(waveform!, buffer: buffer, boxed: false)}
+                    break
+                case .documentAttributeCustomEmoji(let flags, let alt, let stickerset):
+                    if boxed {
+                        buffer.appendInt32(-48981863)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(alt, buffer: buffer, boxed: false)
+                    stickerset.serialize(buffer, true)
+                    break
+                case .documentAttributeFilename(let fileName):
+                    if boxed {
+                        buffer.appendInt32(358154344)
+                    }
+                    serializeString(fileName, buffer: buffer, boxed: false)
+                    break
+                case .documentAttributeHasStickers:
+                    if boxed {
+                        buffer.appendInt32(-1744710921)
+                    }
+                    
+                    break
+                case .documentAttributeImageSize(let w, let h):
+                    if boxed {
+                        buffer.appendInt32(1815593308)
+                    }
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    break
+                case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
+                    if boxed {
+                        buffer.appendInt32(1662637586)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(alt, buffer: buffer, boxed: false)
+                    stickerset.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {maskCoords!.serialize(buffer, true)}
+                    break
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize, let videoStartTs, let videoCodec):
+                    if boxed {
+                        buffer.appendInt32(1137015880)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeDouble(duration, buffer: buffer, boxed: false)
+                    serializeInt32(w, buffer: buffer, boxed: false)
+                    serializeInt32(h, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(preloadPrefixSize!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeString(videoCodec!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .documentAttributeAnimated:
+                return ("documentAttributeAnimated", [])
+                case .documentAttributeAudio(let flags, let duration, let title, let performer, let waveform):
+                return ("documentAttributeAudio", [("flags", flags as Any), ("duration", duration as Any), ("title", title as Any), ("performer", performer as Any), ("waveform", waveform as Any)])
+                case .documentAttributeCustomEmoji(let flags, let alt, let stickerset):
+                return ("documentAttributeCustomEmoji", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any)])
+                case .documentAttributeFilename(let fileName):
+                return ("documentAttributeFilename", [("fileName", fileName as Any)])
+                case .documentAttributeHasStickers:
+                return ("documentAttributeHasStickers", [])
+                case .documentAttributeImageSize(let w, let h):
+                return ("documentAttributeImageSize", [("w", w as Any), ("h", h as Any)])
+                case .documentAttributeSticker(let flags, let alt, let stickerset, let maskCoords):
+                return ("documentAttributeSticker", [("flags", flags as Any), ("alt", alt as Any), ("stickerset", stickerset as Any), ("maskCoords", maskCoords as Any)])
+                case .documentAttributeVideo(let flags, let duration, let w, let h, let preloadPrefixSize, let videoStartTs, let videoCodec):
+                return ("documentAttributeVideo", [("flags", flags as Any), ("duration", duration as Any), ("w", w as Any), ("h", h as Any), ("preloadPrefixSize", preloadPrefixSize as Any), ("videoStartTs", videoStartTs as Any), ("videoCodec", videoCodec as Any)])
+    }
+    }
+    
+        public static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
+            return Api.DocumentAttribute.documentAttributeAnimated
+        }
+        public static func parse_documentAttributeAudio(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_4 = parseString(reader) }
+            var _5: Buffer?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = parseBytes(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.DocumentAttribute.documentAttributeAudio(flags: _1!, duration: _2!, title: _3, performer: _4, waveform: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_documentAttributeCustomEmoji(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.InputStickerSet?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InputStickerSet
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.DocumentAttribute.documentAttributeCustomEmoji(flags: _1!, alt: _2!, stickerset: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DocumentAttribute.documentAttributeFilename(fileName: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
+            return Api.DocumentAttribute.documentAttributeHasStickers
+        }
+        public static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.DocumentAttribute.documentAttributeImageSize(w: _1!, h: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.InputStickerSet?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.InputStickerSet
+            }
+            var _4: Api.MaskCoords?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.MaskCoords
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.DocumentAttribute.documentAttributeSticker(flags: _1!, alt: _2!, stickerset: _3!, maskCoords: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Double?
+            _2 = reader.readDouble()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
+            var _6: Double?
+            if Int(_1!) & Int(1 << 4) != 0 {_6 = reader.readDouble() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 5) != 0 {_7 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.DocumentAttribute.documentAttributeVideo(flags: _1!, duration: _2!, w: _3!, h: _4!, preloadPrefixSize: _5, videoStartTs: _6, videoCodec: _7)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum DraftMessage: TypeConstructorDescription {
         case draftMessage(flags: Int32, replyTo: Api.InputReplyTo?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, date: Int32, effect: Int64?)
         case draftMessageEmpty(flags: Int32, date: Int32?)
@@ -856,250 +1086,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum EncryptedFile: TypeConstructorDescription {
-        case encryptedFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, keyFingerprint: Int32)
-        case encryptedFileEmpty
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
-                    if boxed {
-                        buffer.appendInt32(-1476358952)
-                    }
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt64(size, buffer: buffer, boxed: false)
-                    serializeInt32(dcId, buffer: buffer, boxed: false)
-                    serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
-                    break
-                case .encryptedFileEmpty:
-                    if boxed {
-                        buffer.appendInt32(-1038136962)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
-                return ("encryptedFile", [("id", id as Any), ("accessHash", accessHash as Any), ("size", size as Any), ("dcId", dcId as Any), ("keyFingerprint", keyFingerprint as Any)])
-                case .encryptedFileEmpty:
-                return ("encryptedFileEmpty", [])
-    }
-    }
-    
-        public static func parse_encryptedFile(_ reader: BufferReader) -> EncryptedFile? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
-            return Api.EncryptedFile.encryptedFileEmpty
-        }
-    
-    }
-}
-public extension Api {
-    enum EncryptedMessage: TypeConstructorDescription {
-        case encryptedMessage(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer, file: Api.EncryptedFile)
-        case encryptedMessageService(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
-                    if boxed {
-                        buffer.appendInt32(-317144808)
-                    }
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    serializeInt32(chatId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeBytes(bytes, buffer: buffer, boxed: false)
-                    file.serialize(buffer, true)
-                    break
-                case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
-                    if boxed {
-                        buffer.appendInt32(594758406)
-                    }
-                    serializeInt64(randomId, buffer: buffer, boxed: false)
-                    serializeInt32(chatId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeBytes(bytes, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
-                return ("encryptedMessage", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any), ("file", file as Any)])
-                case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
-                return ("encryptedMessageService", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any)])
-    }
-    }
-    
-        public static func parse_encryptedMessage(_ reader: BufferReader) -> EncryptedMessage? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: Api.EncryptedFile?
-            if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.EncryptedFile
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.EncryptedMessage.encryptedMessage(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!, file: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_encryptedMessageService(_ reader: BufferReader) -> EncryptedMessage? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.EncryptedMessage.encryptedMessageService(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum ExportedChatInvite: TypeConstructorDescription {
-        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, subscriptionExpired: Int32?, title: String?, subscriptionPricing: Api.StarsSubscriptionPricing?)
-        case chatInvitePublicJoinRequests
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
-                    if boxed {
-                        buffer.appendInt32(-1574126186)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(link, buffer: buffer, boxed: false)
-                    serializeInt64(adminId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(startDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(usage!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(subscriptionExpired!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 9) != 0 {subscriptionPricing!.serialize(buffer, true)}
-                    break
-                case .chatInvitePublicJoinRequests:
-                    if boxed {
-                        buffer.appendInt32(-317687113)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
-                return ("chatInviteExported", [("flags", flags as Any), ("link", link as Any), ("adminId", adminId as Any), ("date", date as Any), ("startDate", startDate as Any), ("expireDate", expireDate as Any), ("usageLimit", usageLimit as Any), ("usage", usage as Any), ("requested", requested as Any), ("subscriptionExpired", subscriptionExpired as Any), ("title", title as Any), ("subscriptionPricing", subscriptionPricing as Any)])
-                case .chatInvitePublicJoinRequests:
-                return ("chatInvitePublicJoinRequests", [])
-    }
-    }
-    
-        public static func parse_chatInviteExported(_ reader: BufferReader) -> ExportedChatInvite? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt32() }
-            var _7: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
-            var _8: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_8 = reader.readInt32() }
-            var _9: Int32?
-            if Int(_1!) & Int(1 << 7) != 0 {_9 = reader.readInt32() }
-            var _10: Int32?
-            if Int(_1!) & Int(1 << 10) != 0 {_10 = reader.readInt32() }
-            var _11: String?
-            if Int(_1!) & Int(1 << 8) != 0 {_11 = parseString(reader) }
-            var _12: Api.StarsSubscriptionPricing?
-            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
-            } }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 10) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
-            let _c12 = (Int(_1!) & Int(1 << 9) == 0) || _12 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
-                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, subscriptionExpired: _10, title: _11, subscriptionPricing: _12)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
-            return Api.ExportedChatInvite.chatInvitePublicJoinRequests
         }
     
     }

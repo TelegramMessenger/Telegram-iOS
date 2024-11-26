@@ -1632,6 +1632,22 @@ public extension TelegramEngine {
                 _internal_setStarsReactionDefaultToPrivate(isPrivate: isPrivate, transaction: transaction)
             }).startStandalone()
         }
+        
+        public func updateStarRefProgram(id: EnginePeer.Id, program: (commissionPermille: Int32, durationMonths: Int32?)?) -> Signal<Never, NoError> {
+            return _internal_updateStarRefProgram(account: self.account, id: id, program: program)
+        }
+        
+        public func requestConnectedStarRefBots(id: EnginePeer.Id, offset: (timestamp: Int32, link: String)?, limit: Int) -> Signal<TelegramConnectedStarRefBotList?, NoError> {
+            return _internal_requestConnectedStarRefBots(account: self.account, id: id, offset: offset, limit: limit)
+        }
+        
+        public func requestSuggestedStarRefBots(id: EnginePeer.Id, orderByCommission: Bool, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
+            return _internal_requestSuggestedStarRefBots(account: self.account, id: id, orderByCommission: orderByCommission, offset: offset, limit: limit)
+        }
+        
+        public func connectStarRefBot(id: EnginePeer.Id, botId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item, ConnectStarRefBotError> {
+            return _internal_connectStarRefBot(account: self.account, id: id, botId: botId)
+        }
     }
 }
 

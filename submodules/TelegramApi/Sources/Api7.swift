@@ -1,4 +1,248 @@
 public extension Api {
+    enum EncryptedFile: TypeConstructorDescription {
+        case encryptedFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, keyFingerprint: Int32)
+        case encryptedFileEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
+                    if boxed {
+                        buffer.appendInt32(-1476358952)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
+                    serializeInt32(dcId, buffer: buffer, boxed: false)
+                    serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
+                    break
+                case .encryptedFileEmpty:
+                    if boxed {
+                        buffer.appendInt32(-1038136962)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
+                return ("encryptedFile", [("id", id as Any), ("accessHash", accessHash as Any), ("size", size as Any), ("dcId", dcId as Any), ("keyFingerprint", keyFingerprint as Any)])
+                case .encryptedFileEmpty:
+                return ("encryptedFileEmpty", [])
+    }
+    }
+    
+        public static func parse_encryptedFile(_ reader: BufferReader) -> EncryptedFile? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
+            return Api.EncryptedFile.encryptedFileEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum EncryptedMessage: TypeConstructorDescription {
+        case encryptedMessage(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer, file: Api.EncryptedFile)
+        case encryptedMessageService(randomId: Int64, chatId: Int32, date: Int32, bytes: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
+                    if boxed {
+                        buffer.appendInt32(-317144808)
+                    }
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    file.serialize(buffer, true)
+                    break
+                case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
+                    if boxed {
+                        buffer.appendInt32(594758406)
+                    }
+                    serializeInt64(randomId, buffer: buffer, boxed: false)
+                    serializeInt32(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .encryptedMessage(let randomId, let chatId, let date, let bytes, let file):
+                return ("encryptedMessage", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any), ("file", file as Any)])
+                case .encryptedMessageService(let randomId, let chatId, let date, let bytes):
+                return ("encryptedMessageService", [("randomId", randomId as Any), ("chatId", chatId as Any), ("date", date as Any), ("bytes", bytes as Any)])
+    }
+    }
+    
+        public static func parse_encryptedMessage(_ reader: BufferReader) -> EncryptedMessage? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            var _5: Api.EncryptedFile?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.EncryptedFile
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.EncryptedMessage.encryptedMessage(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!, file: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_encryptedMessageService(_ reader: BufferReader) -> EncryptedMessage? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Buffer?
+            _4 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.EncryptedMessage.encryptedMessageService(randomId: _1!, chatId: _2!, date: _3!, bytes: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum ExportedChatInvite: TypeConstructorDescription {
+        case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, subscriptionExpired: Int32?, title: String?, subscriptionPricing: Api.StarsSubscriptionPricing?)
+        case chatInvitePublicJoinRequests
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
+                    if boxed {
+                        buffer.appendInt32(-1574126186)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    serializeInt64(adminId, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(startDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(expireDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(usageLimit!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(usage!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(subscriptionExpired!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 9) != 0 {subscriptionPricing!.serialize(buffer, true)}
+                    break
+                case .chatInvitePublicJoinRequests:
+                    if boxed {
+                        buffer.appendInt32(-317687113)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let subscriptionExpired, let title, let subscriptionPricing):
+                return ("chatInviteExported", [("flags", flags as Any), ("link", link as Any), ("adminId", adminId as Any), ("date", date as Any), ("startDate", startDate as Any), ("expireDate", expireDate as Any), ("usageLimit", usageLimit as Any), ("usage", usage as Any), ("requested", requested as Any), ("subscriptionExpired", subscriptionExpired as Any), ("title", title as Any), ("subscriptionPricing", subscriptionPricing as Any)])
+                case .chatInvitePublicJoinRequests:
+                return ("chatInvitePublicJoinRequests", [])
+    }
+    }
+    
+        public static func parse_chatInviteExported(_ reader: BufferReader) -> ExportedChatInvite? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt32() }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
+            var _8: Int32?
+            if Int(_1!) & Int(1 << 3) != 0 {_8 = reader.readInt32() }
+            var _9: Int32?
+            if Int(_1!) & Int(1 << 7) != 0 {_9 = reader.readInt32() }
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 10) != 0 {_10 = reader.readInt32() }
+            var _11: String?
+            if Int(_1!) & Int(1 << 8) != 0 {_11 = parseString(reader) }
+            var _12: Api.StarsSubscriptionPricing?
+            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
+                _12 = Api.parse(reader, signature: signature) as? Api.StarsSubscriptionPricing
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 10) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 8) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 9) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.ExportedChatInvite.chatInviteExported(flags: _1!, link: _2!, adminId: _3!, date: _4!, startDate: _5, expireDate: _6, usageLimit: _7, usage: _8, requested: _9, subscriptionExpired: _10, title: _11, subscriptionPricing: _12)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
+            return Api.ExportedChatInvite.chatInvitePublicJoinRequests
+        }
+    
+    }
+}
+public extension Api {
     enum ExportedChatlistInvite: TypeConstructorDescription {
         case exportedChatlistInvite(flags: Int32, title: String, url: String, peers: [Api.Peer])
     
@@ -1222,94 +1466,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum InlineQueryPeerType: TypeConstructorDescription {
-        case inlineQueryPeerTypeBotPM
-        case inlineQueryPeerTypeBroadcast
-        case inlineQueryPeerTypeChat
-        case inlineQueryPeerTypeMegagroup
-        case inlineQueryPeerTypePM
-        case inlineQueryPeerTypeSameBotPM
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inlineQueryPeerTypeBotPM:
-                    if boxed {
-                        buffer.appendInt32(238759180)
-                    }
-                    
-                    break
-                case .inlineQueryPeerTypeBroadcast:
-                    if boxed {
-                        buffer.appendInt32(1664413338)
-                    }
-                    
-                    break
-                case .inlineQueryPeerTypeChat:
-                    if boxed {
-                        buffer.appendInt32(-681130742)
-                    }
-                    
-                    break
-                case .inlineQueryPeerTypeMegagroup:
-                    if boxed {
-                        buffer.appendInt32(1589952067)
-                    }
-                    
-                    break
-                case .inlineQueryPeerTypePM:
-                    if boxed {
-                        buffer.appendInt32(-2093215828)
-                    }
-                    
-                    break
-                case .inlineQueryPeerTypeSameBotPM:
-                    if boxed {
-                        buffer.appendInt32(813821341)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inlineQueryPeerTypeBotPM:
-                return ("inlineQueryPeerTypeBotPM", [])
-                case .inlineQueryPeerTypeBroadcast:
-                return ("inlineQueryPeerTypeBroadcast", [])
-                case .inlineQueryPeerTypeChat:
-                return ("inlineQueryPeerTypeChat", [])
-                case .inlineQueryPeerTypeMegagroup:
-                return ("inlineQueryPeerTypeMegagroup", [])
-                case .inlineQueryPeerTypePM:
-                return ("inlineQueryPeerTypePM", [])
-                case .inlineQueryPeerTypeSameBotPM:
-                return ("inlineQueryPeerTypeSameBotPM", [])
-    }
-    }
-    
-        public static func parse_inlineQueryPeerTypeBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypeBotPM
-        }
-        public static func parse_inlineQueryPeerTypeBroadcast(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypeBroadcast
-        }
-        public static func parse_inlineQueryPeerTypeChat(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypeChat
-        }
-        public static func parse_inlineQueryPeerTypeMegagroup(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypeMegagroup
-        }
-        public static func parse_inlineQueryPeerTypePM(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypePM
-        }
-        public static func parse_inlineQueryPeerTypeSameBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
-            return Api.InlineQueryPeerType.inlineQueryPeerTypeSameBotPM
         }
     
     }

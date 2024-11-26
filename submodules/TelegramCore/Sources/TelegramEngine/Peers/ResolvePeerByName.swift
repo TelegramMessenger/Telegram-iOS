@@ -41,7 +41,7 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
             return .single(.result(cachedEntry.peerId))
         } else {
             return .single(.progress)
-            |> then(account.network.request(Api.functions.contacts.resolveUsername(username: normalizedName))
+            |> then(account.network.request(Api.functions.contacts.resolveUsername(flags: 0, username: normalizedName, referer: nil))
             |> mapError { _ -> Void in
                 return Void()
             }

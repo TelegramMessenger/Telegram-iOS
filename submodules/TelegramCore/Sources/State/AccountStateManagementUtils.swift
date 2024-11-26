@@ -1785,7 +1785,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
             case let .updateBroadcastRevenueTransactions(peer, balances):
                 updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
-            case let .updateStarsBalance(balance):
+            case let .updateStarsBalance(_, balance, _):
                 updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
