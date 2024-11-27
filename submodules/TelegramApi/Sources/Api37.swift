@@ -2640,18 +2640,18 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func updateStarRefProgram(flags: Int32, bot: Api.InputUser, commissionPermille: Int32, durationMonths: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func updateStarRefProgram(flags: Int32, bot: Api.InputUser, commissionPermille: Int32, durationMonths: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StarRefProgram>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1419641678)
+                    buffer.appendInt32(2005621427)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     bot.serialize(buffer, true)
                     serializeInt32(commissionPermille, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(durationMonths!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "bots.updateStarRefProgram", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("commissionPermille", String(describing: commissionPermille)), ("durationMonths", String(describing: durationMonths))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "bots.updateStarRefProgram", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("commissionPermille", String(describing: commissionPermille)), ("durationMonths", String(describing: durationMonths))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.StarRefProgram? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.StarRefProgram?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.StarRefProgram
                         }
                         return result
                     })
@@ -9010,6 +9010,23 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func editConnectedStarRefBot(flags: Int32, peer: Api.InputPeer, link: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-453204829)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeString(link, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.editConnectedStarRefBot", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("link", String(describing: link))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.ConnectedStarRefBots? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.ConnectedStarRefBots?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.ConnectedStarRefBots
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func exportInvoice(invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ExportedInvoice>) {
                     let buffer = Buffer()
                     buffer.appendInt32(261206117)
@@ -9050,6 +9067,22 @@ public extension Api.functions.payments {
                         var result: Api.payments.BankCardData?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.BankCardData
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func getConnectedStarRefBot(peer: Api.InputPeer, bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.ConnectedStarRefBots>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1210476304)
+                    peer.serialize(buffer, true)
+                    bot.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.getConnectedStarRefBot", parameters: [("peer", String(describing: peer)), ("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.ConnectedStarRefBots? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.ConnectedStarRefBots?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.ConnectedStarRefBots
                         }
                         return result
                     })

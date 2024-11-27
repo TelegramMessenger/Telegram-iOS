@@ -409,7 +409,7 @@ final class BrowserAddressListComponent: Component {
                                             
                                             UIPasteboard.general.string = url
                                             if let self, let component = self.component {
-                                                component.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+                                                component.presentInGlobalOverlay(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
                                             }
                                         })))
                                         

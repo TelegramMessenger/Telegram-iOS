@@ -10,12 +10,14 @@ public final class SliderComponent: Component {
     public final class Discrete: Equatable {
         public let valueCount: Int
         public let value: Int
+        public let minValue: Int?
         public let markPositions: Bool
         public let valueUpdated: (Int) -> Void
         
-        public init(valueCount: Int, value: Int, markPositions: Bool, valueUpdated: @escaping (Int) -> Void) {
+        public init(valueCount: Int, value: Int, minValue: Int? = nil, markPositions: Bool, valueUpdated: @escaping (Int) -> Void) {
             self.valueCount = valueCount
             self.value = value
+            self.minValue = minValue
             self.markPositions = markPositions
             self.valueUpdated = valueUpdated
         }
@@ -27,6 +29,9 @@ public final class SliderComponent: Component {
             if lhs.value != rhs.value {
                 return false
             }
+            if lhs.minValue != rhs.minValue {
+                return false
+            }
             if lhs.markPositions != rhs.markPositions {
                 return false
             }
@@ -36,15 +41,20 @@ public final class SliderComponent: Component {
     
     public final class Continuous: Equatable {
         public let value: CGFloat
+        public let minValue: CGFloat?
         public let valueUpdated: (CGFloat) -> Void
         
-        public init(value: CGFloat, valueUpdated: @escaping (CGFloat) -> Void) {
+        public init(value: CGFloat, minValue: CGFloat? = nil, valueUpdated: @escaping (CGFloat) -> Void) {
             self.value = value
+            self.minValue = minValue
             self.valueUpdated = valueUpdated
         }
         
         public static func ==(lhs: Continuous, rhs: Continuous) -> Bool {
             if lhs.value != rhs.value {
+                return false
+            }
+            if lhs.minValue != rhs.minValue {
                 return false
             }
             return true
@@ -59,6 +69,7 @@ public final class SliderComponent: Component {
     public let content: Content
     public let trackBackgroundColor: UIColor
     public let trackForegroundColor: UIColor
+    public let minTrackForegroundColor: UIColor?
     public let knobSize: CGFloat?
     public let knobColor: UIColor?
     public let isTrackingUpdated: ((Bool) -> Void)?
@@ -67,6 +78,7 @@ public final class SliderComponent: Component {
         content: Content,
         trackBackgroundColor: UIColor,
         trackForegroundColor: UIColor,
+        minTrackForegroundColor: UIColor? = nil,
         knobSize: CGFloat? = nil,
         knobColor: UIColor? = nil,
         isTrackingUpdated: ((Bool) -> Void)? = nil
@@ -74,6 +86,7 @@ public final class SliderComponent: Component {
         self.content = content
         self.trackBackgroundColor = trackBackgroundColor
         self.trackForegroundColor = trackForegroundColor
+        self.minTrackForegroundColor = minTrackForegroundColor
         self.knobSize = knobSize
         self.knobColor = knobColor
         self.isTrackingUpdated = isTrackingUpdated
@@ -87,6 +100,9 @@ public final class SliderComponent: Component {
             return false
         }
         if lhs.trackForegroundColor != rhs.trackForegroundColor {
+            return false
+        }
+        if lhs.minTrackForegroundColor != rhs.minTrackForegroundColor {
             return false
         }
         if lhs.knobSize != rhs.knobSize {
@@ -202,11 +218,22 @@ public final class SliderComponent: Component {
                 self.sliderView = sliderView
                 self.addSubview(sliderView)
             }
+            sliderView.lowerBoundTrackColor = component.minTrackForegroundColor
             switch component.content {
             case let .discrete(discrete):
                 sliderView.value = CGFloat(discrete.value)
+                if let minValue = discrete.minValue {
+                    sliderView.lowerBoundValue = CGFloat(minValue)
+                } else {
+                    sliderView.lowerBoundValue = 0.0
+                }
             case let .continuous(continuous):
                 sliderView.value = continuous.value
+                if let minValue = continuous.minValue {
+                    sliderView.lowerBoundValue = minValue
+                } else {
+                    sliderView.lowerBoundValue = 0.0
+                }
             }
             sliderView.interactionBegan = {
                 internalIsTrackingUpdated?(true)

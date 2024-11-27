@@ -42,7 +42,7 @@ public func cutoutAvailability(context: AccountContext) -> Signal<CutoutAvailabi
         if FileManager.default.fileExists(atPath: compiledModelPath) {
             return .single(.available)
         }
-        return context.engine.peers.resolvePeerByName(name: "stickersbackgroundseparation")
+        return context.engine.peers.resolvePeerByName(name: "stickersbackgroundseparation", referrer: nil)
         |> mapToSignal { result -> Signal<CutoutAvailability, NoError> in
             guard case let .result(maybePeer) = result else {
                 return .complete()

@@ -598,7 +598,6 @@ func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program
             return .complete()
         }
         
-        //bots.updateStarRefProgram#549e034e flags:# bot:InputUser commission_permille:int duration_months:flags.0?int = Bool;
         var flags: Int32 = 0
         if let program, program.durationMonths != nil {
             flags |= 1 << 0
@@ -610,11 +609,12 @@ func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program
             commissionPermille: program?.commissionPermille ?? 0,
             durationMonths: program?.durationMonths
         ))
-        |> `catch` { _ -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.StarRefProgram?, NoError> in
+            return .single(nil)
         }
         |> mapToSignal { result -> Signal<Never, NoError> in
-            if result != .boolTrue {
+            guard let result else {
                 return .complete()
             }
             return account.postbox.transaction { transaction -> Void in
@@ -622,28 +622,11 @@ func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program
                     guard var current = current as? CachedUserData else {
                         return current ?? CachedUserData()
                     }
-                    if let program {
-                        current = current.withUpdatedStarRefProgram(TelegramStarRefProgram(
-                            commissionPermille: program.commissionPermille,
-                            durationMonths: program.durationMonths,
-                            endDate: nil
-                        ))
-                    } else {
-                        if let currentProgram = current.starRefProgram {
-                            //TODO:localize
-                            let endDate = Int32(Date().timeIntervalSince1970) + (account.testingEnvironment ? 300 : 86400)
-                            current = current.withUpdatedStarRefProgram(TelegramStarRefProgram(
-                                commissionPermille: currentProgram.commissionPermille,
-                                durationMonths: currentProgram.durationMonths,
-                                endDate: endDate
-                            ))
-                        }
-                    }
+                    current = current.withUpdatedStarRefProgram(TelegramStarRefProgram(apiStarRefProgram: result))
                     return current
                 })
             }
             |> ignoreValues
-            
         }
     }
 }
@@ -906,6 +889,57 @@ func _internal_connectStarRefBot(account: Account, id: EnginePeer.Id, botId: Eng
                     return .fail(.generic)
                 }
             }
+        }
+    }
+}
+
+//payments.editConnectedStarRefBot flags:# revoked:flags.0?true peer:InputPeer link:string = payments.ConnectedStarRefBots;
+
+func _internal_removeConnectedStarRefBot(account: Account, id: EnginePeer.Id, link: String) -> Signal<Never, ConnectStarRefBotError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(id).flatMap(apiInputPeer)
+    }
+    |> castError(ConnectStarRefBotError.self)
+    |> mapToSignal { inputPeer -> Signal<Never, ConnectStarRefBotError> in
+        guard let inputPeer else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= 1 << 0
+        return account.network.request(Api.functions.payments.editConnectedStarRefBot(flags: flags, peer: inputPeer, link: link))
+        |> mapError { _ -> ConnectStarRefBotError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, ConnectStarRefBotError> in
+            return account.postbox.transaction { transaction -> Void in
+                switch result {
+                case let .connectedStarRefBots(_, connectedBots, users):
+                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: users))
+                    
+                    let _ = connectedBots
+                    /*if let bot = connectedBots.first {
+                        switch bot {
+                        case let .connectedBotStarRef(_, url, date, botId, commissionPermille, durationMonths, participants, revenue):
+                            guard let botPeer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))) else {
+                                return
+                            }
+                            return TelegramConnectedStarRefBotList.Item(
+                                peer: EnginePeer(botPeer),
+                                url: url,
+                                timestamp: date,
+                                commissionPermille: commissionPermille,
+                                durationMonths: durationMonths,
+                                participants: participants,
+                                revenue: revenue
+                            )
+                        }
+                    } else {
+                        return nil
+                    }*/
+                }
+            }
+            |> castError(ConnectStarRefBotError.self)
+            |> ignoreValues
         }
     }
 }

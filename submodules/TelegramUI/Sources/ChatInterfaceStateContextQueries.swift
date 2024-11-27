@@ -295,7 +295,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             let chatPeer = peer
-            let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
+            let contextBot = context.engine.peers.resolvePeerByName(name: addressName, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                 guard case let .result(result) = result else {
                     return .complete()

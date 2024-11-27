@@ -812,6 +812,11 @@ public protocol CollectibleItemInfoScreenInitialData: AnyObject {
 public protocol BusinessLinksSetupScreenInitialData: AnyObject {
 }
 
+public enum AffiliateProgramSetupScreenMode {
+    case editProgram
+    case connectedPrograms
+}
+
 public protocol AffiliateProgramSetupScreenInitialData: AnyObject {
 }
 
@@ -1055,7 +1060,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?)
     
-    func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
+    func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
     func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?

@@ -179,7 +179,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
                         UIPasteboard.general.string = url
                         
                         if let strongSelf = self {
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(title: nil, text: strongSelf.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                         }
                     })
                 ]), ActionSheetItemGroup(items: [

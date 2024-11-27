@@ -54,7 +54,7 @@ public func paneGifSearchForQuery(context: AccountContext, query: String, offset
     let contextBot = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
     |> mapToSignal { searchBots -> Signal<EnginePeer?, NoError> in
         let botName = searchBots.gifBotUsername ?? "gif"
-        return context.engine.peers.resolvePeerByName(name: botName)
+        return context.engine.peers.resolvePeerByName(name: botName, referrer: nil)
         |> mapToSignal { result in
             guard case let .result(result) = result else {
                 return .complete()

@@ -741,7 +741,7 @@ final class WatchLocationHandler: WatchRequestHandler {
                 |> take(1)
                 |> mapToSignal({ context -> Signal<[ChatContextResultMessage], NoError> in
                     if let context = context {
-                        return context.engine.peers.resolvePeerByName(name: "foursquare")
+                        return context.engine.peers.resolvePeerByName(name: "foursquare", referrer: nil)
                         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                             guard case let .result(result) = result else {
                                 return .complete()

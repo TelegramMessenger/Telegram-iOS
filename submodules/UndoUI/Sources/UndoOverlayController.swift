@@ -24,7 +24,7 @@ public enum UndoOverlayContent {
     case messagesUnpinned(title: String, text: String, undo: Bool, isHidden: Bool)
     case setProximityAlert(title: String, text: String, cancelled: Bool)
     case invitedToVoiceChat(context: AccountContext, peer: EnginePeer, title: String?, text: String, action: String?, duration: Double)
-    case linkCopied(text: String)
+    case linkCopied(title: String?, text: String)
     case banned(text: String)
     case importedMessage(text: String)
     case audioRate(rate: CGFloat, text: String)

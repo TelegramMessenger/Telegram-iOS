@@ -900,7 +900,7 @@ public func PeerNameColorScreen(
                             let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors(colors: .blue), isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: {
                                 UIPasteboard.general.string = link
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
+                                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
                                 return true
                             }, openStats: nil, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? {
                                 let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)

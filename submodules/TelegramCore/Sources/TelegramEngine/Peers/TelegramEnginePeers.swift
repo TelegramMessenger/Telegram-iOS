@@ -179,8 +179,8 @@ public extension TelegramEngine {
             return _internal_inactiveChannelList(network: self.account.network)
         }
 
-        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerResult, NoError> {
-            return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
+        public func resolvePeerByName(name: String, referrer: String?, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerResult, NoError> {
+            return _internal_resolvePeerByName(account: self.account, name: name, referrer: referrer, ageLimit: ageLimit)
             |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
                 switch result {
                 case .progress:
@@ -1647,6 +1647,10 @@ public extension TelegramEngine {
         
         public func connectStarRefBot(id: EnginePeer.Id, botId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item, ConnectStarRefBotError> {
             return _internal_connectStarRefBot(account: self.account, id: id, botId: botId)
+        }
+        
+        public func removeConnectedStarRefBot(id: EnginePeer.Id, link: String) -> Signal<Never, ConnectStarRefBotError> {
+            return _internal_removeConnectedStarRefBot(account: self.account, id: id, link: link)
         }
     }
 }

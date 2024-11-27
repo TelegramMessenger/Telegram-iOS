@@ -1054,7 +1054,7 @@ func _internal_searchGifs(account: Account, query: String, nextOffset: String = 
         let configuration = currentSearchBotsConfiguration(transaction: transaction)
         return configuration.gifBotUsername ?? "gif"
     } |> mapToSignal {
-        return _internal_resolvePeerByName(account: account, name: $0) |> mapToSignal { result in
+        return _internal_resolvePeerByName(account: account, name: $0, referrer: nil) |> mapToSignal { result in
             guard case let .result(result) = result else {
                 return .complete()
             }

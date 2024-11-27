@@ -19,18 +19,18 @@ private func rad2deg(_ number: Float) -> Float {
     return number * 180.0 / .pi
 }
 
-final class PremiumCoinComponent: Component {
-    enum Mode {
+public final class PremiumCoinComponent: Component {
+    public enum Mode {
         case business
         case affiliate
     }
     
-    let mode: Mode
-    let isIntro: Bool
-    let isVisible: Bool
-    let hasIdleAnimations: Bool
+    public let mode: Mode
+    public let isIntro: Bool
+    public let isVisible: Bool
+    public let hasIdleAnimations: Bool
         
-    init(
+    public init(
         mode: Mode,
         isIntro: Bool,
         isVisible: Bool,
@@ -42,15 +42,15 @@ final class PremiumCoinComponent: Component {
         self.hasIdleAnimations = hasIdleAnimations
     }
     
-    static func ==(lhs: PremiumCoinComponent, rhs: PremiumCoinComponent) -> Bool {
+    public static func ==(lhs: PremiumCoinComponent, rhs: PremiumCoinComponent) -> Bool {
         return lhs.mode == rhs.mode && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
-        final class Tag {
+    public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+        public final class Tag {
         }
         
-        func matches(tag: Any) -> Bool {
+        public func matches(tag: Any) -> Bool {
             if let _ = tag as? Tag {
                 return true
             }
@@ -250,7 +250,7 @@ final class PremiumCoinComponent: Component {
         }
         
         private var didSetReady = false
-        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+        public func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
             if !self.didSetReady {
                 self.didSetReady = true
                 
@@ -535,11 +535,11 @@ final class PremiumCoinComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

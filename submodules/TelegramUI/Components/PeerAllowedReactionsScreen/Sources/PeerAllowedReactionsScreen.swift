@@ -346,7 +346,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             
                     UIPasteboard.general.string = link
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     return true
                 }, openStats: { [weak self] in
                     guard let self else {
@@ -1199,7 +1199,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 return
                             }
                             self.resolveStickersBotDisposable?.dispose()
-                            self.resolveStickersBotDisposable = (component.context.engine.peers.resolvePeerByName(name: "stickers")
+                            self.resolveStickersBotDisposable = (component.context.engine.peers.resolvePeerByName(name: "stickers", referrer: nil)
                             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                                 guard case let .result(result) = result else {
                                     return .complete()

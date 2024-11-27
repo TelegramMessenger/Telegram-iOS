@@ -13,13 +13,15 @@ public final class ListItemSliderSelectorComponent: Component {
         public let values: [String]
         public let markPositions: Bool
         public let selectedIndex: Int
+        public let minSelectedIndex: Int?
         public let title: String?
         public let selectedIndexUpdated: (Int) -> Void
         
-        public init(values: [String], markPositions: Bool, selectedIndex: Int, title: String?, selectedIndexUpdated: @escaping (Int) -> Void) {
+        public init(values: [String], markPositions: Bool, selectedIndex: Int, minSelectedIndex: Int? = nil, title: String?, selectedIndexUpdated: @escaping (Int) -> Void) {
             self.values = values
             self.markPositions = markPositions
             self.selectedIndex = selectedIndex
+            self.minSelectedIndex = minSelectedIndex
             self.title = title
             self.selectedIndexUpdated = selectedIndexUpdated
         }
@@ -34,6 +36,9 @@ public final class ListItemSliderSelectorComponent: Component {
             if lhs.selectedIndex != rhs.selectedIndex {
                 return false
             }
+            if lhs.minSelectedIndex != rhs.minSelectedIndex {
+                return false
+            }
             if lhs.title != rhs.title {
                 return false
             }
@@ -43,13 +48,15 @@ public final class ListItemSliderSelectorComponent: Component {
     
     public final class Continuous: Equatable {
         public let value: CGFloat
+        public let minValue: CGFloat?
         public let lowerBoundTitle: String
         public let upperBoundTitle: String
         public let title: String
         public let valueUpdated: (CGFloat) -> Void
         
-        public init(value: CGFloat, lowerBoundTitle: String, upperBoundTitle: String, title: String, valueUpdated: @escaping (CGFloat) -> Void) {
+        public init(value: CGFloat, minValue: CGFloat? = nil, lowerBoundTitle: String, upperBoundTitle: String, title: String, valueUpdated: @escaping (CGFloat) -> Void) {
             self.value = value
+            self.minValue = minValue
             self.lowerBoundTitle = lowerBoundTitle
             self.upperBoundTitle = upperBoundTitle
             self.title = title
@@ -58,6 +65,9 @@ public final class ListItemSliderSelectorComponent: Component {
         
         public static func ==(lhs: Continuous, rhs: Continuous) -> Bool {
             if lhs.value != rhs.value {
+                return false
+            }
+            if lhs.minValue != rhs.minValue {
                 return false
             }
             if lhs.lowerBoundTitle != rhs.lowerBoundTitle {
@@ -268,6 +278,7 @@ public final class ListItemSliderSelectorComponent: Component {
                         content: .discrete(SliderComponent.Discrete(
                             valueCount: discrete.values.count,
                             value: discrete.selectedIndex,
+                            minValue: discrete.minSelectedIndex,
                             markPositions: discrete.markPositions,
                             valueUpdated: { [weak self] value in
                                 guard let self, let component = self.component, case let .discrete(discrete) = component.content else {
@@ -277,7 +288,8 @@ public final class ListItemSliderSelectorComponent: Component {
                             })
                         ),
                         trackBackgroundColor: component.theme.list.controlSecondaryColor,
-                        trackForegroundColor: component.theme.list.itemAccentColor
+                        trackForegroundColor: component.theme.list.itemAccentColor,
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -288,6 +300,7 @@ public final class ListItemSliderSelectorComponent: Component {
                     component: AnyComponent(SliderComponent(
                         content: .continuous(SliderComponent.Continuous(
                             value: continuous.value,
+                            minValue: continuous.minValue,
                             valueUpdated: { [weak self] value in
                                 guard let self, let component = self.component, case let .continuous(continuous) = component.content else {
                                     return
@@ -296,7 +309,8 @@ public final class ListItemSliderSelectorComponent: Component {
                             })
                         ),
                         trackBackgroundColor: component.theme.list.controlSecondaryColor,
-                        trackForegroundColor: component.theme.list.itemAccentColor
+                        trackForegroundColor: component.theme.list.itemAccentColor,
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)

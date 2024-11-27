@@ -3188,7 +3188,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let shareController = ShareController(context: context, subject: .url("https://t.me/\(addressName)?profile"))
                     shareController.actionCompleted = { [weak self] in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
                     self.present(shareController, in: .window(.root))
                 })))

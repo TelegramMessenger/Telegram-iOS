@@ -1056,7 +1056,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov")
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov", referrer: nil)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()

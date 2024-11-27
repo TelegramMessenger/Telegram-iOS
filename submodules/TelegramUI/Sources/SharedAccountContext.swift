@@ -2832,12 +2832,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         openWebAppImpl(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, botPeer: botPeer, chatPeer: chatPeer, threadId: threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: skipTermsOfService, payload: payload)
     }
     
-    public func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id) -> Signal<AffiliateProgramSetupScreenInitialData, NoError> {
-        return AffiliateProgramSetupScreen.content(context: context, peerId: peerId)
+    public func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError> {
+        return AffiliateProgramSetupScreen.content(context: context, peerId: peerId, mode: mode)
     }
     
     public func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController {
-        return AffiliateProgramSetupScreen(context: context, initialContent: initialData as! AffiliateProgramSetupScreen.Content)
+        return AffiliateProgramSetupScreen(context: context, initialContent: initialData)
     }
 }
 
