@@ -231,7 +231,7 @@ public final class ThemeGridController: ViewController {
                     }
                 }
                 
-                let controller = MediaPickerScreen(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
+                let controller = MediaPickerScreenImpl(context: strongSelf.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
                 controller.customSelection = { [weak self] _, asset in
                     guard let strongSelf = self, let asset = asset as? PHAsset else {
                         return

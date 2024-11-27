@@ -13,7 +13,7 @@ import MediaEditor
 import ChatEntityKeyboardInputNode
 
 extension ChatControllerImpl {
-    func displayPasteMenu(_ subjects: [MediaPickerScreen.Subject.Media]) {
+    func displayPasteMenu(_ subjects: [MediaPickerScreenImpl.Subject.Media]) {
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
@@ -183,6 +183,7 @@ extension ChatControllerImpl {
             additionalVideoTrimRange: nil,
             additionalVideoOffset: nil,
             additionalVideoVolume: nil,
+            collage: [],
             nightTheme: false,
             drawing: nil,
             maskDrawing: blackImage,
@@ -193,6 +194,7 @@ extension ChatControllerImpl {
             audioTrackOffset: nil,
             audioTrackVolume: nil,
             audioTrackSamples: nil,
+            collageTrackSamples: nil,
             coverImageTimestamp: nil,
             qualityPreset: nil
         )
@@ -206,7 +208,6 @@ extension ChatControllerImpl {
             configuration: configuration,
             outputPath: path
         )
-        videoExport.start()
         
         let _ = (videoExport.status
         |> deliverOnMainQueue).startStandalone(next: { [weak self] status in

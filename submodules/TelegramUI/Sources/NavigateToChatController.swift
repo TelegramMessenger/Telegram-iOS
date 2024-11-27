@@ -15,7 +15,6 @@ import AttachmentUI
 import ForumCreateTopicScreen
 import LegacyInstantVideoController
 import StoryContainerScreen
-import CameraScreen
 import MediaEditorScreen
 import ChatControllerInteraction
 import SavedMessagesScreen

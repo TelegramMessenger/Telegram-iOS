@@ -1483,7 +1483,7 @@ final class StoryItemSetContainerSendMessage {
                     return
                 }
                 
-                let currentMediaController = Atomic<MediaPickerScreen?>(value: nil)
+                let currentMediaController = Atomic<MediaPickerScreenImpl?>(value: nil)
                 let currentFilesController = Atomic<AttachmentFileController?>(value: nil)
                 let currentLocationController = Atomic<LocationPickerController?>(value: nil)
                 
@@ -1869,11 +1869,11 @@ final class StoryItemSetContainerSendMessage {
         peer: EnginePeer,
         replyToMessageId: EngineMessage.Id?,
         replyToStoryId: StoryId?,
-        subject: MediaPickerScreen.Subject = .assets(nil, .default),
+        subject: MediaPickerScreenImpl.Subject = .assets(nil, .default),
         saveEditedPhotos: Bool,
         bannedSendPhotos: (Int32, Bool)?,
         bannedSendVideos: (Int32, Bool)?,
-        present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void,
+        present: @escaping (MediaPickerScreenImpl, AttachmentMediaPickerContext?) -> Void,
         updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void,
         completion: @escaping ([Any], Bool, Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void
     ) {
@@ -1881,7 +1881,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let theme = component.theme
-        let controller = MediaPickerScreen(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peer: peer, threadTitle: nil, chatLocation: .peer(id: peer.id), bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
+        let controller = MediaPickerScreenImpl(context: component.context, updatedPresentationData: (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) }), peer: peer, threadTitle: nil, chatLocation: .peer(id: peer.id), bannedSendPhotos: bannedSendPhotos, bannedSendVideos: bannedSendVideos, subject: subject, saveEditedPhotos: saveEditedPhotos)
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self, weak view] cameraView in
             guard let self, let view else {
@@ -2195,7 +2195,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    func presentMediaPasteboard(view: StoryItemSetContainerComponent.View, subjects: [MediaPickerScreen.Subject.Media]) {
+    func presentMediaPasteboard(view: StoryItemSetContainerComponent.View, subjects: [MediaPickerScreenImpl.Subject.Media]) {
         guard let component = view.component else {
             return
         }
@@ -2315,7 +2315,7 @@ final class StoryItemSetContainerSendMessage {
         })
     }
     
-    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer, mediaPicker: MediaPickerScreen? = nil) -> TGCaptionPanelView? {
+    private func getCaptionPanelView(view: StoryItemSetContainerComponent.View, peer: EnginePeer, mediaPicker: MediaPickerScreenImpl? = nil) -> TGCaptionPanelView? {
         guard let component = view.component else {
             return nil
         }

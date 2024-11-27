@@ -504,6 +504,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public var focusUpdated: ((Bool) -> Void)?
     public var heightUpdated: ((Bool) -> Void)?
     public var timerUpdated: ((NSNumber?) -> Void)?
+    public var captionIsAboveUpdated: ((Bool) -> Void)?
     
     public func updateLayoutSize(_ size: CGSize, keyboardHeight: CGFloat, sideInset: CGFloat, animated: Bool) -> CGFloat {
         guard let presentationInterfaceState = self.presentationInterfaceState else {
@@ -518,7 +519,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
     }
     
-    public func setTimeout(_ timeout: Int32, isVideo: Bool) {
+    public func setTimeout(_ timeout: Int32, isVideo: Bool, isCaptionAbove: Bool) {
     }
     
     public func animate(_ view: UIView, frame: CGRect) {

@@ -51,6 +51,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/AnimatedCountLabelNode",
+        "//submodules/TelegramUI/Components/MediaAssetsContext",
     ],
     visibility = [
         "//visibility:public",

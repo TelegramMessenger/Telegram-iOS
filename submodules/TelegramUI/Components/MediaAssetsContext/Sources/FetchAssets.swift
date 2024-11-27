@@ -12,7 +12,7 @@ private let imageManager: PHCachingImageManager = {
 
 private let assetsQueue = Queue()
 
-final class AssetDownloadManager {
+public final class AssetDownloadManager {
     private final class DownloadingAssetContext {
         let identifier: String
         let updated: () -> Void
@@ -33,13 +33,13 @@ final class AssetDownloadManager {
     private let queue = Queue()
     private var currentAssetContext: DownloadingAssetContext?
     
-    init() {
+    public init() {
     }
     
     deinit {
     }
     
-    func download(asset: PHAsset) {
+    public func download(asset: PHAsset) {
         self.cancelAllDownloads()
         
         let queue = self.queue
@@ -70,7 +70,7 @@ final class AssetDownloadManager {
         })
     }
     
-    func cancelAllDownloads() {
+    public func cancelAllDownloads() {
         if let currentAssetContext = self.currentAssetContext {
             currentAssetContext.status = .none
             currentAssetContext.updated()
@@ -83,7 +83,7 @@ final class AssetDownloadManager {
         }
     }
     
-    func cancel(identifier: String) {
+    public func cancel(identifier: String) {
         if let currentAssetContext = self.currentAssetContext, currentAssetContext.identifier == identifier {
             currentAssetContext.status = .none
             currentAssetContext.updated()
@@ -129,7 +129,7 @@ final class AssetDownloadManager {
         }
     }
     
-    func downloadProgress(identifier: String) -> Signal<AssetDownloadStatus, NoError> {
+    public func downloadProgress(identifier: String) -> Signal<AssetDownloadStatus, NoError> {
         return Signal { [weak self] subscriber in
             if let self {
                 return self.downloadProgress(identifier: identifier, next: { status in
@@ -145,7 +145,7 @@ final class AssetDownloadManager {
     }
 }
 
-func checkIfAssetIsLocal(_ asset: PHAsset) -> Signal<Bool, NoError> {
+public func checkIfAssetIsLocal(_ asset: PHAsset) -> Signal<Bool, NoError> {
     if asset.isLocallyAvailable == true {
         return .single(true)
     }
@@ -181,7 +181,7 @@ func checkIfAssetIsLocal(_ asset: PHAsset) -> Signal<Bool, NoError> {
     }
 }
 
-enum AssetDownloadStatus {
+public enum AssetDownloadStatus {
     case none
     case progress(Float)
     case completed
@@ -242,13 +242,13 @@ private func downloadAssetMediaData(_ asset: PHAsset) -> Signal<AssetDownloadSta
     }
 }
 
-func assetImage(fetchResult: PHFetchResult<PHAsset>, index: Int, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
+public func assetImage(fetchResult: PHFetchResult<PHAsset>, index: Int, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
     let asset = fetchResult[index]
     return assetImage(asset: asset, targetSize: targetSize, exact: exact, deliveryMode: deliveryMode, synchronous: synchronous)
 }
 
-func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
-    return Signal { subscriber in        
+public func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: PHImageRequestOptionsDeliveryMode = .opportunistic, synchronous: Bool = false) -> Signal<UIImage?, NoError> {
+    return Signal { subscriber in
         let options = PHImageRequestOptions()
         options.deliveryMode = deliveryMode
         if exact {
@@ -282,7 +282,7 @@ func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool, deliveryMode: P
     }
 }
 
-func assetVideo(fetchResult: PHFetchResult<PHAsset>, index: Int) -> Signal<AVAsset?, NoError> {
+public func assetVideo(fetchResult: PHFetchResult<PHAsset>, index: Int) -> Signal<AVAsset?, NoError> {
     return Signal { subscriber in
         let asset = fetchResult[index]
         

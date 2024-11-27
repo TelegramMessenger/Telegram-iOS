@@ -16,6 +16,7 @@ import ChatMessageBackground
 import ChatSendMessageActionUI
 import ComponentFlow
 import ComponentDisplayAdapters
+import MediaAssetsContext
 
 private class MediaPickerSelectedItemNode: ASDisplayNode {
     let asset: TGMediaEditableItem

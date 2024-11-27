@@ -18,6 +18,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/TelegramUI/Components/AudioWaveformComponent",
+        "//submodules/UIKitRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

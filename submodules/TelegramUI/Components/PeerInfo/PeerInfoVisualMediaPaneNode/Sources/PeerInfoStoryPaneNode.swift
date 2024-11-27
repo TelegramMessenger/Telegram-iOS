@@ -2543,15 +2543,15 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                             }
                         }
                         
-                        guard let controller = MediaEditorScreen.makeEditStoryController(
+                        guard let controller = MediaEditorScreenImpl.makeEditStoryController(
                             context: self.context,
                             peer: peer,
                             storyItem: item,
                             videoPlaybackPosition: nil,
                             cover: false,
                             repost: false,
-                            transitionIn: .gallery(MediaEditorScreen.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
-                            transitionOut: MediaEditorScreen.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),
+                            transitionIn: .gallery(MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(sourceView: self.itemGrid.view, sourceRect: foundItemLayer?.frame ?? .zero, sourceImage: sourceImage)),
+                            transitionOut: MediaEditorScreenImpl.TransitionOut(destinationView: self.itemGrid.view, destinationRect: foundItemLayer?.frame ?? .zero, destinationCornerRadius: 0.0),
                             update: { [weak self] disposable in
                                 guard let self else {
                                     return

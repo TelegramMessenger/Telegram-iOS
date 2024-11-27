@@ -41,7 +41,6 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerAllowedReactionsScreen",
         "//submodules/TelegramUI/Components/EmojiActionIconComponent",
         "//submodules/TelegramUI/Components/TextFieldComponent",
-        "//submodules/TelegramUI/Components/CameraScreen",
     ],
     visibility = [
         "//visibility:public",

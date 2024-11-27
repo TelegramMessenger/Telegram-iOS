@@ -617,7 +617,7 @@ final class ChannelAppearanceScreenComponent: Component {
             let level = boostStatus.level
             let requiredCustomWallpaperLevel = Int(BoostSubject.customWallpaper.requiredLevel(group: self.isGroup, context: component.context, configuration: premiumConfiguration))
             
-            let controller = MediaPickerScreen(context: component.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
+            let controller = MediaPickerScreenImpl(context: component.context, peer: nil, threadTitle: nil, chatLocation: nil, bannedSendPhotos: nil, bannedSendVideos: nil, subject: .assets(nil, .wallpaper))
             controller.customSelection = { [weak self] _, asset in
                 guard let self, let asset = asset as? PHAsset else {
                     return

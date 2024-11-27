@@ -230,20 +230,11 @@ final class ShutterBlobView: UIView {
     }
     
     public init?(test: Bool) {
-        let mainBundle = Bundle(for: ShutterBlobView.self)
-        
-        guard let path = mainBundle.path(forResource: "CameraScreenBundle", ofType: "bundle") else {
-            return nil
-        }
-        guard let bundle = Bundle(path: path) else {
-            return nil
-        }
-        
         guard let device = MTLCreateSystemDefaultDevice() else {
             return nil
         }
 
-        guard let defaultLibrary = try? device.makeDefaultLibrary(bundle: bundle) else {
+        guard let library = metalLibrary(device: device) else {
             return nil
         }
 
@@ -252,11 +243,11 @@ final class ShutterBlobView: UIView {
         }
         self.commandQueue = commandQueue
 
-        guard let loadedVertexProgram = defaultLibrary.makeFunction(name: "cameraBlobVertex") else {
+        guard let loadedVertexProgram = library.makeFunction(name: "cameraBlobVertex") else {
             return nil
         }
 
-        guard let loadedFragmentProgram = defaultLibrary.makeFunction(name: "cameraBlobFragment") else {
+        guard let loadedFragmentProgram = library.makeFunction(name: "cameraBlobFragment") else {
             return nil
         }
                 
