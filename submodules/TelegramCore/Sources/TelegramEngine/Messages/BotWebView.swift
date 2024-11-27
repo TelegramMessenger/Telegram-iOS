@@ -631,7 +631,8 @@ func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program
     }
 }
 
-public final class TelegramConnectedStarRefBotList {
+public final class TelegramConnectedStarRefBotList : Equatable {
+    
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let url: String
@@ -683,6 +684,10 @@ public final class TelegramConnectedStarRefBotList {
     public init(items: [Item], totalCount: Int) {
         self.items = items
         self.totalCount = totalCount
+    }
+    
+    public static func == (lhs: TelegramConnectedStarRefBotList, rhs: TelegramConnectedStarRefBotList) -> Bool {
+        return lhs.items == rhs.items && lhs.totalCount == rhs.totalCount
     }
 }
 
@@ -744,7 +749,8 @@ func  _internal_requestConnectedStarRefBots(account: Account, id: EnginePeer.Id,
     }
 }
 
-public final class TelegramSuggestedStarRefBotList {
+public final class TelegramSuggestedStarRefBotList : Equatable {
+    
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let commissionPermille: Int32
@@ -778,6 +784,10 @@ public final class TelegramSuggestedStarRefBotList {
         self.items = items
         self.totalCount = totalCount
         self.nextOffset = nextOffset
+    }
+    
+    public static func == (lhs: TelegramSuggestedStarRefBotList, rhs: TelegramSuggestedStarRefBotList) -> Bool {
+        return lhs.items == rhs.items && lhs.totalCount == rhs.totalCount && lhs.nextOffset == rhs.nextOffset
     }
 }
 
