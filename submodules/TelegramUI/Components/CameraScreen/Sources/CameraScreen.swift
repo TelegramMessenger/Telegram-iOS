@@ -34,6 +34,7 @@ let collageGrids: [Camera.CollageGrid] = [
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 1), Camera.CollageGrid.Row(columns: 2)]),
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 1), Camera.CollageGrid.Row(columns: 1), Camera.CollageGrid.Row(columns: 1)]),
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 3)]),
+    Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 2)]),
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 1), Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 2)]),
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 1)]),
     Camera.CollageGrid(rows: [Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 2), Camera.CollageGrid.Row(columns: 2)])
@@ -1848,7 +1849,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 duration: 0.0,
                 isDualCameraEnabled: isDualCameraEnabled,
                 isCollageEnabled: false,
-                collageGrid: collageGrids[3],
+                collageGrid: collageGrids[6],
                 collageProgress: 0.0
             )
                         
