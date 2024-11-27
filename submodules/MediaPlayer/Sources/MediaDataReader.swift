@@ -2,28 +2,34 @@ import Foundation
 import AVFoundation
 import CoreMedia
 import FFMpegBinding
+import VideoToolbox
 
-protocol MediaDataReader: AnyObject {
+private let isHardwareAv1Supported: Bool = {
+    let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
+    return value
+}()
+
+public protocol MediaDataReader: AnyObject {
     var hasVideo: Bool { get }
     var hasAudio: Bool { get }
         
     func readSampleBuffer() -> CMSampleBuffer?
 }
 
-final class FFMpegMediaDataReader: MediaDataReader {
+public final class FFMpegMediaDataReader: MediaDataReader {
     private let isVideo: Bool
     private let videoSource: SoftwareVideoReader?
     private let audioSource: SoftwareAudioSource?
     
-    var hasVideo: Bool {
+    public var hasVideo: Bool {
         return self.videoSource != nil
     }
     
-    var hasAudio: Bool {
+    public var hasAudio: Bool {
         return self.audioSource != nil
     }
     
-    init(filePath: String, isVideo: Bool, codecName: String?) {
+    public init(filePath: String, isVideo: Bool, codecName: String?) {
         self.isVideo = isVideo
         
         if self.isVideo {
@@ -49,7 +55,7 @@ final class FFMpegMediaDataReader: MediaDataReader {
         }
     }
     
-    func readSampleBuffer() -> CMSampleBuffer? {
+    public func readSampleBuffer() -> CMSampleBuffer? {
         if let videoSource {
             let frame = videoSource.readFrame()
             if let frame {
@@ -65,21 +71,21 @@ final class FFMpegMediaDataReader: MediaDataReader {
     }
 }
 
-final class AVAssetVideoDataReader: MediaDataReader {
+public final class AVAssetVideoDataReader: MediaDataReader {
     private let isVideo: Bool
     private var mediaInfo: FFMpegMediaInfo.Info?
     private var assetReader: AVAssetReader?
     private var assetOutput: AVAssetReaderOutput?
     
-    var hasVideo: Bool {
+    public var hasVideo: Bool {
         return self.assetOutput != nil
     }
     
-    var hasAudio: Bool {
+    public var hasAudio: Bool {
         return false
     }
     
-    init(filePath: String, isVideo: Bool) {
+    public init(filePath: String, isVideo: Bool) {
         self.isVideo = isVideo
         
         if self.isVideo {
@@ -104,7 +110,7 @@ final class AVAssetVideoDataReader: MediaDataReader {
         }
     }
     
-    func readSampleBuffer() -> CMSampleBuffer? {
+    public func readSampleBuffer() -> CMSampleBuffer? {
         guard let mediaInfo = self.mediaInfo, let assetReader = self.assetReader, let assetOutput = self.assetOutput else {
             return nil
         }
