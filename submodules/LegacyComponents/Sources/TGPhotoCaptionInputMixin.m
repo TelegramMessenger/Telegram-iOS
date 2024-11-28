@@ -181,17 +181,21 @@
 
 #pragma mark - 
 
-- (void)handleDismissTap:(UITapGestureRecognizer *)gestureRecognizer
-{
-    if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
-        return;
-    
+- (void)finishEditing {
     if ([self.inputPanel dismissInput]) {
         _editing = false;
                 
         if (self.finishedWithCaption != nil)
             self.finishedWithCaption([_inputPanel caption]);
     }
+}
+
+- (void)handleDismissTap:(UITapGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
+        return;
+    
+    [self finishEditing];
 }
 
 #pragma mark - Input Panel Delegate

@@ -5276,7 +5276,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         transitionCompletion()
                     }, getCaptionPanelView: {
                         return nil
-                    }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                    }, sendMessagesWithSignals: { [weak self] signals, _, _, _ in
                         if let strongSelf = self {
                             strongSelf.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: strongSelf.context, account: strongSelf.context.account, signals: signals!)
                             |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
