@@ -9,6 +9,7 @@ import AvatarNode
 import TelegramCore
 import AccountContext
 import TextNodeWithEntities
+import ListItemComponentAdaptor
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
@@ -46,7 +47,7 @@ public enum ItemListDisclosureItemDetailLabelColor {
     case destructive
 }
 
-public class ItemListDisclosureItem: ListViewItem, ItemListItem {
+public class ItemListDisclosureItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     let presentationData: ItemListPresentationData
     let icon: UIImage?
     let context: AccountContext?
@@ -56,6 +57,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     let titleColor: ItemListDisclosureItemTitleColor
     let titleFont: ItemListDisclosureItemTitleFont
     let titleIcon: UIImage?
+    let titleBadge: String?
     let enabled: Bool
     let label: String
     let attributedLabel: NSAttributedString?
@@ -71,7 +73,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
     public let tag: ItemListItemTag?
     public let shimmeringIndex: Int?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, attributedTitle: NSAttributedString? = nil, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, label: String, attributedLabel: NSAttributedString? = nil, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, noInsets: Bool = false, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, context: AccountContext? = nil, iconPeer: EnginePeer? = nil, title: String, attributedTitle: NSAttributedString? = nil, enabled: Bool = true, titleColor: ItemListDisclosureItemTitleColor = .primary, titleFont: ItemListDisclosureItemTitleFont = .regular, titleIcon: UIImage? = nil, titleBadge: String? = nil, label: String, attributedLabel: NSAttributedString? = nil, labelStyle: ItemListDisclosureLabelStyle = .text, additionalDetailLabel: String? = nil, additionalDetailLabelColor: ItemListDisclosureItemDetailLabelColor = .generic, sectionId: ItemListSectionId, style: ItemListStyle, disclosureStyle: ItemListDisclosureStyle = .arrow, noInsets: Bool = false, action: (() -> Void)?, clearHighlightAutomatically: Bool = true, tag: ItemListItemTag? = nil, shimmeringIndex: Int? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
@@ -81,6 +83,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
         self.titleColor = titleColor
         self.titleFont = titleFont
         self.titleIcon = titleIcon
+        self.titleBadge = titleBadge
         self.enabled = enabled
         self.labelStyle = labelStyle
         self.label = label
@@ -140,6 +143,27 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
             self.action?()
         }
     }
+    
+    public func item() -> ListViewItem {
+        return self
+    }
+    
+    public static func ==(lhs: ItemListDisclosureItem, rhs: ItemListDisclosureItem) -> Bool {
+        if lhs.presentationData != rhs.presentationData {
+            return false
+        }
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.label != rhs.label {
+            return false
+        }
+        
+        return true
+    }
 }
 
 private let badgeFont = Font.regular(15.0)
@@ -161,6 +185,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     let arrowNode: ASImageNode
     let labelBadgeNode: ASImageNode
     let labelImageNode: ASImageNode
+    
+    var titleBadgeNode: ASImageNode?
+    var titleBadgeTextNode: TextNode?
     
     private let activateArea: AccessibilityAreaNode
     
@@ -259,6 +286,8 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         let makeTitleWithEntitiesLayout = TextNodeWithEntities.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeAdditionalDetailLabelLayout = TextNode.asyncLayout(self.additionalDetailLabelNode)
+        
+        let makeTitleBadgeTextNodeLayout = TextNode.asyncLayout(self.titleBadgeTextNode)
         
         let currentItem = self.item
         
@@ -372,6 +401,13 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             var maxTitleWidth: CGFloat = params.width - params.rightInset - 20.0 - leftInset - additionalTextRightInset
             if item.iconPeer != nil {
                 maxTitleWidth -= 12.0
+            }
+            
+            var titleBadgeTextNodeLayout: (TextNodeLayout, () -> TextNode)?
+            if let titleBadge = item.titleBadge {
+                let titleBadgeTextNodeLayoutValue = makeTitleBadgeTextNodeLayout(TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: titleBadge, font: Font.medium(11.0), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                titleBadgeTextNodeLayout = titleBadgeTextNodeLayoutValue
+                maxTitleWidth -= 5.0 + titleBadgeTextNodeLayoutValue.0.size.width
             }
             
             let titleArguments = TextNodeLayoutArguments(attributedString: item.attributedTitle ?? NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: item.attributedTitle != nil ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets())
@@ -678,6 +714,41 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     } else if let additionalDetailLabelNode = strongSelf.additionalDetailLabelNode {
                         strongSelf.additionalDetailLabelNode = nil
                         additionalDetailLabelNode.removeFromSupernode()
+                    }
+                    
+                    if let (badgeTextLayout, badgeTextApply) = titleBadgeTextNodeLayout {
+                        let titleBadgeNode: ASImageNode
+                        if let current = strongSelf.titleBadgeNode {
+                            titleBadgeNode = current
+                        } else {
+                            titleBadgeNode = ASImageNode()
+                            strongSelf.titleBadgeNode = titleBadgeNode
+                            strongSelf.addSubnode(titleBadgeNode)
+                            
+                            titleBadgeNode.image = generateFilledRoundedRectImage(size: CGSize(width: 16.0, height: 16.0), cornerRadius: 5.0, color: item.presentationData.theme.list.itemCheckColors.fillColor)?.stretchableImage(withLeftCapWidth: 6, topCapHeight: 6)
+                        }
+                        
+                        let titleBadgeTextNode = badgeTextApply()
+                        if titleBadgeTextNode.supernode == nil {
+                            strongSelf.addSubnode(titleBadgeTextNode)
+                        }
+                        let badgeSideInset: CGFloat = 5.0
+                        let badgeVerticalInset: CGFloat = 2.0
+                        let badgeSize = CGSize(width: badgeTextLayout.size.width + badgeSideInset * 2.0, height: badgeTextLayout.size.height + badgeVerticalInset * 2.0)
+                        let titleBadgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 5.0, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - badgeSize.height) * 0.5)), size: badgeSize)
+                        let titleBadgeTextFrame = CGRect(origin: CGPoint(x: titleBadgeFrame.minX + badgeSideInset, y: titleBadgeFrame.minY + badgeVerticalInset), size: badgeTextLayout.size)
+                        
+                        titleBadgeNode.frame = titleBadgeFrame
+                        titleBadgeTextNode.frame = titleBadgeTextFrame
+                    } else {
+                        if let titleBadgeTextNode = strongSelf.titleBadgeTextNode {
+                            strongSelf.titleBadgeTextNode = nil
+                            titleBadgeTextNode.removeFromSupernode()
+                        }
+                        if let titleBadgeNode = strongSelf.titleBadgeNode {
+                            strongSelf.titleBadgeNode = nil
+                            titleBadgeNode.removeFromSupernode()
+                        }
                     }
                     
                     if let titleIcon = item.titleIcon {

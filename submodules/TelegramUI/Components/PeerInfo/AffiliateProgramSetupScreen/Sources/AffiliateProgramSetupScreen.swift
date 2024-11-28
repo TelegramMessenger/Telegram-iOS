@@ -182,7 +182,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
             self.environment?.controller()?.present(tableAlert(
                 theme: presentationData.theme,
                 title: "Warning",
-                text: "This change is irreversible. You won't be able to reduce commission or duration. You can only increase these parameters or end the program, which will disable all previously shared referral links.",
+                text: "Once you start the affiliate program, you won't be able to decrease its commission or duration. You can only increase these parameters or end the program, whuch will disable all previously distributed referral links.",
                 table: TableComponent(theme: environment.theme, items: [
                     TableComponent.Item(id: 0, title: "Commission", component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: commissionTitle, font: Font.regular(17.0), textColor: environment.theme.actionSheet.primaryTextColor))
@@ -362,7 +362,7 @@ If you end your affiliate program:
                     sourcePeer: bot.peer,
                     commissionPermille: bot.commissionPermille,
                     programDuration: bot.durationMonths,
-                    mode: .active(JoinAffiliateProgramScreen.Active(
+                    mode: .active(JoinAffiliateProgramScreenMode.Active(
                         targetPeer: targetPeer,
                         link: bot.url,
                         userCount: Int(bot.participants),
@@ -452,7 +452,7 @@ If you end your affiliate program:
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, actionsOnTop: false)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -1403,7 +1403,7 @@ If you end your affiliate program:
                                             sourcePeer: botPeer,
                                             commissionPermille: item.commissionPermille,
                                             programDuration: item.durationMonths,
-                                            mode: .join(JoinAffiliateProgramScreen.Join(
+                                            mode: .join(JoinAffiliateProgramScreenMode.Join(
                                                 initialTargetPeer: targetPeer,
                                                 canSelectTargetPeer: false,
                                                 completion: { [weak self] _ in
@@ -1646,16 +1646,18 @@ private final class ListContextExtractedContentSource: ContextExtractedContentSo
     }
 }
 
-private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceView: UIView
+    private let actionsOnTop: Bool
 
-    init(controller: ViewController, sourceView: UIView) {
+    init(controller: ViewController, sourceView: UIView, actionsOnTop: Bool) {
         self.controller = controller
         self.sourceView = sourceView
+        self.actionsOnTop = actionsOnTop
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, actionsPosition: self.actionsOnTop ? .top : .bottom)
     }
 }

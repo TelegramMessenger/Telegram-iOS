@@ -907,8 +907,6 @@ func _internal_connectStarRefBot(account: Account, id: EnginePeer.Id, botId: Eng
     }
 }
 
-//payments.editConnectedStarRefBot flags:# revoked:flags.0?true peer:InputPeer link:string = payments.ConnectedStarRefBots;
-
 func _internal_removeConnectedStarRefBot(account: Account, id: EnginePeer.Id, link: String) -> Signal<Never, ConnectStarRefBotError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(id).flatMap(apiInputPeer)
@@ -954,6 +952,61 @@ func _internal_removeConnectedStarRefBot(account: Account, id: EnginePeer.Id, li
             }
             |> castError(ConnectStarRefBotError.self)
             |> ignoreValues
+        }
+    }
+}
+
+func _internal_getStarRefBotConnection(account: Account, id: EnginePeer.Id, targetId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser?, Api.InputPeer?) in
+        return (
+            transaction.getPeer(id).flatMap(apiInputUser),
+            transaction.getPeer(targetId).flatMap(apiInputPeer)
+        )
+    }
+    |> mapToSignal { inputPeer, targetPeer -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> in
+        guard let inputPeer, let targetPeer else {
+            return .single(nil)
+        }
+        return account.network.request(Api.functions.payments.getConnectedStarRefBot(peer: targetPeer, bot: inputPeer))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.payments.ConnectedStarRefBots?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
+            return account.postbox.transaction { transaction -> TelegramConnectedStarRefBotList.Item? in
+                switch result {
+                case let .connectedStarRefBots(_, connectedBots, users):
+                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: users))
+                    
+                    if let bot = connectedBots.first {
+                        switch bot {
+                        case let .connectedBotStarRef(flags, url, date, botId, commissionPermille, durationMonths, participants, revenue):
+                            let isRevoked = (flags & (1 << 1)) != 0
+                            if isRevoked {
+                               return nil
+                            }
+                            
+                            guard let botPeer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))) else {
+                                return nil
+                            }
+                            return TelegramConnectedStarRefBotList.Item(
+                                peer: EnginePeer(botPeer),
+                                url: url,
+                                timestamp: date,
+                                commissionPermille: commissionPermille,
+                                durationMonths: durationMonths,
+                                participants: participants,
+                                revenue: revenue
+                            )
+                        }
+                    } else {
+                        return nil
+                    }
+                }
+            }
         }
     }
 }

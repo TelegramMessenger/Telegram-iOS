@@ -56,9 +56,10 @@ private final class ChannelStatsControllerArguments {
     let expandTransactions: (Bool) -> Void
     let updateCpmEnabled: (Bool) -> Void
     let presentCpmLocked: () -> Void
+    let openEarnStars: () -> Void
     let dismissInput: () -> Void
     
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping (Bool) -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void, updateStarsSelected: @escaping (Bool) -> Void, requestTonWithdraw: @escaping () -> Void, requestStarsWithdraw: @escaping () -> Void, showTimeoutTooltip: @escaping (Int32) -> Void, buyAds: @escaping () -> Void, openMonetizationIntro: @escaping () -> Void, openMonetizationInfo: @escaping () -> Void, openTonTransaction: @escaping (RevenueStatsTransactionsContext.State.Transaction) -> Void, openStarsTransaction: @escaping (StarsContext.State.Transaction) -> Void, expandTransactions: @escaping (Bool) -> Void, updateCpmEnabled: @escaping (Bool) -> Void, presentCpmLocked: @escaping () -> Void, openEarnStars: @escaping () -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
@@ -83,6 +84,7 @@ private final class ChannelStatsControllerArguments {
         self.expandTransactions = expandTransactions
         self.updateCpmEnabled = updateCpmEnabled
         self.presentCpmLocked = presentCpmLocked
+        self.openEarnStars = openEarnStars
         self.dismissInput = dismissInput
     }
 }
@@ -119,6 +121,8 @@ private enum StatsSection: Int32 {
     case adsStarsBalance
     case adsTransactions
     case adsCpm
+    
+    case earnStars
 }
 
 enum StatsPostItem: Equatable {
@@ -249,6 +253,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case adsStarsBalance(PresentationTheme, StarsRevenueStats, Bool, Bool, Int32?)
     case adsStarsBalanceInfo(PresentationTheme, String)
     
+    case earnStarsInfo
     case adsTransactionsTitle(PresentationTheme, String)
     case adsTransactionsTabs(PresentationTheme, String, String, Bool)
     case adsTransaction(Int32, PresentationTheme, RevenueStatsTransactionsContext.State.Transaction)
@@ -314,6 +319,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.adsTonBalance.rawValue
             case .adsStarsBalanceTitle, .adsStarsBalance, .adsStarsBalanceInfo:
                 return StatsSection.adsStarsBalance.rawValue
+            case .earnStarsInfo:
+                return StatsSection.earnStars.rawValue
             case .adsTransactionsTitle, .adsTransactionsTabs, .adsTransaction, .adsStarsTransaction, .adsTransactionsExpand:
                 return StatsSection.adsTransactions.rawValue
             case .adsCpmToggle, .adsCpmInfo:
@@ -445,14 +452,16 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 20014
             case .adsStarsBalanceInfo:
                 return 20015
-            case .adsTransactionsTitle:
+            case .earnStarsInfo:
                 return 20016
-            case .adsTransactionsTabs:
+            case .adsTransactionsTitle:
                 return 20017
+            case .adsTransactionsTabs:
+                return 20018
             case let .adsTransaction(index, _, _):
-                return 20018 + index
+                return 20019 + index
             case let .adsStarsTransaction(index, _, _):
-                return 30017 + index
+                return 30018 + index
             case .adsTransactionsExpand:
                 return 40000
             case .adsCpmToggle:
@@ -830,6 +839,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+        case .earnStarsInfo:
+                if case .earnStarsInfo = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .adsTransactionsTitle(lhsTheme, lhsText):
                 if case let .adsTransactionsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -1202,6 +1217,11 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 }, activatedWhileDisabled: {
                     arguments.presentCpmLocked()
+                })
+            case .earnStarsInfo:
+                //TODO:localize
+                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.earnStars, title: "Earn Stars", titleBadge: presentationData.strings.Settings_New, label: "Distribute links to mini apps and earn a share of their revenue in Stars.", labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, action: {
+                    arguments.openEarnStars()
                 })
         }
     }
@@ -1680,6 +1700,9 @@ private func monetizationEntries(
     
     if displayStarsTransactions {
         if !addedTransactionsTabs {
+            //TODO:localize
+            entries.append(.earnStarsInfo)
+            
             entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_StarsTransactions.uppercased()))
         }
         
@@ -2069,6 +2092,12 @@ public func channelStatsController(
             
             let controller = context.sharedContext.makePremiumBoostLevelsController(context: context, peerId: peerId, subject: .noAds, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: nil)
             pushImpl?(controller)
+        })
+    },
+    openEarnStars: {
+        let _ = (context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: context, peerId: peerId, mode: .connectedPrograms)
+        |> deliverOnMainQueue).startStandalone(next: { initialData in
+            pushImpl?(context.sharedContext.makeAffiliateProgramSetupScreen(context: context, initialData: initialData))
         })
     },
     dismissInput: {

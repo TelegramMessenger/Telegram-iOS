@@ -21,6 +21,8 @@ import UndoUI
 import ListActionItemComponent
 import StarsAvatarComponent
 import TelegramStringFormatting
+import ListItemComponentAdaptor
+import ItemListUI
 
 private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
@@ -102,6 +104,7 @@ final class StarsTransactionsScreenComponent: Component {
         private let descriptionView = ComponentView<Empty>()
         
         private let balanceView = ComponentView<Empty>()
+        private let earnStarsSection = ComponentView<Empty>()
         
         private let subscriptionsView = ComponentView<Empty>()
         
@@ -657,6 +660,47 @@ final class StarsTransactionsScreenComponent: Component {
                 starTransition.setFrame(view: balanceView, frame: balanceFrame)
             }
             contentHeight += balanceSize.height
+            contentHeight += 34.0
+            
+            let earnStarsSectionSize = self.earnStarsSection.update(
+                transition: .immediate,
+                component: AnyComponent(ListSectionComponent(
+                    theme: environment.theme,
+                    header: nil,
+                    footer: nil,
+                    items: [
+                        //TODO:localize
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
+                            itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesSettings.earnStars, title: "Earn Stars", titleBadge: presentationData.strings.Settings_New, label: "Distribute links to mini apps and earn a share of their revenue in Stars.", labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
+                            }),
+                            params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
+                            action: { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                let _ = (component.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: component.context, peerId: component.context.account.peerId, mode: .connectedPrograms)
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    let setupScreen = component.context.sharedContext.makeAffiliateProgramSetupScreen(context: component.context, initialData: initialData)
+                                    self.controller?()?.push(setupScreen)
+                                })
+                            }
+                        )))
+                    ]
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInsets, height: availableSize.height)
+            )
+            let earnStarsSectionFrame = CGRect(origin: CGPoint(x: sideInsets * 0.5, y: contentHeight), size: earnStarsSectionSize)
+            if let earnStarsSectionView = self.earnStarsSection.view {
+                if earnStarsSectionView.superview == nil {
+                    self.scrollView.addSubview(earnStarsSectionView)
+                }
+                starTransition.setFrame(view: earnStarsSectionView, frame: earnStarsSectionFrame)
+            }
+            contentHeight += earnStarsSectionSize.height
             contentHeight += 44.0
             
             let fontBaseDisplaySize = 17.0

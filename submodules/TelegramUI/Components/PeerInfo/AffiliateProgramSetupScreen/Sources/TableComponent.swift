@@ -224,22 +224,110 @@ final class TableComponent: CombinedComponent {
     }
 }
 
+private final class TableAlertContentComponet: CombinedComponent {
+    let theme: PresentationTheme
+    let title: String
+    let text: String
+    let table: TableComponent
+    
+    init(theme: PresentationTheme, title: String, text: String, table: TableComponent) {
+        self.theme = theme
+        self.title = title
+        self.text = text
+        self.table = table
+    }
+    
+    static func ==(lhs: TableAlertContentComponet, rhs: TableAlertContentComponet) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.table != rhs.table {
+            return false
+        }
+        return true
+    }
+    
+    public static var body: Body {
+        let title = Child(MultilineTextComponent.self)
+        let text = Child(MultilineTextComponent.self)
+        let table = Child(TableComponent.self)
+        
+        return { context in
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.title, font: Font.semibold(16.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                    horizontalAlignment: .center
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.text, font: Font.regular(13.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            let table = table.update(
+                component: context.component.table,
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            
+            var size = CGSize(width: 0.0, height: 0.0)
+            
+            size.width = max(size.width, title.size.width)
+            size.width = max(size.width, text.size.width)
+            size.width = max(size.width, table.size.width)
+            
+            size.height += title.size.height
+            size.height += 5.0
+            size.height += text.size.height
+            size.height += 14.0
+            size.height += table.size.height
+            size.height -= 3.0
+            
+            var contentHeight: CGFloat = 0.0
+            let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - title.size.width) * 0.5), y: contentHeight), size: title.size)
+            contentHeight += title.size.height + 5.0
+            let textFrame = CGRect(origin: CGPoint(x: floor((size.width - text.size.width) * 0.5), y: contentHeight), size: text.size)
+            contentHeight += text.size.height + 14.0
+            let tableFrame = CGRect(origin: CGPoint(x: floor((size.width - table.size.width) * 0.5), y: contentHeight), size: table.size)
+            contentHeight += table.size.height
+            
+            context.add(title
+                .position(titleFrame.center)
+            )
+            context.add(text
+                .position(textFrame.center)
+            )
+            context.add(table
+                .position(tableFrame.center)
+            )
+            
+            return size
+        }
+    }
+}
+
 func tableAlert(theme: PresentationTheme, title: String, text: String, table: TableComponent, actions: [ComponentAlertAction]) -> ViewController {
-    let content: AnyComponent<Empty> = AnyComponent(VStack([
-        AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-            text: .plain(NSAttributedString(string: title, font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor)),
-            horizontalAlignment: .center
-        ))),
-        AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-            text: .plain(NSAttributedString(string: text, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)),
-            horizontalAlignment: .center,
-            maximumNumberOfLines: 0
-        ))),
-        AnyComponentWithIdentity(id: 2, component: AnyComponent(table)),
-    ], spacing: 10.0))
     return componentAlertController(
         theme: AlertControllerTheme(presentationTheme: theme, fontSize: .regular),
-        content: content,
+        content: AnyComponent(TableAlertContentComponet(
+            theme: theme,
+            title: title,
+            text: text,
+            table: table
+        )),
         actions: actions,
         actionLayout: .horizontal
     )

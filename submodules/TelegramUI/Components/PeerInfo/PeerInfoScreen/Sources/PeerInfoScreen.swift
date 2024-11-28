@@ -1215,6 +1215,7 @@ private enum InfoSection: Int, CaseIterable {
     case permissions
     case peerInfoTrailing
     case peerMembers
+    case botAffiliateProgram
 }
 
 private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool, isMyProfile: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
@@ -1424,6 +1425,23 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                     
                     currentPeerInfoSection = .peerInfoTrailing
+                }
+                
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                } else {
+                    if let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
+                        if items[.botAffiliateProgram] == nil {
+                            items[.botAffiliateProgram] = []
+                        }
+                        //TODO:localize
+                        let programTitleValue: String
+                        programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
+                        //TODO:localize
+                        items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                            interaction.editingOpenAffiliateProgram()
+                        }))
+                        items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(starRefProgram.commissionPermille / 10)% of their spending there."))
+                    }
                 }
             }
             
@@ -1921,13 +1939,13 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     interaction.editingOpenPublicLinkSetup()
                 }))
                 //TODO:localize
-                let programTitleValue: String
+                let programTitleValue: PeerInfoScreenDisclosureItem.Label
                 if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
-                    programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
+                    programTitleValue = .labelBadge("\(starRefProgram.commissionPermille / 10)%")
                 } else {
-                    programTitleValue = "Off"
+                    programTitleValue = .text("Off")
                 }
-                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: .text(programTitleValue), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
                     interaction.editingOpenAffiliateProgram()
                 }))
                                 
@@ -8575,17 +8593,95 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func editingOpenAffiliateProgram() {
-        if let peer = self.data?.peer as? TelegramUser, peer.botInfo != nil {
-            let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .editProgram)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
-                guard let self else {
-                    return
-                }
-                let controller = self.context.sharedContext.makeAffiliateProgramSetupScreen(context: self.context, initialData: initialData)
-                self.controller?.push(controller)
-            })
-        } else if let channel = self.data?.peer as? TelegramChannel {
-            let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: channel.id, mode: .connectedPrograms)
+        if let peer = self.data?.peer as? TelegramUser, let botInfo = peer.botInfo {
+            if botInfo.flags.contains(.canEdit) {
+                let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .editProgram)
+                         |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                    guard let self else {
+                        return
+                    }
+                    let controller = self.context.sharedContext.makeAffiliateProgramSetupScreen(context: self.context, initialData: initialData)
+                    self.controller?.push(controller)
+                })
+            } else if let starRefProgram = (self.data?.cachedData as? CachedUserData)?.starRefProgram, starRefProgram.endDate == nil {
+                self.activeActionDisposable.set((self.context.engine.peers.getStarRefBotConnection(id: peer.id, targetId: self.context.account.peerId)
+                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)
+                    )
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] accountPeer in
+                        guard let self, let accountPeer else {
+                            return
+                        }
+                        let mode: JoinAffiliateProgramScreenMode
+                        if let result {
+                            mode = .active(JoinAffiliateProgramScreenMode.Active(
+                                targetPeer: accountPeer,
+                                link: result.url,
+                                userCount: Int(result.participants),
+                                copyLink: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    //TODO:localize
+                                    UIPasteboard.general.string = result.url
+                                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(EnginePeer.user(peer).compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                }
+                            ))
+                        } else {
+                            mode = .join(JoinAffiliateProgramScreenMode.Join(
+                                initialTargetPeer: accountPeer,
+                                canSelectTargetPeer: true,
+                                completion: { [weak self] targetPeer in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = (self.context.engine.peers.connectStarRefBot(id: targetPeer.id, botId: self.peerId)
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+                                        guard let self else {
+                                            return
+                                        }
+                                        let bot = result
+                                        
+                                        self.controller?.push(self.context.sharedContext.makeAffiliateProgramJoinScreen(
+                                            context: self.context,
+                                            sourcePeer: bot.peer,
+                                            commissionPermille: bot.commissionPermille,
+                                            programDuration: bot.durationMonths,
+                                            mode: .active(JoinAffiliateProgramScreenMode.Active(
+                                                targetPeer: targetPeer,
+                                                link: bot.url,
+                                                userCount: Int(bot.participants),
+                                                copyLink: { [weak self] in
+                                                    guard let self else {
+                                                        return
+                                                    }
+                                                    UIPasteboard.general.string = bot.url
+                                                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(bot.commissionPermille / 10)%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                }
+                                            ))
+                                        ))
+                                    })
+                                }
+                            ))
+                        }
+                        self.controller?.push(self.context.sharedContext.makeAffiliateProgramJoinScreen(
+                            context: self.context,
+                            sourcePeer: .user(peer),
+                            commissionPermille: starRefProgram.commissionPermille,
+                            programDuration: starRefProgram.durationMonths,
+                            mode: mode
+                        ))
+                    })
+                }))
+            }
+        } else if let peer = self.data?.peer {
+            let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .connectedPrograms)
             |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
                 guard let self else {
                     return

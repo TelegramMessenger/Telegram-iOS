@@ -326,6 +326,49 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
         }
         
+        private func displayTargetSelectionMenu(sourceView: UIView) {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
+                return
+            }
+            guard case let .join(join) = component.mode else {
+                return
+            }
+            
+            var items: [ContextMenuItem] = []
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+            
+            let peers: [EnginePeer] = [
+                join.initialTargetPeer
+            ]
+            
+            let avatarSize = CGSize(width: 30.0, height: 30.0)
+            
+            for peer in peers {
+                let peerLabel: String
+                if peer.id == component.context.account.peerId {
+                    peerLabel = "personal account"
+                } else if case .channel = peer {
+                    peerLabel = "channel"
+                } else {
+                    peerLabel = "bot"
+                }
+                items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(peerLabel), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize)), action: { [weak self] c, _ in
+                    c?.dismiss(completion: {})
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.currentTargetPeer = peer
+                    self.state?.updated(transition: .immediate)
+                })))
+            }
+            
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, actionsOnTop: true)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
         func update(component: JoinAffiliateProgramScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -690,7 +733,12 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             peer: currentTargetPeer,
-                            isSelectable: isTargetPeerSelectable
+                            action: isTargetPeerSelectable ? { [weak self] sourceView in
+                                guard let self else {
+                                    return
+                                }
+                                self.displayTargetSelectionMenu(sourceView: sourceView)
+                            } : nil
                         )),
                         environment: {},
                         containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
@@ -947,36 +995,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
 }
 
 public class JoinAffiliateProgramScreen: ViewControllerComponentContainer {
-    public final class Join {
-        public let initialTargetPeer: EnginePeer
-        public let canSelectTargetPeer: Bool
-        public let completion: (EnginePeer) -> Void
-        
-        public init(initialTargetPeer: EnginePeer, canSelectTargetPeer: Bool, completion: @escaping (EnginePeer) -> Void) {
-            self.initialTargetPeer = initialTargetPeer
-            self.canSelectTargetPeer = canSelectTargetPeer
-            self.completion = completion
-        }
-    }
-    
-    public final class Active {
-        public let targetPeer: EnginePeer
-        public let link: String
-        public let userCount: Int
-        public let copyLink: () -> Void
-        
-        public init(targetPeer: EnginePeer, link: String, userCount: Int, copyLink: @escaping () -> Void) {
-            self.targetPeer = targetPeer
-            self.link = link
-            self.userCount = userCount
-            self.copyLink = copyLink
-        }
-    }
-    
-    public enum Mode {
-        case join(Join)
-        case active(Active)
-    }
+    public typealias Mode = JoinAffiliateProgramScreenMode
     
     private let context: AccountContext
     
@@ -1042,20 +1061,20 @@ private final class PeerBadgeComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let peer: EnginePeer
-    let isSelectable: Bool
+    let action: ((UIView) -> Void)?
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         peer: EnginePeer,
-        isSelectable: Bool
+        action: ((UIView) -> Void)?
     ) {
         self.context = context
         self.theme = theme
         self.strings = strings
         self.peer = peer
-        self.isSelectable = isSelectable
+        self.action = action
     }
     
     static func ==(lhs: PeerBadgeComponent, rhs: PeerBadgeComponent) -> Bool {
@@ -1071,38 +1090,53 @@ private final class PeerBadgeComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
-        if lhs.isSelectable != rhs.isSelectable {
+        if (lhs.action == nil) != (rhs.action == nil) {
             return false
         }
         return true
     }
     
-    final class View: UIView {
+    final class View: HighlightableButton {
         private let background = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private var avatarNode: AvatarNode?
         private var selectorIcon: ComponentView<Empty>?
         
+        private var component: PeerBadgeComponent?
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        @objc private func pressed() {
+            guard let component = self.component else {
+                return
+            }
+            component.action?(self)
+        }
+        
         func update(component: PeerBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            
+            self.isEnabled = component.action != nil
+            
             let height: CGFloat = 32.0
             let avatarPadding: CGFloat = 1.0
             
             let avatarDiameter = height - avatarPadding * 2.0
             let avatarTextSpacing: CGFloat = 4.0
-            let rightTextInset: CGFloat = component.isSelectable ? 26.0 : 12.0
+            let rightTextInset: CGFloat = component.action != nil ? 26.0 : 12.0
             
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.peer.displayTitle(strings: component.strings, displayOrder: .firstLast), font: Font.medium(15.0), textColor: component.isSelectable ? component.theme.list.itemInputField.primaryColor : component.theme.list.itemInputField.primaryColor))
+                    text: .plain(NSAttributedString(string: component.peer.displayTitle(strings: component.strings, displayOrder: .firstLast), font: Font.medium(15.0), textColor: component.action != nil ? component.theme.list.itemInputField.primaryColor : component.theme.list.itemInputField.primaryColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - avatarPadding - avatarDiameter - avatarTextSpacing - rightTextInset, height: height)
@@ -1110,6 +1144,7 @@ private final class PeerBadgeComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: avatarPadding + avatarDiameter + avatarTextSpacing, y: floorToScreenPixels((height - titleSize.height) * 0.5)), size: titleSize)
             if let titleView = self.title.view {
                 if titleView.superview == nil {
+                    titleView.isUserInteractionEnabled = false
                     self.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
@@ -1120,6 +1155,7 @@ private final class PeerBadgeComponent: Component {
                 avatarNode = current
             } else {
                 avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+                avatarNode.isUserInteractionEnabled = false
                 avatarNode.displaysAsynchronously = false
                 self.avatarNode = avatarNode
                 self.addSubview(avatarNode.view)
@@ -1132,7 +1168,7 @@ private final class PeerBadgeComponent: Component {
             
             let size = CGSize(width: avatarPadding + avatarDiameter + avatarTextSpacing + titleSize.width + rightTextInset, height: height)
             
-            if component.isSelectable {
+            if component.action != nil {
                 let selectorIcon: ComponentView<Empty>
                 if let current = self.selectorIcon {
                     selectorIcon = current
@@ -1150,6 +1186,7 @@ private final class PeerBadgeComponent: Component {
                 let selectorIconFrame = CGRect(origin: CGPoint(x: size.width - 8.0 - selectorIconSize.width, y: floorToScreenPixels((size.height - selectorIconSize.height) * 0.5)), size: selectorIconSize)
                 if let selectorIconView = selectorIcon.view {
                     if selectorIconView.superview == nil {
+                        selectorIconView.isUserInteractionEnabled = false
                         self.addSubview(selectorIconView)
                     }
                     transition.setFrame(view: selectorIconView, frame: selectorIconFrame)
@@ -1162,7 +1199,7 @@ private final class PeerBadgeComponent: Component {
             let _ = self.background.update(
                 transition: transition,
                 component: AnyComponent(FilledRoundedRectangleComponent(
-                    color: component.isSelectable ? component.theme.list.itemAccentColor.withMultipliedAlpha(0.1) : component.theme.list.itemInputField.backgroundColor,
+                    color: component.action != nil ? component.theme.list.itemAccentColor.withMultipliedAlpha(0.1) : component.theme.list.itemInputField.backgroundColor,
                     cornerRadius: .minEdge,
                     smoothCorners: false
                 )),
@@ -1171,6 +1208,7 @@ private final class PeerBadgeComponent: Component {
             )
             if let backgroundView = self.background.view {
                 if backgroundView.superview == nil {
+                    backgroundView.isUserInteractionEnabled = false
                     self.insertSubview(backgroundView, at: 0)
                 }
                 transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(), size: size))

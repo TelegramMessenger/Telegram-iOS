@@ -1652,6 +1652,10 @@ public extension TelegramEngine {
         public func removeConnectedStarRefBot(id: EnginePeer.Id, link: String) -> Signal<Never, ConnectStarRefBotError> {
             return _internal_removeConnectedStarRefBot(account: self.account, id: id, link: link)
         }
+        
+        public func getStarRefBotConnection(id: EnginePeer.Id, targetId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> {
+            return _internal_getStarRefBotConnection(account: self.account, id: id, targetId: targetId)
+        }
     }
 }
 
