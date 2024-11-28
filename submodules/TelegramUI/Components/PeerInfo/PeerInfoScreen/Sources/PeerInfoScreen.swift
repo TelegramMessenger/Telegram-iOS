@@ -920,7 +920,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 }
                 let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).startStandalone()
             } else {
-                iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
+                iconSignal = .single(UIImage())
             }
             let label: PeerInfoScreenDisclosureItem.Label = bot.flags.contains(.notActivated) || bot.flags.contains(.showInSettingsDisclaimer) ? .titleBadge(presentationData.strings.Settings_New, presentationData.theme.list.itemAccentColor) : .none
             items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), label: label, text: bot.shortName, icon: nil, iconSignal: iconSignal, action: {

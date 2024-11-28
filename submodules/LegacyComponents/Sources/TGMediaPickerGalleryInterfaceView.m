@@ -1428,7 +1428,7 @@
         || [view isDescendantOfView:_landscapeToolbarView]
         || [view isDescendantOfView:_selectedPhotosView]
         || [view isDescendantOfView:_captionMixin.inputPanelView]
-        || [view isDescendantOfView:_captionMixin.dismissView]
+        || ([view isDescendantOfView:_captionMixin.dismissView] && _captionMixin.dismissView.alpha > 0.0)
         || [view isKindOfClass:[TGMenuButtonView class]])
         
     {

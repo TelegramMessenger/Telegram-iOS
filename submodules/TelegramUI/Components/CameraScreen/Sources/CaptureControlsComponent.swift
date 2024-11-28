@@ -36,6 +36,7 @@ private final class ShutterButtonContentComponent: Component {
     let shutterState: ShutterButtonState
     let blobState: ShutterBlobView.BlobState
     let collageProgress: Float
+    let collageCount: Int?
     let highlightedAction: ActionSlot<Bool>
     let updateOffsetX: ActionSlot<(CGFloat, ComponentTransition)>
     let updateOffsetY: ActionSlot<(CGFloat, ComponentTransition)>
@@ -47,6 +48,7 @@ private final class ShutterButtonContentComponent: Component {
         shutterState: ShutterButtonState,
         blobState: ShutterBlobView.BlobState,
         collageProgress: Float,
+        collageCount: Int?,
         highlightedAction: ActionSlot<Bool>,
         updateOffsetX: ActionSlot<(CGFloat, ComponentTransition)>,
         updateOffsetY: ActionSlot<(CGFloat, ComponentTransition)>
@@ -57,6 +59,7 @@ private final class ShutterButtonContentComponent: Component {
         self.shutterState = shutterState
         self.blobState = blobState
         self.collageProgress = collageProgress
+        self.collageCount = collageCount
         self.highlightedAction = highlightedAction
         self.updateOffsetX = updateOffsetX
         self.updateOffsetY = updateOffsetY
@@ -79,6 +82,9 @@ private final class ShutterButtonContentComponent: Component {
             return false
         }
         if lhs.collageProgress != rhs.collageProgress {
+            return false
+        }
+        if lhs.collageCount != rhs.collageCount {
             return false
         }
         return true
@@ -314,6 +320,8 @@ private final class ShutterButtonContentComponent: Component {
             self.innerLayer.bounds = CGRect(origin: .zero, size: innerSize)
             self.innerLayer.position = CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0)
             
+            let totalProgress = component.collageCount.flatMap { 1.0 / Double($0) } ?? 1.0
+            
             self.progressLayer.bounds = CGRect(origin: .zero, size: maximumShutterSize)
             self.progressLayer.position = CGPoint(x: maximumShutterSize.width / 2.0, y: maximumShutterSize.height / 2.0)
             transition.setShapeLayerPath(layer: self.progressLayer, path: ringPath)
@@ -321,10 +329,14 @@ private final class ShutterButtonContentComponent: Component {
             self.progressLayer.strokeColor = videoRedColor.cgColor
             self.progressLayer.lineWidth = ringWidth + UIScreenPixel
             self.progressLayer.lineCap = .round
-            self.progressLayer.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
+            if totalProgress < 1.0 {
+                self.progressLayer.transform = CATransform3DMakeRotation(-.pi / 2.0 + CGFloat(component.collageProgress) * 2.0 * .pi, 0.0, 0.0, 1.0)
+            } else {
+                self.progressLayer.transform = CATransform3DMakeRotation(-.pi / 2.0, 0.0, 0.0, 1.0)
+            }
             
             let previousValue = self.progressLayer.strokeEnd
-            self.progressLayer.strokeEnd = CGFloat(recordingProgress ?? 0.0)
+            self.progressLayer.strokeEnd = CGFloat(recordingProgress ?? 0.0) * totalProgress
             self.progressLayer.animateStrokeEnd(from: previousValue, to: self.progressLayer.strokeEnd, duration: 0.33)
             
             return maximumShutterSize
@@ -554,6 +566,7 @@ final class CaptureControlsComponent: Component {
     let hasAccess: Bool
     let hideControls: Bool
     let collageProgress: Float
+    let collageCount: Int?
     let tintColor: UIColor
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
@@ -576,6 +589,7 @@ final class CaptureControlsComponent: Component {
         hasAccess: Bool,
         hideControls: Bool,
         collageProgress: Float,
+        collageCount: Int?,
         tintColor: UIColor,
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
@@ -597,6 +611,7 @@ final class CaptureControlsComponent: Component {
         self.hasAccess = hasAccess
         self.hideControls = hideControls
         self.collageProgress = collageProgress
+        self.collageCount = collageCount
         self.tintColor = tintColor
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
@@ -630,6 +645,9 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.collageProgress != rhs.collageProgress {
+            return false
+        }
+        if lhs.collageCount != rhs.collageCount {
             return false
         }
         if lhs.tintColor != rhs.tintColor {
@@ -1152,6 +1170,7 @@ final class CaptureControlsComponent: Component {
                                 shutterState: component.shutterState,
                                 blobState: blobState,
                                 collageProgress: component.collageProgress,
+                                collageCount: component.collageCount,
                                 highlightedAction: self.shutterHightlightedAction,
                                 updateOffsetX: self.shutterUpdateOffsetX,
                                 updateOffsetY: self.shutterUpdateOffsetY

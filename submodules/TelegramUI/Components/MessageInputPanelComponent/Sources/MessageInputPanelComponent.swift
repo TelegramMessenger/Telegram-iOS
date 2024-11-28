@@ -1759,17 +1759,19 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
+            var lightFieldColor = UIColor(white: 1.0, alpha: 0.09)
             var fieldBackgroundIsDark = false
             if component.useGrayBackground {
                 fieldBackgroundIsDark = false
             } else if component.style == .media {
-                fieldBackgroundIsDark = true
+                fieldBackgroundIsDark = false
+                lightFieldColor = UIColor(white: 0.2, alpha: 0.45)
             } else if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
                 fieldBackgroundIsDark = true
             } else if isEditing || component.style == .editor {
                 fieldBackgroundIsDark = true
             }
-            self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
+            self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : lightFieldColor, transition: transition.containedViewLayoutTransition)
             if let placeholder = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 placeholder.isHidden = self.textFieldExternalState.hasText
                 vibrancyPlaceholderView.isHidden = placeholder.isHidden

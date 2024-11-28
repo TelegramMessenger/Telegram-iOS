@@ -1020,6 +1020,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     hasAccess: hasAllRequiredAccess,
                     hideControls: component.cameraState.collageProgress > 1.0 - .ulpOfOne,
                     collageProgress: component.cameraState.collageProgress,
+                    collageCount: component.cameraState.isCollageEnabled ? component.cameraState.collageGrid.count : nil,
                     tintColor: controlsTintColor,
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
@@ -1683,6 +1684,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         fileprivate var additionalPreviewView: CameraSimplePreviewView
         
         fileprivate let previewBlurView: BlurView
+        fileprivate let mainPreviewBlurView: BlurView
         private var mainPreviewSnapshotView: UIView?
         private var additionalPreviewSnapshotView: UIView?
         fileprivate let previewFrameLeftDimView: UIView
@@ -1794,6 +1796,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             self.previewBlurView = BlurView()
             self.previewBlurView.isUserInteractionEnabled = false
+            
+            self.mainPreviewBlurView = BlurView()
+            self.mainPreviewBlurView.isUserInteractionEnabled = false
             
             var isDualCameraEnabled = Camera.isDualCameraSupported(forRoundVideo: false)
             if isDualCameraEnabled {
@@ -2122,9 +2127,17 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             }
                         }
                         if case .position = modeChange {
-                            UIView.transition(with: self.previewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
-                                self.previewBlurView.effect = UIBlurEffect(style: .dark)
-                            })
+                            if self.cameraState.isCollageEnabled {
+                                self.mainPreviewBlurView.frame = self.mainPreviewContainerView.bounds
+                                self.mainPreviewContainerView.addSubview(self.mainPreviewBlurView)
+                                UIView.transition(with: self.mainPreviewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
+                                    self.mainPreviewBlurView.effect = UIBlurEffect(style: .dark)
+                                })
+                            } else {
+                                UIView.transition(with: self.previewContainerView, duration: 0.4, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
+                                    self.previewBlurView.effect = UIBlurEffect(style: .dark)
+                                })
+                            }
                         } else {
                             self.previewContainerView.insertSubview(self.previewBlurView, belowSubview: self.additionalPreviewContainerView)
                             
@@ -2137,6 +2150,13 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             self.previewBlurView.effect = UIBlurEffect(style: .dark)
                         }
                     } else {
+                        if self.mainPreviewBlurView.effect != nil {
+                            UIView.animate(withDuration: 0.4, animations: {
+                                self.mainPreviewBlurView.effect = nil
+                            }, completion: { _ in
+                                self.mainPreviewBlurView.removeFromSuperview()
+                            })
+                        }
                         if self.previewBlurView.effect != nil {
                             UIView.animate(withDuration: 0.4, animations: {
                                 self.previewBlurView.effect = nil
@@ -2971,7 +2991,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         }
                         self.updatingCollageProgress = true
                         self.controller?.updateCameraState({ state in
-                            return state.updatedCollageProgress(collageState.progress)
+                            return state.updatedCollageProgress(collageState.innerProgress)
                         }, transition: .spring(duration: 0.3))
                         self.updatingCollageProgress = false
                     })

@@ -938,7 +938,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             let remoteSignal: Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError>
                             let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError>
                             if hasPremium {
-                                remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                                remoteSignal = context.engine.stickers.searchEmoji(query: query, emoticon: Array(allEmoticons.keys), inputLanguageCode: languageCode)
                                 remotePacksSignal = context.engine.stickers.searchEmojiSets(query: query)
                                 |> mapToSignal { localResult in
                                     return .single((localResult, false))
