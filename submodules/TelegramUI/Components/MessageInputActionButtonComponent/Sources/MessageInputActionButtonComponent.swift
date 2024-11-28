@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import AppBundle
+import TelegramCore
 import ChatTextInputMediaRecordingButton
 import AccountContext
 import TelegramPresentationData
@@ -10,7 +11,7 @@ import ChatPresentationInterfaceState
 import MoreHeaderButton
 import ContextUI
 import ReactionButtonListComponent
-import TelegramCore
+import LottieComponent
 
 private class ButtonIcon: Equatable {
     enum IconType: Equatable {
@@ -131,6 +132,8 @@ public final class MessageInputActionButtonComponent: Component {
         case more
         case like(reaction: MessageReaction.Reaction?, file: TelegramMediaFile?, animationFileId: Int64?)
         case repost
+        case captionUp
+        case captionDown
     }
     
     public enum Action {
@@ -228,6 +231,7 @@ public final class MessageInputActionButtonComponent: Component {
         private let sendIconView: UIImageView
         private var reactionHeartView: UIImageView?
         private var moreButton: MoreHeaderButton?
+        private var animation: ComponentView<Empty>?
         private var reactionIconView: ReactionIconView?
         
         private var component: MessageInputActionButtonComponent?
@@ -423,12 +427,51 @@ public final class MessageInputActionButtonComponent: Component {
                 self.addSubnode(moreButton)
             }
             
+            switch component.mode {
+            case .captionUp, .captionDown:
+                var startingPosition: LottieComponent.StartingPosition = .begin
+                let animation: ComponentView<Empty>
+                if let current = self.animation {
+                    animation = current
+                } else {
+                    animation = ComponentView<Empty>()
+                    self.animation = animation
+                    startingPosition = .end
+                }
+                
+                let playOnce = ActionSlot<Void>()
+                let animationName = component.mode == .captionUp ? "message_preview_sort_above" : "message_preview_sort_below"
+                let _ = animation.update(
+                    transition: transition,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: animationName),
+                        color: .white,
+                        startingPosition: startingPosition,
+                        playOnce: playOnce
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 30.0, height: 30.0)
+                )
+                if let view = animation.view {
+                    if view.superview == nil {
+                        self.referenceNode.view.addSubview(view)
+                    }
+                }
+                if let previousComponent, previousComponent.mode != component.mode {
+                    playOnce.invoke(Void())
+                }
+            default:
+                break
+            }
+            
             var sendAlpha: CGFloat = 0.0
             var microphoneAlpha: CGFloat = 0.0
             var moreAlpha: CGFloat = 0.0
             switch component.mode {
             case .none:
                 break
+            case .captionUp, .captionDown:
+                sendAlpha = 0.0
             case .send, .apply, .attach, .delete, .forward, .removeVideoInput, .repost:
                 sendAlpha = 1.0
             case let .like(reaction, _, _):
@@ -603,6 +646,13 @@ public final class MessageInputActionButtonComponent: Component {
                 transition.setScale(view: moreButton.view, scale: moreAlpha == 0.0 ? 0.01 : 1.0)
             }
             
+            if let view = self.animation?.view {
+                let buttonSize = CGSize(width: 30.0, height: 30.0)
+                let iconFrame = CGRect(origin: CGPoint(x: 2.0 + floorToScreenPixels((availableSize.width - buttonSize.width) * 0.5), y: floorToScreenPixels((availableSize.height - buttonSize.height) * 0.5)), size: buttonSize)
+                transition.setPosition(view: view, position: iconFrame.center)
+                transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: iconFrame.size))
+            }
+            
             if let micButton = self.micButton {
                 micButton.hasShadow = component.hasShadow
                 micButton.hidesOnLock = component.hasShadow
@@ -621,7 +671,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost, .captionUp, .captionDown:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput, .removeVideoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

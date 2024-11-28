@@ -222,7 +222,7 @@
         
         UIView *scrubberBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _headerView.frame.size.width, 64.0f)];
         scrubberBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
+        //scrubberBackgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
         [_scrubberPanelView addSubview:scrubberBackgroundView];
         
         _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, _headerView.frame.size.height - 44.0f, _headerView.frame.size.width, 68.0f)];

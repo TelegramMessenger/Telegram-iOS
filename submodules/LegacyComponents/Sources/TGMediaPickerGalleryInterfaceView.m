@@ -389,6 +389,14 @@
             [strongSelf->_selectionContext setItem:(id<TGMediaSelectableItem>)galleryEditableItem.editableMediaItem selected:true animated:true sender:nil];
         };
         
+        _captionMixin.captionIsAboveUpdated = ^(bool captionIsAbove) {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf->_editingContext setCaptionAbove:captionIsAbove];
+        };
+        
         _captionMixin.stickersContext = stickersContext;
         [_captionMixin createInputPanelIfNeeded];
         
@@ -818,6 +826,8 @@
     {
         id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
         
+        bool isCaptionAbove = galleryEditableItem.editingContext.isCaptionAbove;
+        
         __weak id<TGModernGalleryEditableItem> weakGalleryEditableItem = galleryEditableItem;
         [_adjustmentsDisposable setDisposable:[[[[galleryEditableItem.editingContext adjustmentsSignalForItem:editableMediaItem] mapToSignal:^SSignal *(id<TGMediaEditAdjustments> adjustments) {
             __strong id<TGModernGalleryEditableItem> strongGalleryEditableItem = weakGalleryEditableItem;
@@ -842,7 +852,7 @@
             id<TGMediaEditAdjustments> adjustments = dict[@"adjustments"];
             NSNumber *timer = dict[@"timer"];
             
-            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo];
+            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo isCaptionAbove:isCaptionAbove];
             
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
             {
@@ -1617,6 +1627,7 @@
 - (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
 {
     _safeAreaInset = safeAreaInset;
+    _captionMixin.safeAreaInset = safeAreaInset;
     [_currentItemView setSafeAreaInset:[self localSafeAreaInset]];
     [self setNeedsLayout];
 }

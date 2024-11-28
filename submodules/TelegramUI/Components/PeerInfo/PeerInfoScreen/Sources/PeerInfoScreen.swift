@@ -10019,6 +10019,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let controller = self.context.sharedContext.makeStoryMediaPickerScreen(
                 context: self.context,
                 isDark: false,
+                forCollage: false,
                 getSourceRect: { return .zero },
                 completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
                     guard let self else {

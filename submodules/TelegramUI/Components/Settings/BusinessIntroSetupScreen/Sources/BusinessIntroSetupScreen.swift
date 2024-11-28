@@ -22,7 +22,6 @@ import EntityKeyboard
 import PeerAllowedReactionsScreen
 import EmojiActionIconComponent
 import TextFieldComponent
-import CameraScreen
 
 final class BusinessIntroSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

@@ -449,6 +449,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = action != nil
+        case .collageReordering:
+            //TODO:localize
+            self.action = nil
+            self.text = "Hold and drag tiles to reorder them."
+            self.targetSelectionIndex = nil
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
         }
         
         self.iconNode = ASImageNode()

@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import Display
 import SwiftSignalKit
 import CoreImage
 import Vision
@@ -286,6 +287,19 @@ final class CameraOutput: NSObject {
             }
         }
         
+#if targetEnvironment(simulator)
+        let image = generateImage(CGSize(width: 1080, height: 1920), opaque: true, scale: 1.0, rotatedContext: { size, context in
+            let colors: [UIColor] = [UIColor(rgb: 0xff00ff), UIColor(rgb: 0xff0000), UIColor(rgb: 0x00ffff), UIColor(rgb: 0x00ff00)]
+            if let randomColor = colors.randomElement() {
+                context.setFillColor(randomColor.cgColor)
+            }
+            context.fill(CGRect(origin: .zero, size: size))
+        })!
+        return .single(.began)
+        |> then(
+            .single(.finished(image, nil, CACurrentMediaTime())) |> delay(0.5, queue: Queue.concurrentDefaultQueue())
+        )
+#else
         let uniqueId = settings.uniqueID
         let photoCapture = PhotoCaptureContext(ciContext: self.ciContext, settings: settings, orientation: orientation, mirror: mirror)
         self.photoCaptureRequests[uniqueId] = photoCapture
@@ -295,6 +309,7 @@ final class CameraOutput: NSObject {
         |> afterDisposed { [weak self] in
             self?.photoCaptureRequests.removeValue(forKey: uniqueId)
         }
+#endif
     }
     
     var isRecording: Bool {
