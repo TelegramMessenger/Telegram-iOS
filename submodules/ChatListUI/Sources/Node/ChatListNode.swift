@@ -758,7 +758,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         case .reviewLogin:
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
-                            nodeInteraction?.openStarsTopup(amount)
+                            nodeInteraction?.openStarsTopup(amount.value)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1102,7 +1102,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case .reviewLogin:
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
-                            nodeInteraction?.openStarsTopup(amount)
+                            nodeInteraction?.openStarsTopup(amount.value)
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -2012,7 +2012,7 @@ public final class ChatListNode: ListView {
                     if let starsSubscriptionsContext {
                         return starsSubscriptionsContext.state
                         |> map { state in
-                            if state.balance > 0 && !state.subscriptions.isEmpty {
+                            if state.balance > StarsAmount.zero && !state.subscriptions.isEmpty {
                                 return .starsSubscriptionLowBalance(
                                     amount: state.balance,
                                     peers: state.subscriptions.map { $0.peer }

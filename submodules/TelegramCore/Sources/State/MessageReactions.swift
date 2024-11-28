@@ -412,7 +412,7 @@ private func requestSendStarsReaction(postbox: Postbox, network: Network, stateM
                 return .generic
             }
             |> mapToSignal { result -> Signal<Never, RequestUpdateMessageReactionError> in
-                stateManager.starsContext?.add(balance: Int64(-count), addTransaction: false)
+                stateManager.starsContext?.add(balance: StarsAmount(value: Int64(-count), nanos: 0), addTransaction: false)
                 
                 return postbox.transaction { transaction -> Void in
                     transaction.setPendingMessageAction(type: .sendStarsReaction, id: messageId, action: UpdateMessageReactionsAction())

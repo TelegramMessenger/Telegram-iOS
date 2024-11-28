@@ -1755,7 +1755,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            if balance < 1 {
+                            if balance < StarsAmount(value: 1, nanos: 0) {
                                 let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
                                 |> take(1)
                                 |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in

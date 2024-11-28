@@ -749,7 +749,11 @@ func  _internal_requestConnectedStarRefBots(account: Account, id: EnginePeer.Id,
     }
 }
 
-public final class TelegramSuggestedStarRefBotList : Equatable {
+public final class TelegramSuggestedStarRefBotList: Equatable {
+    public enum SortMode {
+        case date
+        case commission
+    }
     
     public final class Item: Equatable {
         public let peer: EnginePeer

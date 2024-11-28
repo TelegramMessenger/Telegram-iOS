@@ -25,6 +25,7 @@ import PeerListItemComponent
 import TelegramStringFormatting
 import ContextUI
 import BalancedTextComponent
+import AlertComponent
 
 private func textForTimeout(value: Int32) -> String {
     if value < 3600 {
@@ -114,6 +115,8 @@ final class AffiliateProgramSetupScreenComponent: Component {
         
         private var suggestedStarBotList: TelegramSuggestedStarRefBotList?
         private var suggestedStarBotListDisposable: Disposable?
+        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .date
+        private var isSuggestedSortModeUpdating: Bool = false
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -160,24 +163,43 @@ final class AffiliateProgramSetupScreenComponent: Component {
         }
         
         private func requestApplyProgram() {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
+            
+            let programPermille: Int32 = Int32(self.commissionPermille)
+            let programDuration: Int32? = self.durationValue == Int(Int32.max) ? nil : Int32(self.durationValue)
+            
+            let commissionTitle: String = "\(programPermille / 10)%"
+            let durationTitle: String
+            if let durationMonths = programDuration {
+                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
+            } else {
+                durationTitle = "Lifetime"
+            }
+            
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-            self.environment?.controller()?.present(standardTextAlertController(
-                theme: AlertControllerTheme(presentationData: presentationData),
+            self.environment?.controller()?.present(tableAlert(
+                theme: presentationData.theme,
                 title: "Warning",
                 text: "This change is irreversible. You won't be able to reduce commission or duration. You can only increase these parameters or end the program, which will disable all previously shared referral links.",
+                table: TableComponent(theme: environment.theme, items: [
+                    TableComponent.Item(id: 0, title: "Commission", component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: commissionTitle, font: Font.regular(17.0), textColor: environment.theme.actionSheet.primaryTextColor))
+                    ))),
+                    TableComponent.Item(id: 1, title: "Duration", component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: durationTitle, font: Font.regular(17.0), textColor: environment.theme.actionSheet.primaryTextColor))
+                    )))
+                ]),
                 actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultAction, title: "Start", action: { [weak self] in
+                    ComponentAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                    ComponentAlertAction(type: .defaultAction, title: "Start", action: { [weak self] in
                         guard let self else {
                             return
                         }
                         self.applyProgram()
                     })
-                ],
-                actionLayout: .horizontal
+                ]
             ), in: .window(.root))
         }
         
@@ -263,11 +285,19 @@ If you end your affiliate program:
                 program: nil
             )
             |> deliverOnMainQueue).startStrict(completed: { [weak self] in
-                guard let self else {
+                guard let self, let component = self.component, let controller = self.environment?.controller() else {
                     return
                 }
                 self.isApplying = false
-                self.environment?.controller()?.dismiss()
+                
+                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                
+                if let navigationController = controller.navigationController, let index = navigationController.viewControllers.firstIndex(where: { $0 === controller }), index != 0 {
+                    if let previousController = navigationController.viewControllers[index - 1] as? ViewController {
+                        previousController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_link_broken", scale: 0.065, colors: [:], title: "Affiliate Program Ended", text: "Participating affiliates have been notified. All referral links will be disabled in 24 hours.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    }
+                }
+                controller.dismiss()
             })
             
             self.state?.updated(transition: .immediate)
@@ -311,6 +341,121 @@ If you end your affiliate program:
             }
         }
         
+        private func openConnectedBot(bot: TelegramConnectedStarRefBotList.Item) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: component.initialContent.peerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] targetPeer in
+                guard let self, let component = self.component else {
+                    return
+                }
+                guard let targetPeer else {
+                    return
+                }
+                
+                self.environment?.controller()?.push(JoinAffiliateProgramScreen(
+                    context: component.context,
+                    sourcePeer: bot.peer,
+                    commissionPermille: bot.commissionPermille,
+                    programDuration: bot.durationMonths,
+                    mode: .active(JoinAffiliateProgramScreen.Active(
+                        targetPeer: targetPeer,
+                        link: bot.url,
+                        userCount: Int(bot.participants),
+                        copyLink: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            UIPasteboard.general.string = bot.url
+                            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(bot.commissionPermille / 10)%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        }
+                    ))
+                ))
+            })
+        }
+        
+        private func leaveProgram(bot: TelegramConnectedStarRefBotList.Item) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.peers.removeConnectedStarRefBot(id: component.initialContent.peerId, link: bot.url)
+            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
+                guard let self else {
+                    return
+                }
+                if let connectedStarBotList = self.connectedStarBotList {
+                    var updatedItems = connectedStarBotList.items
+                    if let index = updatedItems.firstIndex(where: { $0.peer.id == bot.peer.id }) {
+                        updatedItems.remove(at: index)
+                    }
+                    self.connectedStarBotList = TelegramConnectedStarRefBotList(
+                        items: updatedItems,
+                        totalCount: connectedStarBotList.totalCount + 1
+                    )
+                    self.state?.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        private func openSortModeMenu(sourceView: UIView) {
+            guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
+                return
+            }
+            
+            var items: [ContextMenuItem] = []
+            
+            let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
+                (.date, "Date"),
+                (.commission, "Commission")
+            ]
+            for (mode, title) in availableModes {
+                let isSelected = mode == self.suggestedSortMode
+                items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                    if isSelected {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
+                    } else {
+                        return nil
+                    }
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    if self.suggestedSortMode != mode {
+                        self.suggestedSortMode = mode
+                        self.isSuggestedSortModeUpdating = true
+                        self.state?.updated(transition: .immediate)
+                        
+                        self.suggestedStarBotListDisposable?.dispose()
+                        self.suggestedStarBotListDisposable = (component.context.engine.peers.requestSuggestedStarRefBots(
+                            id: component.initialContent.peerId,
+                            orderByCommission: self.suggestedSortMode == .commission,
+                            offset: nil,
+                            limit: 100)
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] list in
+                            guard let self else {
+                                return
+                            }
+                            self.suggestedStarBotList = list
+                            self.isSuggestedSortModeUpdating = false
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
+                })))
+            }
+            
+            let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
+            controller.presentInGlobalOverlay(contextController)
+        }
+        
         func update(component: AffiliateProgramSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -324,7 +469,7 @@ If you end your affiliate program:
                 (12, "1y", "1 YEAR"),
                 (2 * 12, "2y", "2 YEARS"),
                 (3 * 12, "3y", "3 YEARS"),
-                (Int32.max, "∞", "INDEFINITELY")
+                (Int32.max, "∞", "LIFETIME")
             ]
             
             let environment = environment[EnvironmentType.self].value
@@ -342,36 +487,60 @@ If you end your affiliate program:
                 switch component.initialContent.mode {
                 case let .editProgram(editProgram):
                     if let currentRefProgram = editProgram.currentRefProgram {
-                        self.commissionPermille = Int(currentRefProgram.commissionPermille)
-                        let commissionPercentValue = CGFloat(self.commissionPermille) / 1000.0
-                        self.commissionSliderValue = (commissionPercentValue - 0.01) / (0.9 - 0.01)
-                        
-                        self.durationValue = Int(currentRefProgram.durationMonths ?? Int32.max)
-                        
-                        self.commissionMinPermille = Int(currentRefProgram.commissionPermille)
-                        self.durationMinValue = Int(currentRefProgram.durationMonths ?? Int32.max)
-                        
-                        self.currentProgram = currentRefProgram
-                        
+                        var ignoreCurrentProgram = false
                         if let endDate = currentRefProgram.endDate {
-                            self.programEndTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
-                                guard let self else {
-                                    return
-                                }
-                                
-                                let timestamp = Int32(Date().timeIntervalSince1970)
-                                let remainingTime: Int32 = max(0, endDate - timestamp)
-                                if remainingTime <= 0 {
-                                    self.currentProgram = nil
-                                    self.programEndTimer?.invalidate()
-                                    self.programEndTimer = nil
-                                }
-                                
-                                self.state?.updated(transition: .immediate)
-                            })
+                            let timestamp = Int32(Date().timeIntervalSince1970)
+                            let remainingTime: Int32 = max(0, endDate - timestamp)
+                            if remainingTime <= 0 {
+                                ignoreCurrentProgram = true
+                            }
+                        }
+                        
+                        if !ignoreCurrentProgram {
+                            self.commissionPermille = Int(currentRefProgram.commissionPermille)
+                            let commissionPercentValue = CGFloat(self.commissionPermille) / 1000.0
+                            self.commissionSliderValue = (commissionPercentValue - 0.01) / (0.9 - 0.01)
+                            
+                            self.durationValue = Int(currentRefProgram.durationMonths ?? Int32.max)
+                            
+                            self.commissionMinPermille = Int(currentRefProgram.commissionPermille)
+                            self.durationMinValue = Int(currentRefProgram.durationMonths ?? Int32.max)
+                            
+                            self.currentProgram = currentRefProgram
+                            
+                            if let endDate = currentRefProgram.endDate {
+                                self.programEndTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    
+                                    let timestamp = Int32(Date().timeIntervalSince1970)
+                                    let remainingTime: Int32 = max(0, endDate - timestamp)
+                                    if remainingTime <= 0 {
+                                        self.currentProgram = nil
+                                        self.programEndTimer?.invalidate()
+                                        self.programEndTimer = nil
+                                        
+                                        self.commissionSliderValue = 0.0
+                                        self.commissionPermille = 10
+                                        self.commissionMinPermille = 10
+                                        
+                                        self.durationValue = 0
+                                        self.durationMinValue = 0
+                                    }
+                                    
+                                    self.state?.updated(transition: .immediate)
+                                })
+                            }
+                        } else {
+                            self.commissionPermille = 10
+                            self.commissionSliderValue = 0.0
+                            self.commissionMinPermille = 10
+                            self.durationValue = 10
                         }
                     } else {
                         self.commissionPermille = 10
+                        self.commissionSliderValue = 0.0
                         self.commissionMinPermille = 10
                         self.durationValue = 10
                     }
@@ -919,6 +1088,8 @@ If you end your affiliate program:
                     let timestamp = Int32(Date().timeIntervalSince1970)
                     let remainingTime: Int32 = max(0, endDate - timestamp)
                     buttonText = textForTimeout(value: remainingTime)
+                } else if self.currentProgram != nil {
+                    buttonText = "Update Affiliate Program"
                 } else {
                     buttonText = "Start Affiliate Program"
                 }
@@ -996,7 +1167,7 @@ If you end your affiliate program:
                             } else {
                                 durationTitle = "Lifetime"
                             }
-                            let subtitle = "\(item.commissionPermille / 10)%, \(durationTitle)"
+                            let commissionTitle = "\(item.commissionPermille / 10)%"
                             
                             let itemContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void = { [weak self] peer, sourceView, gesture in
                                 guard let self, let component = self.component, let environment = self.environment else {
@@ -1065,27 +1236,10 @@ If you end your affiliate program:
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] c, _ in
                                     c?.dismiss(completion: {
-                                        guard let self, let component = self.component else {
+                                        guard let self else {
                                             return
                                         }
-                                        
-                                        let _ = (component.context.engine.peers.removeConnectedStarRefBot(id: component.initialContent.peerId, link: item.url)
-                                        |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
-                                            guard let self else {
-                                                return
-                                            }
-                                            if let connectedStarBotList = self.connectedStarBotList {
-                                                var updatedItems = connectedStarBotList.items
-                                                if let index = updatedItems.firstIndex(where: { $0.peer.id == peer.id }) {
-                                                    updatedItems.remove(at: index)
-                                                }
-                                                self.connectedStarBotList = TelegramConnectedStarRefBotList(
-                                                    items: updatedItems,
-                                                    totalCount: connectedStarBotList.totalCount + 1
-                                                )
-                                                self.state?.updated(transition: .immediate)
-                                            }
-                                        })
+                                        self.leaveProgram(bot: item)
                                     })
                                 })))
                                 
@@ -1108,21 +1262,43 @@ If you end your affiliate program:
                                 style: .generic,
                                 sideInset: 0.0,
                                 title: item.peer.compactDisplayTitle,
+                                avatarComponent: AnyComponent(PeerBadgeAvatarComponent(
+                                    context: component.context,
+                                    peer: item.peer,
+                                    theme: environment.theme,
+                                    hasBadge: true
+                                )),
                                 peer: item.peer,
-                                subtitle: PeerListItemComponent.Subtitle(text: subtitle, color: .neutral),
+                                subtitle: nil,
+                                subtitleComponent: AnyComponent(AffiliatePeerSubtitleComponent(
+                                    theme: environment.theme,
+                                    percentText: commissionTitle,
+                                    text: durationTitle
+                                )),
                                 subtitleAccessory: .none,
                                 presence: nil,
-                                rightAccessory: .none,
+                                rightAccessory: .disclosure,
                                 selectionState: .none,
                                 hasNext: false,
                                 extractedTheme: PeerListItemComponent.ExtractedTheme(
                                     inset: 2.0,
                                     background: environment.theme.list.itemBlocksBackgroundColor
                                 ),
-                                action: { peer, _, itemView in
-                                    itemContextAction(peer, itemView.extractedContainerView, nil)
+                                insets: UIEdgeInsets(top: -1.0, left: 0.0, bottom: -1.0, right: 0.0),
+                                action: { [weak self] peer, _, itemView in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openConnectedBot(bot: item)
                                 },
-                                inlineActions: nil,
+                                inlineActions: PeerListItemComponent.InlineActionsState(actions: [
+                                    PeerListItemComponent.InlineAction(id: 0, title: "Leave", color: .destructive, action: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.leaveProgram(bot: item)
+                                    })
+                                ]),
                                 contextAction: { peer, sourceView, gesture in
                                     itemContextAction(peer, sourceView, gesture)
                                 }
@@ -1135,7 +1311,7 @@ If you end your affiliate program:
                                 theme: environment.theme,
                                 header: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "PROGRAMS",
+                                        string: "MY PROGRAMS",
                                         font: Font.regular(13.0),
                                         textColor: environment.theme.list.freeTextColor
                                     )),
@@ -1168,59 +1344,12 @@ If you end your affiliate program:
                     do {
                         var suggestedSectionItems: [AnyComponentWithIdentity<Empty>] = []
                         for item in suggestedStarBotListItems {
+                            let commissionTitle = "\(item.commissionPermille / 10)%"
                             let durationTitle: String
                             if let durationMonths = item.durationMonths {
                                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
                             } else {
                                 durationTitle = "Lifetime"
-                            }
-                            let subtitle = "\(item.commissionPermille / 10)%, \(durationTitle)"
-                            
-                            let itemContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void = { [weak self] peer, sourceView, gesture in
-                                guard let self, let component = self.component, let environment = self.environment else {
-                                    return
-                                }
-                                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                                
-                                var itemList: [ContextMenuItem] = []
-                                
-                                itemList.append(.action(ContextMenuActionItem(text: "Join", textColor: .primary, icon: { theme in
-                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
-                                }, action: { [weak self] c, _ in
-                                    c?.dismiss(completion: {
-                                        guard let self, let component = self.component else {
-                                            return
-                                        }
-                                        let _ = (component.context.engine.peers.connectStarRefBot(id: component.initialContent.peerId, botId: peer.id)
-                                        |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
-                                            guard let self else {
-                                                return
-                                            }
-                                            if let connectedStarBotList = self.connectedStarBotList {
-                                                var updatedItems = connectedStarBotList.items
-                                                if !updatedItems.contains(where: { $0.peer.id == peer.id }) {
-                                                    updatedItems.insert(result, at: 0)
-                                                }
-                                                self.connectedStarBotList = TelegramConnectedStarRefBotList(
-                                                    items: updatedItems,
-                                                    totalCount: connectedStarBotList.totalCount + 1
-                                                )
-                                                self.state?.updated(transition: .immediate)
-                                            }
-                                        })
-                                    })
-                                })))
-                                
-                                let items = ContextController.Items(content: .list(itemList))
-                                
-                                let controller = ContextController(
-                                    presentationData: presentationData,
-                                    source: .extracted(ListContextExtractedContentSource(contentView: sourceView)),
-                                    items: .single(items),
-                                    recognizer: nil,
-                                    gesture: gesture
-                                )
-                                environment.controller()?.presentInGlobalOverlay(controller, with: nil)
                             }
                             
                             suggestedSectionItems.append(AnyComponentWithIdentity(id: item.peer.id, component: AnyComponent(PeerListItemComponent(
@@ -1230,24 +1359,83 @@ If you end your affiliate program:
                                 style: .generic,
                                 sideInset: 0.0,
                                 title: item.peer.compactDisplayTitle,
+                                avatarComponent: AnyComponent(PeerBadgeAvatarComponent(
+                                    context: component.context,
+                                    peer: item.peer,
+                                    theme: environment.theme,
+                                    hasBadge: false
+                                )),
                                 peer: item.peer,
-                                subtitle: PeerListItemComponent.Subtitle(text: subtitle, color: .neutral),
+                                subtitle: nil,
+                                subtitleComponent: AnyComponent(AffiliatePeerSubtitleComponent(
+                                    theme: environment.theme,
+                                    percentText: commissionTitle,
+                                    text: durationTitle
+                                )),
                                 subtitleAccessory: .none,
                                 presence: nil,
-                                rightAccessory: .none,
+                                rightAccessory: .disclosure,
                                 selectionState: .none,
                                 hasNext: false,
                                 extractedTheme: PeerListItemComponent.ExtractedTheme(
                                     inset: 2.0,
                                     background: environment.theme.list.itemBlocksBackgroundColor
                                 ),
-                                action: { peer, _, itemView in
-                                    itemContextAction(peer, itemView.extractedContainerView, nil)
+                                insets: UIEdgeInsets(top: -1.0, left: 0.0, bottom: -1.0, right: 0.0),
+                                action: { [weak self] peer, _, itemView in
+                                    guard let self, let component = self.component else {
+                                        return
+                                    }
+                                    
+                                    let _ = (component.context.engine.data.get(
+                                        TelegramEngine.EngineData.Item.Peer.Peer(id: item.peer.id),
+                                        TelegramEngine.EngineData.Item.Peer.Peer(id: component.initialContent.peerId)
+                                    )
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] botPeer, targetPeer in
+                                        guard let self, let component = self.component else {
+                                            return
+                                        }
+                                        guard let botPeer, let targetPeer else {
+                                            return
+                                        }
+                                        self.environment?.controller()?.push(JoinAffiliateProgramScreen(
+                                            context: component.context,
+                                            sourcePeer: botPeer,
+                                            commissionPermille: item.commissionPermille,
+                                            programDuration: item.durationMonths,
+                                            mode: .join(JoinAffiliateProgramScreen.Join(
+                                                initialTargetPeer: targetPeer,
+                                                canSelectTargetPeer: false,
+                                                completion: { [weak self] _ in
+                                                    guard let self, let component = self.component else {
+                                                        return
+                                                    }
+                                                    let _ = (component.context.engine.peers.connectStarRefBot(id: component.initialContent.peerId, botId: peer.id)
+                                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+                                                        guard let self else {
+                                                            return
+                                                        }
+                                                        if let connectedStarBotList = self.connectedStarBotList {
+                                                            var updatedItems = connectedStarBotList.items
+                                                            if !updatedItems.contains(where: { $0.peer.id == peer.id }) {
+                                                                updatedItems.insert(result, at: 0)
+                                                            }
+                                                            self.connectedStarBotList = TelegramConnectedStarRefBotList(
+                                                                items: updatedItems,
+                                                                totalCount: connectedStarBotList.totalCount + 1
+                                                            )
+                                                            self.state?.updated(transition: .immediate)
+                                                            
+                                                            self.openConnectedBot(bot: result)
+                                                        }
+                                                    })
+                                                }
+                                            ))
+                                        ))
+                                    })
                                 },
                                 inlineActions: nil,
-                                contextAction: { peer, sourceView, gesture in
-                                    itemContextAction(peer, sourceView, gesture)
-                                }
+                                contextAction: nil
                             ))))
                         }
                         
@@ -1255,14 +1443,27 @@ If you end your affiliate program:
                             transition: transition,
                             component: AnyComponent(ListSectionComponent(
                                 theme: environment.theme,
-                                header: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(
-                                        string: "SUGGESTED PROGRAMS",
-                                        font: Font.regular(13.0),
-                                        textColor: environment.theme.list.freeTextColor
-                                    )),
-                                    maximumNumberOfLines: 0
-                                )),
+                                header: AnyComponent(HStack([
+                                    AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                                        text: .plain(NSAttributedString(
+                                            string: "PROGRAMS",
+                                            font: Font.regular(13.0),
+                                            textColor: environment.theme.list.freeTextColor
+                                        )),
+                                        maximumNumberOfLines: 0
+                                    ))),
+                                    AnyComponentWithIdentity(id: 1, component: AnyComponent(BotSectionSortButtonComponent(
+                                        theme: environment.theme,
+                                        strings: environment.strings,
+                                        sortMode: self.suggestedSortMode,
+                                        action: { [weak self] sourceView in
+                                            guard let self else {
+                                                return
+                                            }
+                                            self.openSortModeMenu(sourceView: sourceView)
+                                        }
+                                    )))
+                                ], spacing: 4.0, alignment: .alternatingLeftRight)),
                                 footer: nil,
                                 items: suggestedSectionItems,
                                 displaySeparators: true
@@ -1271,8 +1472,9 @@ If you end your affiliate program:
                             containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
                         )
                         let suggestedProgramsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: suggestedProgramsSectionSize)
-                        if let suggestedProgramsSectionView = self.suggestedProgramsSection.view {
+                        if let suggestedProgramsSectionView = self.suggestedProgramsSection.view as? ListSectionComponent.View {
                             if suggestedProgramsSectionView.superview == nil {
+                                suggestedProgramsSectionView.contentViewImpl.layer.allowsGroupOpacity = true
                                 self.scrollView.addSubview(suggestedProgramsSectionView)
                             }
                             transition.setFrame(view: suggestedProgramsSectionView, frame: suggestedProgramsSectionFrame)
@@ -1281,6 +1483,9 @@ If you end your affiliate program:
                             } else {
                                 suggestedProgramsSectionView.isHidden = true
                             }
+                            
+                            suggestedProgramsSectionView.contentViewImpl.alpha = self.isSuggestedSortModeUpdating ? 0.6 : 1.0
+                            suggestedProgramsSectionView.contentViewImpl.isUserInteractionEnabled = !self.isSuggestedSortModeUpdating
                         }
                         if !suggestedStarBotListItems.isEmpty {
                             contentHeight += suggestedProgramsSectionSize.height
@@ -1438,5 +1643,19 @@ private final class ListContextExtractedContentSource: ContextExtractedContentSo
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceView: UIView
+
+    init(controller: ViewController, sourceView: UIView) {
+        self.controller = controller
+        self.sourceView = sourceView
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

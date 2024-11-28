@@ -849,7 +849,7 @@ public final class InviteLinkViewController: ViewController {
                             var subtitle = presentationData.strings.InviteLink_SubscriptionFee_NoOneJoined
                             if state.count > 0 {
                                 title += " x \(state.count)"
-                                let usdValue = formatTonUsdValue(pricing.amount * Int64(state.count), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat)
+                                let usdValue = formatTonUsdValue(pricing.amount.value * Int64(state.count), divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat)
                                 subtitle = presentationData.strings.InviteLink_SubscriptionFee_ApproximateIncome(usdValue).string
                             }
                             entries.append(.subscriptionPricing(presentationData.theme, title, subtitle))

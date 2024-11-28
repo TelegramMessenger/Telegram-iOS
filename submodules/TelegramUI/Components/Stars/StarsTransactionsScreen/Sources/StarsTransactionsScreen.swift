@@ -127,7 +127,7 @@ final class StarsTransactionsScreenComponent: Component {
         private var stateDisposable: Disposable?
         private var starsState: StarsContext.State?
         
-        private var previousBalance: Int64?
+        private var previousBalance: StarsAmount?
         
         private var subscriptionsStateDisposable: Disposable?
         private var subscriptionsState: StarsSubscriptionsContext.State?
@@ -527,7 +527,7 @@ final class StarsTransactionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
+                        string: presentationStringsFormattedNumber(self.starsState?.balance ?? StarsAmount.zero, environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),
@@ -611,7 +611,7 @@ final class StarsTransactionsScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             dateTimeFormat: environment.dateTimeFormat,
-                            count: self.starsState?.balance ?? 0,
+                            count: self.starsState?.balance ?? StarsAmount.zero,
                             rate: nil,
                             actionTitle: environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled,
@@ -1091,7 +1091,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     guard let self else {
                         return
                     }
-                    self.starsContext.add(balance: stars)
+                    self.starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
                     
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let resultController = UndoOverlayController(

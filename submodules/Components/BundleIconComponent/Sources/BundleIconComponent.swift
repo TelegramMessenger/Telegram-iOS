@@ -8,13 +8,15 @@ public final class BundleIconComponent: Component {
     public let name: String
     public let tintColor: UIColor?
     public let maxSize: CGSize?
+    public let scaleFactor: CGFloat
     public let shadowColor: UIColor?
     public let shadowBlur: CGFloat
     
-    public init(name: String, tintColor: UIColor?, maxSize: CGSize? = nil, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
+    public init(name: String, tintColor: UIColor?, maxSize: CGSize? = nil, scaleFactor: CGFloat = 1.0, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
         self.name = name
         self.tintColor = tintColor
         self.maxSize = maxSize
+        self.scaleFactor = scaleFactor
         self.shadowColor = shadowColor
         self.shadowBlur = shadowBlur
     }
@@ -27,6 +29,9 @@ public final class BundleIconComponent: Component {
             return false
         }
         if lhs.maxSize != rhs.maxSize {
+            return false
+        }
+        if lhs.scaleFactor != rhs.scaleFactor {
             return false
         }
         if lhs.shadowColor != rhs.shadowColor {
@@ -74,6 +79,10 @@ public final class BundleIconComponent: Component {
             var imageSize = self.image?.size ?? CGSize()
             if let maxSize = component.maxSize {
                 imageSize = imageSize.aspectFitted(maxSize)
+            }
+            if component.scaleFactor != 1.0 {
+                imageSize.width = floor(imageSize.width * component.scaleFactor)
+                imageSize.height = floor(imageSize.height * component.scaleFactor)
             }
             
             return CGSize(width: min(imageSize.width, availableSize.width), height: min(imageSize.height, availableSize.height))

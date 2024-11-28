@@ -1785,7 +1785,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateWallpaper(peerId: peer.peerId, wallpaper: wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) })
             case let .updateBroadcastRevenueTransactions(peer, balances):
                 updatedState.updateRevenueBalances(peerId: peer.peerId, balances: RevenueStats.Balances(apiRevenueBalances: balances))
-            case let .updateStarsBalance(_, balance, _):
+            case let .updateStarsBalance(balance):
                 updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
@@ -3418,7 +3418,7 @@ func replayFinalState(
     var syncAttachMenuBots = false
     var updateConfig = false
     var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
-    var updatedStarsBalance: [PeerId: Int64] = [:]
+    var updatedStarsBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     var updatedStarsReactionsAreAnonymousByDefault: Bool?
     
@@ -4846,7 +4846,7 @@ func replayFinalState(
             case let .UpdateRevenueBalances(peerId, balances):
                 updatedRevenueBalances[peerId] = balances
             case let .UpdateStarsBalance(peerId, balance):
-                updatedStarsBalance[peerId] = balance
+                updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
             case let .UpdateStarsReactionsAreAnonymousByDefault(value):

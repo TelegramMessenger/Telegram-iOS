@@ -418,7 +418,7 @@ extension ChatControllerImpl {
                                 return
                             }
                             
-                            if balance < 1 {
+                            if balance < StarsAmount(value: 1, nanos: 0) {
                                 controller?.dismiss(completion: {
                                     guard let strongSelf = self else {
                                         return

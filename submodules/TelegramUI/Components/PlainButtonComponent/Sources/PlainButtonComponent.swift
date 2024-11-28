@@ -200,16 +200,16 @@ public final class PlainButtonComponent: Component {
                 transition: component.animateContents ? transition : transition.withAnimation(.none),
                 component: component.content,
                 environment: {},
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - component.contentInsets.left - component.contentInsets.right, height: availableSize.height - component.contentInsets.top - component.contentInsets.bottom)
             )
 
             var size = contentSize
+            size.width += component.contentInsets.left + component.contentInsets.right
+            size.height += component.contentInsets.top + component.contentInsets.bottom
             if let minSize = component.minSize {
                 size.width = max(size.width, minSize.width)
                 size.height = max(size.height, minSize.height)
             }
-            size.width += component.contentInsets.left + component.contentInsets.right
-            size.height += component.contentInsets.top + component.contentInsets.bottom
 
             if let contentView = self.content.view {
                 var contentTransition = transition

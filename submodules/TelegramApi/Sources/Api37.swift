@@ -7873,6 +7873,26 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func searchStickers(flags: Int32, q: String, langCode: String, offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1277568311)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchStickers", parameters: [("flags", String(describing: flags)), ("q", String(describing: q)), ("langCode", String(describing: langCode)), ("offset", String(describing: offset)), ("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FoundStickers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.FoundStickers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.FoundStickers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func sendBotRequestedPeer(peer: Api.InputPeer, msgId: Int32, buttonId: Int32, requestedPeers: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1850552224)

@@ -4,10 +4,12 @@ import CoreMedia
 import FFMpegBinding
 import VideoToolbox
 
+#if os(macOS)
 private let isHardwareAv1Supported: Bool = {
     let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
     return value
 }()
+#endif
 
 public protocol MediaDataReader: AnyObject {
     var hasVideo: Bool { get }

@@ -92,7 +92,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     
     case subscriptionFeeToggle(PresentationTheme, String, Bool, Bool)
-    case subscriptionFee(PresentationTheme, String, Bool, Int64?, String, Int64?)
+    case subscriptionFee(PresentationTheme, String, Bool, StarsAmount?, String, StarsAmount?)
     case subscriptionFeeInfo(PresentationTheme, String)
     
     case requestApproval(PresentationTheme, String, Bool, Bool)
@@ -328,7 +328,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 return ItemListSingleLineInputItem(context: arguments.context, presentationData: presentationData, title: title, text: value.flatMap { "\($0)" } ?? "", placeholder: placeholder, label: label, type: .number, spacing: 3.0, enabled: enabled, tag: InviteLinksEditEntryTag.subscriptionFee, sectionId: self.section, textUpdated: { text in
                     arguments.updateState { state in
                         var updatedState = state
-                        if var value = Int64(text) {
+                        if var value = Int64(text).flatMap({ StarsAmount(value: $0, nanos: 0) }) {
                             if let maxValue, value > maxValue {
                                 value = maxValue
                                 arguments.errorWithItem(.subscriptionFee)
@@ -492,14 +492,14 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         entries.append(.subscriptionFeeToggle(presentationData.theme, presentationData.strings.InviteLink_Create_Fee, state.subscriptionEnabled, isEditingEnabled))
         if state.subscriptionEnabled {
             var label: String = ""
-            if let subscriptionFee = state.subscriptionFee, subscriptionFee > 0 {
+            if let subscriptionFee = state.subscriptionFee, subscriptionFee > StarsAmount.zero {
                 var usdRate = 0.012
                 if let usdWithdrawRate = configuration.usdWithdrawRate {
                     usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                 }
-                label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
+                label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee.value, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
             }
-            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee))
+            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee.flatMap({ StarsAmount(value: $0, nanos: 0) })))
         }
         let infoText: String
         if let _ = invite, state.subscriptionEnabled {
@@ -566,7 +566,7 @@ private struct InviteLinkEditControllerState: Equatable {
     var time: InviteLinkTimeLimit
     var requestApproval = false
     var subscriptionEnabled = false
-    var subscriptionFee: Int64?
+    var subscriptionFee: StarsAmount?
     var pickingExpiryDate = false
     var pickingExpiryTime = false
     var pickingUsageLimit = false
@@ -698,7 +698,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         
         var doneIsEnabled = true
         if state.subscriptionEnabled {
-            if (state.subscriptionFee ?? 0) == 0 {
+            if (state.subscriptionFee ?? StarsAmount.zero) == StarsAmount.zero {
                 doneIsEnabled = false
             }
         }

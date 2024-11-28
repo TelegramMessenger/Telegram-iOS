@@ -1589,7 +1589,7 @@ private func monetizationEntries(
     entries.append(.adsProceedsOverview(presentationData.theme, canViewRevenue ? data : nil, canViewStarsRevenue ? starsData : nil))
     
     let hasTonBalance = data.balances.overallRevenue > 0
-    let hasStarsBalance = (starsData?.balances.overallRevenue ?? 0) > 0
+    let hasStarsBalance = (starsData?.balances.overallRevenue ?? StarsAmount.zero) > StarsAmount.zero
     
     let proceedsInfo: String
     if (canViewStarsRevenue && hasStarsBalance) && (canViewRevenue && hasTonBalance) {
@@ -1624,9 +1624,9 @@ private func monetizationEntries(
     }
     
     if canViewStarsRevenue {
-        if let starsData, starsData.balances.overallRevenue > 0 {
+        if let starsData, starsData.balances.overallRevenue > StarsAmount.zero {
             entries.append(.adsStarsBalanceTitle(presentationData.theme, presentationData.strings.Monetization_StarsBalanceTitle))
-            entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > 0, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
+            entries.append(.adsStarsBalance(presentationData.theme, starsData, isCreator && starsData.balances.availableBalance > StarsAmount.zero, starsData.balances.withdrawEnabled, starsData.balances.nextWithdrawalTimestamp))
             entries.append(.adsStarsBalanceInfo(presentationData.theme, presentationData.strings.Monetization_Balance_StarsInfo))
         }
     }
