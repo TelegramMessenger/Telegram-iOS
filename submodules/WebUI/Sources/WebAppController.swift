@@ -2349,6 +2349,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            
+            guard !fileName.contains("/") && fileName.lengthOfBytes(using: .utf8) < 256 && url.lengthOfBytes(using: .utf8) < 32768 else {
+                self.webView?.sendEvent(name: "file_download_requested", data: "{status: \"cancelled\"}")
+                return
+            }
+            
             var isMedia = false
             var title: String?
             let photoExtensions = [".jpg", ".png", ".gif", ".tiff"]

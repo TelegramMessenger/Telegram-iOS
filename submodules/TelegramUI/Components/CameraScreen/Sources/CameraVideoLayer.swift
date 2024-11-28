@@ -300,7 +300,7 @@ final class CameraVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 
                 encoder.setFragmentTexture(blurredTexture, index: 0)
                 
-                var brightness: Float = 0.75
+                var brightness: Float = 0.85
                 var saturation: Float = 1.3
                 var overlay: SIMD4<Float> = SIMD4<Float>()
                 encoder.setFragmentBytes(&brightness, length: 4, index: 0)
@@ -311,32 +311,32 @@ final class CameraVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             })
         }
     
-        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, inputs: rgbaTexture.placeholer, commands: { encoder, placement, rgbaTexture in
-            guard let rgbaTexture else {
-                return
-            }
-            
-            let effectiveRect = placement.effectiveRect
-            
-            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
-            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
-            
-            var mirror = SIMD2<UInt32>(
-                videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
-                videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
-            )
-            encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
-            
-            encoder.setFragmentTexture(rgbaTexture, index: 0)
-            
-            var brightness: Float = 1.0
-            var saturation: Float = 1.0
-            var overlay: SIMD4<Float> = SIMD4<Float>()
-            encoder.setFragmentBytes(&brightness, length: 4, index: 0)
-            encoder.setFragmentBytes(&saturation, length: 4, index: 1)
-            encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
-            
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        })
+//        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, inputs: rgbaTexture.placeholer, commands: { encoder, placement, rgbaTexture in
+//            guard let rgbaTexture else {
+//                return
+//            }
+//            
+//            let effectiveRect = placement.effectiveRect
+//            
+//            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
+//            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+//            
+//            var mirror = SIMD2<UInt32>(
+//                videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
+//                videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
+//            )
+//            encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
+//            
+//            encoder.setFragmentTexture(rgbaTexture, index: 0)
+//            
+//            var brightness: Float = 1.0
+//            var saturation: Float = 1.0
+//            var overlay: SIMD4<Float> = SIMD4<Float>()
+//            encoder.setFragmentBytes(&brightness, length: 4, index: 0)
+//            encoder.setFragmentBytes(&saturation, length: 4, index: 1)
+//            encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
+//            
+//            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+//        })
     }
 }

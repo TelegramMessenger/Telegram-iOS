@@ -738,7 +738,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             self.extractedContainerView.contentView.clipsToBounds = false
             self.clippingView.clipsToBounds = false
             
-            let scale = size.width / originalCameraFrame.width
+            let scale = self.bounds.width / originalCameraFrame.width
             transition.animateScale(view: cameraContainerView, from: 1.0, to: scale)
             transition.animatePosition(view: cameraContainerView, from: originalCameraFrame.center, to: cameraContainerView.center, completion: { _ in
                 self.extractedContainerView.contentView.clipsToBounds = true
@@ -815,7 +815,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             self.state = state
             if let size = self.validLayout {
                 var transition: ComponentTransition = .spring(duration: 0.3)
-                if let previousState, previousState.innerProgress != state.innerProgress {
+                if let previousState, previousState.grid == state.grid && previousState.innerProgress != state.innerProgress {
                     transition = .immediate
                 }
                 var progressUpdated = false
