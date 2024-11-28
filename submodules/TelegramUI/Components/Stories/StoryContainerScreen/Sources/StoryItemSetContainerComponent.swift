@@ -6255,7 +6255,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 
                                 component.presentController(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                    content: .linkCopied(title: nil, text: component.strings.Story_ToastLinkCopied),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     blurred: true,
@@ -6468,7 +6468,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 
                                 component.presentController(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                    content: .linkCopied(title: nil, text: component.strings.Story_ToastLinkCopied),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     blurred: true,
@@ -6767,7 +6767,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     
                                     component.presentController(UndoOverlayController(
                                         presentationData: presentationData,
-                                        content: .linkCopied(text: component.strings.Story_ToastLinkCopied),
+                                        content: .linkCopied(title: nil, text: component.strings.Story_ToastLinkCopied),
                                         elevatedLayout: false,
                                         animateInAsReplacement: false,
                                         blurred: true,

@@ -1022,7 +1022,7 @@ final class StoryItemSetContainerSendMessage {
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                             component.presentController(UndoOverlayController(
                                 presentationData: presentationData,
-                                content: .linkCopied(text: presentationData.strings.Story_ToastLinkCopied),
+                                content: .linkCopied(title: nil, text: presentationData.strings.Story_ToastLinkCopied),
                                 elevatedLayout: false,
                                 animateInAsReplacement: false,
                                 action: { _ in return false }
@@ -1270,7 +1270,7 @@ final class StoryItemSetContainerSendMessage {
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 component.presentController(UndoOverlayController(
                     presentationData: presentationData,
-                    content: .linkCopied(text: presentationData.strings.Story_ToastLinkCopied),
+                    content: .linkCopied(title: nil, text: presentationData.strings.Story_ToastLinkCopied),
                     elevatedLayout: false,
                     animateInAsReplacement: false,
                     action: { _ in return false }
@@ -2780,7 +2780,7 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         let disposable = self.resolvePeerByNameDisposable
-        var resolveSignal = component.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+        var resolveSignal = component.context.engine.peers.resolvePeerByName(name: name, referrer: nil, ageLimit: 10)
         
         var cancelImpl: (() -> Void)?
         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
@@ -2856,7 +2856,7 @@ final class StoryItemSetContainerSendMessage {
         
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
-            resolveSignal = component.context.engine.peers.resolvePeerByName(name: peerName)
+            resolveSignal = component.context.engine.peers.resolvePeerByName(name: peerName, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                 guard case let .result(result) = result else {
                     return .complete()

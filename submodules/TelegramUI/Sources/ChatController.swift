@@ -1755,7 +1755,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            if balance < 1 {
+                            if balance < StarsAmount(value: 1, nanos: 0) {
                                 let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
                                 |> take(1)
                                 |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in
@@ -9552,7 +9552,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 disposable = MetaDisposable()
                 self.resolvePeerByNameDisposable = disposable
             }
-            var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+            var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, referrer: nil, ageLimit: 10)
             
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
@@ -9619,7 +9619,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
-                resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
+                resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName, referrer: nil)
                 |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                     guard case let .result(result) = result else {
                         return .complete()

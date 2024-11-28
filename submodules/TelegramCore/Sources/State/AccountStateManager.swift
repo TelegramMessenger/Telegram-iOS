@@ -49,7 +49,7 @@ private final class UpdatedRevenueBalancesSubscriberContext {
 }
 
 private final class UpdatedStarsBalanceSubscriberContext {
-    let subscribers = Bag<([PeerId: Int64]) -> Void>()
+    let subscribers = Bag<([PeerId: StarsAmount]) -> Void>()
 }
 
 private final class UpdatedStarsRevenueStatusSubscriberContext {
@@ -1705,7 +1705,7 @@ public final class AccountStateManager {
             }
         }
         
-        public func updatedStarsBalance() -> Signal<[PeerId: Int64], NoError> {
+        public func updatedStarsBalance() -> Signal<[PeerId: StarsAmount], NoError> {
             let queue = self.queue
             return Signal { [weak self] subscriber in
                 let disposable = MetaDisposable()
@@ -1726,7 +1726,7 @@ public final class AccountStateManager {
             }
         }
         
-        private func notifyUpdatedStarsBalance(_ updatedStarsBalance: [PeerId: Int64]) {
+        private func notifyUpdatedStarsBalance(_ updatedStarsBalance: [PeerId: StarsAmount]) {
             for subscriber in self.updatedStarsBalanceContext.subscribers.copyItems() {
                 subscriber(updatedStarsBalance)
             }
@@ -2084,7 +2084,7 @@ public final class AccountStateManager {
         }
     }
 
-    public func updatedStarsBalance() -> Signal<[PeerId: Int64], NoError> {
+    public func updatedStarsBalance() -> Signal<[PeerId: StarsAmount], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedStarsBalance().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }

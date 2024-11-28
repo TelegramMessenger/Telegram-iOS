@@ -86,7 +86,7 @@ extension ChatControllerImpl {
                 } else if isEmail {
                     content = .copy(text: self.presentationData.strings.Conversation_EmailCopied)
                 } else if canAddToReadingList {
-                    content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                    content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_LinkCopied)
                 } else {
                     content = .copy(text: self.presentationData.strings.Conversation_TextCopied)
                 }

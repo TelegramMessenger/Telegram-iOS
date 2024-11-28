@@ -1157,7 +1157,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                         let context = self.context
                         let combinedDisposable = DisposableSet()
                         self.preloadAdPeerDisposable.set(combinedDisposable)
-                        combinedDisposable.add(context.engine.peers.resolvePeerByName(name: adPeerName).startStrict(next: { result in
+                        combinedDisposable.add(context.engine.peers.resolvePeerByName(name: adPeerName, referrer: nil).startStrict(next: { result in
                             if case let .result(maybePeer) = result, let peer = maybePeer {
                                 combinedDisposable.add(context.account.viewTracker.polledChannel(peerId: peer.id).startStrict())
                                 combinedDisposable.add(context.account.addAdditionalPreloadHistoryPeerId(peerId: peer.id))

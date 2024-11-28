@@ -76,6 +76,7 @@ public enum ParsedInternalPeerUrlParameter {
     case boost
     case text(String)
     case profile
+    case referrer(String)
 }
 
 public enum ParsedInternalUrl {
@@ -269,7 +270,13 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                     return .peer(.name(peerName), .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
-                                    return .peer(.name(peerName), .botStart(value))
+                                    let linkRefPrefix = "_tgref_"
+                                    if value.hasPrefix(linkRefPrefix) {
+                                        let referrer = String(value[value.index(value.startIndex, offsetBy: linkRefPrefix.count)...])
+                                        return .peer(.name(peerName), .referrer(referrer))
+                                    } else {
+                                        return .peer(.name(peerName), .botStart(value))
+                                    }
                                 } else if queryItem.name == "startgroup" {
                                     var botAdminRights: ResolvedBotAdminRights?
                                     for queryItem in queryItems {
@@ -316,7 +323,9 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     if let id = Int32(value) {
                                         return .peer(.name(peerName), .story(id))
                                     }
-                                }
+                                 } else if queryItem.name == "ref", let referrer = queryItem.value {
+                                     return .peer(.name(peerName), .referrer(referrer))
+                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peer(.name(peerName), .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
@@ -361,6 +370,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                 }
                                 return .peer(.name(peerName), .appStart("", queryItem.value, mode))
+                            } else if queryItem.name == "ref", let referrer = queryItem.value {
+                                return .peer(.name(peerName), .referrer(referrer))
                             }
                         }
                     }
@@ -677,7 +688,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         textInputState = ChatTextInputState(inputText: NSAttributedString(string: text))
                     }
                     if let attach = attach {
-                        return context.engine.peers.resolvePeerByName(name: attach)
+                        return context.engine.peers.resolvePeerByName(name: attach, referrer: nil)
                         |> map { result -> ResolveInternalUrlResult in
                             switch result {
                             case .progress:
@@ -701,7 +712,11 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             let resolvedPeer: Signal<ResolvePeerResult, NoError>
             switch reference {
             case let .name(name):
-                resolvedPeer = context.engine.peers.resolvePeerByName(name: name)
+                var referrer: String?
+                if case let .referrer(value) = parameter {
+                    referrer = value
+                }
+                resolvedPeer = context.engine.peers.resolvePeerByName(name: name, referrer: referrer)
                 |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
                     switch result {
                     case .progress:
@@ -754,7 +769,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             case let .gameStart(game):
                                 return .single(.result(.gameStart(peerId: peer.id, game: game)))
                             case let .attachBotStart(name, payload):
-                                return context.engine.peers.resolvePeerByName(name: name)
+                                return context.engine.peers.resolvePeerByName(name: name, referrer: nil)
                                 |> mapToSignal { botPeerResult -> Signal<ResolveInternalUrlResult, NoError> in
                                     switch botPeerResult {
                                     case .progress:
@@ -870,6 +885,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         return .result(.boost(peerId: peer.id, status: boostStatus, myBoostStatus: myBoostStatus))
                                     }
                                 )
+                            case .referrer:
+                                return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                         }
                     } else {
                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
@@ -1049,7 +1066,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     choose.insert(.channels)
                 }
             }
-            return context.engine.peers.resolvePeerByName(name: name)
+            return context.engine.peers.resolvePeerByName(name: name, referrer: nil)
             |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                 switch result {
                 case .progress:

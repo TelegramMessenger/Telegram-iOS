@@ -114,6 +114,7 @@ public final class ButtonTextContentComponent: Component {
     public let text: String
     public let badge: Int
     public let textColor: UIColor
+    public let fontSize: CGFloat
     public let badgeBackground: UIColor
     public let badgeForeground: UIColor
     public let badgeStyle: BadgeStyle
@@ -124,6 +125,7 @@ public final class ButtonTextContentComponent: Component {
         text: String,
         badge: Int,
         textColor: UIColor,
+        fontSize: CGFloat = 17.0,
         badgeBackground: UIColor,
         badgeForeground: UIColor,
         badgeStyle: BadgeStyle = .round,
@@ -133,6 +135,7 @@ public final class ButtonTextContentComponent: Component {
         self.text = text
         self.badge = badge
         self.textColor = textColor
+        self.fontSize = fontSize
         self.badgeBackground = badgeBackground
         self.badgeForeground = badgeForeground
         self.badgeStyle = badgeStyle
@@ -148,6 +151,9 @@ public final class ButtonTextContentComponent: Component {
             return false
         }
         if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.fontSize != rhs.fontSize {
             return false
         }
         if lhs.badgeBackground != rhs.badgeBackground {
@@ -202,7 +208,7 @@ public final class ButtonTextContentComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(Text(
                     text: component.text,
-                    font: Font.semibold(17.0),
+                    font: Font.semibold(component.fontSize),
                     color: component.textColor
                 )),
                 environment: {},

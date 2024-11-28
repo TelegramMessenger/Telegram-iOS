@@ -1,7 +1,7 @@
 import Foundation
+import UIKit
 import SwiftSignalKit
 import AVFoundation
-import UIKit
 
 private var managedAudioSessionLogger: (String) -> Void = { _ in }
 

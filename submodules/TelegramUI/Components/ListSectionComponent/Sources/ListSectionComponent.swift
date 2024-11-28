@@ -363,6 +363,10 @@ public final class ListSectionComponent: Component {
     public final class View: UIView {
         private let contentView: ListSectionContentView
         
+        public var contentViewImpl: UIView {
+            return self.contentView
+        }
+        
         private var header: ComponentView<Empty>?
         private var footer: ComponentView<Empty>?
         

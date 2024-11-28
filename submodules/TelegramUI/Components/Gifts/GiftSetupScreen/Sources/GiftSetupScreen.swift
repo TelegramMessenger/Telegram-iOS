@@ -391,7 +391,7 @@ final class GiftSetupScreenComponent: Component {
                 })
             }
             
-            if starsState.balance < starGift.price {
+            if starsState.balance < StarsAmount(value: starGift.price, nanos: 0) {
                 let _ = (self.optionsPromise.get()
                 |> filter { $0 != nil }
                 |> take(1)
@@ -405,7 +405,7 @@ final class GiftSetupScreenComponent: Component {
                         options: options ?? [],
                         purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
                         completion: { [weak starsContext] stars in
-                            starsContext?.add(balance: stars)
+                            starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
                             Queue.mainQueue().after(0.1) {
                                 proceed()
                             }

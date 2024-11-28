@@ -40,7 +40,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .phoneCall(callId: callId, discardReason: discardReason, duration: duration, isVideo: isVideo))
     case .messageActionEmpty:
         return nil
-    case let .messageActionPaymentSent(flags, currency, totalAmount, invoiceSlug):
+    case let .messageActionPaymentSent(flags, currency, totalAmount, invoiceSlug, subscriptionUntilDate):
+        let _ = subscriptionUntilDate
         let isRecurringInit = (flags & (1 << 2)) != 0
         let isRecurringUsed = (flags & (1 << 3)) != 0
         return TelegramMediaAction(action: .paymentSent(currency: currency, totalAmount: totalAmount, invoiceSlug: invoiceSlug, isRecurringInit: isRecurringInit, isRecurringUsed: isRecurringUsed))

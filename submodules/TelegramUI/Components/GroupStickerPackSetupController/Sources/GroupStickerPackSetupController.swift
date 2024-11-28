@@ -430,7 +430,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
             completionImpl?(nil)
         }
     }, openStickersBot: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers")
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers", referrer: nil)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()

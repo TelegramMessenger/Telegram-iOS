@@ -1461,20 +1461,22 @@ final class AutomaticBusinessMessageSetupScreenComponent: Component {
                         items: [
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
                                 theme: environment.theme,
-                                values: valueList.map { item in
-                                    return environment.strings.MessageTimer_Days(Int32(item))
-                                },
-                                markPositions: true,
-                                selectedIndex: selectedInactivityIndex,
-                                title: nil,
-                                selectedIndexUpdated: { [weak self] index in
-                                    guard let self else {
-                                        return
+                                content: .discrete(ListItemSliderSelectorComponent.Discrete(
+                                    values: valueList.map { item in
+                                        return environment.strings.MessageTimer_Days(Int32(item))
+                                    },
+                                    markPositions: true,
+                                    selectedIndex: selectedInactivityIndex,
+                                    title: nil,
+                                    selectedIndexUpdated: { [weak self] index in
+                                        guard let self else {
+                                            return
+                                        }
+                                        let index = max(0, min(valueList.count - 1, index))
+                                        self.inactivityDays = valueList[index]
+                                        self.state?.updated(transition: .immediate)
                                     }
-                                    let index = max(0, min(valueList.count - 1, index))
-                                    self.inactivityDays = valueList[index]
-                                    self.state?.updated(transition: .immediate)
-                                }
+                                ))
                             )))
                         ]
                     )),

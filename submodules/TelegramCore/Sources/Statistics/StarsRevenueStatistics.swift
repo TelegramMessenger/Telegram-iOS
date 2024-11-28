@@ -24,18 +24,21 @@ public struct StarsRevenueStats: Equatable, Codable {
             case overallRevenue
             case withdrawEnabled
             case nextWithdrawalTimestamp
+            case currentBalanceStars
+            case availableBalanceStars
+            case overallRevenueStars
         }
         
-        public let currentBalance: Int64
-        public let availableBalance: Int64
-        public let overallRevenue: Int64
+        public let currentBalance: StarsAmount
+        public let availableBalance: StarsAmount
+        public let overallRevenue: StarsAmount
         public let withdrawEnabled: Bool
         public let nextWithdrawalTimestamp: Int32?
         
         public init(
-            currentBalance: Int64,
-            availableBalance: Int64,
-            overallRevenue: Int64,
+            currentBalance: StarsAmount,
+            availableBalance: StarsAmount,
+            overallRevenue: StarsAmount,
             withdrawEnabled: Bool,
             nextWithdrawalTimestamp: Int32?
         ) {
@@ -48,18 +51,35 @@ public struct StarsRevenueStats: Equatable, Codable {
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            self.currentBalance = try container.decode(Int64.self, forKey: .currentBalance)
-            self.availableBalance = try container.decode(Int64.self, forKey: .availableBalance)
-            self.overallRevenue = try container.decode(Int64.self, forKey: .overallRevenue)
+            
+            if let legacyCurrentBalance = try container.decodeIfPresent(Int64.self, forKey: .currentBalance) {
+                self.currentBalance = StarsAmount(value: legacyCurrentBalance, nanos: 0)
+            } else {
+                self.currentBalance = try container.decode(StarsAmount.self, forKey: .currentBalanceStars)
+            }
+            
+            if let legacyAvailableBalance = try container.decodeIfPresent(Int64.self, forKey: .availableBalance) {
+                self.availableBalance = StarsAmount(value: legacyAvailableBalance, nanos: 0)
+            } else {
+                self.availableBalance = try container.decode(StarsAmount.self, forKey: .availableBalanceStars)
+            }
+            
+            
+            if let legacyOverallRevenue = try container.decodeIfPresent(Int64.self, forKey: .overallRevenue) {
+                self.overallRevenue = StarsAmount(value: legacyOverallRevenue, nanos: 0)
+            } else {
+                self.overallRevenue = try container.decode(StarsAmount.self, forKey: .overallRevenueStars)
+            }
+            
             self.withdrawEnabled = try container.decode(Bool.self, forKey: .withdrawEnabled)
             self.nextWithdrawalTimestamp = try container.decodeIfPresent(Int32.self, forKey: .nextWithdrawalTimestamp)
         }
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(self.currentBalance, forKey: .currentBalance)
-            try container.encode(self.availableBalance, forKey: .availableBalance)
-            try container.encode(self.overallRevenue, forKey: .overallRevenue)
+            try container.encode(self.currentBalance, forKey: .currentBalanceStars)
+            try container.encode(self.availableBalance, forKey: .availableBalanceStars)
+            try container.encode(self.overallRevenue, forKey: .overallRevenueStars)
             try container.encode(self.withdrawEnabled, forKey: .withdrawEnabled)
             try container.encodeIfPresent(self.nextWithdrawalTimestamp, forKey: .nextWithdrawalTimestamp)
         }
@@ -126,7 +146,7 @@ extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
         case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue, nextWithdrawalAt):
-            self.init(currentBalance: currentBalance, availableBalance: availableBalance, overallRevenue: overallRevenue, withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
+            self.init(currentBalance: StarsAmount(value: currentBalance, nanos: 0), availableBalance: StarsAmount(value: availableBalance, nanos: 0), overallRevenue: StarsAmount(value: overallRevenue, nanos: 0), withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
         }
     }
 }

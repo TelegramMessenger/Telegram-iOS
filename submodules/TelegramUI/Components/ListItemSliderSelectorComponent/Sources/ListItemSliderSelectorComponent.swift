@@ -9,43 +9,101 @@ import ListSectionComponent
 import SliderComponent
 
 public final class ListItemSliderSelectorComponent: Component {
+    public final class Discrete: Equatable {
+        public let values: [String]
+        public let markPositions: Bool
+        public let selectedIndex: Int
+        public let minSelectedIndex: Int?
+        public let title: String?
+        public let selectedIndexUpdated: (Int) -> Void
+        
+        public init(values: [String], markPositions: Bool, selectedIndex: Int, minSelectedIndex: Int? = nil, title: String?, selectedIndexUpdated: @escaping (Int) -> Void) {
+            self.values = values
+            self.markPositions = markPositions
+            self.selectedIndex = selectedIndex
+            self.minSelectedIndex = minSelectedIndex
+            self.title = title
+            self.selectedIndexUpdated = selectedIndexUpdated
+        }
+        
+        public static func ==(lhs: Discrete, rhs: Discrete) -> Bool {
+            if lhs.values != rhs.values {
+                return false
+            }
+            if lhs.markPositions != rhs.markPositions {
+                return false
+            }
+            if lhs.selectedIndex != rhs.selectedIndex {
+                return false
+            }
+            if lhs.minSelectedIndex != rhs.minSelectedIndex {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public final class Continuous: Equatable {
+        public let value: CGFloat
+        public let minValue: CGFloat?
+        public let lowerBoundTitle: String
+        public let upperBoundTitle: String
+        public let title: String
+        public let valueUpdated: (CGFloat) -> Void
+        
+        public init(value: CGFloat, minValue: CGFloat? = nil, lowerBoundTitle: String, upperBoundTitle: String, title: String, valueUpdated: @escaping (CGFloat) -> Void) {
+            self.value = value
+            self.minValue = minValue
+            self.lowerBoundTitle = lowerBoundTitle
+            self.upperBoundTitle = upperBoundTitle
+            self.title = title
+            self.valueUpdated = valueUpdated
+        }
+        
+        public static func ==(lhs: Continuous, rhs: Continuous) -> Bool {
+            if lhs.value != rhs.value {
+                return false
+            }
+            if lhs.minValue != rhs.minValue {
+                return false
+            }
+            if lhs.lowerBoundTitle != rhs.lowerBoundTitle {
+                return false
+            }
+            if lhs.upperBoundTitle != rhs.upperBoundTitle {
+                return false
+            }
+            if lhs.title != rhs.title {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public enum Content: Equatable {
+        case discrete(Discrete)
+        case continuous(Continuous)
+    }
+    
     public let theme: PresentationTheme
-    public let values: [String]
-    public let markPositions: Bool
-    public let selectedIndex: Int
-    public let title: String?
-    public let selectedIndexUpdated: (Int) -> Void
+    public let content: Content
     
     public init(
         theme: PresentationTheme,
-        values: [String],
-        markPositions: Bool,
-        selectedIndex: Int,
-        title: String?,
-        selectedIndexUpdated: @escaping (Int) -> Void
+        content: Content
     ) {
         self.theme = theme
-        self.values = values
-        self.markPositions = markPositions
-        self.selectedIndex = selectedIndex
-        self.title = title
-        self.selectedIndexUpdated = selectedIndexUpdated
+        self.content = content
     }
     
     public static func ==(lhs: ListItemSliderSelectorComponent, rhs: ListItemSliderSelectorComponent) -> Bool {
         if lhs.theme !== rhs.theme {
             return false
         }
-        if lhs.values != rhs.values {
-            return false
-        }
-        if lhs.markPositions != rhs.markPositions {
-            return false
-        }
-        if lhs.selectedIndex != rhs.selectedIndex {
-            return false
-        }
-        if lhs.title != rhs.title {
+        if lhs.content != rhs.content {
             return false
         }
         return true
@@ -81,48 +139,90 @@ public final class ListItemSliderSelectorComponent: Component {
             let titleAreaWidth: CGFloat = availableSize.width - titleSideInset * 2.0
             
             var validIds: [Int] = []
-            for i in 0 ..< component.values.count {
-                if component.title != nil {
-                    if i != 0 && i != component.values.count - 1 {
-                        continue
+            var mainTitleValue: String?
+            
+            switch component.content {
+            case let .discrete(discrete):
+                mainTitleValue = discrete.title
+                
+                for i in 0 ..< discrete.values.count {
+                    if discrete.title != nil {
+                        if i != 0 && i != discrete.values.count - 1 {
+                            continue
+                        }
+                    }
+                    
+                    validIds.append(i)
+                    
+                    var titleTransition = transition
+                    let title: ComponentView<Empty>
+                    if let current = self.titles[i] {
+                        title = current
+                    } else {
+                        titleTransition = titleTransition.withAnimation(.none)
+                        title = ComponentView()
+                        self.titles[i] = title
+                    }
+                    let titleSize = title.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: discrete.values[i], font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    var titleFrame = CGRect(origin: CGPoint(x: titleSideInset - floor(titleSize.width * 0.5), y: 14.0), size: titleSize)
+                    if discrete.values.count > 1 {
+                        titleFrame.origin.x += floor(CGFloat(i) / CGFloat(discrete.values.count - 1) * titleAreaWidth)
+                    }
+                    if titleFrame.minX < titleClippingSideInset {
+                        titleFrame.origin.x = titleSideInset
+                    }
+                    if titleFrame.maxX > availableSize.width - titleClippingSideInset {
+                        titleFrame.origin.x = availableSize.width - titleClippingSideInset - titleSize.width
+                    }
+                    if let titleView = title.view {
+                        if titleView.superview == nil {
+                            self.addSubview(titleView)
+                        }
+                        titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                        titleTransition.setPosition(view: titleView, position: titleFrame.center)
                     }
                 }
+            case let .continuous(continuous):
+                mainTitleValue = continuous.title
                 
-                validIds.append(i)
-                
-                var titleTransition = transition
-                let title: ComponentView<Empty>
-                if let current = self.titles[i] {
-                    title = current
-                } else {
-                    titleTransition = titleTransition.withAnimation(.none)
-                    title = ComponentView()
-                    self.titles[i] = title
-                }
-                let titleSize = title.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.values[i], font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
-                )
-                var titleFrame = CGRect(origin: CGPoint(x: titleSideInset - floor(titleSize.width * 0.5), y: 14.0), size: titleSize)
-                if component.values.count > 1 {
-                    titleFrame.origin.x += floor(CGFloat(i) / CGFloat(component.values.count - 1) * titleAreaWidth)
-                }
-                if titleFrame.minX < titleClippingSideInset {
-                    titleFrame.origin.x = titleSideInset
-                }
-                if titleFrame.maxX > availableSize.width - titleClippingSideInset {
-                    titleFrame.origin.x = availableSize.width - titleClippingSideInset - titleSize.width
-                }
-                if let titleView = title.view {
-                    if titleView.superview == nil {
-                        self.addSubview(titleView)
+                for i in 0 ..< 2 {
+                    validIds.append(i)
+                    
+                    var titleTransition = transition
+                    let title: ComponentView<Empty>
+                    if let current = self.titles[i] {
+                        title = current
+                    } else {
+                        titleTransition = titleTransition.withAnimation(.none)
+                        title = ComponentView()
+                        self.titles[i] = title
                     }
-                    titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                    titleTransition.setPosition(view: titleView, position: titleFrame.center)
+                    let titleSize = title.update(
+                        transition: .immediate,
+                        component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: i == 0 ? continuous.lowerBoundTitle : continuous.upperBoundTitle, font: Font.regular(13.0), textColor: component.theme.list.itemSecondaryTextColor))
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    var titleFrame = CGRect(origin: CGPoint(x: titleSideInset, y: 14.0), size: titleSize)
+                    if i == 1 {
+                        titleFrame.origin.x = availableSize.width - titleClippingSideInset - titleSize.width
+                    }
+                    if let titleView = title.view {
+                        if titleView.superview == nil {
+                            self.addSubview(titleView)
+                        }
+                        titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                        titleTransition.setPosition(view: titleView, position: titleFrame.center)
+                    }
                 }
             }
             var removeIds: [Int] = []
@@ -136,7 +236,7 @@ public final class ListItemSliderSelectorComponent: Component {
                 self.titles.removeValue(forKey: id)
             }
             
-            if let title = component.title {
+            if let title = mainTitleValue {
                 let mainTitle: ComponentView<Empty>
                 var mainTitleTransition = transition
                 if let current = self.mainTitle {
@@ -169,24 +269,54 @@ public final class ListItemSliderSelectorComponent: Component {
                 }
             }
             
-            let sliderSize = self.slider.update(
-                transition: transition,
-                component: AnyComponent(SliderComponent(
-                    valueCount: component.values.count,
-                    value: component.selectedIndex,
-                    markPositions: component.markPositions,
-                    trackBackgroundColor: component.theme.list.controlSecondaryColor,
-                    trackForegroundColor: component.theme.list.itemAccentColor,
-                    valueUpdated: { [weak self] value in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.selectedIndexUpdated(value)
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
-            )
+            let sliderSize: CGSize
+            switch component.content {
+            case let .discrete(discrete):
+                sliderSize = self.slider.update(
+                    transition: transition,
+                    component: AnyComponent(SliderComponent(
+                        content: .discrete(SliderComponent.Discrete(
+                            valueCount: discrete.values.count,
+                            value: discrete.selectedIndex,
+                            minValue: discrete.minSelectedIndex,
+                            markPositions: discrete.markPositions,
+                            valueUpdated: { [weak self] value in
+                                guard let self, let component = self.component, case let .discrete(discrete) = component.content else {
+                                    return
+                                }
+                                discrete.selectedIndexUpdated(value)
+                            })
+                        ),
+                        trackBackgroundColor: component.theme.list.controlSecondaryColor,
+                        trackForegroundColor: component.theme.list.itemAccentColor,
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                )
+            case let .continuous(continuous):
+                sliderSize = self.slider.update(
+                    transition: transition,
+                    component: AnyComponent(SliderComponent(
+                        content: .continuous(SliderComponent.Continuous(
+                            value: continuous.value,
+                            minValue: continuous.minValue,
+                            valueUpdated: { [weak self] value in
+                                guard let self, let component = self.component, case let .continuous(continuous) = component.content else {
+                                    return
+                                }
+                                continuous.valueUpdated(value)
+                            })
+                        ),
+                        trackBackgroundColor: component.theme.list.controlSecondaryColor,
+                        trackForegroundColor: component.theme.list.itemAccentColor,
+                        minTrackForegroundColor: component.theme.list.itemAccentColor.mixedWith(component.theme.list.itemBlocksBackgroundColor, alpha: 0.6)
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100.0)
+                )
+            }
+            
             let sliderFrame = CGRect(origin: CGPoint(x: sideInset, y: 36.0), size: sliderSize)
             if let sliderView = self.slider.view {
                 if sliderView.superview == nil {

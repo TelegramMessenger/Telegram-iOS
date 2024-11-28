@@ -607,6 +607,7 @@ private final class PeerInfoInteraction {
     let openWorkingHoursContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBusinessLocationContextMenu: (ASDisplayNode, ContextGesture?) -> Void
     let openBirthdayContextMenu: (ASDisplayNode, ContextGesture?) -> Void
+    let editingOpenAffiliateProgram: () -> Void
     let getController: () -> ViewController?
     
     init(
@@ -675,6 +676,7 @@ private final class PeerInfoInteraction {
         openWorkingHoursContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBusinessLocationContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         openBirthdayContextMenu: @escaping (ASDisplayNode, ContextGesture?) -> Void,
+        editingOpenAffiliateProgram: @escaping () -> Void,
         getController: @escaping () -> ViewController?
     ) {
         self.openUsername = openUsername
@@ -742,6 +744,7 @@ private final class PeerInfoInteraction {
         self.openWorkingHoursContextMenu = openWorkingHoursContextMenu
         self.openBusinessLocationContextMenu = openBusinessLocationContextMenu
         self.openBirthdayContextMenu = openBirthdayContextMenu
+        self.editingOpenAffiliateProgram = editingOpenAffiliateProgram
         self.getController = getController
     }
 }
@@ -990,8 +993,8 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }))
         if let starsState = data.starsState {
             let balanceText: String
-            if starsState.balance > 0 {
-                balanceText = presentationStringsFormattedNumber(Int32(starsState.balance), presentationData.dateTimeFormat.groupingSeparator)
+            if starsState.balance > StarsAmount.zero {
+                balanceText = presentationStringsFormattedNumber(starsState.balance, presentationData.dateTimeFormat.groupingSeparator)
             } else {
                 balanceText = ""
             }
@@ -1212,6 +1215,7 @@ private enum InfoSection: Int, CaseIterable {
     case permissions
     case peerInfoTrailing
     case peerMembers
+    case botAffiliateProgram
 }
 
 private func infoItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], chatLocation: ChatLocation, isOpenedFromChat: Bool, isMyProfile: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {
@@ -1422,6 +1426,23 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     
                     currentPeerInfoSection = .peerInfoTrailing
                 }
+                
+                if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
+                } else {
+                    if let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
+                        if items[.botAffiliateProgram] == nil {
+                            items[.botAffiliateProgram] = []
+                        }
+                        //TODO:localize
+                        let programTitleValue: String
+                        programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
+                        //TODO:localize
+                        items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                            interaction.editingOpenAffiliateProgram()
+                        }))
+                        items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(starRefProgram.commissionPermille / 10)% of their spending there."))
+                    }
+                }
             }
             
             if let businessHours = cachedData.businessHours {
@@ -1511,10 +1532,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
                 let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
                 
-                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
-                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
+                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
+                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
                 
-                if overallRevenueBalance > 0 || overallStarsBalance > 0 {
+                if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
                     items[.balances]!.append(PeerInfoScreenHeaderItem(id: 20, text: presentationData.strings.PeerInfo_BotBalance_Title))
                     if overallRevenueBalance > 0 {
                         let string = "*\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))"
@@ -1528,8 +1549,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         }))
                     }
 
-                    if overallStarsBalance > 0 {
-                        let string = "*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))"
+                    if overallStarsBalance > StarsAmount.zero {
+                        let string = "*\(presentationStringsFormattedNumber(starsBalance, presentationData.dateTimeFormat.groupingSeparator))"
                         let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
                         if let range = attributedString.string.range(of: "*") {
                             attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
@@ -1762,21 +1783,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             
                             if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
                                 let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
-                                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? 0
+                                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
                                 
                                 let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
-                                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? 0
+                                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
                                 
-                                if overallRevenueBalance > 0 || overallStarsBalance > 0 {
+                                if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
                                     var string = ""
                                     if overallRevenueBalance > 0 {
                                         string.append("#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))")
                                     }
-                                    if overallStarsBalance > 0 {
+                                    if overallStarsBalance > StarsAmount.zero {
                                         if !string.isEmpty {
                                             string.append(" ")
                                         }
-                                        string.append("*\(presentationStringsFormattedNumber(Int32(starsBalance), presentationData.dateTimeFormat.groupingSeparator))")
+                                        string.append("*\(presentationStringsFormattedNumber(starsBalance, presentationData.dateTimeFormat.groupingSeparator))")
                                     }
                                     let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
                                     if let range = attributedString.string.range(of: "#") {
@@ -1906,6 +1927,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             let ItemInfo = 3
             let ItemDelete = 4
             let ItemUsername = 5
+            let ItemAffiliateProgram = 6
             
             let ItemIntro = 7
             let ItemCommands = 8
@@ -1915,6 +1937,16 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
+                }))
+                //TODO:localize
+                let programTitleValue: PeerInfoScreenDisclosureItem.Label
+                if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
+                    programTitleValue = .labelBadge("\(starRefProgram.commissionPermille / 10)%")
+                } else {
+                    programTitleValue = .text("Off")
+                }
+                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                    interaction.editingOpenAffiliateProgram()
                 }))
                                 
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
@@ -1998,6 +2030,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemStats = 10
                 let ItemBanned = 11
                 let ItemRecentActions = 12
+                let ItemAffiliatePrograms = 13
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -2162,6 +2195,12 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     
                     items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
                         interaction.openRecentActions()
+                    }))
+                }
+                
+                if channel.hasPermission(.changeInfo) {
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliatePrograms, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Programs", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                        interaction.editingOpenAffiliateProgram()
                     }))
                 }
                 
@@ -3012,6 +3051,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 self.openBirthdayContextMenu(node: node, gesture: gesture)
+            }, editingOpenAffiliateProgram: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.editingOpenAffiliateProgram()
             },
             getController: { [weak self] in
                 return self?.controller
@@ -3102,7 +3146,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         UIPasteboard.general.string = linkForCopying
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     })))
                 }
                 
@@ -5346,7 +5390,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             disposable = MetaDisposable()
             self.resolvePeerByNameDisposable = disposable
         }
-        var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+        var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, referrer: nil, ageLimit: 10)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()
@@ -5408,7 +5452,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
-            resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
+            resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                 guard case let .result(result) = result else {
                     return .complete()
@@ -7085,7 +7129,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             shareController.actionCompleted = { [weak self] in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                 }
             }
             self.view.endEditing(true)
@@ -8460,7 +8504,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 }
                 strongSelf.view.endEditing(true)
@@ -8545,6 +8589,106 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
                 }
             }
+        }
+    }
+    
+    private func editingOpenAffiliateProgram() {
+        if let peer = self.data?.peer as? TelegramUser, let botInfo = peer.botInfo {
+            if botInfo.flags.contains(.canEdit) {
+                let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .editProgram)
+                         |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                    guard let self else {
+                        return
+                    }
+                    let controller = self.context.sharedContext.makeAffiliateProgramSetupScreen(context: self.context, initialData: initialData)
+                    self.controller?.push(controller)
+                })
+            } else if let starRefProgram = (self.data?.cachedData as? CachedUserData)?.starRefProgram, starRefProgram.endDate == nil {
+                self.activeActionDisposable.set((self.context.engine.peers.getStarRefBotConnection(id: peer.id, targetId: self.context.account.peerId)
+                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)
+                    )
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] accountPeer in
+                        guard let self, let accountPeer else {
+                            return
+                        }
+                        let mode: JoinAffiliateProgramScreenMode
+                        if let result {
+                            mode = .active(JoinAffiliateProgramScreenMode.Active(
+                                targetPeer: accountPeer,
+                                link: result.url,
+                                userCount: Int(result.participants),
+                                copyLink: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    //TODO:localize
+                                    UIPasteboard.general.string = result.url
+                                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(EnginePeer.user(peer).compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                }
+                            ))
+                        } else {
+                            mode = .join(JoinAffiliateProgramScreenMode.Join(
+                                initialTargetPeer: accountPeer,
+                                canSelectTargetPeer: true,
+                                completion: { [weak self] targetPeer in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = (self.context.engine.peers.connectStarRefBot(id: targetPeer.id, botId: self.peerId)
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
+                                        guard let self else {
+                                            return
+                                        }
+                                        let bot = result
+                                        
+                                        self.controller?.push(self.context.sharedContext.makeAffiliateProgramJoinScreen(
+                                            context: self.context,
+                                            sourcePeer: bot.peer,
+                                            commissionPermille: bot.commissionPermille,
+                                            programDuration: bot.durationMonths,
+                                            mode: .active(JoinAffiliateProgramScreenMode.Active(
+                                                targetPeer: targetPeer,
+                                                link: bot.url,
+                                                userCount: Int(bot.participants),
+                                                copyLink: { [weak self] in
+                                                    guard let self else {
+                                                        return
+                                                    }
+                                                    UIPasteboard.general.string = bot.url
+                                                    let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
+                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(bot.commissionPermille / 10)%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                }
+                                            ))
+                                        ))
+                                    })
+                                }
+                            ))
+                        }
+                        self.controller?.push(self.context.sharedContext.makeAffiliateProgramJoinScreen(
+                            context: self.context,
+                            sourcePeer: .user(peer),
+                            commissionPermille: starRefProgram.commissionPermille,
+                            programDuration: starRefProgram.durationMonths,
+                            mode: mode
+                        ))
+                    })
+                }))
+            }
+        } else if let peer = self.data?.peer {
+            let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .connectedPrograms)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makeAffiliateProgramSetupScreen(context: self.context, initialData: initialData)
+                self.controller?.push(controller)
+            })
         }
     }
     
@@ -9062,18 +9206,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let content: UndoOverlayContent
             if let customLink = customLink {
                 text = customLink
-                content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_LinkCopied)
             } else if let addressName = peer.addressName {
                 if peer is TelegramChannel {
                     text = "https://t.me/\(addressName)"
-                    content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                    content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_LinkCopied)
                 } else {
                     text = "@" + addressName
                     content = .copy(text: self.presentationData.strings.Conversation_UsernameCopied)
                 }
             } else {
                 text = "https://t.me/@id\(peer.id.id._internalGetInt64Value())"
-                content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_LinkCopied)
             }
         
             let contextMenuController = makeContextMenuController(actions: [ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: { [weak self] in
@@ -10423,7 +10567,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let context = self.context
         let navigationController = self.controller?.navigationController as? NavigationController
-        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername)
+        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername, referrer: nil)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()

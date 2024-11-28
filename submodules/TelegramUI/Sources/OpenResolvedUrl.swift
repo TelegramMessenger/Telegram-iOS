@@ -301,14 +301,14 @@ func openResolvedUrlImpl(
                                 photo.append(photoRepresentation)
                             }
                             let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil)
-                            let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: [], version: 0)
+                            let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount.value, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: [], version: 0)
                             
                             inputData.set(.single(BotCheckoutController.InputData(
                                 form: BotPaymentForm(
                                     id: subscriptionFormId,
                                     canSaveCredentials: false,
                                     passwordMissing: false,
-                                    invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil, subscriptionPeriod: subscriptionPricing.period),
+                                    invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount.value)], tip: nil, termsInfo: nil, subscriptionPeriod: subscriptionPricing.period),
                                     paymentBotId: channel.id,
                                     providerId: nil,
                                     url: nil,
@@ -464,7 +464,7 @@ func openResolvedUrlImpl(
             
             if let to = to {
                 if to.hasPrefix("@") {
-                    let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
+                    let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]), referrer: nil)
                     |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                         guard case let .result(result) = result else {
                             return .complete()
@@ -501,7 +501,7 @@ func openResolvedUrlImpl(
                 if let url = url, !url.isEmpty {
                     let shareController = ShareController(context: context, subject: .url(url), presetText: text, externalShare: false, immediateExternalShare: false)
                     shareController.actionCompleted = {
-                        present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                        present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }
                     present(shareController, nil)
                     context.sharedContext.applicationBindings.dismissNativeController()
@@ -725,7 +725,7 @@ func openResolvedUrlImpl(
                         navigationController.pushViewController(controller, animated: true)
                     }
                 }
-                if let currentState = starsContext.currentState, currentState.balance >= amount {
+                if let currentState = starsContext.currentState, currentState.balance >= StarsAmount(value: amount, nanos: 0) {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = UndoOverlayController(
                         presentationData: presentationData,

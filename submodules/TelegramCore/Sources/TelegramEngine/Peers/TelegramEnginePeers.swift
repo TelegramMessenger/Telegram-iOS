@@ -179,8 +179,8 @@ public extension TelegramEngine {
             return _internal_inactiveChannelList(network: self.account.network)
         }
 
-        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerResult, NoError> {
-            return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
+        public func resolvePeerByName(name: String, referrer: String?, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerResult, NoError> {
+            return _internal_resolvePeerByName(account: self.account, name: name, referrer: referrer, ageLimit: ageLimit)
             |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
                 switch result {
                 case .progress:
@@ -1631,6 +1631,30 @@ public extension TelegramEngine {
             let _ = self.account.postbox.transaction({ transaction in
                 _internal_setStarsReactionDefaultToPrivate(isPrivate: isPrivate, transaction: transaction)
             }).startStandalone()
+        }
+        
+        public func updateStarRefProgram(id: EnginePeer.Id, program: (commissionPermille: Int32, durationMonths: Int32?)?) -> Signal<Never, NoError> {
+            return _internal_updateStarRefProgram(account: self.account, id: id, program: program)
+        }
+        
+        public func requestConnectedStarRefBots(id: EnginePeer.Id, offset: (timestamp: Int32, link: String)?, limit: Int) -> Signal<TelegramConnectedStarRefBotList?, NoError> {
+            return _internal_requestConnectedStarRefBots(account: self.account, id: id, offset: offset, limit: limit)
+        }
+        
+        public func requestSuggestedStarRefBots(id: EnginePeer.Id, orderByCommission: Bool, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
+            return _internal_requestSuggestedStarRefBots(account: self.account, id: id, orderByCommission: orderByCommission, offset: offset, limit: limit)
+        }
+        
+        public func connectStarRefBot(id: EnginePeer.Id, botId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item, ConnectStarRefBotError> {
+            return _internal_connectStarRefBot(account: self.account, id: id, botId: botId)
+        }
+        
+        public func removeConnectedStarRefBot(id: EnginePeer.Id, link: String) -> Signal<Never, ConnectStarRefBotError> {
+            return _internal_removeConnectedStarRefBot(account: self.account, id: id, link: link)
+        }
+        
+        public func getStarRefBotConnection(id: EnginePeer.Id, targetId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> {
+            return _internal_getStarRefBotConnection(account: self.account, id: id, targetId: targetId)
         }
     }
 }

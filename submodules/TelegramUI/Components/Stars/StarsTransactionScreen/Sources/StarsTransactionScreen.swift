@@ -207,7 +207,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var statusText: String?
             var statusIsDestructive = false
             
-            let count: Int64
+            let count: StarsAmount
             var countIsGeneric = false
             var countOnTop = false
             var transactionId: String?
@@ -243,14 +243,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 titleText = strings.Stars_Transaction_Giveaway_Boost_Stars(Int32(stars))
                 descriptionText = ""
                 boostsText = strings.Stars_Transaction_Giveaway_Boost_Boosts(boosts)
-                count = stars
+                count = StarsAmount(value: stars, nanos: 0)
                 date = boost.date
                 toPeer = state.peerMap[peerId]
 //                toString = strings.Stars_Transaction_Giveaway_Boost_Subscribers(boost.quantity)
                 giveawayMessageId = boost.giveawayMessageId
                 isBoost = true
             case let .importer(peer, pricing, importer, usdRate):
-                let usdValue = formatTonUsdValue(pricing.amount, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat)
+                let usdValue = formatTonUsdValue(pricing.amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat)
                 titleText = strings.Stars_Transaction_Subscription_Title
                 descriptionText = strings.Stars_Transaction_Subscription_PerMonthUsd(usdValue).string
                 count = pricing.amount
@@ -499,7 +499,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             case let .receipt(receipt):
                 titleText = receipt.invoiceMedia.title
                 descriptionText = receipt.invoiceMedia.description
-                count = (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1
+                count = StarsAmount(value: (receipt.invoice.prices.first?.amount ?? receipt.invoiceMedia.totalAmount) * -1, nanos: 0)
                 transactionId = receipt.transactionId
                 date = receipt.date
                 if let peer = state.peerMap[receipt.botPaymentId] {
@@ -516,7 +516,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     if case let .giftStars(_, _, countValue, _, _, _) = action.action {
                         titleText = incoming ? strings.Stars_Gift_Received_Title : strings.Stars_Gift_Sent_Title
                         
-                        count = countValue
+                        count = StarsAmount(value: countValue, nanos: 0)
                         if !incoming {
                             countIsGeneric = true
                         }
@@ -530,7 +530,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     } else if case let .prizeStars(countValue, _, boostPeerId, _, giveawayMessageIdValue) = action.action {
                         titleText = strings.Stars_Transaction_Giveaway_Title
                         
-                        count = countValue
+                        count = StarsAmount(value: countValue, nanos: 0)
                         countOnTop = true
                         transactionId = nil
                         giveawayMessageId = giveawayMessageIdValue
@@ -561,7 +561,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 descriptionText = modifiedString
             }
             
-            let formattedAmount = presentationStringsFormattedNumber(abs(Int32(count)), dateTimeFormat.groupingSeparator)
+            let absCount = StarsAmount(value: abs(count.value), nanos: abs(count.nanos))
+            let formattedAmount = presentationStringsFormattedNumber(absCount, dateTimeFormat.groupingSeparator)
             let countColor: UIColor
             var countFont: UIFont = isSubscription || isSubscriber ? Font.regular(17.0) : Font.semibold(17.0)
             var countBackgroundColor: UIColor?
@@ -576,7 +577,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             } else if countIsGeneric {
                 amountText = "\(formattedAmount)"
                 countColor = theme.list.itemPrimaryTextColor
-            } else if count < 0 {
+            } else if count < StarsAmount.zero {
                 amountText = "- \(formattedAmount)"
                 countColor = theme.list.itemDestructiveColor
             } else {
@@ -602,7 +603,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let imageSubject: StarsImageComponent.Subject
             var imageIcon: StarsImageComponent.Icon?
             if isGift {
-                imageSubject = .gift(count)
+                imageSubject = .gift(count.value)
             } else if !media.isEmpty {
                 imageSubject = .media(media)
             } else if let photo {
@@ -734,7 +735,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else if isSubscriber {
                     title = strings.Stars_Transaction_Subscription_Subscriber
                 } else {
-                    title = count < 0 || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From
+                    title = count < StarsAmount.zero || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From
                 }
                 tableItems.append(.init(
                     id: "to",
@@ -788,7 +789,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     id: "prize",
                     title: strings.Stars_Transaction_Giveaway_Prize,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Stars_Transaction_Giveaway_Stars(Int32(count)), font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Stars_Transaction_Giveaway_Stars(Int32(count.value)), font: tableFont, textColor: tableTextColor)))
                     )
                 ))
                 

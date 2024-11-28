@@ -324,7 +324,7 @@ extension VideoChatScreenComponent.View {
                         if let link {
                             UIPasteboard.general.string = link
                             
-                            self.presentUndoOverlay(content: .linkCopied(text: environment.strings.VoiceChat_InviteLinkCopiedText), action: { _ in return false })
+                            self.presentUndoOverlay(content: .linkCopied(title: nil, text: environment.strings.VoiceChat_InviteLinkCopiedText), action: { _ in return false })
                         }
                     })
                 }

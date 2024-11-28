@@ -77,7 +77,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
     let context: AccountContext
     let externalState: ExternalState
     let containerSize: CGSize
-    let balance: Int64?
+    let balance: StarsAmount?
     let options: [Any]
     let purpose: StarsPurchasePurpose
     let selectedProductId: String?
@@ -93,7 +93,7 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
         context: AccountContext,
         externalState: ExternalState,
         containerSize: CGSize,
-        balance: Int64?,
+        balance: StarsAmount?,
         options: [Any],
         purpose: StarsPurchasePurpose,
         selectedProductId: String?,
@@ -297,17 +297,17 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
             var items: [AnyComponentWithIdentity<Empty>] = []
                            
             if let products = state.products, let balance = context.component.balance {
-                var minimumCount: Int64?
+                var minimumCount: StarsAmount?
                 if let requiredStars = context.component.purpose.requiredStars {
                     if case .generic = context.component.purpose {
-                        minimumCount = requiredStars
+                        minimumCount = StarsAmount(value: requiredStars, nanos: 0)
                     } else {
-                        minimumCount = requiredStars - balance
+                        minimumCount = StarsAmount(value: requiredStars, nanos: 0) - balance
                     }
                 }
                 
                 for product in products {
-                    if let minimumCount, minimumCount > product.count && !(items.isEmpty && product.id == products.last?.id) {
+                    if let minimumCount, minimumCount > StarsAmount(value: product.count, nanos: 0) && !(items.isEmpty && product.id == products.last?.id) {
                         continue
                     }
                     
@@ -847,10 +847,11 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: .immediate
             )
+            let starsBalance: StarsAmount = state.starsState?.balance ?? StarsAmount.zero
             let balanceValue = balanceValue.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(state.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
+                        string: presentationStringsFormattedNumber(starsBalance, environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),

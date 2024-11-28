@@ -602,7 +602,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 
                                 if let self, let component = self.component, let controller = self.environment?.controller() {
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                                 }
                             })))
                             

@@ -155,9 +155,9 @@ extension ChatControllerImpl {
             }
             let content: UndoOverlayContent
             if warnAboutPrivate {
-                content = .linkCopied(text: self.presentationData.strings.Conversation_PrivateMessageLinkCopiedLong)
+                content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_PrivateMessageLinkCopiedLong)
             } else {
-                content = .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied)
+                content = .linkCopied(title: nil, text: self.presentationData.strings.Conversation_LinkCopied)
             }
             self.present(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
         }

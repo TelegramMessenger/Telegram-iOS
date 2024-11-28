@@ -823,6 +823,14 @@ public protocol CollectibleItemInfoScreenInitialData: AnyObject {
 public protocol BusinessLinksSetupScreenInitialData: AnyObject {
 }
 
+public enum AffiliateProgramSetupScreenMode {
+    case editProgram
+    case connectedPrograms
+}
+
+public protocol AffiliateProgramSetupScreenInitialData: AnyObject {
+}
+
 public enum CollectibleItemInfoScreenSubject {
     case phoneNumber(String)
     case username(String)
@@ -871,6 +879,38 @@ public final class BotPreviewEditorTransitionOut {
 }
 
 public protocol MiniAppListScreenInitialData: AnyObject {
+}
+
+public enum JoinAffiliateProgramScreenMode {
+    public final class Join {
+        public let initialTargetPeer: EnginePeer
+        public let canSelectTargetPeer: Bool
+        public let completion: (EnginePeer) -> Void
+        
+        public init(initialTargetPeer: EnginePeer, canSelectTargetPeer: Bool, completion: @escaping (EnginePeer) -> Void) {
+            self.initialTargetPeer = initialTargetPeer
+            self.canSelectTargetPeer = canSelectTargetPeer
+            self.completion = completion
+        }
+    }
+
+    public final class Active {
+        public let targetPeer: EnginePeer
+        public let link: String
+        public let userCount: Int
+        public let copyLink: () -> Void
+        
+        public init(targetPeer: EnginePeer, link: String, userCount: Int, copyLink: @escaping () -> Void) {
+            self.targetPeer = targetPeer
+            self.link = link
+            self.userCount = userCount
+            self.copyLink = copyLink
+        }
+    }
+
+    
+    case join(Join)
+    case active(Active)
 }
 
 public protocol SharedAccountContext: AnyObject {
@@ -1062,6 +1102,11 @@ public protocol SharedAccountContext: AnyObject {
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     
     func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?)
+    
+    func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
+    func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController
+    
+    func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, mode: JoinAffiliateProgramScreenMode) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

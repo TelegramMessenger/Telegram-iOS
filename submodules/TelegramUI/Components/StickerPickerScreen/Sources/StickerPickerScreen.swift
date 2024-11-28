@@ -1658,6 +1658,7 @@ public class StickerPickerScreen: ViewController {
             let tooltipController = UndoOverlayController(
                 presentationData: self.presentationData,
                 content: .linkCopied(
+                    title: nil,
                     text: self.presentationData.strings.Story_Editor_TooltipLinkPremium
                 ),
                 elevatedLayout: true,

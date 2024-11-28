@@ -80,7 +80,7 @@ private final class SheetContent: CombinedComponent {
         private(set) var chatPeer: EnginePeer?
         private(set) var authorPeer: EnginePeer?
         private var peerDisposable: Disposable?
-        private(set) var balance: Int64?
+        private(set) var balance: StarsAmount?
         private(set) var form: BotPaymentForm?
         private(set) var navigateToPeer: (EnginePeer) -> Void
         
@@ -129,14 +129,14 @@ private final class SheetContent: CombinedComponent {
                 guard let self else {
                     return
                 }
-                self.balance = inputData?.0.balance ?? 0
+                self.balance = inputData?.0.balance ?? StarsAmount.zero
                 self.form = inputData?.1
                 self.botPeer = inputData?.2
                 self.chatPeer = chatPeer
                 self.authorPeer = inputData?.3
                 self.updated(transition: .immediate)
                 
-                if self.optionsDisposable == nil, let balance = self.balance, balance < self.invoice.totalAmount {
+                if self.optionsDisposable == nil, let balance = self.balance, balance < StarsAmount(value: self.invoice.totalAmount, nanos: 0) {
                     self.optionsDisposable = (context.engine.payments.starsTopUpOptions()
                     |> deliverOnMainQueue).start(next: { [weak self] options in
                         guard let self else {
@@ -206,7 +206,7 @@ private final class SheetContent: CombinedComponent {
                 })
             }
             
-            if balance < self.invoice.totalAmount {
+            if balance < StarsAmount(value: self.invoice.totalAmount, nanos: 0) {
                 if self.options.isEmpty {
                     self.inProgress = true
                     self.updated()
@@ -236,7 +236,7 @@ private final class SheetContent: CombinedComponent {
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { _ in
                                 Queue.mainQueue().after(0.1, { [weak self] in
-                                    if let self, let balance = self.balance, balance < self.invoice.totalAmount {
+                                    if let self, let balance = self.balance, balance < StarsAmount(value: self.invoice.totalAmount, nanos: 0) {
                                         self.inProgress = false
                                         self.updated()
                                         
@@ -272,7 +272,7 @@ private final class SheetContent: CombinedComponent {
         let balanceValue = Child(MultilineTextComponent.self)
         let balanceIcon = Child(BundleIconComponent.self)
         let info = Child(BalancedTextComponent.self)
-        
+
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
@@ -501,7 +501,7 @@ private final class SheetContent: CombinedComponent {
             let balanceValue = balanceValue.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(state.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
+                        string: presentationStringsFormattedNumber(state.balance ?? StarsAmount.zero, environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(16.0),
                         textColor: textColor
                     )),
@@ -586,7 +586,7 @@ private final class SheetContent: CombinedComponent {
                                     options: state?.options ?? [],
                                     purpose: purpose,
                                     completion: { [weak starsContext] stars in
-                                        starsContext?.add(balance: stars)
+                                        starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
                                         Queue.mainQueue().after(0.1) {
                                             completion()
                                         }
@@ -650,7 +650,6 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height
-
             if isSubscription  {
                 contentSize.height += 14.0
                 

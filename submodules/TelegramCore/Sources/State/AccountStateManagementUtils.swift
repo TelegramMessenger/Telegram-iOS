@@ -3418,7 +3418,7 @@ func replayFinalState(
     var syncAttachMenuBots = false
     var updateConfig = false
     var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
-    var updatedStarsBalance: [PeerId: Int64] = [:]
+    var updatedStarsBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     var updatedStarsReactionsAreAnonymousByDefault: Bool?
     
@@ -4846,7 +4846,7 @@ func replayFinalState(
             case let .UpdateRevenueBalances(peerId, balances):
                 updatedRevenueBalances[peerId] = balances
             case let .UpdateStarsBalance(peerId, balance):
-                updatedStarsBalance[peerId] = balance
+                updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
             case let .UpdateStarsReactionsAreAnonymousByDefault(value):
