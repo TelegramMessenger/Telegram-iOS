@@ -580,7 +580,7 @@ final class GiftOptionsScreenComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(Int32(self.starsState?.balance ?? 0), environment.dateTimeFormat.groupingSeparator),
+                        string: presentationStringsFormattedNumber(self.starsState?.balance ?? StarsAmount.zero, environment.dateTimeFormat.groupingSeparator),
                         font: Font.semibold(14.0),
                         textColor: environment.theme.actionSheet.primaryTextColor
                     )),
@@ -944,8 +944,9 @@ final class GiftOptionsScreenComponent: Component {
                 self.starsItemsOrigin = contentHeight
 
                 let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
-                contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * starsOptionSize.height
-                contentHeight += 66.0
+                let optionSpacing: CGFloat = 10.0
+                contentHeight += ceil(CGFloat(starGifts.count) / 3.0) * (starsOptionSize.height + optionSpacing)
+                contentHeight += -optionSpacing + 66.0
             }
             
             contentHeight += bottomContentInset

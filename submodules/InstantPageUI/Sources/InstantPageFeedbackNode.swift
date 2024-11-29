@@ -71,7 +71,7 @@ final class InstantPageFeedbackNode: ASDisplayNode, InstantPageNode {
     }
     
     @objc func buttonPressed() {
-        self.resolveDisposable.set((self.context.engine.peers.resolvePeerByName(name: "previews")
+        self.resolveDisposable.set((self.context.engine.peers.resolvePeerByName(name: "previews", referrer: nil)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()

@@ -17,6 +17,7 @@ import ImageBlur
 import FastBlur
 import MediaEditor
 import RadialStatusNode
+import MediaAssetsContext
 
 private let leftShadowImage: UIImage = {
     let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
@@ -48,7 +49,7 @@ private let rightShadowImage: UIImage = {
 
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
-    case media(MediaPickerScreen.Subject.Media, Int)
+    case media(MediaPickerScreenImpl.Subject.Media, Int)
     case draft(MediaEditorDraft, Int)
 }
 
@@ -395,7 +396,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
     
-    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreen.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
+    func setup(interaction: MediaPickerInteraction, media: MediaPickerScreenImpl.Subject.Media, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable

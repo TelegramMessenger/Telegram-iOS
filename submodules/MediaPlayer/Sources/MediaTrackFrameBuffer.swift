@@ -185,8 +185,12 @@ public final class MediaTrackFrameBuffer {
         
         if !self.frames.isEmpty {
             let frame = self.frames.removeFirst()
-            if let decodedFrame = self.decoder.decode(frame: frame) {
-                return .frame(decodedFrame)
+            if self.decoder.send(frame: frame) {
+                if let decodedFrame = self.decoder.decode() {
+                    return .frame(decodedFrame)
+                } else {
+                    return .skipFrame
+                }
             } else {
                 return .skipFrame
             }

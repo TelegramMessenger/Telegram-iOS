@@ -153,7 +153,7 @@ private final class UniversalSoftwareVideoSourceImpl {
         
         self.cancelRead = cancelInitialization
         
-        let ioBufferSize = 1 * 1024
+        let ioBufferSize = 64 * 1024
         
         let isSeekable: Bool
         switch source {
@@ -174,7 +174,7 @@ private final class UniversalSoftwareVideoSourceImpl {
         }
         avFormatContext.setIO(avIoContext)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             return nil
         }
         

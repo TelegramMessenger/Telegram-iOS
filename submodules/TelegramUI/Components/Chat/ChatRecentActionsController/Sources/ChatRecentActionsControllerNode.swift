@@ -344,7 +344,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             let resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
-                resolveSignal = strongSelf.context.engine.peers.resolvePeerByName(name: peerName)
+                resolveSignal = strongSelf.context.engine.peers.resolvePeerByName(name: peerName, referrer: nil)
                 |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                     guard case let .result(result) = result else {
                         return .complete()
@@ -417,7 +417,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             } else if isEmail {
                                 content = .copy(text: presentationData.strings.Conversation_EmailCopied)
                             } else if canAddToReadingList {
-                                content = .linkCopied(text: presentationData.strings.Conversation_LinkCopied)
+                                content = .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied)
                             } else {
                                 content = .copy(text: presentationData.strings.Conversation_TextCopied)
                             }
@@ -992,7 +992,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openPeerMention(_ name: String) {
-        self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+        self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, referrer: nil, ageLimit: 10)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()
@@ -1283,14 +1283,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                             photo.append(photoRepresentation)
                                         }
                                         let channel = TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(0)), accessHash: .genericPublic(0), title: invite.title, username: nil, photo: photo, creationDate: 0, version: 0, participationStatus: .left, info: .broadcast(TelegramChannelBroadcastInfo(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: invite.nameColor, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil)
-                                        let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: [], version: 0)
+                                        let invoice = TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: "XTR", totalAmount: subscriptionPricing.amount.value, startParam: "", extendedMedia: nil, subscriptionPeriod: nil, flags: [], version: 0)
                                         
                                         inputData.set(.single(BotCheckoutController.InputData(
                                             form: BotPaymentForm(
                                                 id: subscriptionFormId,
                                                 canSaveCredentials: false,
                                                 passwordMissing: false,
-                                                invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount)], tip: nil, termsInfo: nil, subscriptionPeriod: subscriptionPricing.period),
+                                                invoice: BotPaymentInvoice(isTest: false, requestedFields: [], currency: "XTR", prices: [BotPaymentPrice(label: "", amount: subscriptionPricing.amount.value)], tip: nil, termsInfo: nil, subscriptionPeriod: subscriptionPricing.period),
                                                 paymentBotId: channel.id,
                                                 providerId: nil,
                                                 url: nil,

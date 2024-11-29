@@ -16,10 +16,12 @@ public final class ListItemComponentAdaptor: Component {
     private let isEqualImpl: (AnyObject) -> Bool
     private let itemImpl: () -> ListViewItem
     private let params: ListViewItemLayoutParams
+    private let action: (() -> Void)?
 
     public init<ItemGeneratorType: ItemGenerator>(
         itemGenerator: ItemGeneratorType,
-        params: ListViewItemLayoutParams
+        params: ListViewItemLayoutParams,
+        action: (() -> Void)? = nil
     ) {
         self.itemGenerator = itemGenerator
         self.isEqualImpl = { other in
@@ -33,6 +35,7 @@ public final class ListItemComponentAdaptor: Component {
             return itemGenerator.item()
         }
         self.params = params
+        self.action = action
     }
     
     public static func ==(lhs: ListItemComponentAdaptor, rhs: ListItemComponentAdaptor) -> Bool {
@@ -42,13 +45,28 @@ public final class ListItemComponentAdaptor: Component {
         if lhs.params != rhs.params {
             return false
         }
+        if (lhs.action == nil) != (rhs.action == nil) {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
+        private var button: HighlightTrackingButton?
         public var itemNode: ListViewItemNode?
         
+        private var component: ListItemComponentAdaptor?
+        
+        @objc private func pressed() {
+            guard let component = self.component else {
+                return
+            }
+            component.action?()
+        }
+        
         func update(component: ListItemComponentAdaptor, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            
             let item = component.itemImpl()
             
             if let itemNode = self.itemNode {
@@ -84,7 +102,32 @@ public final class ListItemComponentAdaptor: Component {
                         apply(ListViewItemApply(isOnScreen: true))
                     }
                 )
+                
                 if let resultSize {
+                    itemNode.isUserInteractionEnabled = component.action == nil
+                    if component.action != nil {
+                        let button: HighlightTrackingButton
+                        if let current = self.button {
+                            button = current
+                        } else {
+                            button = HighlightTrackingButton()
+                            self.button = button
+                            self.addSubview(button)
+                            button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+                            button.highligthedChanged = { [weak self] isHighlighted in
+                                guard let self, let itemNode = self.itemNode else {
+                                    return
+                                }
+                                itemNode.setHighlighted(isHighlighted, at: itemNode.bounds.center, animated: !isHighlighted)
+                            }
+                        }
+                        
+                        transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: resultSize))
+                    } else if let button = self.button {
+                        self.button = nil
+                        button.removeFromSuperview()
+                    }
+                    
                     transition.setFrame(view: itemNode.view, frame: CGRect(origin: CGPoint(), size: resultSize))
                     return resultSize
                 } else {
@@ -107,6 +150,29 @@ public final class ListItemComponentAdaptor: Component {
                     }
                 )
                 if let itemNode {
+                    itemNode.isUserInteractionEnabled = component.action == nil
+                    if component.action != nil {
+                        let button: HighlightTrackingButton
+                        if let current = self.button {
+                            button = current
+                        } else {
+                            button = HighlightTrackingButton()
+                            self.button = button
+                            self.addSubview(button)
+                            button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+                            button.highligthedChanged = { [weak self] isHighlighted in
+                                guard let self, let itemNode = self.itemNode else {
+                                    return
+                                }
+                                itemNode.setHighlighted(isHighlighted, at: itemNode.bounds.center, animated: !isHighlighted)
+                            }
+                        }
+                        transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
+                    } else if let button = self.button {
+                        self.button = nil
+                        button.removeFromSuperview()
+                    }
+                    
                     self.itemNode = itemNode
                     self.addSubnode(itemNode)
                     

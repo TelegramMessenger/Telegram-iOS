@@ -1234,6 +1234,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     var credibilityIconComponent: EmojiStatusComponent?
     let mutedIconNode: ASImageNode
     var itemTagList: ComponentView<Empty>?
+    var actionButtonTitleNode: TextNode?
+    var actionButtonBackgroundView: UIImageView?
+    var actionButtonNode: HighlightableButtonNode?
     
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     private var cachedDataDisposable = MetaDisposable()
@@ -1890,6 +1893,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         let onlineLayout = self.onlineNode.asyncLayout()
         let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         let reorderControlLayout = ItemListEditableReorderControlNode.asyncLayout(self.reorderControlNode)
+        let makeActionButtonTitleNodeLayout = TextNode.asyncLayout(self.actionButtonTitleNode)
         
         let currentItem = self.layoutParams?.0
         let currentChatListText = self.cachedChatListText
@@ -2077,6 +2081,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
             var currentStoryIcon: UIImage?
+            var currentGiftIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -2250,6 +2255,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var displayForwardedIcon = false
             var displayStoryReplyIcon = false
+            var displayGiftIcon = false
             var ignoreForwardedIcon = false
             
             switch contentData {
@@ -2558,6 +2564,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 displayForwardedIcon = true
                             } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
                                 displayStoryReplyIcon = true
+                            } else {
+                                for media in message.media {
+                                    if let action = media as? TelegramMediaAction {
+                                        switch action.action {
+                                        case .giftPremium, .giftStars, .starGift:
+                                            displayGiftIcon = true
+                                        case let .giftCode(_, _, _, boostPeerId, _, _, _, _, _, _, _):
+                                            if boostPeerId == nil {
+                                                displayGiftIcon = true
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+                                    break
+                                }
                             }
                         }
                 
@@ -2712,6 +2734,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentStoryIcon = PresentationResourcesChatList.storyReplyIcon(item.presentationData.theme)
             }
             
+            if displayGiftIcon {
+                currentGiftIcon = PresentationResourcesChatList.giftIcon(item.presentationData.theme)
+            }
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
                 if !contentImageSpecs.isEmpty {
@@ -2723,6 +2749,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let currentStoryIcon {
                 textLeftCutout += currentStoryIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
+            }
+            
+            if let currentGiftIcon {
+                textLeftCutout += currentGiftIcon.size.width
                 if !contentImageSpecs.isEmpty {
                     textLeftCutout += forwardedIconSpacing
                 } else {
@@ -3061,6 +3096,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let (mentionBadgeLayout, mentionBadgeApply) = mentionBadgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), badgeDiameter, badgeFont, currentMentionBadgeImage, mentionBadgeContent)
             
+            var actionButtonTitleNodeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if case .none = badgeContent, case .none = mentionBadgeContent, case let .chat(itemPeer) = contentPeer, case let .user(user) = itemPeer.chatMainPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                actionButtonTitleNodeLayoutAndApply = makeActionButtonTitleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.ChatList_InlineButtonOpenApp, font: Font.semibold(15.0), textColor: theme.unreadBadgeActiveTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            }
+            
             var badgeSize: CGFloat = 0.0
             if !badgeLayout.width.isZero {
                 badgeSize += badgeLayout.width + 5.0
@@ -3080,6 +3120,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     badgeSize += 5.0
                 }
                 badgeSize += currentPinnedIconImage.size.width
+            }
+            if let (actionButtonTitleNodeLayout, _) = actionButtonTitleNodeLayoutAndApply {
+                if !badgeSize.isZero {
+                    badgeSize += 4.0
+                } else {
+                    badgeSize += 5.0
+                }
+                badgeSize += actionButtonTitleNodeLayout.size.width + 12.0 * 2.0
             }
             badgeSize = max(badgeSize, reorderInset)
             
@@ -3816,23 +3864,19 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.statusNode.fontSize = item.presentationData.fontSize.itemListBaseFontSize
                     let _ = strongSelf.statusNode.transitionToState(statusState, animated: animateContent)
                     
+                    var nextBadgeX: CGFloat = contentRect.maxX
                     if let _ = currentBadgeBackgroundImage {
-                        let badgeFrame = CGRect(x: contentRect.maxX - badgeLayout.width, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeLayout.width, height: badgeLayout.height)
+                        let badgeFrame = CGRect(x: nextBadgeX - badgeLayout.width, y: contentRect.maxY - badgeLayout.height - 2.0, width: badgeLayout.width, height: badgeLayout.height)
                         
                         transition.updateFrame(node: strongSelf.badgeNode, frame: badgeFrame)
+                        nextBadgeX -= badgeLayout.width + 6.0
                     }
                     
                     if currentMentionBadgeImage != nil || currentBadgeBackgroundImage != nil {
-                        let mentionBadgeOffset: CGFloat
-                        if badgeLayout.width.isZero {
-                            mentionBadgeOffset = contentRect.maxX - mentionBadgeLayout.width
-                        } else {
-                            mentionBadgeOffset = contentRect.maxX - badgeLayout.width - 6.0 - mentionBadgeLayout.width
-                        }
-                        
-                        let badgeFrame = CGRect(x: mentionBadgeOffset, y: contentRect.maxY - mentionBadgeLayout.height - 2.0, width: mentionBadgeLayout.width, height: mentionBadgeLayout.height)
+                        let badgeFrame = CGRect(x: nextBadgeX - mentionBadgeLayout.width, y: contentRect.maxY - mentionBadgeLayout.height - 2.0, width: mentionBadgeLayout.width, height: mentionBadgeLayout.height)
                         
                         transition.updateFrame(node: strongSelf.mentionBadgeNode, frame: badgeFrame)
+                        nextBadgeX -= mentionBadgeLayout.width + 6.0
                     }
                     
                     if let currentPinnedIconImage = currentPinnedIconImage {
@@ -3840,12 +3884,69 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.pinnedIconNode.isHidden = false
                         
                         let pinnedIconSize = currentPinnedIconImage.size
-                        let pinnedIconFrame = CGRect(x: contentRect.maxX - pinnedIconSize.width, y: contentRect.maxY - pinnedIconSize.height - 2.0, width: pinnedIconSize.width, height: pinnedIconSize.height)
+                        let pinnedIconFrame = CGRect(x: nextBadgeX - pinnedIconSize.width, y: contentRect.maxY - pinnedIconSize.height - 2.0, width: pinnedIconSize.width, height: pinnedIconSize.height)
                         
                         strongSelf.pinnedIconNode.frame = pinnedIconFrame
+                        nextBadgeX -= pinnedIconSize.width + 6.0
                     } else {
                         strongSelf.pinnedIconNode.image = nil
                         strongSelf.pinnedIconNode.isHidden = true
+                    }
+                    
+                    if let (actionButtonTitleNodeLayout, apply) = actionButtonTitleNodeLayoutAndApply {
+                        let actionButtonSize = CGSize(width: actionButtonTitleNodeLayout.size.width + 12.0 * 2.0, height: actionButtonTitleNodeLayout.size.height + 5.0 + 4.0)
+                        let actionButtonFrame = CGRect(x: nextBadgeX - actionButtonSize.width, y: contentRect.maxY - actionButtonSize.height, width: actionButtonSize.width, height: actionButtonSize.height)
+                        
+                        let actionButtonNode: HighlightableButtonNode
+                        if let current = strongSelf.actionButtonNode {
+                            actionButtonNode = current
+                        } else {
+                            actionButtonNode = HighlightableButtonNode()
+                            strongSelf.actionButtonNode = actionButtonNode
+                            strongSelf.mainContentContainerNode.addSubnode(actionButtonNode)
+                            actionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.actionButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        
+                        let actionButtonBackgroundView: UIImageView
+                        if let current = strongSelf.actionButtonBackgroundView {
+                            actionButtonBackgroundView = current
+                        } else {
+                            actionButtonBackgroundView = UIImageView()
+                            strongSelf.actionButtonBackgroundView = actionButtonBackgroundView
+                            actionButtonNode.view.addSubview(actionButtonBackgroundView)
+                            
+                            if actionButtonBackgroundView.image?.size.height != actionButtonSize.height {
+                                actionButtonBackgroundView.image = generateStretchableFilledCircleImage(diameter: actionButtonSize.height, color: .white)?.withRenderingMode(.alwaysTemplate)
+                            }
+                        }
+                        
+                        actionButtonBackgroundView.tintColor = theme.unreadBadgeActiveBackgroundColor
+                        
+                        let actionButtonTitleNode = apply()
+                        if strongSelf.actionButtonTitleNode !== actionButtonTitleNode {
+                            strongSelf.actionButtonTitleNode?.removeFromSupernode()
+                            strongSelf.actionButtonTitleNode = actionButtonTitleNode
+                            actionButtonNode.addSubnode(actionButtonTitleNode)
+                        }
+                        
+                        actionButtonNode.frame = actionButtonFrame
+                        actionButtonBackgroundView.frame = CGRect(origin: CGPoint(), size: actionButtonFrame.size)
+                        actionButtonTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleNodeLayout.size.width) * 0.5), y: 5.0), size: actionButtonTitleNodeLayout.size)
+                        
+                        nextBadgeX -= actionButtonSize.width + 6.0
+                    } else {
+                        if let actionButtonTitleNode = strongSelf.actionButtonTitleNode {
+                            actionButtonTitleNode.removeFromSupernode()
+                            strongSelf.actionButtonTitleNode = nil
+                        }
+                        if let actionButtonBackgroundView = strongSelf.actionButtonBackgroundView {
+                            actionButtonBackgroundView.removeFromSuperview()
+                            strongSelf.actionButtonBackgroundView = nil
+                        }
+                        if let actionButtonNode = strongSelf.actionButtonNode {
+                            actionButtonNode.removeFromSupernode()
+                            strongSelf.actionButtonNode = nil
+                        }
                     }
                     
                     var titleOffset: CGFloat = 0.0
@@ -4190,6 +4291,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         messageTypeIconOffset.y += 3.0
                     } else if let currentStoryIcon {
                         messageTypeIcon = currentStoryIcon
+                    } else if let currentGiftIcon {
+                        messageTypeIcon = currentGiftIcon
+                        messageTypeIconOffset.y -= 2.0 - UIScreenPixel
                     }
                     
                     if let messageTypeIcon {
@@ -4493,6 +4597,18 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             return
         }
         item.interaction.openForumThread(index.messageIndex.id.peerId, topicItem.id)
+    }
+    
+    @objc private func actionButtonPressed() {
+        guard let item else {
+            return
+        }
+        guard case let .peer(peerData) = item.content else {
+            return
+        }
+        if case let .user(user) = peerData.peer.peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+            item.interaction.openWebApp(user)
+        }
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, options: ListViewItemAnimationOptions) {

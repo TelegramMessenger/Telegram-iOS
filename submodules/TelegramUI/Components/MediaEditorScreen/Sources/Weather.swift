@@ -17,7 +17,7 @@ private func getWeatherData(context: AccountContext, location: CLLocationCoordin
     let botConfiguration = WeatherBotConfiguration.with(appConfiguration: appConfiguration)
     
     if let botUsername = botConfiguration.botName {
-        return context.engine.peers.resolvePeerByName(name: botUsername)
+        return context.engine.peers.resolvePeerByName(name: botUsername, referrer: nil)
         |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
             guard case let .result(result) = result else {
                 return .complete()

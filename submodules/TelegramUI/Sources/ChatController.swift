@@ -1462,9 +1462,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 transitionCompletion()
                             }, getCaptionPanelView: { [weak self] in
                                 return self?.getCaptionPanelView(isFile: false)
-                            }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                            }, sendMessagesWithSignals: { [weak self] signals, _, _, isCaptionAbove in
                                 if let strongSelf = self {
-                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
+                                    var parameters: ChatSendMessageActionSheetController.SendParameters?
+                                    if isCaptionAbove {
+                                        parameters = ChatSendMessageActionSheetController.SendParameters(effect: nil, textIsAboveMedia: true)
+                                    }
+                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false, parameters: parameters)
                                 }
                             }, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root), with: a)
@@ -1755,7 +1759,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            if balance < 1 {
+                            if balance < StarsAmount(value: 1, nanos: 0) {
                                 let _ = (strongSelf.context.engine.payments.starsTopUpOptions()
                                 |> take(1)
                                 |> deliverOnMainQueue).startStandalone(next: { [weak strongSelf] options in
@@ -3801,7 +3805,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
                         legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView(isFile: true)
-                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _, _ in
                             if let strongSelf = self {
                                 strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)
@@ -9026,7 +9030,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let stickerPackReference = stickerPackReference {
-            self.presentEmojiList(references: [stickerPackReference])
+            self.presentEmojiList(references: [stickerPackReference], previewIconFile: file)
             
             /*let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
             |> deliverOnMainQueue).startStandalone(next: { [weak self] stickerPack in
@@ -9552,7 +9556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 disposable = MetaDisposable()
                 self.resolvePeerByNameDisposable = disposable
             }
-            var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+            var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, referrer: nil, ageLimit: 10)
             
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
@@ -9619,7 +9623,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
-                resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
+                resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName, referrer: nil)
                 |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                     guard case let .result(result) = result else {
                         return .complete()

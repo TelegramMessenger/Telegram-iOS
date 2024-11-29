@@ -777,6 +777,17 @@ public class MediaEditorTransitionOutExternalState {
     }
 }
 
+public protocol CameraScreen: ViewController {
+    
+}
+
+public protocol MediaEditorScreen: ViewController {
+}
+
+public protocol MediaPickerScreen: ViewController {
+    func dismissAnimated()
+}
+
 public protocol MediaEditorScreenResult {
     var target: Stories.PendingTarget { get }
 }
@@ -810,6 +821,14 @@ public protocol CollectibleItemInfoScreenInitialData: AnyObject {
 }
 
 public protocol BusinessLinksSetupScreenInitialData: AnyObject {
+}
+
+public enum AffiliateProgramSetupScreenMode {
+    case editProgram
+    case connectedPrograms
+}
+
+public protocol AffiliateProgramSetupScreenInitialData: AnyObject {
 }
 
 public enum CollectibleItemInfoScreenSubject {
@@ -860,6 +879,36 @@ public final class BotPreviewEditorTransitionOut {
 }
 
 public protocol MiniAppListScreenInitialData: AnyObject {
+}
+
+public enum JoinAffiliateProgramScreenMode {
+    public final class Join {
+        public let initialTargetPeer: EnginePeer
+        public let canSelectTargetPeer: Bool
+        public let completion: (EnginePeer) -> Void
+        
+        public init(initialTargetPeer: EnginePeer, canSelectTargetPeer: Bool, completion: @escaping (EnginePeer) -> Void) {
+            self.initialTargetPeer = initialTargetPeer
+            self.canSelectTargetPeer = canSelectTargetPeer
+            self.completion = completion
+        }
+    }
+
+    public final class Active {
+        public let targetPeer: EnginePeer
+        public let bot: TelegramConnectedStarRefBotList.Item
+        public let copyLink: (TelegramConnectedStarRefBotList.Item) -> Void
+        
+        public init(targetPeer: EnginePeer, bot: TelegramConnectedStarRefBotList.Item, copyLink: @escaping (TelegramConnectedStarRefBotList.Item) -> Void) {
+            self.targetPeer = targetPeer
+            self.bot = bot
+            self.copyLink = copyLink
+        }
+    }
+
+    
+    case join(Join)
+    case active(Active)
 }
 
 public protocol SharedAccountContext: AnyObject {
@@ -1015,7 +1064,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStickerEditorScreen(context: AccountContext, source: Any?, intro: Bool, transitionArguments: (UIView, CGRect, UIImage?)?, completion: @escaping (TelegramMediaFile, [String], @escaping () -> Void) -> Void, cancelled: @escaping () -> Void) -> ViewController
     
     func makeStickerMediaPickerScreen(context: AccountContext, getSourceRect: @escaping () -> CGRect?, completion: @escaping (Any?, UIView?, CGRect, UIImage?, Bool, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void) -> ViewController
-    func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController
+    func makeStoryMediaPickerScreen(context: AccountContext, isDark: Bool, forCollage: Bool, getSourceRect: @escaping () -> CGRect, completion: @escaping (Any, UIView, CGRect, UIImage?, @escaping (Bool?) -> (UIView, CGRect)?, @escaping () -> Void) -> Void, dismissed: @escaping () -> Void, groupsPresented: @escaping () -> Void) -> ViewController
     
     func makeStickerPickerScreen(context: AccountContext, inputData: Promise<StickerPickerInput>, completion: @escaping (FileMediaReference) -> Void) -> ViewController
     
@@ -1051,6 +1100,11 @@ public protocol SharedAccountContext: AnyObject {
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
     
     func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?)
+    
+    func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
+    func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController
+    
+    func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, revenuePerUser: Double, mode: JoinAffiliateProgramScreenMode) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     

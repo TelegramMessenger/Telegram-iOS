@@ -456,7 +456,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     })
                 } else {
-                    if let url = controller.url, isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
+                    if let url = controller.url, isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, context: self.context, url: url), case .peer(_, .appStart) = internalUrl {
                         let _ = (self.context.sharedContext.resolveUrl(context: self.context, peerId: controller.peerId, url: url, skipUrlAuth: false)
                         |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                             guard let self, let controller = self.controller else {
@@ -2246,7 +2246,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 var effectiveIsAbsolute = false
                 let referenceFrame: CMAttitudeReferenceFrame
-                if absolute && CMMotionManager.availableAttitudeReferenceFrames().contains(.xMagneticNorthZVertical) {
+                
+                if absolute && [.authorizedWhenInUse, .authorizedAlways].contains(CLLocationManager.authorizationStatus()) && CMMotionManager.availableAttitudeReferenceFrames().contains(.xTrueNorthZVertical) {
+                    referenceFrame = .xTrueNorthZVertical
+                    effectiveIsAbsolute = true
+                } else if absolute && CMMotionManager.availableAttitudeReferenceFrames().contains(.xMagneticNorthZVertical) {
                     referenceFrame = .xMagneticNorthZVertical
                     effectiveIsAbsolute = true
                 } else {
@@ -2349,6 +2353,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             guard let controller = self.controller else {
                 return
             }
+            
+            guard !fileName.contains("/") && fileName.lengthOfBytes(using: .utf8) < 256 && url.lengthOfBytes(using: .utf8) < 32768 else {
+                self.webView?.sendEvent(name: "file_download_requested", data: "{status: \"cancelled\"}")
+                return
+            }
+            
             var isMedia = false
             var title: String?
             let photoExtensions = [".jpg", ".png", ".gif", ".tiff"]
@@ -2780,7 +2790,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }, openSettings: {
                 context.sharedContext.applicationBindings.openSettings()
             }, { [weak self, weak controller] authorized in
-                guard let controller else {
+                guard let controller, authorized else {
                     return
                 }
                 let context = controller.context
@@ -2839,7 +2849,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
                             TelegramEngine.EngineData.Item.Peer.Peer(id: botId)
                         )
-                                 |> deliverOnMainQueue).start(next: { [weak self, weak controller] accountPeer, botPeer in
+                        |> deliverOnMainQueue).start(next: { [weak self, weak controller] accountPeer, botPeer in
                             guard let accountPeer, let botPeer, let controller else {
                                 return
                             }
@@ -3188,7 +3198,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let shareController = ShareController(context: context, subject: .url("https://t.me/\(addressName)?profile"))
                     shareController.actionCompleted = { [weak self] in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
                     self.present(shareController, in: .window(.root))
                 })))

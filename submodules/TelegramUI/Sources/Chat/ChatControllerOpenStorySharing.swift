@@ -30,7 +30,7 @@ import MediaEditorScreen
 extension ChatControllerImpl {
     func openStorySharing(messages: [Message]) {
         let context = self.context
-        let subject: Signal<MediaEditorScreen.Subject?, NoError> = .single(.message(messages.map { $0.id }))
+        let subject: Signal<MediaEditorScreenImpl.Subject?, NoError> = .single(.message(messages.map { $0.id }))
         
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
@@ -39,7 +39,7 @@ extension ChatControllerImpl {
             transitionOut: nil
         )
         
-        let controller = MediaEditorScreen(
+        let controller = MediaEditorScreenImpl(
             context: context,
             mode: .storyEditor,
             subject: subject,

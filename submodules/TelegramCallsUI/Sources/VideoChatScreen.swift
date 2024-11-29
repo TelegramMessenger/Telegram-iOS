@@ -119,6 +119,8 @@ final class VideoChatScreenComponent: Component {
         let updateAvatarDisposable = MetaDisposable()
         var currentUpdatingAvatar: (TelegramMediaImageRepresentation, Float)?
         
+        var maxVideoQuality: Int = Int.max
+        
         override init(frame: CGRect) {
             self.containerView = UIView()
             self.containerView.clipsToBounds = true
@@ -475,7 +477,7 @@ final class VideoChatScreenComponent: Component {
                         return
                     }
                     let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
-                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 }
                 environment.controller()?.present(shareController, in: .window(.root))
             })
@@ -1506,6 +1508,7 @@ final class VideoChatScreenComponent: Component {
                     participants: mappedParticipants,
                     speakingParticipants: self.members?.speakingParticipants ?? Set(),
                     expandedVideoState: self.expandedParticipantsVideoState,
+                    maxVideoQuality: self.maxVideoQuality,
                     theme: environment.theme,
                     strings: environment.strings,
                     layout: participantsLayout,

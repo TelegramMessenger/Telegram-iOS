@@ -8,19 +8,20 @@ import MultilineTextComponent
 import TelegramPresentationData
 import PresentationDataUtils
 import TelegramStringFormatting
+import TelegramCore
 
 final class StarsOverviewItemComponent: Component {
     let theme: PresentationTheme
     let dateTimeFormat: PresentationDateTimeFormat
     let title: String
-    let value: Int64
+    let value: StarsAmount
     let rate: Double
     
     init(
         theme: PresentationTheme,
         dateTimeFormat: PresentationDateTimeFormat,
         title: String,
-        value: Int64,
+        value: StarsAmount,
         rate: Double
     ) {
         self.theme = theme
@@ -80,8 +81,8 @@ final class StarsOverviewItemComponent: Component {
                 valueOffset += icon.size.width
             }
             
-            let valueString = presentationStringsFormattedNumber(Int32(component.value), component.dateTimeFormat.groupingSeparator)
-            let usdValueString = formatTonUsdValue(component.value, divide: false, rate: component.rate, dateTimeFormat: component.dateTimeFormat)
+            let valueString = presentationStringsFormattedNumber(component.value, component.dateTimeFormat.groupingSeparator)
+            let usdValueString = formatTonUsdValue(component.value.value, divide: false, rate: component.rate, dateTimeFormat: component.dateTimeFormat)
             
             let valueSize = self.value.update(
                 transition: .immediate,

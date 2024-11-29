@@ -204,6 +204,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private var isEmojiKeyExpanded: Bool = false
     private var areControlsHidden: Bool = false
     private var swapLocalAndRemoteVideo: Bool = false
+    public private(set) var isPictureInPictureRequested: Bool = false
     private var isPictureInPictureActive: Bool = false
     
     private var hideEmojiTooltipTimer: Foundation.Timer?
@@ -324,15 +325,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.closeAction?()
         }
         
-        if !"".isEmpty {
-            if #available(iOS 16.0, *) {
-                let pipVideoCallViewController = AVPictureInPictureVideoCallViewController()
-                pipVideoCallViewController.view.addSubview(self.pipView)
-                self.pipView.frame = pipVideoCallViewController.view.bounds
-                self.pipView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                self.pipView.translatesAutoresizingMaskIntoConstraints = true
-                self.pipVideoCallViewController = pipVideoCallViewController
-            }
+        if #available(iOS 16.0, *) {
+            let pipVideoCallViewController = PrivateCallPictureInPictureController()
+            pipVideoCallViewController.pipView = self.pipView
+            pipVideoCallViewController.view.addSubview(self.pipView)
+            self.pipView.frame = pipVideoCallViewController.view.bounds
+            self.pipView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            self.pipView.translatesAutoresizingMaskIntoConstraints = true
+            self.pipVideoCallViewController = pipVideoCallViewController
         }
         
         if let blurFilter = makeBlurFilter() {
@@ -366,13 +366,19 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     
     public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         self.isPictureInPictureActive = true
+        self.isPictureInPictureRequested = true
         if !self.isUpdating {
             self.update(transition: .easeInOut(duration: 0.2))
         }
     }
     
+    public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        self.isPictureInPictureRequested = false
+    }
+    
     public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
         self.isPictureInPictureActive = false
+        self.isPictureInPictureRequested = false
         if !self.isUpdating {
             let wereControlsHidden = self.areControlsHidden
             self.areControlsHidden = true
@@ -387,6 +393,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     }
     
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+        self.isPictureInPictureRequested = false
         if self.activeLocalVideoSource != nil || self.activeRemoteVideoSource != nil {
             if let restoreUIForPictureInPicture = self.restoreUIForPictureInPicture {
                 restoreUIForPictureInPicture(completionHandler)
@@ -469,6 +476,15 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     public func beginPictureInPictureIfPossible() {
         if let pipController = self.pipController, (self.activeLocalVideoSource != nil || self.activeRemoteVideoSource != nil) {
             pipController.startPictureInPicture()
+        }
+    }
+    
+    public func restoreFromPictureInPictureIfPossible() -> Bool {
+        if let pipController = self.pipController, pipController.isPictureInPictureActive {
+            pipController.stopPictureInPicture()
+            return !self.isPictureInPictureRequested
+        } else {
+            return true
         }
     }
     

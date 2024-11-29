@@ -56,6 +56,12 @@ public final class MessageInputPanelComponent: Component {
         case emoji
     }
     
+    public enum AttachmentButtonMode: Hashable {
+        case attach
+        case captionUp
+        case captionDown
+    }
+    
     public struct MyReaction: Equatable {
         public let reaction: MessageReaction.Reaction
         public let file: TelegramMediaFile?
@@ -157,6 +163,7 @@ public final class MessageInputPanelComponent: Component {
     public let maxLength: Int?
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
+    public let useGrayBackground: Bool
     public let resetInputContents: SendMessageInput?
     public let nextInputMode: (Bool) -> InputMode?
     public let areVoiceMessagesAvailable: Bool
@@ -170,6 +177,7 @@ public final class MessageInputPanelComponent: Component {
     public let stopAndPreviewMediaRecording: (() -> Void)?
     public let discardMediaRecordingPreview: (() -> Void)?
     public let attachmentAction: (() -> Void)?
+    public let attachmentButtonMode: AttachmentButtonMode?
     public let myReaction: MyReaction?
     public let likeAction: (() -> Void)?
     public let likeOptionsAction: ((UIView, ContextGesture?) -> Void)?
@@ -177,6 +185,7 @@ public final class MessageInputPanelComponent: Component {
     public let timeoutAction: ((UIView, ContextGesture?) -> Void)?
     public let forwardAction: (() -> Void)?
     public let moreAction: ((UIView, ContextGesture?) -> Void)?
+    public let presentCaptionPositionTooltip: ((UIView) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
     public let presentTextLengthLimitTooltip: (() -> Void)?
     public let presentTextFormattingTooltip: (() -> Void)?
@@ -212,6 +221,7 @@ public final class MessageInputPanelComponent: Component {
         maxLength: Int?,
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
+        useGrayBackground: Bool = false,
         resetInputContents: SendMessageInput?,
         nextInputMode: @escaping (Bool) -> InputMode?,
         areVoiceMessagesAvailable: Bool,
@@ -225,6 +235,7 @@ public final class MessageInputPanelComponent: Component {
         stopAndPreviewMediaRecording: (() -> Void)?,
         discardMediaRecordingPreview: (() -> Void)?,
         attachmentAction: (() -> Void)?,
+        attachmentButtonMode: AttachmentButtonMode? = nil,
         myReaction: MyReaction?,
         likeAction: (() -> Void)?,
         likeOptionsAction: ((UIView, ContextGesture?) -> Void)?,
@@ -232,6 +243,7 @@ public final class MessageInputPanelComponent: Component {
         timeoutAction: ((UIView, ContextGesture?) -> Void)?,
         forwardAction: (() -> Void)?,
         moreAction: ((UIView, ContextGesture?) -> Void)?,
+        presentCaptionPositionTooltip: ((UIView) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
         presentTextLengthLimitTooltip: (() -> Void)?,
         presentTextFormattingTooltip: (() -> Void)?,
@@ -267,6 +279,7 @@ public final class MessageInputPanelComponent: Component {
         self.maxLength = maxLength
         self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
+        self.useGrayBackground = useGrayBackground
         self.resetInputContents = resetInputContents
         self.areVoiceMessagesAvailable = areVoiceMessagesAvailable
         self.presentController = presentController
@@ -279,6 +292,7 @@ public final class MessageInputPanelComponent: Component {
         self.stopAndPreviewMediaRecording = stopAndPreviewMediaRecording
         self.discardMediaRecordingPreview = discardMediaRecordingPreview
         self.attachmentAction = attachmentAction
+        self.attachmentButtonMode = attachmentButtonMode
         self.myReaction = myReaction
         self.likeAction = likeAction
         self.likeOptionsAction = likeOptionsAction
@@ -286,6 +300,7 @@ public final class MessageInputPanelComponent: Component {
         self.timeoutAction = timeoutAction
         self.forwardAction = forwardAction
         self.moreAction = moreAction
+        self.presentCaptionPositionTooltip = presentCaptionPositionTooltip
         self.presentVoiceMessagesUnavailableTooltip = presentVoiceMessagesUnavailableTooltip
         self.presentTextLengthLimitTooltip = presentTextLengthLimitTooltip
         self.presentTextFormattingTooltip = presentTextFormattingTooltip
@@ -338,6 +353,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.alwaysDarkWhenHasText != rhs.alwaysDarkWhenHasText {
+            return false
+        }
+        if lhs.useGrayBackground != rhs.useGrayBackground {
             return false
         }
         if lhs.resetInputContents != rhs.resetInputContents {
@@ -409,6 +427,9 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.attachmentAction == nil) != (rhs.attachmentAction == nil) {
             return false
         }
+        if lhs.attachmentButtonMode != rhs.attachmentButtonMode {
+            return false
+        }
         if lhs.myReaction != rhs.myReaction {
             return false
         }
@@ -456,7 +477,6 @@ public final class MessageInputPanelComponent: Component {
         private let inputActionButton = ComponentView<Empty>()
         private let likeButton = ComponentView<Empty>()
         private let stickerButton = ComponentView<Empty>()
-        private let reactionButton = ComponentView<Empty>()
         private let timeoutButton = ComponentView<Empty>()
         
         private var mediaRecordingVibrancyContainer: UIView
@@ -483,6 +503,8 @@ public final class MessageInputPanelComponent: Component {
         private var viewsIconView: UIImageView?
         private var viewStatsCountText: AnimatedCountLabelView?
         private var reactionStatsCountText: AnimatedCountLabelView?
+        
+        private var didDisplayCaptionPositionTooltip = false
         
         private let hapticFeedback = HapticFeedback()
         
@@ -717,7 +739,10 @@ public final class MessageInputPanelComponent: Component {
         func update(component: MessageInputPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousPlaceholder = self.component?.placeholder
             
-            var insets = UIEdgeInsets(top: 14.0, left: 9.0, bottom: 6.0, right: 41.0)
+            let defaultInsets = UIEdgeInsets(top: 14.0, left: 9.0, bottom: 6.0, right: 41.0)
+            var insets = defaultInsets
+            
+            let layoutFromTop = component.attachmentButtonMode == .captionDown
             
             if let _ = component.attachmentAction {
                 insets.left = 41.0
@@ -858,7 +883,10 @@ public final class MessageInputPanelComponent: Component {
                 containerSize: availableTextFieldSize
             )
             if !isEditing && component.setMediaRecordingActive == nil {
-                insets.right = insets.left
+                insets.right = defaultInsets.left
+            }
+            if component.attachmentButtonMode != .attach && !isEditing && !self.textFieldExternalState.hasText {
+                insets.left = defaultInsets.left
             }
             
             var headerHeight: CGFloat = 0.0
@@ -938,7 +966,7 @@ public final class MessageInputPanelComponent: Component {
             fieldBackgroundFrame.size.height += headerHeight
                         
             transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
-            self.vibrancyEffectView.isHidden = component.style == .media
+            self.vibrancyEffectView.isHidden = false // component.style == .media
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
             self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: headerHeight > 0.0 ? 18.0 : baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
@@ -1195,7 +1223,24 @@ public final class MessageInputPanelComponent: Component {
             
             if component.attachmentAction != nil {
                 let attachmentButtonMode: MessageInputActionButtonComponent.Mode
-                attachmentButtonMode = .attach
+        
+                var attachmentVisible = isEditing || self.textFieldExternalState.hasText
+                switch component.attachmentButtonMode {
+                case .captionUp:
+                    attachmentButtonMode = .captionUp
+                case .captionDown:
+                    attachmentButtonMode = .captionDown
+                default:
+                    attachmentButtonMode = .attach
+                    attachmentVisible = !(hasMediaRecording || hasMediaEditing || !isEditing)
+                }
+                
+                if attachmentButtonMode == .captionUp && !self.didDisplayCaptionPositionTooltip && self.textFieldExternalState.textLength > 3 {
+                    self.didDisplayCaptionPositionTooltip = true
+                    if let sourceView = self.attachmentButton.view {
+                        component.presentCaptionPositionTooltip?(sourceView)
+                    }
+                }
                 
                 let attachmentButtonSize = self.attachmentButton.update(
                     transition: transition,
@@ -1210,7 +1255,7 @@ public final class MessageInputPanelComponent: Component {
                             switch mode {
                             case .delete:
                                 break
-                            case .attach:
+                            case .attach, .captionUp, .captionDown:
                                 component.attachmentAction?()
                             default:
                                 break
@@ -1245,10 +1290,16 @@ public final class MessageInputPanelComponent: Component {
                     if attachmentButtonView.superview == nil {
                         self.addSubview(attachmentButtonView)
                     }
-                    let attachmentButtonFrame = CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5) + (fieldBackgroundFrame.minX - fieldFrame.minX), y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - attachmentButtonSize.height) * 0.5)), size: attachmentButtonSize)
+                    var attachmentButtonPosition = floor((baseFieldHeight - attachmentButtonSize.height) * 0.5)
+                    if layoutFromTop {
+                        attachmentButtonPosition += 14.0
+                    } else {
+                        attachmentButtonPosition = size.height - insets.bottom - baseFieldHeight + attachmentButtonPosition
+                    }
+                    let attachmentButtonFrame = CGRect(origin: CGPoint(x: floor((insets.left - attachmentButtonSize.width) * 0.5) + (fieldBackgroundFrame.minX - fieldFrame.minX), y: attachmentButtonPosition), size: attachmentButtonSize)
                     transition.setPosition(view: attachmentButtonView, position: attachmentButtonFrame.center)
                     transition.setBounds(view: attachmentButtonView, bounds: CGRect(origin: CGPoint(), size: attachmentButtonFrame.size))
-                    transition.setAlpha(view: attachmentButtonView, alpha: (hasMediaRecording || hasMediaEditing || !isEditing) ? 0.0 : 1.0)
+                    transition.setAlpha(view: attachmentButtonView, alpha: attachmentVisible ? 1.0 : 0.0)
                     transition.setScale(view: attachmentButtonView, scale: hasMediaEditing ? 0.001 : 1.0)
                 }
             }
@@ -1326,6 +1377,7 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
+            var inputActionButtonAlpha = 1.0
             let inputActionButtonMode: MessageInputActionButtonComponent.Mode
             if case .editor = component.style {
                 if isEditing {
@@ -1334,7 +1386,10 @@ public final class MessageInputPanelComponent: Component {
                     inputActionButtonMode = component.hasRecordedVideo ? .removeVideoInput : .videoInput
                 }
             } else if case .media = component.style {
-                inputActionButtonMode = isEditing ? .apply : .none
+                inputActionButtonMode = .apply
+                if !isEditing {
+                    inputActionButtonAlpha = 0.0
+                }
             } else {
                 if hasMediaEditing {
                     inputActionButtonMode = .send
@@ -1494,10 +1549,16 @@ public final class MessageInputPanelComponent: Component {
                 if inputActionButtonView.superview == nil {
                     self.addSubview(inputActionButtonView)
                 }
-                let inputActionButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: size.height - insets.bottom - baseFieldHeight + floor((baseFieldHeight - inputActionButtonSize.height) * 0.5)), size: inputActionButtonSize)
+                var inputActionButtonPosition = floor((baseFieldHeight - inputActionButtonSize.height) * 0.5)
+                if layoutFromTop {
+                    inputActionButtonPosition += 14.0
+                } else {
+                    inputActionButtonPosition = size.height - insets.bottom - baseFieldHeight + inputActionButtonPosition
+                }
+                let inputActionButtonFrame = CGRect(origin: CGPoint(x: inputActionButtonOriginX, y: inputActionButtonPosition), size: inputActionButtonSize)
                 transition.setPosition(view: inputActionButtonView, position: inputActionButtonFrame.center)
                 transition.setBounds(view: inputActionButtonView, bounds: CGRect(origin: CGPoint(), size: inputActionButtonFrame.size))
-                transition.setAlpha(view: inputActionButtonView, alpha: likeActionReplacesInputAction ? 0.0 : 1.0)
+                transition.setAlpha(view: inputActionButtonView, alpha: likeActionReplacesInputAction ? 0.0 : inputActionButtonAlpha)
                 
                 if rightButtonsOffsetX != 0.0 {
                     if hasLikeAction {
@@ -1698,15 +1759,19 @@ public final class MessageInputPanelComponent: Component {
                 }
             }
             
+            var lightFieldColor = UIColor(white: 1.0, alpha: 0.09)
             var fieldBackgroundIsDark = false
-            if component.style == .media {
-                
+            if component.useGrayBackground {
+                fieldBackgroundIsDark = false
+            } else if component.style == .media {
+                fieldBackgroundIsDark = false
+                lightFieldColor = UIColor(white: 0.2, alpha: 0.45)
             } else if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
                 fieldBackgroundIsDark = true
             } else if isEditing || component.style == .editor {
                 fieldBackgroundIsDark = true
             }
-            self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : UIColor(white: 1.0, alpha: 0.09), transition: transition.containedViewLayoutTransition)
+            self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : lightFieldColor, transition: transition.containedViewLayoutTransition)
             if let placeholder = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 placeholder.isHidden = self.textFieldExternalState.hasText
                 vibrancyPlaceholderView.isHidden = placeholder.isHidden

@@ -95,7 +95,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .installed:
                         scope = [.installed]
                 }
-                return context.engine.stickers.searchStickers(query: [query.basicEmoji.0], scope: scope)
+                return context.engine.stickers.searchStickers(query: nil, emoticon: [query.basicEmoji.0], scope: scope)
                 |> map { items -> [FoundStickerItem] in
                     return items.items
                 }
@@ -295,7 +295,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             
             let chatPeer = peer
-            let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
+            let contextBot = context.engine.peers.resolvePeerByName(name: addressName, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                 guard case let .result(result) = result else {
                     return .complete()

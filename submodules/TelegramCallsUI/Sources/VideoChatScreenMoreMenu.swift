@@ -152,6 +152,56 @@ extension VideoChatScreenComponent.View {
             }
         }
         
+        //TODO:localize
+        let qualityList: [(Int, String)] = [
+            (0, "Audio Only"),
+            (180, "180p"),
+            (360, "360p"),
+            (Int.max, "720p")
+        ]
+        
+        let videoQualityTitle = qualityList.first(where: { $0.0 == self.maxVideoQuality })?.1 ?? ""
+        items.append(.action(ContextMenuActionItem(text: "Receive Video Quality", textColor: .primary, textLayout: .secondLineWithValue(videoQualityTitle), icon: { _ in
+            return nil
+        }, action: { [weak self] c, _ in
+            guard let self else {
+                c?.dismiss(completion: nil)
+                return
+            }
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: environment.strings.Common_Back, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+            }, iconPosition: .left, action: { (c, _) in
+                c?.popItems()
+            })))
+            items.append(.separator)
+            
+            for (quality, title) in qualityList {
+                let isSelected = self.maxVideoQuality == quality
+                items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
+                    if isSelected {
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                    } else {
+                        return nil
+                    }
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    if self.maxVideoQuality != quality {
+                        self.maxVideoQuality = quality
+                        self.state?.updated(transition: .immediate)
+                    }
+                })))
+            }
+            
+            c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
+        })))
+        
         if callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
             if component.call.hasScreencast {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_StopScreenSharing, icon: { theme in

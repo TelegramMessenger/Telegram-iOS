@@ -24,7 +24,7 @@ public enum ResolvePeerResult {
     case result(EnginePeer?)
 }
 
-func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerIdByNameResult, NoError> {
+func _internal_resolvePeerByName(account: Account, name: String, referrer: String?, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerIdByNameResult, NoError> {
     var normalizedName = name
     if normalizedName.hasPrefix("@") {
        normalizedName = String(normalizedName[name.index(after: name.startIndex)...])
@@ -37,11 +37,15 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
     }
     |> mapToSignal { cachedEntry -> Signal<ResolvePeerIdByNameResult, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-        if let cachedEntry = cachedEntry, cachedEntry.timestamp <= timestamp && cachedEntry.timestamp >= timestamp - ageLimit {
+        if referrer == nil, let cachedEntry = cachedEntry, cachedEntry.timestamp <= timestamp && cachedEntry.timestamp >= timestamp - ageLimit {
             return .single(.result(cachedEntry.peerId))
         } else {
+            var flags: Int32 = 0
+            if referrer != nil {
+                flags |= 1 << 0
+            }
             return .single(.progress)
-            |> then(account.network.request(Api.functions.contacts.resolveUsername(username: normalizedName))
+            |> then(account.network.request(Api.functions.contacts.resolveUsername(flags: flags, username: normalizedName, referer: referrer))
             |> mapError { _ -> Void in
                 return Void()
             }

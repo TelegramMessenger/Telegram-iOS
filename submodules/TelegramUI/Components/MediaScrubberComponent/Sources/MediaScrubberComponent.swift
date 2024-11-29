@@ -10,11 +10,13 @@ import AccountContext
 import AudioWaveformComponent
 import MultilineTextComponent
 import MediaEditor
+import UIKitRuntimeUtils
 
 private let handleWidth: CGFloat = 14.0
 private let trackHeight: CGFloat = 39.0
 private let collapsedTrackHeight: CGFloat = 26.0
 private let trackSpacing: CGFloat = 4.0
+private let collageTrackSpacing: CGFloat = 8.0
 private let borderHeight: CGFloat = 1.0 + UIScreenPixel
 
 public final class MediaScrubberComponent: Component {
@@ -23,7 +25,7 @@ public final class MediaScrubberComponent: Component {
     public struct Track: Equatable {
         public enum Content: Equatable {
             case video(frames: [UIImage], framesUpdateTimestamp: Double)
-            case audio(artist: String?, title: String?, samples: Data?, peak: Int32)
+            case audio(artist: String?, title: String?, samples: Data?, peak: Int32, isTimeline: Bool)
             
             public static func ==(lhs: Content, rhs: Content) -> Bool {
                 switch lhs {
@@ -33,9 +35,9 @@ public final class MediaScrubberComponent: Component {
                     } else {
                         return false
                     }
-                case let .audio(lhsArtist, lhsTitle, lhsSamples, lhsPeak):
-                    if case let .audio(rhsArtist, rhsTitle, rhsSamples, rhsPeak) = rhs {
-                        return lhsArtist == rhsArtist && lhsTitle == rhsTitle && lhsSamples == rhsSamples && lhsPeak == rhsPeak
+                case let .audio(lhsArtist, lhsTitle, lhsSamples, lhsPeak, lhsIsTimeline):
+                    if case let .audio(rhsArtist, rhsTitle, rhsSamples, rhsPeak, rhsIsTimeline) = rhs {
+                        return lhsArtist == rhsArtist && lhsTitle == rhsTitle && lhsSamples == rhsSamples && lhsPeak == rhsPeak && lhsIsTimeline == rhsIsTimeline
                     } else {
                         return false
                     }
@@ -85,6 +87,10 @@ public final class MediaScrubberComponent: Component {
     let isPlaying: Bool
     
     let tracks: [Track]
+    let isCollage: Bool
+    let isCollageSelected: Bool
+    let collageSamples: (samples: Data, peak: Int32)?
+    
     let portalView: PortalView?
     
     let positionUpdated: (Double, Bool) -> Void
@@ -92,6 +98,8 @@ public final class MediaScrubberComponent: Component {
     let trackTrimUpdated: (Int32, Double, Double, Bool, Bool) -> Void
     let trackOffsetUpdated: (Int32, Double, Bool) -> Void
     let trackLongPressed: (Int32, UIView) -> Void
+    let collageSelectionUpdated: () -> Void
+    let trackSelectionUpdated: (Int32) -> Void
     
     public init(
         context: AccountContext,
@@ -103,12 +111,17 @@ public final class MediaScrubberComponent: Component {
         maxDuration: Double,
         isPlaying: Bool,
         tracks: [Track],
+        isCollage: Bool,
+        isCollageSelected: Bool = false,
+        collageSamples: (samples: Data, peak: Int32)? = nil,
         portalView: PortalView? = nil,
         positionUpdated: @escaping (Double, Bool) -> Void,
         coverPositionUpdated: @escaping (Double, Bool, @escaping () -> Void) -> Void = { _, _, _ in },
         trackTrimUpdated: @escaping (Int32, Double, Double, Bool, Bool) -> Void,
         trackOffsetUpdated: @escaping (Int32, Double, Bool) -> Void,
-        trackLongPressed: @escaping (Int32, UIView) -> Void
+        trackLongPressed: @escaping (Int32, UIView) -> Void,
+        collageSelectionUpdated: @escaping () -> Void = {},
+        trackSelectionUpdated: @escaping (Int32) -> Void = { _ in }
     ) {
         self.context = context
         self.style = style
@@ -119,12 +132,17 @@ public final class MediaScrubberComponent: Component {
         self.maxDuration = maxDuration
         self.isPlaying = isPlaying
         self.tracks = tracks
+        self.isCollage = isCollage
+        self.isCollageSelected = isCollageSelected
+        self.collageSamples = collageSamples
         self.portalView = portalView
         self.positionUpdated = positionUpdated
         self.coverPositionUpdated = coverPositionUpdated
         self.trackTrimUpdated = trackTrimUpdated
         self.trackOffsetUpdated = trackOffsetUpdated
         self.trackLongPressed = trackLongPressed
+        self.collageSelectionUpdated = collageSelectionUpdated
+        self.trackSelectionUpdated = trackSelectionUpdated
     }
     
     public static func ==(lhs: MediaScrubberComponent, rhs: MediaScrubberComponent) -> Bool {
@@ -152,15 +170,27 @@ public final class MediaScrubberComponent: Component {
         if lhs.tracks != rhs.tracks {
             return false
         }
+        if lhs.isCollage != rhs.isCollage {
+            return false
+        }
+        if lhs.isCollageSelected != rhs.isCollageSelected {
+            return false
+        }
+        if lhs.collageSamples?.samples != rhs.collageSamples?.samples || lhs.collageSamples?.peak != rhs.collageSamples?.peak {
+            return false
+        }
         return true
     }
     
     public final class View: UIView, UIGestureRecognizerDelegate {
+        private let trackContainerView: UIView
+        private var collageTrackView: TrackView?
         private var trackViews: [Int32: TrackView] = [:]
         private let trimView: TrimView
         private let ghostTrimView: TrimView
         private let cursorContentView: UIView
         private let cursorView: HandleView
+        private let cursorImageView: UIImageView
         
         private var cursorDisplayLink: SharedDisplayLinkDriver.Link?
         private var cursorPositionAnimation: (start: Double, from: Double, to: Double, ended: Bool)?
@@ -175,11 +205,13 @@ public final class MediaScrubberComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.trackContainerView = UIView()
             self.trimView = TrimView(frame: .zero)
             self.ghostTrimView = TrimView(frame: .zero)
             self.ghostTrimView.isHollow = true
             self.cursorContentView = UIView()
             self.cursorView = HandleView()
+            self.cursorImageView = UIImageView()
             
             super.init(frame: frame)
                                                  
@@ -201,14 +233,18 @@ public final class MediaScrubberComponent: Component {
                 context.addPath(path.cgPath)
                 context.fillPath()
             })?.stretchableImage(withLeftCapWidth: Int(handleWidth / 2.0), topCapHeight: 25)
-            self.cursorView.image = positionImage
+            self.cursorView.image = nil
             self.cursorView.isUserInteractionEnabled = true
             self.cursorView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
-                
-            self.addSubview(self.ghostTrimView)
-            self.addSubview(self.trimView)
+            
+            self.cursorImageView.image = positionImage
+            
+            self.addSubview(self.trackContainerView)
+            self.trackContainerView.addSubview(self.ghostTrimView)
+            self.trackContainerView.addSubview(self.trimView)
             self.addSubview(self.cursorContentView)
             self.addSubview(self.cursorView)
+            self.cursorView.addSubview(self.cursorImageView)
             
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleCursorPan(_:))))
             
@@ -303,6 +339,11 @@ public final class MediaScrubberComponent: Component {
             guard let component = self.component, case .began = gestureRecognizer.state else {
                 return
             }
+            
+            guard !component.isCollage || component.isCollageSelected else {
+                return
+            }
+            
             let point = gestureRecognizer.location(in: self)
             for (id, trackView) in self.trackViews {
                 if trackView.frame.contains(point) {
@@ -385,8 +426,18 @@ public final class MediaScrubberComponent: Component {
         }
         
         private var effectiveCursorHeight: CGFloat {
-            let additionalTracksCount = max(0, (self.component?.tracks.count ?? 1) - 1)
-            return 50.0 + CGFloat(additionalTracksCount) * 30.0
+            var height: CGFloat = 50.0
+            if let component = self.component {
+                if !component.isCollage || component.isCollageSelected {
+                    let trackHeight = component.isCollage ? 34.0 : 30.0
+                    let additionalTracksCount = max(0, (component.tracks.count) - 1)
+                    height += CGFloat(additionalTracksCount) * trackHeight
+                }
+                if component.isCollage && !component.isCollageSelected {
+                    height = 37.0
+                }
+            }
+            return height
         }
         
         private func updateCursorPosition() {
@@ -421,6 +472,7 @@ public final class MediaScrubberComponent: Component {
                 
         public func update(component: MediaScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
+            let previousComponent = self.component
             self.component = component
             self.state = state
             
@@ -452,7 +504,7 @@ public final class MediaScrubberComponent: Component {
                         context.addPath(path.cgPath)
                         context.strokePath()
                     })
-                    self.cursorView.image = positionImage
+                    self.cursorImageView.image = positionImage
                 }
             }
             
@@ -465,6 +517,8 @@ public final class MediaScrubberComponent: Component {
             
             var lowestVideoId: Int32?
             
+            let effectiveTrackSpacing = component.isCollage ? collageTrackSpacing : trackSpacing
+                
             var validIds = Set<Int32>()
             for track in component.tracks {
                 let id = track.id
@@ -506,6 +560,7 @@ public final class MediaScrubberComponent: Component {
                             return
                         }
                         self.selectedTrackId = id
+                        self.component?.trackSelectionUpdated(id)
                         self.state?.updated(transition: .easeInOut(duration: 0.2))
                     }
                     trackView.offsetUpdated = { [weak self] offset, apply in
@@ -522,28 +577,80 @@ public final class MediaScrubberComponent: Component {
                     }
                     self.trackViews[id] = trackView
                     
-                    self.insertSubview(trackView, at: 0)
+                    self.trackContainerView.insertSubview(trackView, at: 0)
                     
                     if !isFirstTime {
                         animateTrackIn = true
                     }
                 }
                 
+                var isSelected = id == self.selectedTrackId
+                if component.isCollage && !component.isCollageSelected {
+                    isSelected = false
+                }
+                
                 let trackSize = trackView.update(
                     context: component.context,
                     style: component.style,
                     track: track,
-                    isSelected: id == self.selectedTrackId,
+                    isSelected: isSelected,
                     availableSize: availableSize,
                     duration: self.duration,
                     transition: trackTransition
                 )
                 trackLayout[id] = (CGRect(origin: CGPoint(x: 0.0, y: totalHeight), size: trackSize), trackTransition, animateTrackIn)
                 
-                totalHeight += trackSize.height
-                totalHeight += trackSpacing
+                if component.isCollage && !component.isCollageSelected {
+                    
+                } else {
+                    totalHeight += trackSize.height
+                    totalHeight += effectiveTrackSpacing
+                }
             }
-            totalHeight -= trackSpacing
+            totalHeight -= effectiveTrackSpacing
+            
+            if component.isCollage {
+                if !component.isCollageSelected {
+                    totalHeight = collapsedTrackHeight
+                }
+                
+                var trackTransition = transition
+                
+                let trackView: TrackView
+                if let current = self.collageTrackView {
+                    trackView = current
+                } else {
+                    trackTransition = .immediate
+                    trackView = TrackView()
+                    trackView.onSelection = { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.component?.collageSelectionUpdated()
+                    }
+                    self.insertSubview(trackView, belowSubview: self.cursorView)
+                    self.collageTrackView = trackView
+                }
+                
+                let trackSize = trackView.update(
+                    context: component.context,
+                    style: component.style,
+                    track: MediaScrubberComponent.Track(
+                        id: 1024,
+                        content: .audio(artist: nil, title: "Timeline", samples: component.collageSamples?.samples, peak: component.collageSamples?.peak ?? 0, isTimeline: true),
+                        duration: component.maxDuration,
+                        trimRange: nil,
+                        offset: nil,
+                        isMain: false
+                    ),
+                    isSelected: false,
+                    availableSize: availableSize,
+                    duration: self.duration,
+                    transition: trackTransition
+                )
+                trackTransition.setFrame(view: trackView, frame: CGRect(origin: .zero, size: trackSize))
+                trackTransition.setAlpha(view: trackView, alpha: component.isCollageSelected ? 0.0 : 1.0)
+            }
             
             for track in component.tracks {
                 guard let trackView = self.trackViews[track.id], let (trackFrame, trackTransition, animateTrackIn) = trackLayout[track.id] else {
@@ -552,7 +659,7 @@ public final class MediaScrubberComponent: Component {
                 trackTransition.setFrame(view: trackView, frame: CGRect(origin: CGPoint(x: 0.0, y: totalHeight - trackFrame.maxY), size: trackFrame.size))
                 if animateTrackIn {
                     trackView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    trackView.layer.animatePosition(from: CGPoint(x: 0.0, y: trackFrame.height + trackSpacing), to: .zero, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    trackView.layer.animatePosition(from: CGPoint(x: 0.0, y: trackFrame.height + effectiveTrackSpacing), to: .zero, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                 }
             }
             
@@ -592,7 +699,7 @@ public final class MediaScrubberComponent: Component {
                         trimViewVisualInsets.left = delta
                     }
                     
-                    if lowestVideoId == 0 && track.id == 1 {
+                    if (lowestVideoId == 0 && track.id == 1) || component.isCollage {
                         trimViewVisualInsets = .zero
                         trackViewWidth = trackView.containerView.frame.width
                         mainTrimDuration = track.duration
@@ -653,11 +760,19 @@ public final class MediaScrubberComponent: Component {
                 selectedTrackFrame = mainTrackFrame
             }
 
-            let trimViewFrame = CGRect(origin: CGPoint(x: trimViewOffset, y: selectedTrackFrame.minY), size: scrubberSize)
+            var trimViewFrame = CGRect(origin: CGPoint(x: trimViewOffset, y: selectedTrackFrame.minY), size: scrubberSize)
+            
+            var trimVisible = true
+            if component.isCollage && !component.isCollageSelected {
+                trimVisible = false
+                trimViewFrame = trimViewFrame.offsetBy(dx: 0.0, dy: collapsedTrackHeight - trackHeight)
+            }
+            
             transition.setFrame(view: self.trimView, frame: trimViewFrame)
+            transition.setAlpha(view: self.trimView, alpha: trimVisible ? 1.0 : 0.0)
             
             var ghostTrimVisible = false
-            if let lowestVideoId, self.selectedTrackId != lowestVideoId {
+            if let lowestVideoId, !component.isCollage && self.selectedTrackId != lowestVideoId {
                 ghostTrimVisible = true
             }
             
@@ -709,7 +824,40 @@ public final class MediaScrubberComponent: Component {
                 self.updateCursorPosition()
             }
             
-            return CGSize(width: availableSize.width, height: totalHeight)
+            transition.setFrame(view: self.cursorImageView, frame: CGRect(origin: .zero, size: self.cursorView.frame.size))
+            
+            if component.isCollage {
+                transition.setAlpha(view: self.trackContainerView, alpha: component.isCollageSelected ? 1.0 : 0.0)
+            }
+            
+            if let previousComponent, component.isCollage, previousComponent.isCollageSelected != component.isCollageSelected {
+                if let blurFilter = makeBlurFilter() {
+                    if component.isCollageSelected {
+                        blurFilter.setValue(0.0 as NSNumber, forKey: "inputRadius")
+                        self.trackContainerView.layer.filters = [blurFilter]
+                        self.trackContainerView.layer.animate(from: 20.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, completion: { [weak self] completed in
+                            guard let self, completed else {
+                                return
+                            }
+                            self.trackContainerView.layer.filters = []
+                        })
+                    } else {
+                        blurFilter.setValue(0.0 as NSNumber, forKey: "inputRadius")
+                        self.trackContainerView.layer.filters = [blurFilter]
+                        self.trackContainerView.layer.animate(from: 0.0 as NSNumber, to: 20.0 as NSNumber, keyPath: "filters.gaussianBlur.inputRadius", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.4, completion: { [weak self] completed in
+                            guard let self, completed else {
+                                return
+                            }
+                            self.trackContainerView.layer.filters = []
+                        })
+                    }
+                }
+            }
+            
+            let size = CGSize(width: availableSize.width, height: totalHeight)
+            transition.setFrame(view: self.trackContainerView, frame: CGRect(origin: .zero, size: size))
+            
+            return size
         }
         
         public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -1124,7 +1272,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                 }
                 frameOffset += frameSize.width
             }
-        case let .audio(artist, title, samples, peak):
+        case let .audio(artist, title, samples, peak, isTimeline):
             var components: [String] = []
             var trackTitle = ""
             if let artist {
@@ -1161,7 +1309,15 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
             }
             
             let spacing: CGFloat = 4.0
-            let iconSize = CGSize(width: 14.0, height: 14.0)
+            var iconSize = CGSize(width: 14.0, height: 14.0)
+            var trackTitleAlpha: CGFloat = 1.0
+            if isTimeline {
+                if previousParams == nil {
+                    self.audioIconView.image = UIImage(bundleImageName: "Media Editor/Timeline")
+                }
+                iconSize = CGSize(width: 24.0, height: 24.0)
+                trackTitleAlpha = 0.7
+            }
             let contentTotalWidth = iconSize.width + audioTitleSize.width + spacing
             
             let audioContentTransition = transition
@@ -1181,16 +1337,16 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                     self.audioContentContainerView.addSubview(self.audioIconView)
                     self.audioContentContainerView.addSubview(view)
                 }
-                transition.setAlpha(view: view, alpha: trackTitleIsVisible ? 1.0 : 0.0)
+                transition.setAlpha(view: view, alpha: trackTitleIsVisible ? trackTitleAlpha : 0.0)
                 
                 let audioTitleFrame = CGRect(origin: CGPoint(x: audioIconFrame.maxX + spacing, y: floorToScreenPixels((scrubberSize.height - audioTitleSize.height) / 2.0)), size: audioTitleSize)
                 view.bounds = CGRect(origin: .zero, size: audioTitleFrame.size)
                 audioContentTransition.setPosition(view: view, position: audioTitleFrame.center)
             }
-            transition.setAlpha(view: self.audioIconView, alpha: trackTitleIsVisible ? 1.0 : 0.0)
+            transition.setAlpha(view: self.audioIconView, alpha: trackTitleIsVisible ? trackTitleAlpha : 0.0)
             
             var previousSamples: Data?
-            if let previousParams, case let .audio(_ , _, previousSamplesValue, _) = previousParams.track.content {
+            if let previousParams, case let .audio(_ , _, previousSamplesValue, _, _) = previousParams.track.content {
                 previousSamples = previousSamplesValue
             }
             

@@ -104,6 +104,24 @@ final class PrivateCallPictureInPictureView: UIView {
         }
     }
     
+    override var frame: CGRect {
+        didSet {
+            if !self.bounds.isEmpty {
+                /*if let testView = self.viewWithTag(123) {
+                    testView.frame = self.bounds.insetBy(dx: 10.0, dy: 10.0)
+                } else {
+                    let testView = AnimationTrackingView(frame: self.bounds.insetBy(dx: 10.0, dy: 10.0))
+                    testView.layer.borderColor = UIColor.red.cgColor
+                    testView.layer.borderWidth = 2.0
+                    testView.tag = 123
+                    self.addSubview(testView)
+                }*/
+                
+                self.updateLayout(size: self.bounds.size)
+            }
+        }
+    }
+    
     override static var layerClass: AnyClass {
         return AVSampleBufferDisplayLayer.self
     }
@@ -146,48 +164,9 @@ final class PrivateCallPictureInPictureView: UIView {
         }
     }
     
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        
-        let size = self.bounds.size
+    func updateLayout(size: CGSize) {
         if size.width.isZero || size.height.isZero {
             return
-        }
-        
-        var animationTemplate: CAAnimation?
-        self.animationTrackingView.onAnimation = { animation in
-            animationTemplate = animation
-        }
-        self.animationTrackingView.frame = CGRect(origin: CGPoint(), size: size)
-        self.animationTrackingView.onAnimation = nil
-        
-        let _ = animationTemplate
-        
-        let animationDuration = CATransaction.animationDuration()
-        let timingFunction = CATransaction.animationTimingFunction()
-        
-        let mappedTransition: ComponentTransition
-        if self.sampleBufferView.bounds.isEmpty {
-            mappedTransition = .immediate
-        } else if animationDuration > 0.0 && !CATransaction.disableActions() {
-            let mappedCurve: ComponentTransition.Animation.Curve
-            if let timingFunction {
-                var controlPoint0: [Float] = [0.0, 0.0]
-                var controlPoint1: [Float] = [0.0, 0.0]
-                timingFunction.getControlPoint(at: 1, values: &controlPoint0)
-                timingFunction.getControlPoint(at: 2, values: &controlPoint1)
-                mappedCurve = .custom(controlPoint0[0], controlPoint0[1], controlPoint1[0], controlPoint1[1])
-            } else if animationDuration >= 0.5 {
-                mappedCurve = .spring
-            } else {
-                mappedCurve = .easeInOut
-            }
-            mappedTransition = ComponentTransition(animation: .curve(
-                duration: animationDuration,
-                curve: mappedCurve
-            ))
-        } else {
-            mappedTransition = .immediate
         }
         
         if let videoMetrics = self.videoMetrics {
@@ -223,26 +202,34 @@ final class PrivateCallPictureInPictureView: UIView {
                 
                 if let sublayers = self.sampleBufferView.layer.sublayers {
                     if sublayers.count > 1, !sublayers[0].bounds.isEmpty {
-                        sublayers[0].position = CGPoint(x: videoFrame.width * 0.5, y: videoFrame.height * 0.5)
                         sublayers[0].bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
+                        sublayers[0].position = CGPoint(x: videoFrame.width * 0.5, y: videoFrame.height * 0.5)
                     }
                 }
             }
             
-            if !mappedTransition.animation.isImmediate {
-                apply()
-            } else {
-                UIView.performWithoutAnimation {
-                    apply()
-                }
-            }
+            apply()
         }
     }
 }
 
 @available(iOS 15.0, *)
 final class PrivateCallPictureInPictureController: AVPictureInPictureVideoCallViewController {
+    var pipView: PrivateCallPictureInPictureView?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        if let pipView = self.pipView {
+            pipView.updateLayout(size: self.view.bounds.size)
+        }
+    }
+    
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
+        
+        coordinator.animate(alongsideTransition: { context in
+            self.pipView?.frame = CGRect(origin: CGPoint(), size: size)
+        })
     }
 }

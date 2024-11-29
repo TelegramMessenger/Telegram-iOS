@@ -185,6 +185,7 @@ public final class LoadingOverlayNode: ASDisplayNode {
             }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openPremiumGift: { _, _ in }, openPremiumManagement: {}, openActiveSessions: {}, openBirthdaySetup: {}, performActiveSessionAction: { _, _ in }, openChatFolderUpdates: {}, hideChatFolderUpdates: {}, openStories: { _, _ in }, openStarsTopup: { _ in
             }, dismissNotice: { _ in
             }, editPeer: { _ in
+            }, openWebApp: { _ in
             })
             
             let items = (0 ..< 1).map { _ -> ChatListItem in
@@ -539,6 +540,8 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             dismissNotice: { _ in
             },
             editPeer: { _ in
+            },
+            openWebApp: { _ in
             }
         )
         

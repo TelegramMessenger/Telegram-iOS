@@ -6,6 +6,7 @@ import ContextUI
 import AccountContext
 import TelegramPresentationData
 import Photos
+import MediaAssetsContext
 
 struct MediaGroupItem {
     let collection: PHAssetCollection

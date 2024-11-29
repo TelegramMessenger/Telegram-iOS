@@ -72,11 +72,10 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     }
     
     func decodeInternal(frame: MediaTrackDecodableFrame) {
-    
     }
     
-    public func decode(frame: MediaTrackDecodableFrame) -> MediaTrackFrame? {
-        return self.decode(frame: frame, ptsOffset: nil)
+    public func decode() -> MediaTrackFrame? {
+        return self.decode(ptsOffset: nil)
     }
     
     public func sendToDecoder(frame: MediaTrackDecodableFrame) -> Bool {
@@ -126,28 +125,36 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?, forceARGB: Bool = false, unpremultiplyAlpha: Bool = true, displayImmediately: Bool = true) -> MediaTrackFrame? {
-        if self.isError {
-            return nil
-        }
-        
+    public func send(frame: MediaTrackDecodableFrame) -> Bool {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
             self.defaultDuration = frame.duration
             self.defaultTimescale = frame.pts.timescale
-            
-            if self.codecContext.receive(into: self.videoFrame) == .success {
-                if self.videoFrame.width * self.videoFrame.height > 4 * 1024 * 4 * 1024 {
-                    self.isError = true
-                    return nil
-                }
-                
-                var pts = CMTimeMake(value: self.videoFrame.pts, timescale: frame.pts.timescale)
-                if let ptsOffset = ptsOffset {
-                    pts = CMTimeAdd(pts, ptsOffset)
-                }
-                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB, unpremultiplyAlpha: unpremultiplyAlpha, displayImmediately: displayImmediately)
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    public func decode(ptsOffset: CMTime?, forceARGB: Bool = false, unpremultiplyAlpha: Bool = true, displayImmediately: Bool = true) -> MediaTrackFrame? {
+        if self.isError {
+            return nil
+        }
+        guard let defaultDuration = self.defaultDuration, let defaultTimescale = self.defaultTimescale else {
+            return nil
+        }
+        
+        if self.codecContext.receive(into: self.videoFrame) == .success {
+            if self.videoFrame.width * self.videoFrame.height > 4 * 1024 * 4 * 1024 {
+                self.isError = true
+                return nil
             }
+            
+            var pts = CMTimeMake(value: self.videoFrame.pts, timescale: defaultTimescale)
+            if let ptsOffset = ptsOffset {
+                pts = CMTimeAdd(pts, ptsOffset)
+            }
+            return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: defaultDuration, forceARGB: forceARGB, unpremultiplyAlpha: unpremultiplyAlpha, displayImmediately: displayImmediately)
         }
         
         return nil

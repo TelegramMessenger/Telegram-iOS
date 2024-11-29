@@ -10,7 +10,7 @@ import SaveToCameraRoll
 import ImageCompression
 import LocalMediaResources
 
-public extension MediaEditorScreen {
+public extension MediaEditorScreenImpl {
     static func makeEditStoryController(
         context: AccountContext,
         peer: EnginePeer,
@@ -18,16 +18,16 @@ public extension MediaEditorScreen {
         videoPlaybackPosition: Double?,
         cover: Bool,
         repost: Bool,
-        transitionIn: MediaEditorScreen.TransitionIn,
-        transitionOut: MediaEditorScreen.TransitionOut?,
+        transitionIn: MediaEditorScreenImpl.TransitionIn,
+        transitionOut: MediaEditorScreenImpl.TransitionOut?,
         completed: @escaping () -> Void = {},
         willDismiss: @escaping () -> Void = {},
         update: @escaping (Disposable?) -> Void
-    ) -> MediaEditorScreen? {
+    ) -> MediaEditorScreenImpl? {
         guard let peerReference = PeerReference(peer._asPeer()) else {
             return nil
         }
-        let subject: Signal<MediaEditorScreen.Subject?, NoError>
+        let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
         subject = getStorySource(engine: context.engine, peerId: peer.id, id: Int64(storyItem.id))
         |> mapToSignal { source in
             if !repost, let source {
@@ -35,14 +35,14 @@ public extension MediaEditorScreen {
             } else {
                 let media = storyItem.media._asMedia()
                 return fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .peer(peerReference.id), customUserContentType: .story, mediaReference: .story(peer: peerReference, id: storyItem.id, media: media))
-                |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreen.Subject?, NoError> in
+                |> mapToSignal { (value, isImage) -> Signal<MediaEditorScreenImpl.Subject?, NoError> in
                     guard case let .data(data) = value, data.complete else {
                         return .complete()
                     }
                     if let image = UIImage(contentsOfFile: data.path) {
                         return .single(nil)
                         |> then(
-                            .single(.image(image, PixelDimensions(image.size), nil, .bottomRight))
+                            .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
                             |> delay(0.1, queue: Queue.mainQueue())
                         )
                     } else {
@@ -56,7 +56,7 @@ public extension MediaEditorScreen {
                         }
                         return .single(nil)
                         |> then(
-                            .single(.video(symlinkPath, nil, false, nil, nil, PixelDimensions(width: 720, height: 1280), duration ?? 0.0, [], .bottomRight))
+                            .single(.video(videoPath: symlinkPath, thumbnail: nil, mirror: false, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: PixelDimensions(width: 720, height: 1280), duration: duration ?? 0.0, videoPositionChanges: [], additionalVideoPosition: .bottomRight))
                         )
                     }
                 }
@@ -95,7 +95,7 @@ public extension MediaEditorScreen {
         }
         
         var updateProgressImpl: ((Float) -> Void)?
-        let controller = MediaEditorScreen(
+        let controller = MediaEditorScreenImpl(
             context: context,
             mode: .storyEditor,
             subject: subject,
@@ -110,7 +110,7 @@ public extension MediaEditorScreen {
             transitionOut: { finished, isNew in
                 if repost && finished {
                     if let transitionOut = externalState.transitionOut?(externalState.storyTarget, externalState.isPeerArchived), let destinationView = transitionOut.destinationView {
-                        return MediaEditorScreen.TransitionOut(
+                        return MediaEditorScreenImpl.TransitionOut(
                             destinationView: destinationView,
                             destinationRect: transitionOut.destinationRect,
                             destinationCornerRadius: transitionOut.destinationCornerRadius

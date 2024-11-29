@@ -9,7 +9,7 @@ import AccountContext
 import MediaEditor
 import DrawingUI
 
-extension MediaEditorScreen {
+extension MediaEditorScreenImpl {
     func isEligibleForDraft() -> Bool {
         if self.isEditingStory {
             return false
@@ -40,6 +40,8 @@ extension MediaEditorScreen {
             } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
                 return false
             } else if case .empty = subject, !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
+                return false
+            } else if case .videoCollage = subject {
                 return false
             }
         }
@@ -173,6 +175,8 @@ extension MediaEditorScreen {
                     innerSaveDraft(media: .image(image: image, dimensions: dimensions))
                 case let .video(path, _, _, _, _, dimensions, _, _, _):
                     innerSaveDraft(media: .video(path: path, dimensions: dimensions, duration: duration))
+                case let .videoCollage(items):
+                    let _ = items
                 case let .asset(asset):
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in

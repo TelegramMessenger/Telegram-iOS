@@ -177,6 +177,8 @@ private struct CommandChatInputContextPanelEntry: Comparable, Identifiable {
                     dismissNotice: { _ in
                     },
                     editPeer: { _ in
+                    },
+                    openWebApp: { _ in
                     }
                 )
                 

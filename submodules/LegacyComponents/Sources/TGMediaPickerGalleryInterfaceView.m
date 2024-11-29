@@ -175,7 +175,15 @@
             [strongSelf.window endEditing:true];
             strongSelf->_portraitToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_landscapeToolbarView.doneButton.userInteractionEnabled = false;
-            strongSelf->_donePressed(strongSelf->_currentItem);
+            
+            if (strongSelf->_captionMixin.editing) {
+                [strongSelf->_captionMixin finishEditing];
+                TGDispatchAfter(0.1, dispatch_get_main_queue(), ^{
+                    strongSelf->_donePressed(strongSelf->_currentItem);
+                });
+            } else {
+                strongSelf->_donePressed(strongSelf->_currentItem);
+            }
             
             [strongSelf->_captionMixin onAnimateOut];
         };
@@ -387,6 +395,14 @@
             [strongSelf->_editingContext setTimer:timeout forItem:galleryEditableItem.editableMediaItem];
             
             [strongSelf->_selectionContext setItem:(id<TGMediaSelectableItem>)galleryEditableItem.editableMediaItem selected:true animated:true sender:nil];
+        };
+        
+        _captionMixin.captionIsAboveUpdated = ^(bool captionIsAbove) {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf->_editingContext setCaptionAbove:captionIsAbove];
         };
         
         _captionMixin.stickersContext = stickersContext;
@@ -818,6 +834,8 @@
     {
         id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
         
+        bool isCaptionAbove = galleryEditableItem.editingContext.isCaptionAbove;
+        
         __weak id<TGModernGalleryEditableItem> weakGalleryEditableItem = galleryEditableItem;
         [_adjustmentsDisposable setDisposable:[[[[galleryEditableItem.editingContext adjustmentsSignalForItem:editableMediaItem] mapToSignal:^SSignal *(id<TGMediaEditAdjustments> adjustments) {
             __strong id<TGModernGalleryEditableItem> strongGalleryEditableItem = weakGalleryEditableItem;
@@ -842,7 +860,7 @@
             id<TGMediaEditAdjustments> adjustments = dict[@"adjustments"];
             NSNumber *timer = dict[@"timer"];
             
-            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo];
+            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo isCaptionAbove:isCaptionAbove];
             
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
             {
@@ -1418,7 +1436,7 @@
         || [view isDescendantOfView:_landscapeToolbarView]
         || [view isDescendantOfView:_selectedPhotosView]
         || [view isDescendantOfView:_captionMixin.inputPanelView]
-        || [view isDescendantOfView:_captionMixin.dismissView]
+        || ([view isDescendantOfView:_captionMixin.dismissView] && _captionMixin.dismissView.alpha > 0.0)
         || [view isKindOfClass:[TGMenuButtonView class]])
         
     {
@@ -1617,6 +1635,7 @@
 - (void)setSafeAreaInset:(UIEdgeInsets)safeAreaInset
 {
     _safeAreaInset = safeAreaInset;
+    _captionMixin.safeAreaInset = safeAreaInset;
     [_currentItemView setSafeAreaInset:[self localSafeAreaInset]];
     [self setNeedsLayout];
 }

@@ -2264,5 +2264,30 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct StarRefProgram: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramStarRefProgram?
+            
+            public let id: EnginePeer.Id
+            
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+            
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.starRefProgram
+                } else {
+                    return nil
+                }
+            }
+        }
     }
 }

@@ -21,7 +21,7 @@ public enum ChatMessageGalleryControllerData {
     case pass(TelegramMediaFile)
     case instantPage(InstantPageGalleryController, Int, Media)
     case map(TelegramMediaMap)
-    case stickerPack(StickerPackReference)
+    case stickerPack(StickerPackReference, TelegramMediaFile?)
     case audio(TelegramMediaFile)
     case document(TelegramMediaFile, Bool)
     case gallery(Signal<GalleryController, NoError>)
@@ -104,7 +104,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
         for attribute in file.attributes {
             if case let .CustomEmoji(_, _, _, reference) = attribute {
                 if let reference = reference {
-                    return .stickerPack(reference)
+                    return .stickerPack(reference, file)
                 }
                 break
             }
@@ -214,7 +214,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             for attribute in file.attributes {
                 if case let .Sticker(_, reference, _) = attribute {
                     if let reference = reference {
-                        return .stickerPack(reference)
+                        return .stickerPack(reference, file)
                     }
                     break
                 }

@@ -1928,7 +1928,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                             UIPasteboard.general.string = link
                             
                             if let previousController = controller?.navigationController?.viewControllers.reversed().first(where: { $0 !== controller }) as? ViewController {
-                                previousController.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                previousController.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(title: nil, text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }
                         },
                         dismiss: { [weak controller] in

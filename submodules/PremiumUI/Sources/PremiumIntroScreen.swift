@@ -3218,6 +3218,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if case .business = context.component.mode {
                 header = coin.update(
                     component: PremiumCoinComponent(
+                        mode: .business,
                         isIntro: isIntro,
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations
@@ -3767,7 +3768,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             self.dismissAllTooltips()
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, action: { _ in return true }), in: .current)
+            self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, action: { _ in return true }), in: .current)
         }
         
         shareLinkImpl = { [weak self] link in

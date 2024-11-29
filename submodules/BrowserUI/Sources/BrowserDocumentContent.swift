@@ -412,7 +412,7 @@ final class BrowserDocumentContent: UIView, BrowserContent, WKNavigationDelegate
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let shareController = ShareController(context: self.context, subject: .url(url))
         shareController.actionCompleted = { [weak self] in
-            self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+            self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
         }
         self.present(shareController, nil)
     }

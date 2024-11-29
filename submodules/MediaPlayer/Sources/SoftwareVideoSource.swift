@@ -107,7 +107,7 @@ public final class SoftwareVideoSource {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -277,10 +277,14 @@ public final class SoftwareVideoSource {
             if let maxPts = maxPts, CMTimeCompare(decodableFrame.pts, maxPts) < 0 {
                 ptsOffset = maxPts
             }
-            if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
-                result = (decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9, unpremultiplyAlpha: self.unpremultiplyAlpha), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            if videoStream.decoder.send(frame: decodableFrame) {
+                if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                    result = (decoder.decode(ptsOffset: ptsOffset, forceARGB: self.hintVP9, unpremultiplyAlpha: self.unpremultiplyAlpha), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+                } else {
+                    result = (videoStream.decoder.decode(), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+                }
             } else {
-                result = (videoStream.decoder.decode(frame: decodableFrame), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+                result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
             }
         } else {
             result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
@@ -392,7 +396,7 @@ public final class SoftwareAudioSource {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -518,11 +522,17 @@ public final class SoftwareAudioSource {
             return nil
         }
         
-        let (decodableFrame, _) = self.readDecodableFrame()
-        if let decodableFrame = decodableFrame {
-            return audioStream.decoder.decode(frame: decodableFrame)?.sampleBuffer
-        } else {
-            return nil
+        while true {
+            let (decodableFrame, _) = self.readDecodableFrame()
+            if let decodableFrame = decodableFrame {
+                if audioStream.decoder.send(frame: decodableFrame) {
+                    if let result = audioStream.decoder.decode() {
+                        return result.sampleBuffer
+                    }
+                }
+            } else {
+                return nil
+            }
         }
     }
     
@@ -593,7 +603,7 @@ final class SoftwareVideoReader {
         
         avFormatContext.setIO(self.avIoContext!)
         
-        if !avFormatContext.openInput() {
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
             self.readingError = true
             return
         }
@@ -730,10 +740,14 @@ final class SoftwareVideoReader {
         while !self.readingError && !self.hasReadToEnd {
             if let decodableFrame = self.readDecodableFrame() {
                 var result: (MediaTrackFrame?, CGFloat, CGFloat)
-                if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
-                    result = (decoder.decode(frame: decodableFrame, ptsOffset: nil, forceARGB: false, unpremultiplyAlpha: false, displayImmediately: false), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                if videoStream.decoder.send(frame: decodableFrame) {
+                    if let decoder = videoStream.decoder as? FFMpegMediaVideoFrameDecoder {
+                        result = (decoder.decode(ptsOffset: nil, forceARGB: false, unpremultiplyAlpha: false, displayImmediately: false), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                    } else {
+                        result = (videoStream.decoder.decode(), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                    }
                 } else {
-                    result = (videoStream.decoder.decode(frame: decodableFrame), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
+                    result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect))
                 }
                 if let frame = result.0 {
                     return frame
@@ -839,7 +853,7 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
     
     avFormatContext.setIO(avIoContext)
     
-    if !avFormatContext.openInput() {
+    if !avFormatContext.openInput(withDirectFilePath: nil) {
         return nil
     }
     

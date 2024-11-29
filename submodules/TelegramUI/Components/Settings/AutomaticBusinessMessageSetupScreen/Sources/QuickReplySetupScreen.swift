@@ -228,6 +228,8 @@ final class QuickReplySetupScreenComponent: Component {
                         if let itemId = item.id {
                             parentView.openEditShortcut(id: itemId, currentValue: item.shortcut)
                         }
+                    },
+                    openWebApp: { _ in
                     }
                 )
                 

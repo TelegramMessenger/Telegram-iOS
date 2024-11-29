@@ -1,4 +1,92 @@
 public extension Api {
+    enum InlineQueryPeerType: TypeConstructorDescription {
+        case inlineQueryPeerTypeBotPM
+        case inlineQueryPeerTypeBroadcast
+        case inlineQueryPeerTypeChat
+        case inlineQueryPeerTypeMegagroup
+        case inlineQueryPeerTypePM
+        case inlineQueryPeerTypeSameBotPM
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inlineQueryPeerTypeBotPM:
+                    if boxed {
+                        buffer.appendInt32(238759180)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeBroadcast:
+                    if boxed {
+                        buffer.appendInt32(1664413338)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeChat:
+                    if boxed {
+                        buffer.appendInt32(-681130742)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeMegagroup:
+                    if boxed {
+                        buffer.appendInt32(1589952067)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypePM:
+                    if boxed {
+                        buffer.appendInt32(-2093215828)
+                    }
+                    
+                    break
+                case .inlineQueryPeerTypeSameBotPM:
+                    if boxed {
+                        buffer.appendInt32(813821341)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inlineQueryPeerTypeBotPM:
+                return ("inlineQueryPeerTypeBotPM", [])
+                case .inlineQueryPeerTypeBroadcast:
+                return ("inlineQueryPeerTypeBroadcast", [])
+                case .inlineQueryPeerTypeChat:
+                return ("inlineQueryPeerTypeChat", [])
+                case .inlineQueryPeerTypeMegagroup:
+                return ("inlineQueryPeerTypeMegagroup", [])
+                case .inlineQueryPeerTypePM:
+                return ("inlineQueryPeerTypePM", [])
+                case .inlineQueryPeerTypeSameBotPM:
+                return ("inlineQueryPeerTypeSameBotPM", [])
+    }
+    }
+    
+        public static func parse_inlineQueryPeerTypeBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeBotPM
+        }
+        public static func parse_inlineQueryPeerTypeBroadcast(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeBroadcast
+        }
+        public static func parse_inlineQueryPeerTypeChat(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeChat
+        }
+        public static func parse_inlineQueryPeerTypeMegagroup(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeMegagroup
+        }
+        public static func parse_inlineQueryPeerTypePM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypePM
+        }
+        public static func parse_inlineQueryPeerTypeSameBotPM(_ reader: BufferReader) -> InlineQueryPeerType? {
+            return Api.InlineQueryPeerType.inlineQueryPeerTypeSameBotPM
+        }
+    
+    }
+}
+public extension Api {
     enum InputAppEvent: TypeConstructorDescription {
         case inputAppEvent(time: Double, type: String, peer: Int64, data: Api.JSONValue)
     
@@ -1120,190 +1208,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputChannel.inputChannelFromMessage(peer: _1!, msgId: _2!, channelId: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputChatPhoto: TypeConstructorDescription {
-        case inputChatPhoto(id: Api.InputPhoto)
-        case inputChatPhotoEmpty
-        case inputChatUploadedPhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?, videoEmojiMarkup: Api.VideoSize?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputChatPhoto(let id):
-                    if boxed {
-                        buffer.appendInt32(-1991004873)
-                    }
-                    id.serialize(buffer, true)
-                    break
-                case .inputChatPhotoEmpty:
-                    if boxed {
-                        buffer.appendInt32(480546647)
-                    }
-                    
-                    break
-                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs, let videoEmojiMarkup):
-                    if boxed {
-                        buffer.appendInt32(-1110593856)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {videoEmojiMarkup!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputChatPhoto(let id):
-                return ("inputChatPhoto", [("id", id as Any)])
-                case .inputChatPhotoEmpty:
-                return ("inputChatPhotoEmpty", [])
-                case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs, let videoEmojiMarkup):
-                return ("inputChatUploadedPhoto", [("flags", flags as Any), ("file", file as Any), ("video", video as Any), ("videoStartTs", videoStartTs as Any), ("videoEmojiMarkup", videoEmojiMarkup as Any)])
-    }
-    }
-    
-        public static func parse_inputChatPhoto(_ reader: BufferReader) -> InputChatPhoto? {
-            var _1: Api.InputPhoto?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPhoto
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputChatPhoto.inputChatPhoto(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputChatPhotoEmpty(_ reader: BufferReader) -> InputChatPhoto? {
-            return Api.InputChatPhoto.inputChatPhotoEmpty
-        }
-        public static func parse_inputChatUploadedPhoto(_ reader: BufferReader) -> InputChatPhoto? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.InputFile?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.InputFile
-            } }
-            var _3: Api.InputFile?
-            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.InputFile
-            } }
-            var _4: Double?
-            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readDouble() }
-            var _5: Api.VideoSize?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.VideoSize
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.InputChatPhoto.inputChatUploadedPhoto(flags: _1!, file: _2, video: _3, videoStartTs: _4, videoEmojiMarkup: _5)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputChatlist: TypeConstructorDescription {
-        case inputChatlistDialogFilter(filterId: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputChatlistDialogFilter(let filterId):
-                    if boxed {
-                        buffer.appendInt32(-203367885)
-                    }
-                    serializeInt32(filterId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputChatlistDialogFilter(let filterId):
-                return ("inputChatlistDialogFilter", [("filterId", filterId as Any)])
-    }
-    }
-    
-        public static func parse_inputChatlistDialogFilter(_ reader: BufferReader) -> InputChatlist? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputChatlist.inputChatlistDialogFilter(filterId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputCheckPasswordSRP: TypeConstructorDescription {
-        case inputCheckPasswordEmpty
-        case inputCheckPasswordSRP(srpId: Int64, A: Buffer, M1: Buffer)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputCheckPasswordEmpty:
-                    if boxed {
-                        buffer.appendInt32(-1736378792)
-                    }
-                    
-                    break
-                case .inputCheckPasswordSRP(let srpId, let A, let M1):
-                    if boxed {
-                        buffer.appendInt32(-763367294)
-                    }
-                    serializeInt64(srpId, buffer: buffer, boxed: false)
-                    serializeBytes(A, buffer: buffer, boxed: false)
-                    serializeBytes(M1, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputCheckPasswordEmpty:
-                return ("inputCheckPasswordEmpty", [])
-                case .inputCheckPasswordSRP(let srpId, let A, let M1):
-                return ("inputCheckPasswordSRP", [("srpId", srpId as Any), ("A", A as Any), ("M1", M1 as Any)])
-    }
-    }
-    
-        public static func parse_inputCheckPasswordEmpty(_ reader: BufferReader) -> InputCheckPasswordSRP? {
-            return Api.InputCheckPasswordSRP.inputCheckPasswordEmpty
-        }
-        public static func parse_inputCheckPasswordSRP(_ reader: BufferReader) -> InputCheckPasswordSRP? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputCheckPasswordSRP.inputCheckPasswordSRP(srpId: _1!, A: _2!, M1: _3!)
             }
             else {
                 return nil

@@ -122,7 +122,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     shareController.actionCompleted = { [weak parentNavigationController] in
                         if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         }
                     }
                     strongSelf.present(shareController, in: .window(.root))
@@ -135,7 +135,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 return
             }
             
-            strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
+            strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
               guard case let .result(result) = result else {
                   return .complete()

@@ -3013,6 +3013,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, openStarsTopup: { _ in
         }, dismissNotice: { _ in
         }, editPeer: { _ in
+        }, openWebApp: { _ in
         })
         chatListInteraction.isSearchMode = true
         
@@ -3936,7 +3937,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 if !value.isEmpty {
                                     context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: value, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
                                 } else {
-                                    let _ = (context.engine.peers.resolvePeerByName(name: "botfather")
+                                    let _ = (context.engine.peers.resolvePeerByName(name: "botfather", referrer: nil)
                                     |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                                         guard case let .result(result) = result else {
                                             return .complete()
@@ -4905,6 +4906,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, openStarsTopup: { _ in
             }, dismissNotice: { _ in
             }, editPeer: { _ in
+            }, openWebApp: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

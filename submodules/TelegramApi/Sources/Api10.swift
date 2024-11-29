@@ -1,4 +1,212 @@
 public extension Api {
+    indirect enum InputFolderPeer: TypeConstructorDescription {
+        case inputFolderPeer(peer: Api.InputPeer, folderId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                    if boxed {
+                        buffer.appendInt32(-70073706)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(folderId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputFolderPeer(let peer, let folderId):
+                return ("inputFolderPeer", [("peer", peer as Any), ("folderId", folderId as Any)])
+    }
+    }
+    
+        public static func parse_inputFolderPeer(_ reader: BufferReader) -> InputFolderPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputFolderPeer.inputFolderPeer(peer: _1!, folderId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum InputGame: TypeConstructorDescription {
+        case inputGameID(id: Int64, accessHash: Int64)
+        case inputGameShortName(botId: Api.InputUser, shortName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputGameID(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(53231223)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputGameShortName(let botId, let shortName):
+                    if boxed {
+                        buffer.appendInt32(-1020139510)
+                    }
+                    botId.serialize(buffer, true)
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputGameID(let id, let accessHash):
+                return ("inputGameID", [("id", id as Any), ("accessHash", accessHash as Any)])
+                case .inputGameShortName(let botId, let shortName):
+                return ("inputGameShortName", [("botId", botId as Any), ("shortName", shortName as Any)])
+    }
+    }
+    
+        public static func parse_inputGameID(_ reader: BufferReader) -> InputGame? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputGame.inputGameID(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputGameShortName(_ reader: BufferReader) -> InputGame? {
+            var _1: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputGame.inputGameShortName(botId: _1!, shortName: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InputGeoPoint: TypeConstructorDescription {
+        case inputGeoPoint(flags: Int32, lat: Double, long: Double, accuracyRadius: Int32?)
+        case inputGeoPointEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputGeoPoint(let flags, let lat, let long, let accuracyRadius):
+                    if boxed {
+                        buffer.appendInt32(1210199983)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeDouble(lat, buffer: buffer, boxed: false)
+                    serializeDouble(long, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(accuracyRadius!, buffer: buffer, boxed: false)}
+                    break
+                case .inputGeoPointEmpty:
+                    if boxed {
+                        buffer.appendInt32(-457104426)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputGeoPoint(let flags, let lat, let long, let accuracyRadius):
+                return ("inputGeoPoint", [("flags", flags as Any), ("lat", lat as Any), ("long", long as Any), ("accuracyRadius", accuracyRadius as Any)])
+                case .inputGeoPointEmpty:
+                return ("inputGeoPointEmpty", [])
+    }
+    }
+    
+        public static func parse_inputGeoPoint(_ reader: BufferReader) -> InputGeoPoint? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Double?
+            _2 = reader.readDouble()
+            var _3: Double?
+            _3 = reader.readDouble()
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputGeoPoint.inputGeoPoint(flags: _1!, lat: _2!, long: _3!, accuracyRadius: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputGeoPointEmpty(_ reader: BufferReader) -> InputGeoPoint? {
+            return Api.InputGeoPoint.inputGeoPointEmpty
+        }
+    
+    }
+}
+public extension Api {
+    enum InputGroupCall: TypeConstructorDescription {
+        case inputGroupCall(id: Int64, accessHash: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputGroupCall(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(-659913713)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputGroupCall(let id, let accessHash):
+                return ("inputGroupCall", [("id", id as Any), ("accessHash", accessHash as Any)])
+    }
+    }
+    
+        public static func parse_inputGroupCall(_ reader: BufferReader) -> InputGroupCall? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputGroupCall.inputGroupCall(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputInvoice: TypeConstructorDescription {
         case inputInvoiceChatInviteSubscription(hash: String)
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
@@ -880,106 +1088,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    indirect enum InputNotifyPeer: TypeConstructorDescription {
-        case inputNotifyBroadcasts
-        case inputNotifyChats
-        case inputNotifyForumTopic(peer: Api.InputPeer, topMsgId: Int32)
-        case inputNotifyPeer(peer: Api.InputPeer)
-        case inputNotifyUsers
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputNotifyBroadcasts:
-                    if boxed {
-                        buffer.appendInt32(-1311015810)
-                    }
-                    
-                    break
-                case .inputNotifyChats:
-                    if boxed {
-                        buffer.appendInt32(1251338318)
-                    }
-                    
-                    break
-                case .inputNotifyForumTopic(let peer, let topMsgId):
-                    if boxed {
-                        buffer.appendInt32(1548122514)
-                    }
-                    peer.serialize(buffer, true)
-                    serializeInt32(topMsgId, buffer: buffer, boxed: false)
-                    break
-                case .inputNotifyPeer(let peer):
-                    if boxed {
-                        buffer.appendInt32(-1195615476)
-                    }
-                    peer.serialize(buffer, true)
-                    break
-                case .inputNotifyUsers:
-                    if boxed {
-                        buffer.appendInt32(423314455)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputNotifyBroadcasts:
-                return ("inputNotifyBroadcasts", [])
-                case .inputNotifyChats:
-                return ("inputNotifyChats", [])
-                case .inputNotifyForumTopic(let peer, let topMsgId):
-                return ("inputNotifyForumTopic", [("peer", peer as Any), ("topMsgId", topMsgId as Any)])
-                case .inputNotifyPeer(let peer):
-                return ("inputNotifyPeer", [("peer", peer as Any)])
-                case .inputNotifyUsers:
-                return ("inputNotifyUsers", [])
-    }
-    }
-    
-        public static func parse_inputNotifyBroadcasts(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyBroadcasts
-        }
-        public static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyChats
-        }
-        public static func parse_inputNotifyForumTopic(_ reader: BufferReader) -> InputNotifyPeer? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputNotifyPeer.inputNotifyForumTopic(peer: _1!, topMsgId: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
-            var _1: Api.InputPeer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputNotifyPeer.inputNotifyPeer(peer: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
-            return Api.InputNotifyPeer.inputNotifyUsers
         }
     
     }

@@ -9,7 +9,7 @@ import AppBundle
 import LegacyComponents
 import PremiumStarComponent
 
-private let sceneVersion: Int = 3
+private let sceneVersion: Int = 4
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -19,26 +19,38 @@ private func rad2deg(_ number: Float) -> Float {
     return number * 180.0 / .pi
 }
 
-class PremiumCoinComponent: Component {
-    let isIntro: Bool
-    let isVisible: Bool
-    let hasIdleAnimations: Bool
+public final class PremiumCoinComponent: Component {
+    public enum Mode {
+        case business
+        case affiliate
+    }
+    
+    public let mode: Mode
+    public let isIntro: Bool
+    public let isVisible: Bool
+    public let hasIdleAnimations: Bool
         
-    init(isIntro: Bool, isVisible: Bool, hasIdleAnimations: Bool) {
+    public init(
+        mode: Mode,
+        isIntro: Bool,
+        isVisible: Bool,
+        hasIdleAnimations: Bool
+    ) {
+        self.mode = mode
         self.isIntro = isIntro
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
-    static func ==(lhs: PremiumCoinComponent, rhs: PremiumCoinComponent) -> Bool {
-        return lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+    public static func ==(lhs: PremiumCoinComponent, rhs: PremiumCoinComponent) -> Bool {
+        return lhs.mode == rhs.mode && lhs.isIntro == rhs.isIntro && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
-        final class Tag {
+    public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
+        public final class Tag {
         }
         
-        func matches(tag: Any) -> Bool {
+        public func matches(tag: Any) -> Bool {
             if let _ = tag as? Tag {
                 return true
             }
@@ -238,7 +250,7 @@ class PremiumCoinComponent: Component {
         }
         
         private var didSetReady = false
-        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+        public func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
             if !self.didSetReady {
                 self.didSetReady = true
                 
@@ -350,7 +362,7 @@ class PremiumCoinComponent: Component {
                 }
                 
                 if let material = node.geometry?.materials.first {
-                    if node.name == "Logos" {
+                    if ["Business", "Affiliate", "Plane"].contains(node.name) {
                         material.metalness.intensity = 0.1
                     } else {
                         material.metalness.intensity = 0.3
@@ -501,17 +513,33 @@ class PremiumCoinComponent: Component {
                 self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
             }
             
+            let visibleLogo: String
+            switch component.mode {
+            case .business:
+                visibleLogo = "Business"
+            case .affiliate:
+                visibleLogo = "Affiliate"
+            }
+            
+            if let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) {
+                for node in node.childNodes {
+                    if ["Business", "Affiliate"].contains(node.name) {
+                        node.isHidden = node.name != visibleLogo
+                    }
+                }
+            }
+            
             self.hasIdleAnimations = component.hasIdleAnimations
             
             return availableSize
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect(), isIntro: self.isIntro)
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

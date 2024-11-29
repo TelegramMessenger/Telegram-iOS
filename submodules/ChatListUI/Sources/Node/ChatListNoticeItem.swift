@@ -270,7 +270,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             case let .starsSubscriptionLowBalance(amount, peers):
                 let title: String
                 let text: String
-                let starsValue = item.strings.ChatList_SubscriptionsLowBalance_Stars(Int32(amount))
+                let starsValue = item.strings.ChatList_SubscriptionsLowBalance_Stars(Int32(amount.value))
                 if let peer = peers.first, peers.count == 1 {
                     title = item.strings.ChatList_SubscriptionsLowBalance_Single_Title(starsValue, peer.compactDisplayTitle).string
                     text = item.strings.ChatList_SubscriptionsLowBalance_Single_Text

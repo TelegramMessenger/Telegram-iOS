@@ -497,7 +497,7 @@ private final class CollectibleItemInfoScreenContentComponent: Component {
                         }
                         
                         let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: toastText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: toastText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                         
                         component.dismiss()
                     },

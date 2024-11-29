@@ -16,6 +16,7 @@ import CallKit
 import AppLockState
 import NotificationsPresentationData
 import RangeSet
+import ConvertOpusToAAC
 
 private let queue = Queue()
 
@@ -440,11 +441,11 @@ private func avatarImage(path: String?, peerId: PeerId, letters: [String], size:
     }
 }
 
-private func storeTemporaryImage(path: String) -> String {
+private func storeTemporaryImage(path: String, fileExtension: String) -> String {
     let imagesPath = NSTemporaryDirectory() + "/aps-data"
     let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: imagesPath), withIntermediateDirectories: true, attributes: nil)
 
-    let tempPath = imagesPath + "\(path.persistentHashValue)"
+    let tempPath = imagesPath + "\(path.persistentHashValue).\(fileExtension)"
     if FileManager.default.fileExists(atPath: tempPath) {
         return tempPath
     }
@@ -459,7 +460,7 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, i
     if let resource = smallestImageRepresentation(peer.profileImageRepresentations)?.resource, let path = mediaBox.completedResourcePath(resource) {
         let cachedPath = mediaBox.cachedRepresentationPathForId(resource.id.stringRepresentation, representationId: "intents\(isStory ? "-story2" : "").png", keepDuration: .shortLived)
         if let _ = fileSize(cachedPath), !"".isEmpty {
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath, fileExtension: "jpg")))
         } else {
             let image = avatarImage(path: path, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
             if let data = image.pngData() {
@@ -467,19 +468,19 @@ private func peerAvatar(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, i
                 let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
             }
 
-            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+            return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath, fileExtension: "jpg")))
         }
     }
 
     let cachedPath = mediaBox.cachedRepresentationPathForId("lettersAvatar2-\(peer.displayLetters.joined(separator: ","))\(isStory ? "-story" : "")", representationId: "intents.png", keepDuration: .shortLived)
     if let _ = fileSize(cachedPath) {
-        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath, fileExtension: "jpg")))
     } else {
         let image = avatarImage(path: nil, peerId: peer.id, letters: peer.displayLetters, size: CGSize(width: 50.0, height: 50.0), isStory: isStory)
         if let data = image.pngData() {
             let _ = try? data.write(to: URL(fileURLWithPath: cachedPath), options: .atomic)
         }
-        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath)))
+        return INImage(url: URL(fileURLWithPath: storeTemporaryImage(path: cachedPath, fileExtension: "jpg")))
     }
 }
 
@@ -1247,7 +1248,9 @@ private final class NotificationServiceHandler {
                         case let .poll(peerId, initialContent, messageId):
                             Logger.shared.log("NotificationService \(episode)", "Will poll")
                             if let stateManager = strongSelf.stateManager {
-                                let pollCompletion: (NotificationContent) -> Void = { content in
+                                let shouldKeepConnection = stateManager.network.shouldKeepConnection
+                                
+                                let pollCompletion: (NotificationContent, Media?) -> Void = { content, customMedia in
                                     var content = content
 
                                     queue.async {
@@ -1257,6 +1260,8 @@ private final class NotificationServiceHandler {
                                             completed()
                                             return
                                         }
+                                        
+                                        let mediaAttachment = mediaAttachment ?? customMedia
 
                                         var fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
                                         if let mediaAttachment = mediaAttachment {
@@ -1272,6 +1277,9 @@ private final class NotificationServiceHandler {
                                                 } else if file.isVideo {
                                                     fetchResource = file.previewRepresentations.first?.resource as? TelegramMultipartFetchableResource
                                                     contentType = .video
+                                                } else if file.isVoice {
+                                                    fetchResource = file.resource as? TelegramMultipartFetchableResource
+                                                    contentType = .audio
                                                 } else {
                                                     contentType = .file
                                                 }
@@ -1443,8 +1451,10 @@ private final class NotificationServiceHandler {
                                                 completed()
                                                 return
                                             }
+                                            
+                                            shouldKeepConnection.set(.single(false))
 
-                                            Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Non-empty" : "Empty")")
+                                            Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Empty" : "Non-empty")")
                                             
                                             if let notificationSoundData = notificationSoundData {
                                                 Logger.shared.log("NotificationService \(episode)", "Did fetch notificationSoundData")
@@ -1527,6 +1537,24 @@ private final class NotificationServiceHandler {
                                                                 content.attachments.append(attachment)
                                                             }
                                                         }
+                                                    } else if file.isVoice {
+                                                        if let mediaData = mediaData {
+                                                            stateManager.postbox.mediaBox.storeResourceData(file.resource.id, data: mediaData, synchronous: true)
+                                                        }
+                                                        if let storedPath = stateManager.postbox.mediaBox.completedResourcePath(file.resource, pathExtension: nil) {
+                                                            let semaphore = DispatchSemaphore(value: 0)
+                                                            let tempFile = TempBox.shared.tempFile(fileName: "audio.m4a")
+                                                            let _ = (convertOpusToAAC(sourcePath: storedPath, allocateTempFile: {
+                                                                return tempFile.path
+                                                            })
+                                                            |> timeout(5.0, queue: .concurrentDefaultQueue(), alternate: .single(nil))).startStandalone(next: { _ in
+                                                                semaphore.signal()
+                                                            })
+                                                            semaphore.wait()
+                                                            if let attachment = try? UNNotificationAttachment(identifier: "audio", url: URL(fileURLWithPath: tempFile.path), options: nil) {
+                                                                content.attachments.append(attachment)
+                                                            }
+                                                        }
                                                     }
                                                 }
 
@@ -1550,11 +1578,10 @@ private final class NotificationServiceHandler {
                                 }
 
                                 let pollSignal: Signal<Never, NoError>
-
+                                
                                 if !shouldSynchronizeState {
                                     pollSignal = .complete()
                                 } else {
-                                    let shouldKeepConnection = stateManager.network.shouldKeepConnection
                                     shouldKeepConnection.set(.single(true))
                                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                                         Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
@@ -1566,9 +1593,6 @@ private final class NotificationServiceHandler {
                                             peerId: peerId,
                                             stateManager: stateManager
                                         )
-                                        |> afterDisposed { [weak shouldKeepConnection] in
-                                            shouldKeepConnection?.set(.single(false))
-                                        }
                                     } else {
                                         Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
                                         enum ControlError {
@@ -1584,17 +1608,14 @@ private final class NotificationServiceHandler {
                                             }
                                         }
                                         |> restartIfError
-                                        |> afterDisposed { [weak shouldKeepConnection] in
-                                            shouldKeepConnection?.set(.single(false))
-                                        }
                                         
                                         pollSignal = signal
                                     }
                                 }
 
-                                let pollWithUpdatedContent: Signal<NotificationContent, NoError>
+                                let pollWithUpdatedContent: Signal<(NotificationContent, Media?), NoError>
                                 if interactionAuthorId != nil || messageId != nil {
-                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
+                                    pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> (NotificationContent, Media?) in
                                         var content = initialContent
                                         
                                         if let interactionAuthorId = interactionAuthorId {
@@ -1639,22 +1660,37 @@ private final class NotificationServiceHandler {
                                             }
                                         }
 
-                                        return content
+                                        return (content, nil)
                                     }
                                     |> then(
                                         pollSignal
-                                        |> map { _ -> NotificationContent in }
+                                        |> map { _ -> (NotificationContent, Media?) in }
                                     )
+                                    |> takeLast
+                                    |> mapToSignal { content, _ -> Signal<(NotificationContent, Media?), NoError> in
+                                        return stateManager.postbox.transaction { transaction -> (NotificationContent, Media?) in
+                                            var parsedMedia: Media?
+                                            if let messageId, let message = transaction.getMessage(messageId) {
+                                                if let media = message.media.first {
+                                                    parsedMedia = media
+                                                }
+                                            }
+                                            
+                                            return (content, parsedMedia)
+                                        }
+                                    }
                                 } else {
                                     pollWithUpdatedContent = pollSignal
-                                    |> map { _ -> NotificationContent in }
+                                    |> map { _ -> (NotificationContent, Media?) in }
                                 }
 
                                 var updatedContent = initialContent
-                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in
+                                var updatedMedia: Media?
+                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content, media in
                                     updatedContent = content
+                                    updatedMedia = media
                                 }, completed: {
-                                    pollCompletion(updatedContent)
+                                    pollCompletion(updatedContent, updatedMedia)
                                 }))
                             } else {
                                 completed()

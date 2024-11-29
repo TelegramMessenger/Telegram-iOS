@@ -56,7 +56,7 @@ private final class HeaderComponent: Component {
             
             let coinSize = self.coin.update(
                 transition: .immediate,
-                component: AnyComponent(PremiumCoinComponent(isIntro: true, isVisible: true, hasIdleAnimations: true)),
+                component: AnyComponent(PremiumCoinComponent(mode: .business, isIntro: true, isVisible: true, hasIdleAnimations: true)),
                 environment: {},
                 containerSize: containerSize
             )

@@ -99,6 +99,12 @@ typedef enum
         _currentTimeLabel.backgroundColor = [UIColor clearColor];
         _currentTimeLabel.text = @"0:00";
         _currentTimeLabel.textColor = [UIColor whiteColor];
+        _currentTimeLabel.layer.shadowOffset = CGSizeMake(0.0, 0.0);
+        _currentTimeLabel.layer.shadowRadius = 4.0;
+        _currentTimeLabel.layer.shadowColor = [UIColor blackColor].CGColor;
+        _currentTimeLabel.layer.shadowOpacity = 0.6;
+        _currentTimeLabel.layer.rasterizationScale = TGScreenScaling();
+        _currentTimeLabel.layer.shouldRasterize = true;
         [self addSubview:_currentTimeLabel];
         
         _inverseTimeLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.size.width - 108, 4, 100, 15)];
@@ -108,6 +114,12 @@ typedef enum
         _inverseTimeLabel.text = @"0:00";
         _inverseTimeLabel.textAlignment = NSTextAlignmentRight;
         _inverseTimeLabel.textColor = [UIColor whiteColor];
+        _inverseTimeLabel.layer.shadowOffset = CGSizeMake(0.0, 0.0);
+        _inverseTimeLabel.layer.shadowRadius = 4.0;
+        _inverseTimeLabel.layer.shadowColor = [UIColor blackColor].CGColor;
+        _inverseTimeLabel.layer.shadowOpacity = 0.6;
+        _inverseTimeLabel.layer.rasterizationScale = TGScreenScaling();
+        _inverseTimeLabel.layer.shouldRasterize = true;
         [self addSubview:_inverseTimeLabel];
         
         _wrapperView = [[UIControl alloc] initWithFrame:CGRectMake(8, 24, 0, 36)];
@@ -119,14 +131,19 @@ typedef enum
         
         _summaryThumbnailWrapperView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 32)];
         _summaryThumbnailWrapperView.clipsToBounds = true;
+        _summaryThumbnailWrapperView.layer.cornerRadius = 5.0;
         [_wrapperView addSubview:_summaryThumbnailWrapperView];
         
         _leftCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
         _leftCurtainView.backgroundColor = [[TGPhotoEditorInterfaceAssets toolbarBackgroundColor] colorWithAlphaComponent:0.8f];
+        _leftCurtainView.clipsToBounds = true;
+        _leftCurtainView.layer.cornerRadius = 5.0;
         [_wrapperView addSubview:_leftCurtainView];
 
         _rightCurtainView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
         _rightCurtainView.backgroundColor = [[TGPhotoEditorInterfaceAssets toolbarBackgroundColor] colorWithAlphaComponent:0.8f];
+        _rightCurtainView.clipsToBounds = true;
+        _rightCurtainView.layer.cornerRadius = 5.0;
         [_wrapperView addSubview:_rightCurtainView];
 
         __weak TGMediaPickerGalleryVideoScrubber *weakSelf = self;

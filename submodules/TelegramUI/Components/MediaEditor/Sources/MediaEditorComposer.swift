@@ -52,15 +52,15 @@ private func roundedCornersMaskImage(size: CGSize) -> CIImage {
 
 final class MediaEditorComposer {
     enum Input {
-        case texture(MTLTexture, CMTime, Bool)
-        case videoBuffer(VideoPixelBuffer)
+        case texture(MTLTexture, CMTime, Bool, CGRect?)
+        case videoBuffer(VideoPixelBuffer, CGRect?)
         case ciImage(CIImage, CMTime)
         
         var timestamp: CMTime {
             switch self {
-            case let .texture(_, timestamp, _):
+            case let .texture(_, timestamp, _, _):
                 return timestamp
-            case let .videoBuffer(videoBuffer):
+            case let .videoBuffer(videoBuffer, _):
                 return videoBuffer.timestamp
             case let .ciImage(_, timestamp):
                 return timestamp
@@ -69,10 +69,10 @@ final class MediaEditorComposer {
         
         var rendererInput: MediaEditorRenderer.Input {
             switch self {
-            case let .texture(texture, timestamp, hasTransparency):
-                return .texture(texture, timestamp, hasTransparency)
-            case let .videoBuffer(videoBuffer):
-                return .videoBuffer(videoBuffer)
+            case let .texture(texture, timestamp, hasTransparency, rect):
+                return .texture(texture, timestamp, hasTransparency, rect)
+            case let .videoBuffer(videoBuffer, rect):
+                return .videoBuffer(videoBuffer, rect)
             case let .ciImage(image, timestamp):
                 return .ciImage(image, timestamp)
             }
@@ -150,21 +150,26 @@ final class MediaEditorComposer {
         self.renderer.videoFinishPass.update(values: self.values, videoDuration: videoDuration, additionalVideoDuration: additionalVideoDuration)
     }
         
-    var previousAdditionalInput: Input?
-    func process(main: Input, additional: Input?, timestamp: CMTime, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
+    var previousAdditionalInput: [Int: Input] = [:]
+    func process(main: Input, additional: [Input?], timestamp: CMTime, pool: CVPixelBufferPool?, completion: @escaping (CVPixelBuffer?) -> Void) {
         guard let pool, let ciContext = self.ciContext else {
             completion(nil)
             return
         }
         
-        var additional = additional
-        if let additional {
-            self.previousAdditionalInput = additional
-        } else {
-            additional = self.previousAdditionalInput
+        var index = 0
+        var augmentedAdditionals: [Input?] = []
+        for input in additional {
+            if let input {
+                self.previousAdditionalInput[index] = input
+                augmentedAdditionals.append(input)
+            } else {
+                augmentedAdditionals.append(self.previousAdditionalInput[index])
+            }
+            index += 1
         }
         
-        self.renderer.consume(main: main.rendererInput, additional: additional?.rendererInput, render: true)
+        self.renderer.consume(main: main.rendererInput, additionals: augmentedAdditionals.compactMap { $0 }.map { $0.rendererInput }, render: true)
         
         if let resultTexture = self.renderer.resultTexture, var ciImage = CIImage(mtlTexture: resultTexture, options: [.colorSpace: self.colorSpace]) {
             ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
@@ -190,13 +195,13 @@ final class MediaEditorComposer {
         completion(nil)
     }
     
-    private var cachedTexture: MTLTexture?
-    func textureForImage(_ image: UIImage) -> MTLTexture? {
-        if let cachedTexture = self.cachedTexture {
+    private var cachedTextures: [Int: MTLTexture] = [:]
+    func textureForImage(index: Int, image: UIImage) -> MTLTexture? {
+        if let cachedTexture = self.cachedTextures[index] {
             return cachedTexture
         }
         if let device = self.device, let texture = loadTexture(image: image, device: device) {
-            self.cachedTexture = texture
+            self.cachedTextures[index] = texture
             return texture
         }
         return nil

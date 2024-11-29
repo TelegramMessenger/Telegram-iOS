@@ -327,6 +327,7 @@ private final class MediaCoverScreenComponent: Component {
                         maxDuration: storyMaxVideoDuration,
                         isPlaying: playerState.isPlaying,
                         tracks: visibleTracks,
+                        isCollage: false,
                         portalView: controller.portalView,
                         positionUpdated: { [weak state] position, apply in
                             if let mediaEditor = state?.mediaEditor {

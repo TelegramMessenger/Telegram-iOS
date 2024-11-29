@@ -20,7 +20,7 @@ import LottieComponent
 
 private extension StarsContext.State.Transaction {
     var extendedId: String {
-        if self.count > 0 {
+        if self.count > StarsAmount.zero {
             return "\(id)_in"
         } else {
             return "\(id)_out"
@@ -304,7 +304,7 @@ final class StarsTransactionsListPanelComponent: Component {
                     case let .peer(peer):
                         if let starGift = item.starGift {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
-                            itemSubtitle = item.count > 0 ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
+                            itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
                             itemFile = starGift.file
                         } else if let _ = item.giveawayMessageId {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
@@ -344,7 +344,7 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                             }
                         } else {
-                            if item.count > 0 && !item.flags.contains(.isRefund) {
+                            if item.count > StarsAmount.zero && !item.flags.contains(.isRefund) {
                                 itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
                             } else {
@@ -373,8 +373,9 @@ final class StarsTransactionsListPanelComponent: Component {
                     let itemLabel: NSAttributedString
                     let labelString: String
                     
-                    let formattedLabel = presentationStringsFormattedNumber(abs(Int32(item.count)), environment.dateTimeFormat.groupingSeparator)
-                    if item.count < 0 {
+                    let absCount = StarsAmount(value: abs(item.count.value), nanos: abs(item.count.nanos))
+                    let formattedLabel = presentationStringsFormattedNumber(absCount, environment.dateTimeFormat.groupingSeparator)
+                    if item.count < StarsAmount.zero {
                         labelString = "- \(formattedLabel)"
                     } else {
                         labelString = "+ \(formattedLabel)"

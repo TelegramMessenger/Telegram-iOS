@@ -118,7 +118,7 @@ func openWebAppImpl(
                 
                 var fullSize = false
                 var isFullscreen = false
-                if isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
+                if isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, context: context, url: url), case .peer(_, .appStart) = internalUrl {
                     if url.contains("mode=fullscreen") {
                         isFullscreen = true
                         fullSize = true

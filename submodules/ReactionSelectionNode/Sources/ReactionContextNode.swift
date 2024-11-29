@@ -2028,7 +2028,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                     ))
                                     return .single(resultGroups)
                                 } else {
-                                    let remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                                    let remoteSignal = context.engine.stickers.searchEmoji(query: query, emoticon: Array(allEmoticons.keys), inputLanguageCode: languageCode)
                                     
                                     return combineLatest(
                                         context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),

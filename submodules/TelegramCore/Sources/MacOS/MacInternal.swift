@@ -11,7 +11,7 @@ public enum InternalUpdaterError {
 }
 
 public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, InternalUpdaterError> {
-    return TelegramEngine(account: account).peers.resolvePeerByName(name: source)
+    return TelegramEngine(account: account).peers.resolvePeerByName(name: source, referrer: nil)
         |> castError(InternalUpdaterError.self)
         |> mapToSignal { result -> Signal<Peer?, InternalUpdaterError> in
             switch result {
@@ -81,7 +81,7 @@ public enum AppUpdateDownloadResult {
 }
 
 public func downloadAppUpdate(account: Account, source: String, messageId: Int32) -> Signal<AppUpdateDownloadResult, InternalUpdaterError> {
-    return TelegramEngine(account: account).peers.resolvePeerByName(name: source)
+    return TelegramEngine(account: account).peers.resolvePeerByName(name: source, referrer: nil)
         |> castError(InternalUpdaterError.self)
         |> mapToSignal { result -> Signal<Peer?, InternalUpdaterError> in
             switch result {
@@ -177,7 +177,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
 }
 
 public func requestApplicationIcons(engine: TelegramEngine, source: String = "macos_app_icons") -> Signal<Void, NoError> {
-    return engine.peers.resolvePeerByName(name: source)
+    return engine.peers.resolvePeerByName(name: source, referrer: nil)
         |> mapToSignal { result -> Signal<Peer?, NoError> in
             switch result {
             case .progress:

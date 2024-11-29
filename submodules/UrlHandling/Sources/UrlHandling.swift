@@ -76,6 +76,7 @@ public enum ParsedInternalPeerUrlParameter {
     case boost
     case text(String)
     case profile
+    case referrer(String)
 }
 
 public enum ParsedInternalUrl {
@@ -112,7 +113,7 @@ private enum ParsedUrl {
     case internalUrl(ParsedInternalUrl)
 }
 
-public func parseInternalUrl(sharedContext: SharedAccountContext, query: String) -> ParsedInternalUrl? {
+public func parseInternalUrl(sharedContext: SharedAccountContext, context: AccountContext?, query: String) -> ParsedInternalUrl? {
     var query = query
     if query.hasPrefix("s/") {
         query = String(query[query.index(query.startIndex, offsetBy: 2)...])
@@ -269,7 +270,18 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                     return .peer(.name(peerName), .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
-                                    return .peer(.name(peerName), .botStart(value))
+                                    var linkRefPrefix = "_tgr_"
+                                    if let context {
+                                        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_start_param_prefixes"] as? String {
+                                            linkRefPrefix = value
+                                        }
+                                    }
+                                    if value.hasPrefix(linkRefPrefix) {
+                                        let referrer = String(value[value.index(value.startIndex, offsetBy: linkRefPrefix.count)...])
+                                        return .peer(.name(peerName), .referrer(referrer))
+                                    } else {
+                                        return .peer(.name(peerName), .botStart(value))
+                                    }
                                 } else if queryItem.name == "startgroup" {
                                     var botAdminRights: ResolvedBotAdminRights?
                                     for queryItem in queryItems {
@@ -316,7 +328,9 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     if let id = Int32(value) {
                                         return .peer(.name(peerName), .story(id))
                                     }
-                                }
+                                 } else if queryItem.name == "ref", let referrer = queryItem.value {
+                                     return .peer(.name(peerName), .referrer(referrer))
+                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peer(.name(peerName), .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
@@ -361,6 +375,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                 }
                                 return .peer(.name(peerName), .appStart("", queryItem.value, mode))
+                            } else if queryItem.name == "ref", let referrer = queryItem.value {
+                                return .peer(.name(peerName), .referrer(referrer))
                             }
                         }
                     }
@@ -677,7 +693,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         textInputState = ChatTextInputState(inputText: NSAttributedString(string: text))
                     }
                     if let attach = attach {
-                        return context.engine.peers.resolvePeerByName(name: attach)
+                        return context.engine.peers.resolvePeerByName(name: attach, referrer: nil)
                         |> map { result -> ResolveInternalUrlResult in
                             switch result {
                             case .progress:
@@ -701,7 +717,11 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             let resolvedPeer: Signal<ResolvePeerResult, NoError>
             switch reference {
             case let .name(name):
-                resolvedPeer = context.engine.peers.resolvePeerByName(name: name)
+                var referrer: String?
+                if case let .referrer(value) = parameter {
+                    referrer = value
+                }
+                resolvedPeer = context.engine.peers.resolvePeerByName(name: name, referrer: referrer)
                 |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
                     switch result {
                     case .progress:
@@ -754,7 +774,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             case let .gameStart(game):
                                 return .single(.result(.gameStart(peerId: peer.id, game: game)))
                             case let .attachBotStart(name, payload):
-                                return context.engine.peers.resolvePeerByName(name: name)
+                                return context.engine.peers.resolvePeerByName(name: name, referrer: nil)
                                 |> mapToSignal { botPeerResult -> Signal<ResolveInternalUrlResult, NoError> in
                                     switch botPeerResult {
                                     case .progress:
@@ -870,6 +890,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                         return .result(.boost(peerId: peer.id, status: boostStatus, myBoostStatus: myBoostStatus))
                                     }
                                 )
+                            case .referrer:
+                                return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                         }
                     } else {
                         return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
@@ -1049,7 +1071,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     choose.insert(.channels)
                 }
             }
-            return context.engine.peers.resolvePeerByName(name: name)
+            return context.engine.peers.resolvePeerByName(name: name, referrer: nil)
             |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
                 switch result {
                 case .progress:
@@ -1122,14 +1144,14 @@ public func parseProxyUrl(sharedContext: SharedAccountContext, url: String) -> (
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .proxy(host, port, username, password, secret) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .proxy(host, port, username, password, secret) = internalUrl {
                     return (host, port, username, password, secret)
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .proxy(host, port, username, password, secret) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .proxy(host, port, username, password, secret) = internalUrl {
             return (host, port, username, password, secret)
         }
     }
@@ -1143,14 +1165,14 @@ public func parseStickerPackUrl(sharedContext: SharedAccountContext, url: String
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .stickerPack(name, _) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .stickerPack(name, _) = internalUrl {
                     return name
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .stickerPack(name, _) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .stickerPack(name, _) = internalUrl {
             return name
         }
     }
@@ -1164,14 +1186,14 @@ public func parseWallpaperUrl(sharedContext: SharedAccountContext, url: String) 
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
                     return wallpaper
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
             return wallpaper
         }
     }
@@ -1179,20 +1201,20 @@ public func parseWallpaperUrl(sharedContext: SharedAccountContext, url: String) 
     return nil
 }
 
-public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+public func parseAdUrl(sharedContext: SharedAccountContext, context: AccountContext, url: String) -> ParsedInternalUrl? {
     let schemes = ["http://", "https://", ""]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case .peer = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: String(url[basePrefix.endIndex...])), case .peer = internalUrl {
                     return internalUrl
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case .peer = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: host + "?" + query), case .peer = internalUrl {
             return internalUrl
         }
     }
@@ -1200,13 +1222,13 @@ public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> Pars
     return nil
 }
 
-public func parseFullInternalUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+public func parseFullInternalUrl(sharedContext: SharedAccountContext, context: AccountContext, url: String) -> ParsedInternalUrl? {
     let schemes = ["http://", "https://", ""]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])) {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: String(url[basePrefix.endIndex...])) {
                     return internalUrl
                 }
             }
@@ -1292,7 +1314,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                         }
                     }
                     if url.lowercased().hasPrefix(basePrefix) {
-                        if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, query: String(url[basePrefix.endIndex...])) {
+                        if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, context: context, query: String(url[basePrefix.endIndex...])) {
                             return resolveInternalUrl(context: context, url: internalUrl)
                             |> map { result -> ResolveUrlResult in
                                 switch result {

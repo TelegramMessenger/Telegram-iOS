@@ -946,6 +946,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private let intrinsicDimensions: CGSize
     
     private var enableSound: Bool
+    private let codecConfiguration: HLSCodecConfiguration
 
     private let audioSessionManager: ManagedAudioSession
     private let audioSessionDisposable = MetaDisposable()
@@ -1030,7 +1031,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     private var contextDisposable: Disposable?
     
-    init(accountId: AccountRecordId, postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, onlyFullSizeThumbnail: Bool, useLargeThumbnail: Bool, autoFetchFullSizeThumbnail: Bool) {
+    init(accountId: AccountRecordId, postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, streamVideo: Bool, loopVideo: Bool, enableSound: Bool, baseRate: Double, fetchAutomatically: Bool, onlyFullSizeThumbnail: Bool, useLargeThumbnail: Bool, autoFetchFullSizeThumbnail: Bool, codecConfiguration: HLSCodecConfiguration) {
         self.instanceId = HLSVideoJSNativeContentNode.nextInstanceId
         HLSVideoJSNativeContentNode.nextInstanceId += 1
         
@@ -1041,6 +1042,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         self.userLocation = userLocation
         self.requestedBaseRate = baseRate
         self.enableSound = enableSound
+        self.codecConfiguration = codecConfiguration
         
         if var dimensions = fileReference.media.dimensions {
             if let thumbnail = fileReference.media.previewRepresentations.first {
@@ -1058,7 +1060,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         self.imageNode = TransformImageNode()
         
         var playerSource: HLSJSServerSource?
-        if let qualitySet = HLSQualitySet(baseFile: fileReference) {
+        if let qualitySet = HLSQualitySet(baseFile: fileReference, codecConfiguration: codecConfiguration) {
             let playerSourceValue = HLSJSServerSource(accountId: accountId.int64, fileId: fileReference.media.fileId.id, postbox: postbox, userLocation: userLocation, playlistFiles: qualitySet.playlistFiles, qualityFiles: qualitySet.qualityFiles)
             playerSource = playerSourceValue
         }
@@ -1074,19 +1076,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         self.playerNode = MediaPlayerNode()
         
         var onSeeked: (() -> Void)?
-        /*self.player = ChunkMediaPlayerV2(
-            audioSessionManager: audioSessionManager,
-            partsState: self.chunkPlayerPartsState.get(),
-            video: true,
-            enableSound: self.enableSound,
-            baseRate: baseRate,
-            onSeeked: {
-                onSeeked?()
-            },
-            playerNode: self.playerNode
-        )*/
-        self.player = ChunkMediaPlayerImpl(
-            postbox: postbox,
+        self.player = ChunkMediaPlayerV2(
             audioSessionManager: audioSessionManager,
             partsState: self.chunkPlayerPartsState.get(),
             video: true,
@@ -1097,12 +1087,33 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             },
             playerNode: self.playerNode
         )
+        /*self.player = ChunkMediaPlayerImpl(
+            postbox: postbox,
+            audioSessionManager: audioSessionManager,
+            partsState: self.chunkPlayerPartsState.get(),
+            video: true,
+            enableSound: self.enableSound,
+            baseRate: baseRate,
+            onSeeked: {
+                onSeeked?()
+            },
+            playerNode: self.playerNode
+        )*/
         
         super.init()
         
         self.contextDisposable = SharedHLSVideoJSContext.shared.register(context: self)
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
+        var didProcessFramesToDisplay = false
+        self.playerNode.isHidden = true
+        self.playerNode.hasSentFramesToDisplay = { [weak self] in
+            guard let self, !didProcessFramesToDisplay else {
+                return
+            }
+            didProcessFramesToDisplay = true
+            self.playerNode.isHidden = false
+        }
 
         //let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
         
@@ -1249,7 +1260,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 if !self.playerAvailableLevels.isEmpty {
                     var selectedLevelIndex: Int?
                     
-                    if let qualityFiles = HLSQualitySet(baseFile: self.fileReference)?.qualityFiles.values, let maxQualityFile = qualityFiles.max(by: { lhs, rhs in
+                    if let qualityFiles = HLSQualitySet(baseFile: self.fileReference, codecConfiguration: self.codecConfiguration)?.qualityFiles.values, let maxQualityFile = qualityFiles.max(by: { lhs, rhs in
                         if let lhsDimensions = lhs.media.dimensions, let rhsDimensions = rhs.media.dimensions {
                             return lhsDimensions.width < rhsDimensions.width
                         } else {
@@ -1267,7 +1278,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                     }
                     
                     if selectedLevelIndex == nil {
-                        if let minimizedQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file {
+                        if let minimizedQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference, codecConfiguration: self.codecConfiguration)?.file {
                             if let dimensions = minimizedQualityFile.media.dimensions {
                                 for (index, level) in self.playerAvailableLevels {
                                     if level.height == Int(dimensions.height) {
@@ -1572,7 +1583,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             return self.requestedLevelIndex
         } else {
             var foundIndex: Int?
-            if let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file, let dimensions = minQualityFile.media.dimensions {
+            if let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference, codecConfiguration: self.codecConfiguration)?.file, let dimensions = minQualityFile.media.dimensions {
                 for (index, level) in self.playerAvailableLevels {
                     if level.width == Int(dimensions.width) && level.height == Int(dimensions.height) {
                         foundIndex = index
@@ -1629,7 +1640,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     
     func videoQualityState() -> (current: Int, preferred: UniversalVideoContentVideoQuality, available: [Int])? {
         if self.playerAvailableLevels.isEmpty {
-            if let qualitySet = HLSQualitySet(baseFile: self.fileReference), let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file {
+            if let qualitySet = HLSQualitySet(baseFile: self.fileReference, codecConfiguration: self.codecConfiguration), let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference, codecConfiguration: self.codecConfiguration)?.file {
                 let sortedFiles = qualitySet.qualityFiles.sorted(by: { $0.key > $1.key })
                 if let minQuality = sortedFiles.first(where: { $0.value.media.fileId == minQualityFile.media.fileId }) {
                     return (minQuality.key, .auto, sortedFiles.map(\.key))
@@ -1641,7 +1652,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         if let playerCurrentLevelIndex = self.playerCurrentLevelIndex {
             currentLevelIndex = playerCurrentLevelIndex
         } else {
-            if let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference)?.file, let dimensions = minQualityFile.media.dimensions {
+            if let minQualityFile = HLSVideoContent.minimizedHLSQuality(file: self.fileReference, codecConfiguration: self.codecConfiguration)?.file, let dimensions = minQualityFile.media.dimensions {
                 var foundIndex: Int?
                 for (index, level) in self.playerAvailableLevels {
                     if level.width == Int(dimensions.width) && level.height == Int(dimensions.height) {

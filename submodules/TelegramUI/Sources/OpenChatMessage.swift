@@ -181,8 +181,8 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 controller.navigationPresentation = .modal
                 params.navigationController?.pushViewController(controller)
                 return true
-            case let .stickerPack(reference):
-                let controller = StickerPackScreen(context: params.context, updatedPresentationData: params.updatedPresentationData, mainStickerPack: reference, stickerPacks: [reference], parentNavigationController: params.navigationController, sendSticker: params.sendSticker, sendEmoji: params.sendEmoji, actionPerformed: { actions in
+            case let .stickerPack(reference, previewIconFile):
+                let controller = StickerPackScreen(context: params.context, updatedPresentationData: params.updatedPresentationData, mainStickerPack: reference, stickerPacks: [reference], previewIconFile: previewIconFile, parentNavigationController: params.navigationController, sendSticker: params.sendSticker, sendEmoji: params.sendEmoji, actionPerformed: { actions in
                     let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
                     
                     if actions.count > 1, let first = actions.first {

@@ -1080,7 +1080,7 @@ public class StickerPickerScreen: ViewController {
                                 }
                                 let remoteSignal: Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError>
                                 if hasPremium {
-                                    remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                                    remoteSignal = context.engine.stickers.searchEmoji(query: query, emoticon: Array(allEmoticons.keys), inputLanguageCode: languageCode)
                                 } else {
                                     remoteSignal = .single(([], true))
                                 }
@@ -1658,6 +1658,7 @@ public class StickerPickerScreen: ViewController {
             let tooltipController = UndoOverlayController(
                 presentationData: self.presentationData,
                 content: .linkCopied(
+                    title: nil,
                     text: self.presentationData.strings.Story_Editor_TooltipLinkPremium
                 ),
                 elevatedLayout: true,

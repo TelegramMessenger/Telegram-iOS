@@ -468,7 +468,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                     guard let name = configuration.imageBotUsername else {
                         return .single(nil)
                     }
-                    return context.engine.peers.resolvePeerByName(name: name)
+                    return context.engine.peers.resolvePeerByName(name: name, referrer: nil)
                     |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                         guard case let .result(result) = result else {
                             return .complete()

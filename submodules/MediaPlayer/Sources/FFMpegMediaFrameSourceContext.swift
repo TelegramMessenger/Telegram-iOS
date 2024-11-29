@@ -32,13 +32,13 @@ struct FFMpegMediaFrameSourceDescriptionSet {
 }
 
 private final class InitializedState {
-    fileprivate let avIoContext: FFMpegAVIOContext
+    fileprivate let avIoContext: FFMpegAVIOContext?
     fileprivate let avFormatContext: FFMpegAVFormatContext
     
     fileprivate let audioStream: StreamContext?
     fileprivate let videoStream: StreamContext?
     
-    init(avIoContext: FFMpegAVIOContext, avFormatContext: FFMpegAVFormatContext, audioStream: StreamContext?, videoStream: StreamContext?) {
+    init(avIoContext: FFMpegAVIOContext?, avFormatContext: FFMpegAVFormatContext, audioStream: StreamContext?, videoStream: StreamContext?) {
         self.avIoContext = avIoContext
         self.avFormatContext = avFormatContext
         self.audioStream = audioStream
@@ -297,7 +297,6 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     fileprivate var streamable: Bool?
     fileprivate var statsCategory: MediaResourceStatsCategory?
     
-    private let ioBufferSize = 1 * 1024
     fileprivate var readingOffset: Int64 = 0
     
     fileprivate var requestedDataOffset: Int64?
@@ -408,16 +407,43 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             }
         }
         
-        let avFormatContext = FFMpegAVFormatContext()
-        
-        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(self.ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: isSeekable) else {
-            self.readingError = true
-            return
+        var directFilePath: String?
+        if !streamable {
+            let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
+            let semaphore = DispatchSemaphore(value: 0)
+            let _ = self.currentSemaphore.swap(semaphore)
+            var resultFilePath: String?
+            let disposable = data.start(next: { next in
+                if next.complete {
+                    resultFilePath = next.path
+                    semaphore.signal()
+                }
+            })
+            semaphore.wait()
+            let _ = self.currentSemaphore.swap(nil)
+            disposable.dispose()
+            
+            if let resultFilePath {
+                directFilePath = resultFilePath
+            } else {
+                self.readingError = true
+                return
+            }
         }
         
-        avFormatContext.setIO(avIoContext)
+        let avFormatContext = FFMpegAVFormatContext()
         
-        if !avFormatContext.openInput() {
+        var avIoContext: FFMpegAVIOContext?
+        if directFilePath == nil {
+            guard let avIoContextValue = FFMpegAVIOContext(bufferSize: 64 * 1024, opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: isSeekable) else {
+                self.readingError = true
+                return
+            }
+            avIoContext = avIoContextValue
+            avFormatContext.setIO(avIoContextValue)
+        }
+        
+        if !avFormatContext.openInput(withDirectFilePath: directFilePath) {
             self.readingError = true
             return
         }
@@ -643,7 +669,13 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             for stream in [initializedState.videoStream, initializedState.audioStream] {
                 if let stream = stream {
                     let pts = CMTimeMakeWithSeconds(timestamp, preferredTimescale: stream.timebase.timescale)
+                    #if DEBUG && false
+                    let startTime = CFAbsoluteTimeGetCurrent()
+                    #endif
                     initializedState.avFormatContext.seekFrame(forStreamIndex: Int32(stream.index), pts: pts.value, positionOnKeyframe: true)
+                    #if DEBUG && false
+                    print("Seek time: \(CFAbsoluteTimeGetCurrent() - startTime) s")
+                    #endif
                     break
                 }
             }

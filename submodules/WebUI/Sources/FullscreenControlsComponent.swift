@@ -170,16 +170,17 @@ final class FullscreenControlsComponent: Component {
             let leftBackgroundSize = CGSize(width: 30.0, height: 30.0)
             let rightBackgroundSize = CGSize(width: 72.0, height: 30.0)
             
-            self.leftBackgroundView.updateColor(color: UIColor(white: 0.7, alpha: 0.35), transition: transition.containedViewLayoutTransition)
-            self.rightBackgroundView.updateColor(color: UIColor(white: 0.7, alpha: 0.35), transition: transition.containedViewLayoutTransition)
+            let backgroundColor: UIColor = component.statusBarStyle == .Black ? UIColor(white: 0.7, alpha: 0.35) : UIColor(white: 0.45, alpha: 0.25)
+            let textColor: UIColor = component.statusBarStyle == .Black ? UIColor(rgb: 0x808080) : .white
+            
+            self.leftBackgroundView.updateColor(color: backgroundColor, transition: transition.containedViewLayoutTransition)
+            self.rightBackgroundView.updateColor(color: backgroundColor, transition: transition.containedViewLayoutTransition)
                         
             let rightBackgroundFrame = CGRect(origin: CGPoint(x: availableSize.width - component.insets.right - sideInset - rightBackgroundSize.width, y: 0.0), size: rightBackgroundSize)
             self.rightBackgroundView.update(size: rightBackgroundSize, cornerRadius: rightBackgroundFrame.height / 2.0, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.rightBackgroundView, frame: rightBackgroundFrame)
             
             var isAnimatingTextTransition = false
-            
-            let textColor: UIColor = component.statusBarStyle == .Black ? UIColor(rgb: 0x808080) : .white
             self.moreNode.updateColor(textColor, transition: .immediate)
             
             var additionalLeftWidth: CGFloat = 0.0
