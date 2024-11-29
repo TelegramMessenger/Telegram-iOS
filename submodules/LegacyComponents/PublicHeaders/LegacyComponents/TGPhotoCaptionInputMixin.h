@@ -26,8 +26,11 @@
 @property (nonatomic, copy) void (^timerUpdated)(NSNumber *timeout);
 @property (nonatomic, copy) void (^captionIsAboveUpdated)(bool captionIsAbove);
 
+@property (nonatomic, readonly) bool editing;
+
 - (void)createInputPanelIfNeeded;
 - (void)beginEditing;
+- (void)finishEditing;
 - (void)enableDismissal;
 
 - (void)onAnimateOut;

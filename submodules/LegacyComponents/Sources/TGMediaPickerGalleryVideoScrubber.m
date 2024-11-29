@@ -100,9 +100,9 @@ typedef enum
         _currentTimeLabel.text = @"0:00";
         _currentTimeLabel.textColor = [UIColor whiteColor];
         _currentTimeLabel.layer.shadowOffset = CGSizeMake(0.0, 0.0);
-        _currentTimeLabel.layer.shadowRadius = 2.0;
+        _currentTimeLabel.layer.shadowRadius = 4.0;
         _currentTimeLabel.layer.shadowColor = [UIColor blackColor].CGColor;
-        _currentTimeLabel.layer.shadowOpacity = 0.4;
+        _currentTimeLabel.layer.shadowOpacity = 0.6;
         _currentTimeLabel.layer.rasterizationScale = TGScreenScaling();
         _currentTimeLabel.layer.shouldRasterize = true;
         [self addSubview:_currentTimeLabel];
@@ -115,9 +115,9 @@ typedef enum
         _inverseTimeLabel.textAlignment = NSTextAlignmentRight;
         _inverseTimeLabel.textColor = [UIColor whiteColor];
         _inverseTimeLabel.layer.shadowOffset = CGSizeMake(0.0, 0.0);
-        _inverseTimeLabel.layer.shadowRadius = 2.0;
+        _inverseTimeLabel.layer.shadowRadius = 4.0;
         _inverseTimeLabel.layer.shadowColor = [UIColor blackColor].CGColor;
-        _inverseTimeLabel.layer.shadowOpacity = 0.4;
+        _inverseTimeLabel.layer.shadowOpacity = 0.6;
         _inverseTimeLabel.layer.rasterizationScale = TGScreenScaling();
         _inverseTimeLabel.layer.shouldRasterize = true;
         [self addSubview:_inverseTimeLabel];

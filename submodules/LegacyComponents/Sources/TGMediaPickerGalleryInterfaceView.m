@@ -175,7 +175,15 @@
             [strongSelf.window endEditing:true];
             strongSelf->_portraitToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_landscapeToolbarView.doneButton.userInteractionEnabled = false;
-            strongSelf->_donePressed(strongSelf->_currentItem);
+            
+            if (strongSelf->_captionMixin.editing) {
+                [strongSelf->_captionMixin finishEditing];
+                TGDispatchAfter(0.1, dispatch_get_main_queue(), ^{
+                    strongSelf->_donePressed(strongSelf->_currentItem);
+                });
+            } else {
+                strongSelf->_donePressed(strongSelf->_currentItem);
+            }
             
             [strongSelf->_captionMixin onAnimateOut];
         };
@@ -1428,7 +1436,7 @@
         || [view isDescendantOfView:_landscapeToolbarView]
         || [view isDescendantOfView:_selectedPhotosView]
         || [view isDescendantOfView:_captionMixin.inputPanelView]
-        || [view isDescendantOfView:_captionMixin.dismissView]
+        || ([view isDescendantOfView:_captionMixin.dismissView] && _captionMixin.dismissView.alpha > 0.0)
         || [view isKindOfClass:[TGMenuButtonView class]])
         
     {

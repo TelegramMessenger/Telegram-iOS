@@ -798,7 +798,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     let botsKey = ValueBoxKey(length: 8)
     botsKey.setInt64(0, value: 0)
     
-    let iconLoaded = Atomic<[EnginePeer.Id: Bool]>(value: [:])
+    //let iconLoaded = Atomic<[EnginePeer.Id: Bool]>(value: [:])
     let bots = context.engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.attachMenuBots, id: botsKey))
     |> mapToSignal { entry -> Signal<[AttachMenuBot], NoError> in
         let bots: [AttachMenuBots.Bot] = entry?.get(AttachMenuBots.self)?.bots ?? []
@@ -811,32 +811,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
                 if let maybePeer = peersMap[bot.peerId], let peer = maybePeer {
                     let resultBot = AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags)
                     if bot.flags.contains(.showInSettings) {
-                        if let peer = PeerReference(peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
-                            let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
-                            let signal: Signal<AttachMenuBot?, NoError>
-                            if let _ = iconLoaded.with({ $0 })[peer.id] {
-                                signal = .single(resultBot)
-                            } else {
-                                signal = .single(nil)
-                                |> then(
-                                    preloadedBotIcon(account: context.account, fileReference: fileReference)
-                                    |> filter { $0 }
-                                    |> map { _ -> AttachMenuBot? in
-                                        return resultBot
-                                    }
-                                    |> afterNext { _ in
-                                        let _ = iconLoaded.modify { current in
-                                            var updated = current
-                                            updated[peer.id] = true
-                                            return updated
-                                        }
-                                    }
-                                )
-                            }
-                            result.append(signal)
-                        } else {
-                            result.append(.single(resultBot))
-                        }
+                        result.append(.single(resultBot))
                     }
                 }
             }

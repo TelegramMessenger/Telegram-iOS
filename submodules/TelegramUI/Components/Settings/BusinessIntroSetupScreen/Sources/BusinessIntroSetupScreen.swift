@@ -370,7 +370,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                                         var signals: Signal<[Signal<(String?, [FoundStickerItem]), NoError>], NoError> = .single([])
                                         
                                         if query.isSingleEmoji {
-                                            signals = .single([context.engine.stickers.searchStickers(query: [query.basicEmoji.0])
+                                            signals = .single([context.engine.stickers.searchStickers(query: nil, emoticon: [query.basicEmoji.0])
                                             |> map { (nil, $0.items) }])
                                         } else if query.count > 1, !languageCode.isEmpty && languageCode != "emoji" {
                                             var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query.lowercased(), completeMatch: query.count < 3)
@@ -385,18 +385,12 @@ final class BusinessIntroSetupScreenComponent: Component {
                                                         }
                                                     )
                                                 }
-                                            }
-                                            
+                                            } 
                                             signals = signal
                                             |> map { keywords -> [Signal<(String?, [FoundStickerItem]), NoError>] in
-                                                var signals: [Signal<(String?, [FoundStickerItem]), NoError>] = []
-                                                let emoticons = keywords.flatMap { $0.emoticons }
-                                                for emoji in emoticons {
-                                                    signals.append(context.engine.stickers.searchStickers(query: [emoji.basicEmoji.0])
-                                                    |> take(1)
-                                                    |> map { (emoji, $0.items) })
-                                                }
-                                                return signals
+                                                let emoticon = keywords.flatMap { $0.emoticons }.map { $0.basicEmoji.0 }
+                                                return [context.engine.stickers.searchStickers(query: query, emoticon: emoticon, inputLanguageCode: languageCode)
+                                                |> map { (nil, $0.items) }]
                                             }
                                         }
                                         

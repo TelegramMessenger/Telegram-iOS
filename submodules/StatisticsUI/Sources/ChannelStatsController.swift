@@ -1628,9 +1628,9 @@ private func monetizationEntries(
     
     if canViewRevenue {
         entries.append(.adsTonBalanceTitle(presentationData.theme, isBot ? presentationData.strings.Monetization_Bot_BalanceTitle : presentationData.strings.Monetization_TonBalanceTitle))
-        entries.append(.adsTonBalance(presentationData.theme, data, isCreator && data.balances.availableBalance > 0, data.balances.withdrawEnabled))
+        entries.append(.adsTonBalance(presentationData.theme, data, (isCreator || isBot) && data.balances.availableBalance > 0, data.balances.withdrawEnabled))
     
-        if isCreator {
+        if isCreator || isBot {
             let withdrawalInfoText: String
             if data.balances.availableBalance == 0 {
                 withdrawalInfoText = presentationData.strings.Monetization_Balance_ZeroInfo

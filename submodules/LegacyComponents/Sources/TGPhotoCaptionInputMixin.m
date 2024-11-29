@@ -61,7 +61,6 @@
     _inputPanel.sendPressed = ^(NSAttributedString *string) {
         __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
         [TGViewController enableAutorotation];
-        strongSelf->_dismissView.hidden = true;
     
         strongSelf->_editing = false;
         
@@ -74,9 +73,7 @@
             [TGViewController disableAutorotation];
             
             [strongSelf beginEditing];
-            
-            strongSelf->_dismissView.hidden = false;
-                
+                            
             if (strongSelf.panelFocused != nil)
                 strongSelf.panelFocused();
             
@@ -129,12 +126,13 @@
     
     _dismissView = [[UIView alloc] initWithFrame:parentView.bounds];
     _dismissView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    _dismissView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.4];
     
     _dismissTapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDismissTap:)];
     _dismissTapRecognizer.enabled = false;
     [_dismissView addGestureRecognizer:_dismissTapRecognizer];
     
-    //[parentView insertSubview:_dismissView belowSubview:_backgroundView];
+    [parentView insertSubview:_dismissView belowSubview:_inputPanelView];
 }
 
 - (void)setCaption:(NSAttributedString *)caption
@@ -168,6 +166,12 @@
     
     [self createDismissViewIfNeeded];
     [self createInputPanelIfNeeded];
+    
+    _dismissView.alpha = 0.0;
+    [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        _dismissView.alpha = 1.0f;
+    } completion:^(BOOL finished) {
+    }];
 }
 
 - (void)enableDismissal
@@ -177,19 +181,21 @@
 
 #pragma mark - 
 
+- (void)finishEditing {
+    if ([self.inputPanel dismissInput]) {
+        _editing = false;
+                
+        if (self.finishedWithCaption != nil)
+            self.finishedWithCaption([_inputPanel caption]);
+    }
+}
+
 - (void)handleDismissTap:(UITapGestureRecognizer *)gestureRecognizer
 {
     if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
         return;
     
-    if ([self.inputPanel dismissInput]) {
-        _editing = false;
-        
-        [_dismissView removeFromSuperview];
-        
-        if (self.finishedWithCaption != nil)
-            self.finishedWithCaption([_inputPanel caption]);
-    }
+    [self finishEditing];
 }
 
 #pragma mark - Input Panel Delegate
@@ -227,6 +233,19 @@
     }
     
     _keyboardHeight = keyboardHeight;
+    
+    CGFloat fadeAlpha = 1.0;
+    if (keyboardHeight < FLT_EPSILON) {
+        fadeAlpha = 0.0;
+    }
+    
+    if (ABS(_dismissView.alpha - fadeAlpha) > FLT_EPSILON) {
+        [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            _dismissView.alpha = fadeAlpha;
+        } completion:^(BOOL finished) {
+            
+        }];
+    }
     
     if (!UIInterfaceOrientationIsPortrait([[LegacyComponentsGlobals provider] applicationStatusBarOrientation]) && !TGIsPad())
         return;

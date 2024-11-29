@@ -1462,9 +1462,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 transitionCompletion()
                             }, getCaptionPanelView: { [weak self] in
                                 return self?.getCaptionPanelView(isFile: false)
-                            }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                            }, sendMessagesWithSignals: { [weak self] signals, _, _, isCaptionAbove in
                                 if let strongSelf = self {
-                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false)
+                                    var parameters: ChatSendMessageActionSheetController.SendParameters?
+                                    if isCaptionAbove {
+                                        parameters = ChatSendMessageActionSheetController.SendParameters(effect: nil, textIsAboveMedia: true)
+                                    }
+                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false, parameters: parameters)
                                 }
                             }, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root), with: a)
@@ -3801,7 +3805,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
                         legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: inputText, snapshots: [], transitionCompletion: nil, getCaptionPanelView: { [weak self] in
                             return self?.getCaptionPanelView(isFile: true)
-                        }, sendMessagesWithSignals: { [weak self] signals, _, _ in
+                        }, sendMessagesWithSignals: { [weak self] signals, _, _, _ in
                             if let strongSelf = self {
                                 strongSelf.interfaceInteraction?.setupEditMessage(messageId, { _ in })
                                 strongSelf.editMessageMediaWithLegacySignals(signals!)

@@ -155,7 +155,7 @@ public func legacyStoryMediaEditor(context: AccountContext, item: TGMediaEditabl
     })
 }
 
-public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, mode: LegacyMediaEditorMode, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, mode: LegacyMediaEditorMode, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -215,7 +215,8 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: 
             let signals = TGCameraController.resultSignals(for: nil, editingContext: editingContext, currentItem: selectableResult, storeAssets: false, saveEditedPhotos: false, descriptionGenerator: { _1, _2, _3 in
                 nativeGenerator(_1, _2, _3, nil)
             })
-            sendMessagesWithSignals(signals, false, 0)
+            let isCaptionAbove = editingContext?.isCaptionAbove() ?? false
+            sendMessagesWithSignals(signals, false, 0, isCaptionAbove)
         }, dismissed: { [weak legacyController] in
             legacyController?.dismiss()
         })
