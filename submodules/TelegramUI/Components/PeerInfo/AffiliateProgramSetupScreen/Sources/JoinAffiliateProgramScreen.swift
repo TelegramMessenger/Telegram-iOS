@@ -680,7 +680,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     }
                     transition.setFrame(view: self.sourceTargetArrow, frame: sourceTargetArrowFrame)
                 }
-            } else if case let .active(active) = component.mode {
+            } else if case let .active(active) = currentMode {
                 contentHeight += 31.0
                 
                 let linkIconBackgroundSize = self.linkIconBackground.update(
@@ -973,7 +973,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             var displayTargetPeer = false
             var isTargetPeerSelectable = false
-            switch component.mode {
+            switch currentMode {
             case let .join(join):
                 displayTargetPeer = join.canSelectTargetPeer
                 isTargetPeerSelectable = join.canSelectTargetPeer
@@ -1059,7 +1059,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         minSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0),
                         contentInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
                         action: { [weak self] in
-                            guard let self, let component = self.component, case let .active(active) = component.mode else {
+                            guard let self, case let .active(active) = self.currentMode else {
                                 return
                             }
                             self.environment?.controller()?.dismiss()
@@ -1112,12 +1112,12 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     isEnabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self, let currentMode = self.currentMode else {
                             return
                         }
                         self.environment?.controller()?.dismiss()
                         
-                        switch component.mode {
+                        switch currentMode {
                         case let .join(join):
                             if let currentTargetPeer = self.currentTargetPeer {
                                 join.completion(currentTargetPeer)
