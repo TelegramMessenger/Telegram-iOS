@@ -368,6 +368,7 @@ If you end your affiliate program:
                     sourcePeer: bot.peer,
                     commissionPermille: bot.commissionPermille,
                     programDuration: bot.durationMonths,
+                    revenuePerUser: bot.participants == 0 ? 0.0 : Double(bot.revenue) / Double(bot.participants),
                     mode: .active(JoinAffiliateProgramScreenMode.Active(
                         targetPeer: targetPeer,
                         bot: bot,
@@ -1422,6 +1423,7 @@ If you end your affiliate program:
                                             sourcePeer: botPeer,
                                             commissionPermille: item.program.commissionPermille,
                                             programDuration: item.program.durationMonths,
+                                            revenuePerUser: item.program.dailyRevenuePerUser?.totalValue ?? 0.0,
                                             mode: .join(JoinAffiliateProgramScreenMode.Join(
                                                 initialTargetPeer: targetPeer,
                                                 canSelectTargetPeer: false,

@@ -2529,7 +2529,16 @@ open class TextNode: ASDisplayNode, TextNodeProtocol {
                             textColor = color
                         }
                     }
-                    if let textColor {
+                    if image.renderingMode == .alwaysOriginal {
+                        let imageRect = CGRect(origin: CGPoint(x: attachment.frame.midX - image.size.width * 0.5, y: attachment.frame.midY - image.size.height * 0.5 + 1.0), size: image.size).offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                        context.draw(image.cgImage!, in: imageRect)
+                        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                    } else if let textColor {
                         if let tintedImage = generateTintedImage(image: image, color: textColor) {
                             let imageRect = CGRect(origin: CGPoint(x: attachment.frame.midX - tintedImage.size.width * 0.5, y: attachment.frame.midY - tintedImage.size.height * 0.5 + 1.0), size: tintedImage.size).offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
                             context.translateBy(x: imageRect.midX, y: imageRect.midY)

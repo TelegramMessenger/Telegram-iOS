@@ -798,7 +798,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             
             var useInlineHLS = true
             if let data = context.currentAppConfiguration.with({ $0 }).data {
-                if let value = data["ios_inline_hls"] as? Double {
+                if let value = data["ios_inline_hls_v2"] as? Double {
                     useInlineHLS = value != 0.0
                 }
             }

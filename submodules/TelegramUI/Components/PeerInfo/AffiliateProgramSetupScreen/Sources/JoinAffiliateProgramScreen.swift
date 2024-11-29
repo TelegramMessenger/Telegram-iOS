@@ -28,6 +28,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
     let sourcePeer: EnginePeer
     let commissionPermille: Int32
     let programDuration: Int32?
+    let revenuePerUser: Double
     let mode: JoinAffiliateProgramScreen.Mode
     
     init(
@@ -35,12 +36,14 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         sourcePeer: EnginePeer,
         commissionPermille: Int32,
         programDuration: Int32?,
+        revenuePerUser: Double,
         mode: JoinAffiliateProgramScreen.Mode
     ) {
         self.context = context
         self.sourcePeer = sourcePeer
         self.commissionPermille = commissionPermille
         self.programDuration = programDuration
+        self.revenuePerUser = revenuePerUser
         self.mode = mode
     }
     
@@ -86,6 +89,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         private var toast: ComponentView<Empty>?
         
         private let sourceAvatar = ComponentView<Empty>()
+        private let sourceAvatarBadge = ComponentView<Empty>()
         private let targetAvatar = ComponentView<Empty>()
         private let targetAvatarBadge = ComponentView<Empty>()
         private let sourceTargetArrow = UIImageView()
@@ -96,6 +100,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
+        private var dailyRevenueText: ComponentView<Empty>?
         private let titleTransformContainer: UIView
         private let bottomPanelContainer: UIView
         private let actionButton = ComponentView<Empty>()
@@ -128,6 +133,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         private var isChangingTargetPeer: Bool = false
         
         private var cachedCloseImage: UIImage?
+        private var inlineTextStarImage: UIImage?
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -576,25 +582,71 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     transition.setFrame(view: targetAvatarView, frame: targetAvatarFrame)
                 }
                 
-                let badgeIconInset: CGFloat = 2.0
+                if component.revenuePerUser != 0.0 {
+                    var revenueString = String(format: "%.1f", component.revenuePerUser)
+                    if revenueString.hasSuffix(".0") {
+                        revenueString = String(revenueString[revenueString.startIndex ..< revenueString.index(revenueString.endIndex, offsetBy: -2)])
+                    }
+                    let sourceAvatarBadgeSize = self.sourceAvatarBadge.update(
+                        transition: transition,
+                        component: AnyComponent(BorderedBadgeComponent(
+                            backgroundColor: environment.theme.list.itemDisclosureActions.constructive.fillColor,
+                            cutoutColor: environment.theme.list.plainBackgroundColor,
+                            content: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(TransformContents(
+                                    content: AnyComponent(BundleIconComponent(
+                                        name: "Premium/PremiumStar",
+                                        tintColor: environment.theme.list.itemDisclosureActions.constructive.foregroundColor,
+                                        scaleFactor: 0.58
+                                    )),
+                                    fixedSize: CGSize(width: 13.0, height: 10.0),
+                                    translation: CGPoint(x: 0.0, y: 1.0 + UIScreenPixel)
+                                ))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: revenueString, font: Font.regular(13.0), textColor: environment.theme.list.itemDisclosureActions.constructive.foregroundColor))
+                                )))
+                            ], spacing: 2.0)),
+                            insets: UIEdgeInsets(top: 3.0, left: 6.0, bottom: 3.0, right: 6.0),
+                            cutoutWidth: 1.0 + UIScreenPixel)
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    let sourceAvatarBadgeFrame = CGRect(origin: CGPoint(x: sourceAvatarFrame.minX + floor((sourceAvatarFrame.width - sourceAvatarBadgeSize.width) * 0.5), y: sourceAvatarFrame.maxY - 7.0 - floor(sourceAvatarBadgeSize.height * 0.5)), size: sourceAvatarBadgeSize)
+                    if let sourceAvatarBadgeView = self.sourceAvatarBadge.view {
+                        if sourceAvatarBadgeView.superview == nil {
+                            self.scrollContentView.addSubview(sourceAvatarBadgeView)
+                        }
+                        transition.setFrame(view: sourceAvatarBadgeView, frame: sourceAvatarBadgeFrame)
+                    }
+                }
+                
                 let targetAvatarBadgeSize = self.targetAvatarBadge.update(
                     transition: transition,
                     component: AnyComponent(BorderedBadgeComponent(
-                        backgroundColor: UIColor(rgb: 0x8A7AFF),
+                        backgroundColor: environment.theme.list.itemCheckColors.fillColor,
                         cutoutColor: environment.theme.list.plainBackgroundColor,
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Premium/PremiumStar",
-                            tintColor: .white,
-                            scaleFactor: 0.95
-                        )),
-                        insets: UIEdgeInsets(top: badgeIconInset, left: badgeIconInset, bottom: badgeIconInset, right: badgeIconInset),
-                        aspect: 1.0,
-                        cutoutWidth: 1.0 + UIScreenPixel
-                    )),
+                        content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(TransformContents(
+                                    content: AnyComponent(BundleIconComponent(
+                                        name: "Media Editor/Link",
+                                        tintColor: environment.theme.list.itemCheckColors.foregroundColor,
+                                        scaleFactor: 0.75
+                                    )),
+                                    translation: CGPoint(x: 0.0, y: 0.0)
+                                ))
+                            ),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: "\(component.commissionPermille / 10)%", font: Font.regular(13.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
+                            )))
+                        ], spacing: 2.0)),
+                        insets: UIEdgeInsets(top: 3.0, left: 6.0, bottom: 3.0, right: 6.0),
+                        cutoutWidth: 1.0 + UIScreenPixel)
+                    ),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let targetAvatarBadgeFrame = CGRect(origin: CGPoint(x: targetAvatarFrame.maxX + 3.0 - targetAvatarBadgeSize.width, y: targetAvatarFrame.maxY + 3.0 - targetAvatarBadgeSize.height), size: targetAvatarBadgeSize)
+                let targetAvatarBadgeFrame = CGRect(origin: CGPoint(x: targetAvatarFrame.minX + floor((targetAvatarFrame.width - targetAvatarBadgeSize.width) * 0.5), y: targetAvatarFrame.maxY - 7.0 - floor(targetAvatarBadgeSize.height * 0.5)), size: targetAvatarBadgeSize)
                 if let targetAvatarBadgeView = self.targetAvatarBadge.view {
                     if targetAvatarBadgeView.superview == nil {
                         self.scrollContentView.addSubview(targetAvatarBadgeView)
@@ -723,12 +775,22 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             
             let titleString: String
-            let subtitleString: String
+            var subtitleString: String
+            var dailyRevenueString: String?
             let termsString: String
             switch currentMode {
             case .join:
                 titleString = "Affiliate Program"
                 subtitleString = "**\(component.sourcePeer.compactDisplayTitle)** will share **\(commissionTitle)** of the revenue from each user you refer to it for **\(durationTitle)**."
+                
+                if component.revenuePerUser != 0.0 {
+                    var revenueString = String(format: "%.1f", component.revenuePerUser)
+                    if revenueString.hasSuffix(".0") {
+                        revenueString = String(revenueString[revenueString.startIndex ..< revenueString.index(revenueString.endIndex, offsetBy: -2)])
+                    }
+                    dailyRevenueString = "Daily revenue per user: #**\(revenueString)**"
+                }
+                
                 termsString = "By joining this program, you afree to the [terms and conditions](https://telegram.org/terms) of Affiliate Programs."
             case let .active(active):
                 titleString = "Referral Link"
@@ -799,7 +861,115 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 transition.setPosition(view: subtitleView, position: subtitleFrame.center)
                 subtitleView.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
             }
-            contentHeight += subtitleSize.height + 23.0
+            contentHeight += subtitleSize.height
+            
+            if let dailyRevenueString {
+                let dailyRevenueText: ComponentView<Empty>
+                if let current = self.dailyRevenueText {
+                    dailyRevenueText = current
+                } else {
+                    dailyRevenueText = ComponentView()
+                    self.dailyRevenueText = dailyRevenueText
+                }
+                
+                var inlineTextStarImage: UIImage?
+                if let current = self.inlineTextStarImage {
+                    inlineTextStarImage = current
+                } else {
+                    if let image = UIImage(bundleImageName: "Premium/Stars/StarSmall") {
+                        let starInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+                        inlineTextStarImage = generateImage(CGSize(width: starInsets.left + image.size.width + starInsets.right, height: image.size.height), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            UIGraphicsPushContext(context)
+                            defer {
+                                UIGraphicsPopContext()
+                            }
+                            
+                            image.draw(at: CGPoint(x: starInsets.left, y: starInsets.top))
+                        })?.withRenderingMode(.alwaysOriginal)
+                        self.inlineTextStarImage = inlineTextStarImage
+                    }
+                }
+                
+                let attributedDailyRevenueString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(dailyRevenueString, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                    bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                    link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ), textAlignment: .center))
+                if let range = attributedDailyRevenueString.string.range(of: "#"), let starImage = inlineTextStarImage {
+                    final class RunDelegateData {
+                        let ascent: CGFloat
+                        let descent: CGFloat
+                        let width: CGFloat
+                        
+                        init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+                            self.ascent = ascent
+                            self.descent = descent
+                            self.width = width
+                        }
+                    }
+                    
+                    let runDelegateData = RunDelegateData(
+                        ascent: Font.regular(15.0).ascender,
+                        descent: Font.regular(15.0).descender,
+                        width: starImage.size.width + 2.0
+                    )
+                    var callbacks = CTRunDelegateCallbacks(
+                        version: kCTRunDelegateCurrentVersion,
+                        dealloc: { dataRef in
+                            Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                        },
+                        getAscent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().ascent
+                        },
+                        getDescent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().descent
+                        },
+                        getWidth: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().width
+                        }
+                    )
+                    if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                        attributedDailyRevenueString.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: NSRange(range, in: attributedDailyRevenueString.string))
+                    }
+                    attributedDailyRevenueString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: attributedDailyRevenueString.string))
+                    attributedDailyRevenueString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: attributedDailyRevenueString.string))
+                    attributedDailyRevenueString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedDailyRevenueString.string))
+                }
+                
+                let dailyRevenueTextSize = dailyRevenueText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(attributedDailyRevenueString),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                contentHeight += 16.0
+                let dailyRevenueTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - dailyRevenueTextSize.width) * 0.5), y: contentHeight), size: dailyRevenueTextSize)
+                if let dailyRevenueTextView = dailyRevenueText.view {
+                    if dailyRevenueTextView.superview == nil {
+                        self.scrollContentView.addSubview(dailyRevenueTextView)
+                    }
+                    transition.setPosition(view: dailyRevenueTextView, position: dailyRevenueTextFrame.center)
+                    dailyRevenueTextView.bounds = CGRect(origin: CGPoint(), size: dailyRevenueTextFrame.size)
+                }
+                contentHeight += dailyRevenueTextSize.height
+            } else if let dailyRevenueText = self.dailyRevenueText {
+                self.dailyRevenueText = nil
+                dailyRevenueText.view?.removeFromSuperview()
+            }
+            
+            contentHeight += 23.0
             
             var displayTargetPeer = false
             var isTargetPeerSelectable = false
@@ -1116,6 +1286,7 @@ public class JoinAffiliateProgramScreen: ViewControllerComponentContainer {
         sourcePeer: EnginePeer,
         commissionPermille: Int32,
         programDuration: Int32?,
+        revenuePerUser: Double,
         mode: Mode
     ) {
         self.context = context
@@ -1125,6 +1296,7 @@ public class JoinAffiliateProgramScreen: ViewControllerComponentContainer {
             sourcePeer: sourcePeer,
             commissionPermille: commissionPermille,
             programDuration: programDuration,
+            revenuePerUser: revenuePerUser,
             mode: mode
         ), navigationBarAppearance: .none)
         

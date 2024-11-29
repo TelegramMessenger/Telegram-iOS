@@ -8685,6 +8685,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                             sourcePeer: bot.peer,
                                             commissionPermille: bot.commissionPermille,
                                             programDuration: bot.durationMonths,
+                                            revenuePerUser: bot.participants == 0 ? 0.0 : Double(bot.revenue) / Double(bot.participants),
                                             mode: .active(JoinAffiliateProgramScreenMode.Active(
                                                 targetPeer: targetPeer,
                                                 bot: bot,
@@ -8707,6 +8708,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             sourcePeer: .user(peer),
                             commissionPermille: starRefProgram.commissionPermille,
                             programDuration: starRefProgram.durationMonths,
+                            revenuePerUser: starRefProgram.dailyRevenuePerUser?.totalValue ?? 0.0,
                             mode: mode
                         ))
                     })

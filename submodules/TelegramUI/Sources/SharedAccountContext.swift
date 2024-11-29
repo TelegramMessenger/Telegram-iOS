@@ -2840,8 +2840,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return AffiliateProgramSetupScreen(context: context, initialContent: initialData)
     }
     
-    public func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, mode: JoinAffiliateProgramScreenMode) -> ViewController {
-        return JoinAffiliateProgramScreen(context: context, sourcePeer: sourcePeer, commissionPermille: commissionPermille, programDuration: programDuration, mode: mode)
+    public func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, revenuePerUser: Double, mode: JoinAffiliateProgramScreenMode) -> ViewController {
+        return JoinAffiliateProgramScreen(context: context, sourcePeer: sourcePeer, commissionPermille: commissionPermille, programDuration: programDuration, revenuePerUser: revenuePerUser, mode: mode)
     }
 }
 
