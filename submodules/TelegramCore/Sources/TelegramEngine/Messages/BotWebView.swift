@@ -589,6 +589,18 @@ func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) ->
     }
 }
 
+public func formatPermille(_ value: Int32) -> String {
+    return formatPermille(Int(value))
+}
+
+public func formatPermille(_ value: Int) -> String {
+    if value % 10 == 0 {
+        return "\(value / 10)"
+    } else {
+        return String(format: "%.1f", Double(value) / 10.0)
+    }
+}
+
 func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program: (commissionPermille: Int32, durationMonths: Int32?)?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(id).flatMap(apiInputUser)

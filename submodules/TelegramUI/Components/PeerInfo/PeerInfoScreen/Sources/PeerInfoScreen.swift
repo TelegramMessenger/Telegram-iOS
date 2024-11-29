@@ -1445,12 +1445,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             }
                             //TODO:localize
                             let programTitleValue: String
-                            programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
+                            programTitleValue = "\(formatPermille(starRefProgram.commissionPermille))%"
                             //TODO:localize
                             items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
                                 interaction.editingOpenAffiliateProgram()
                             }))
-                            items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(starRefProgram.commissionPermille / 10)% of their spending there."))
+                            items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(formatPermille(starRefProgram.commissionPermille))% of their spending there."))
                         }
                     }
                 }
@@ -1963,7 +1963,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     //TODO:localize
                     let programTitleValue: PeerInfoScreenDisclosureItem.Label
                     if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
-                        programTitleValue = .labelBadge("\(starRefProgram.commissionPermille / 10)%")
+                        programTitleValue = .labelBadge("\(formatPermille(starRefProgram.commissionPermille))%")
                     } else {
                         programTitleValue = .text("Off")
                     }
@@ -8662,7 +8662,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     //TODO:localize
                                     UIPasteboard.general.string = result.url
                                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(result.commissionPermille))%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                 }
                             ))
                         } else {
@@ -8695,7 +8695,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                                     }
                                                     UIPasteboard.general.string = result.url
                                                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(result.commissionPermille))%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                                 }
                                             ))
                                         ))

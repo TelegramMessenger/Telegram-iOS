@@ -637,7 +637,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                                 ))
                             ),
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: "\(component.commissionPermille / 10)%", font: Font.regular(13.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
+                                text: .plain(NSAttributedString(string: "\(formatPermille(component.commissionPermille))%", font: Font.regular(13.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
                             )))
                         ], spacing: 2.0)),
                         insets: UIEdgeInsets(top: 3.0, left: 6.0, bottom: 3.0, right: 6.0),
@@ -766,7 +766,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 contentHeight += linkIconBackgroundSize.height + 21.0
             }
             
-            let commissionTitle = "\(component.commissionPermille / 10)%"
+            let commissionTitle = "\(formatPermille(component.commissionPermille))%"
             let durationTitle: String
             if let durationMonths = component.programDuration {
                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))

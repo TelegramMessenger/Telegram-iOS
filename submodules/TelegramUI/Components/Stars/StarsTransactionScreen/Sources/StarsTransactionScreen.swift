@@ -407,7 +407,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     //TODO:localize
                     isRefProgram = true
                     if transaction.starrefPeerId == nil {
-                        titleText = "\(starrefCommissionPermille / 10)% Commission"
+                        titleText = "\(formatPermille(starrefCommissionPermille))% Commission"
                     } else {
                         titleText = transaction.title ?? "Product"
                     }
@@ -987,7 +987,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     tableItems.append(.init(
                         id: "commission",
                         title: "Commission",
-                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(starrefCommissionPermille / 10)%", font: tableFont, textColor: tableTextColor))
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(formatPermille(starrefCommissionPermille))%", font: tableFont, textColor: tableTextColor))
                         )),
                         insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
                     ))
