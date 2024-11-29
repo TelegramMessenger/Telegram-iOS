@@ -41,6 +41,8 @@ extension MediaEditorScreenImpl {
                 return false
             } else if case .empty = subject, !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
                 return false
+            } else if case .videoCollage = subject {
+                return false
             }
         }
         return true

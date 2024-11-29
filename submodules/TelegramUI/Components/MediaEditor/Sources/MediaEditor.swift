@@ -1686,10 +1686,17 @@ public final class MediaEditor {
     public func setupCollage(_ items: [MediaEditor.Subject.VideoCollageItem]) {
         let longestItem = longestCollageItem(items)
         var collage: [MediaEditorValues.VideoCollageItem] = []
+        
+        var index = 0
+        var passedFirstVideo = false
+        var mainVideoIsMuted = false
+        
         for item in items {
             var content: MediaEditorValues.VideoCollageItem.Content
+            var isVideo = false
             if item.content == longestItem?.content {
                 content = .main
+                isVideo = true
             } else {
                 switch item.content {
                 case let .image(image):
@@ -1700,23 +1707,38 @@ public final class MediaEditor {
                     content = .imageFile(path: tempImagePath)
                 case let .video(path, _):
                     content = .videoFile(path: path)
+                    isVideo = true
                 case let .asset(asset):
                     content = .asset(localIdentifier: asset.localIdentifier, isVideo: asset.mediaType == .video)
+                    isVideo = asset.mediaType == .video
                 }
             }
-            collage.append(MediaEditorValues.VideoCollageItem(
+            let item = MediaEditorValues.VideoCollageItem(
                 content: content,
                 frame: item.frame,
                 videoTrimRange: nil,
                 videoOffset: nil,
-                videoVolume: nil
-            ))
+                videoVolume: passedFirstVideo ? 0.0 : nil
+            )
+            collage.append(item)
+            if isVideo {
+                passedFirstVideo = true
+            }
+            index += 1
+            
+            if item.content == .main, let videoVolume = item.videoVolume, videoVolume.isZero {
+                mainVideoIsMuted = true
+            }
         }
         
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedCollage(collage)
+            var values = values.withUpdatedCollage(collage)
+            if mainVideoIsMuted {
+                values = values.withUpdatedVideoVolume(0.0)
+            }
+            return values
         }
-        
+                
         self.setupAdditionalVideoPlayback()
         self.updateAdditionalVideoPlaybackRange()
     }
@@ -1766,21 +1788,20 @@ public final class MediaEditor {
     
     private func setupAdditionalVideoPlayback() {
         if !self.values.collage.isEmpty {
-            var signals: [Signal<(UniversalTextureSource.Input, AVPlayer?), NoError>] = []
-            
+            var signals: [Signal<(UniversalTextureSource.Input, AVPlayer?, CGFloat?), NoError>] = []
             for item in self.values.collage {
                 switch item.content {
                 case .main:
                     break
                 case let .imageFile(path):
                     if let image = UIImage(contentsOfFile: path) {
-                        signals.append(.single((.image(image, item.frame), nil)))
+                        signals.append(.single((.image(image, item.frame), nil, nil)))
                     }
                 case let .videoFile(path):
                     let asset = AVURLAsset(url: URL(fileURLWithPath: path))
                     let player = self.makePlayer(asset: asset)
                     if let playerItem = player.currentItem {
-                        signals.append(.single((.video(playerItem, item.frame), player)))
+                        signals.append(.single((.video(playerItem, item.frame), player, item.videoVolume)))
                     }
                 case let .asset(localIdentifier, _):
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
@@ -1798,7 +1819,7 @@ public final class MediaEditor {
                                 }
                                 let player = self.makePlayer(asset: avAsset)
                                 if let playerItem = player.currentItem {
-                                    subscriber.putNext((.video(playerItem, item.frame), player))
+                                    subscriber.putNext((.video(playerItem, item.frame), player, item.videoVolume))
                                 }
                                 subscriber.putCompletion()
                             })
@@ -1817,9 +1838,12 @@ public final class MediaEditor {
                 var additionalInputs: [UniversalTextureSource.Input] = []
                 var additionalPlayers: [AVPlayer] = []
                 
-                for (input, player) in results {
+                for (input, player, volume) in results {
                     additionalInputs.append(input)
                     if let player {
+                        if let volume {
+                            player.volume = Float(volume)
+                        }
                         additionalPlayers.append(player)
                     }
                 }
@@ -1861,23 +1885,41 @@ public final class MediaEditor {
     }
     
     public func collageItemIndexForTrackId(_ trackId: Int32) -> Int? {
-        var collageIndex = -1
-        var trackIndex = -1
+        var trackIdToIndex: [Int32: Int] = [:]
+        
+        var index = 0
+        var trackIndex: Int32 = 0
         for item in self.values.collage {
             if case .main = item.content {
-                trackIndex += 1
-            } else if case .videoFile = item.content {
-                trackIndex += 1
-            } else if case .asset(_, true) = item.content {
-                trackIndex += 1
+                trackIdToIndex[0] = index
+            } else {
+                if item.content.isVideo {
+                    trackIndex += 1
+                    trackIdToIndex[trackIndex] = index
+                }
             }
-            collageIndex += 1
-            
-            if trackIndex == trackId {
-                return collageIndex
-            }
+            index += 1
         }
-        return nil
+        
+        return trackIdToIndex[trackId]
+                
+//        var collageIndex = -1
+//        var trackIndex = -1
+//        for item in self.values.collage {
+//            if case .main = item.content {
+//                trackIndex += 1
+//            } else if case .videoFile = item.content {
+//                trackIndex += 1
+//            } else if case .asset(_, true) = item.content {
+//                trackIndex += 1
+//            }
+//            collageIndex += 1
+//            
+//            if trackIndex == trackId {
+//                return collageIndex
+//            }
+//        }
+//        return nil
     }
     
     public func playerIndexForTrackId(_ trackId: Int32) -> Int? {

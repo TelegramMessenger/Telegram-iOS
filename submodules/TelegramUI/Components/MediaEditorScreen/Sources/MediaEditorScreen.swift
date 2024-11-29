@@ -4579,7 +4579,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             guard let mediaEditor = self.mediaEditor else {
                 return
             }
-            let isVideo = trackId != 2
+            let isVideo = trackId != 1000
             let actionTitle: String = isVideo ? self.presentationData.strings.MediaEditor_RemoveVideo : self.presentationData.strings.MediaEditor_RemoveAudio
             let isCollage = !mediaEditor.values.collage.isEmpty
             

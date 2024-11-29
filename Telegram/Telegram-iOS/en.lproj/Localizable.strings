@@ -13299,3 +13299,16 @@ Sorry for the inconvenience.";
 "WebApp.ShareMessage.Share" = "Share With...";
 
 "Notification.Gift" = "Gift";
+
+"WebBrowser.PassExistsError" = "This pass is already added to Wallet.";
+
+"Chat.VideoProcessingInfo" = "The video will be published once converted and optimized.";
+
+"Camera.CollageManagementTooltip" = "Tap a tile to delete or reorder it.";
+"Camera.CollageReorderingInfo" = "Hold and drag tiles to reorder them.";
+
+"MediaPicker.InvertCaptionTooltip" = "Tap here to move caption up.";
+"MediaPicker.InvertCaption.Updated.Up.Title" = "Caption moved up";
+"MediaPicker.InvertCaption.Updated.Up.Text" = "Text will be shown above the media.";
+"MediaPicker.InvertCaption.Updated.Down.Title" = "Caption moved down";
+"MediaPicker.InvertCaption.Updated.Down.Text" = "Text will be shown below the media.";
