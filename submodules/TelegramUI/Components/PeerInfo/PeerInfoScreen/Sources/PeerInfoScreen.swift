@@ -1430,17 +1430,28 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 if let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                 } else {
                     if let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
-                        if items[.botAffiliateProgram] == nil {
-                            items[.botAffiliateProgram] = []
+                        var canJoinRefProgram = false
+                        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+                            if let value = value as? Double {
+                                canJoinRefProgram = value != 0.0
+                            } else if let value = value as? Bool {
+                                canJoinRefProgram = value
+                            }
                         }
-                        //TODO:localize
-                        let programTitleValue: String
-                        programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
-                        //TODO:localize
-                        items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
-                            interaction.editingOpenAffiliateProgram()
-                        }))
-                        items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(starRefProgram.commissionPermille / 10)% of their spending there."))
+                        
+                        if canJoinRefProgram {
+                            if items[.botAffiliateProgram] == nil {
+                                items[.botAffiliateProgram] = []
+                            }
+                            //TODO:localize
+                            let programTitleValue: String
+                            programTitleValue = "\(starRefProgram.commissionPermille / 10)%"
+                            //TODO:localize
+                            items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                                interaction.editingOpenAffiliateProgram()
+                            }))
+                            items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(starRefProgram.commissionPermille / 10)% of their spending there."))
+                        }
                     }
                 }
             }
@@ -1938,16 +1949,28 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemUsername, label: .text("@\(user.addressName ?? "")"), text: presentationData.strings.PeerInfo_Bot_Username, icon: PresentationResourcesSettings.bot, action: {
                     interaction.editingOpenPublicLinkSetup()
                 }))
-                //TODO:localize
-                let programTitleValue: PeerInfoScreenDisclosureItem.Label
-                if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
-                    programTitleValue = .labelBadge("\(starRefProgram.commissionPermille / 10)%")
-                } else {
-                    programTitleValue = .text("Off")
+                
+                var canSetupRefProgram = false
+                if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_program_allowed"] {
+                    if let value = value as? Double {
+                        canSetupRefProgram = value != 0.0
+                    } else if let value = value as? Bool {
+                        canSetupRefProgram = value
+                    }
                 }
-                items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
-                    interaction.editingOpenAffiliateProgram()
-                }))
+                
+                if canSetupRefProgram {
+                    //TODO:localize
+                    let programTitleValue: PeerInfoScreenDisclosureItem.Label
+                    if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
+                        programTitleValue = .labelBadge("\(starRefProgram.commissionPermille / 10)%")
+                    } else {
+                        programTitleValue = .text("Off")
+                    }
+                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                        interaction.editingOpenAffiliateProgram()
+                    }))
+                }
                                 
                 items[.peerSettings]!.append(PeerInfoScreenActionItem(id: ItemIntro, text: presentationData.strings.PeerInfo_Bot_EditIntro, icon: UIImage(bundleImageName: "Peer Info/BotIntro"), action: {
                     interaction.openPeerMention("botfather", .withBotStartPayload(ChatControllerInitialBotStart(payload: "\(user.addressName ?? "")-intro", behavior: .interactive)))
@@ -2199,9 +2222,20 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 if channel.hasPermission(.changeInfo) {
-                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliatePrograms, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Programs", icon: PresentationResourcesSettings.affiliateProgram, action: {
-                        interaction.editingOpenAffiliateProgram()
-                    }))
+                    var canJoinRefProgram = false
+                    if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+                        if let value = value as? Double {
+                            canJoinRefProgram = value != 0.0
+                        } else if let value = value as? Bool {
+                            canJoinRefProgram = value
+                        }
+                    }
+                    
+                    if canJoinRefProgram {
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliatePrograms, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Programs", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                            interaction.editingOpenAffiliateProgram()
+                        }))
+                    }
                 }
                 
                 if isCreator { //if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
@@ -8596,7 +8630,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if let peer = self.data?.peer as? TelegramUser, let botInfo = peer.botInfo {
             if botInfo.flags.contains(.canEdit) {
                 let _ = (self.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: self.context, peerId: peer.id, mode: .editProgram)
-                         |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
                     guard let self else {
                         return
                     }

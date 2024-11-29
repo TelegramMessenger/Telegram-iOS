@@ -65,6 +65,12 @@ final class AffiliateProgramSetupScreenComponent: Component {
         return true
     }
     
+    private class ScrollView: UIScrollView {
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
         
@@ -119,7 +125,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
         private var isSuggestedSortModeUpdating: Bool = false
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.scrollsToTop = false
@@ -454,6 +460,20 @@ If you end your affiliate program:
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, actionsOnTop: false)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
             controller.presentInGlobalOverlay(contextController)
+        }
+        
+        private func openExistingAffiliatePrograms() {
+            guard let component = self.component else {
+                return
+            }
+            let _ = (component.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: component.context, peerId: component.initialContent.peerId, mode: .connectedPrograms)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self, let component = self.component else {
+                    return
+                }
+                let setupScreen = component.context.sharedContext.makeAffiliateProgramSetupScreen(context: component.context, initialData: initialData)
+                self.environment?.controller()?.push(setupScreen)
+            })
         }
         
         func update(component: AffiliateProgramSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -991,8 +1011,7 @@ If you end your affiliate program:
                                     guard let self else {
                                         return
                                     }
-                                    
-                                    let _ = self
+                                    self.openExistingAffiliatePrograms()
                                 }
                             )))
                         ],

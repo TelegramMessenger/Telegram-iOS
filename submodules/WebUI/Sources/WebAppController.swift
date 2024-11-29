@@ -456,7 +456,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     })
                 } else {
-                    if let url = controller.url, isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, url: url), case .peer(_, .appStart) = internalUrl {
+                    if let url = controller.url, isTelegramMeLink(url), let internalUrl = parseFullInternalUrl(sharedContext: self.context.sharedContext, context: self.context, url: url), case .peer(_, .appStart) = internalUrl {
                         let _ = (self.context.sharedContext.resolveUrl(context: self.context, peerId: controller.peerId, url: url, skipUrlAuth: false)
                         |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                             guard let self, let controller = self.controller else {

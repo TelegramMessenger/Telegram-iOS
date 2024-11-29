@@ -92,7 +92,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         private let linkIconBackground = ComponentView<Empty>()
         private let linkIcon = ComponentView<Empty>()
-        private let linkIconBadge = ComponentView<Empty>()
+        private var linkIconBadge: ComponentView<Empty>?
         
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
@@ -668,7 +668,17 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 }
                 
                 if active.bot.participants != 0 {
-                    let linkIconBadgeSize = self.linkIconBadge.update(
+                    let linkIconBadge: ComponentView<Empty>
+                    var linkIconBadgeTransition = transition
+                    if let current = self.linkIconBadge {
+                        linkIconBadge = current
+                    } else {
+                        linkIconBadgeTransition = linkIconBadgeTransition.withAnimation(.none)
+                        linkIconBadge = ComponentView()
+                        self.linkIconBadge = linkIconBadge
+                    }
+                    
+                    let linkIconBadgeSize = linkIconBadge.update(
                         transition: .immediate,
                         component: AnyComponent(BorderedBadgeComponent(
                             backgroundColor: UIColor(rgb: 0x34C759),
@@ -690,12 +700,15 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
                     let linkIconBadgeFrame = CGRect(origin: CGPoint(x: linkIconBackgroundFrame.minX + floor((linkIconBackgroundFrame.width - linkIconBadgeSize.width) * 0.5), y: linkIconBackgroundFrame.maxY - floor(linkIconBadgeSize.height * 0.5)), size: linkIconBadgeSize)
-                    if let linkIconBadgeView = self.linkIconBadge.view {
+                    if let linkIconBadgeView = linkIconBadge.view {
                         if linkIconBadgeView.superview == nil {
                             self.scrollContentView.addSubview(linkIconBadgeView)
                         }
-                        transition.setFrame(view: linkIconBadgeView, frame: linkIconBadgeFrame)
+                        linkIconBadgeTransition.setFrame(view: linkIconBadgeView, frame: linkIconBadgeFrame)
                     }
+                } else if let linkIconBadge = self.linkIconBadge {
+                    self.linkIconBadge = nil
+                    linkIconBadge.view?.removeFromSuperview()
                 }
                 
                 contentHeight += linkIconBackgroundSize.height + 21.0
@@ -895,6 +908,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         self.scrollContentView.addSubview(linkTextView)
                     }
                     transition.setFrame(view: linkTextView, frame: linkTextFrame)
+                    transition.setAlpha(view: linkTextView, alpha: self.isChangingTargetPeer ? 0.6 : 1.0)
                 }
                 contentHeight += linkTextSize.height
                 contentHeight += 24.0

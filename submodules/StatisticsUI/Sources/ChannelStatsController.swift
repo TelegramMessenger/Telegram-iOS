@@ -1575,7 +1575,8 @@ private func monetizationEntries(
     premiumConfiguration: PremiumConfiguration,
     monetizationConfiguration: MonetizationConfiguration,
     canViewRevenue: Bool,
-    canViewStarsRevenue: Bool
+    canViewStarsRevenue: Bool,
+    canJoinRefPrograms: Bool
 ) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
@@ -1700,8 +1701,10 @@ private func monetizationEntries(
     
     if displayStarsTransactions {
         if !addedTransactionsTabs {
-            //TODO:localize
-            entries.append(.earnStarsInfo)
+            if canJoinRefPrograms {
+                //TODO:localize
+                entries.append(.earnStarsInfo)
+            }
             
             entries.append(.adsTransactionsTitle(presentationData.theme, presentationData.strings.Monetization_StarsTransactions.uppercased()))
         }
@@ -1767,7 +1770,8 @@ private func channelStatsControllerEntries(
     premiumConfiguration: PremiumConfiguration,
     monetizationConfiguration: MonetizationConfiguration,
     canViewRevenue: Bool,
-    canViewStarsRevenue: Bool
+    canViewStarsRevenue: Bool,
+    canJoinRefPrograms: Bool
 ) -> [StatsEntry] {
     switch state.section {
     case .stats:
@@ -1809,7 +1813,8 @@ private func channelStatsControllerEntries(
                 premiumConfiguration: premiumConfiguration,
                 monetizationConfiguration: monetizationConfiguration,
                 canViewRevenue: canViewRevenue,
-                canViewStarsRevenue: canViewStarsRevenue
+                canViewStarsRevenue: canViewStarsRevenue,
+                canJoinRefPrograms: canJoinRefPrograms
             )
         }
     }
@@ -2157,6 +2162,15 @@ public func channelStatsController(
         let (canViewStats, adsRestricted, _, canViewStarsRevenue) = peerData
         var canViewRevenue = peerData.2
         
+        var canJoinRefPrograms = false
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_connect_allowed"] {
+            if let value = value as? Double {
+                canJoinRefPrograms = value != 0.0
+            } else if let value = value as? Bool {
+                canJoinRefPrograms = value
+            }
+        }
+        
         let _ = canViewStatsValue.swap(canViewStats)
         
         var isGroup = false
@@ -2262,7 +2276,7 @@ public func channelStatsController(
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: title, leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, starsState: starsState?.stats, starsTransactions: starsTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration, canViewRevenue: canViewRevenue, canViewStarsRevenue: canViewStarsRevenue), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(presentationData: presentationData, state: state, peer: peer, data: data, messages: messages, stories: stories, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable, isGroup: isGroup, boostsOnly: boostsOnly, revenueState: revenueState?.stats, revenueTransactions: revenueTransactions, starsState: starsState?.stats, starsTransactions: starsTransactions, adsRestricted: adsRestricted, premiumConfiguration: premiumConfiguration, monetizationConfiguration: monetizationConfiguration, canViewRevenue: canViewRevenue, canViewStarsRevenue: canViewStarsRevenue, canJoinRefPrograms: canJoinRefPrograms), style: .blocks, emptyStateItem: emptyStateItem, headerItem: headerItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
