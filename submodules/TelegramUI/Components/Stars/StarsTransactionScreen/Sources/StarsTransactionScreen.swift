@@ -33,7 +33,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let context: AccountContext
     let subject: StarsTransactionScreen.Subject
     let cancel: (Bool) -> Void
-    let openPeer: (EnginePeer) -> Void
+    let openPeer: (EnginePeer, Bool) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
@@ -44,7 +44,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
         cancel: @escaping  (Bool) -> Void,
-        openPeer: @escaping (EnginePeer) -> Void,
+        openPeer: @escaping (EnginePeer, Bool) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
@@ -94,6 +94,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             case let .transaction(transaction, _):
                 if case let .peer(peer) = transaction.peer {
                     peerIds.append(peer.id)
+                }
+                if let starrefPeerId = transaction.starrefPeerId {
+                    peerIds.append(starrefPeerId)
                 }
             case let .receipt(receipt):
                 peerIds.append(receipt.botPaymentId)
@@ -232,6 +235,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var giveawayMessageId: MessageId?
             var isBoost = false
             var giftAnimation: TelegramMediaFile?
+            var isRefProgram = false
             
             var delayedCloseOnOpenPeer = true
             switch subject {
@@ -399,6 +403,23 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                     transactionPeer = transaction.peer
                     isGift = true
+                } else if let starrefCommissionPermille = transaction.starrefCommissionPermille {
+                    //TODO:localize
+                    isRefProgram = true
+                    if transaction.starrefPeerId == nil {
+                        titleText = "\(starrefCommissionPermille / 10)% Commission"
+                    } else {
+                        titleText = transaction.title ?? "Product"
+                    }
+                    descriptionText = ""
+                    count = transaction.count
+                    countOnTop = false
+                    transactionId = transaction.id
+                    date = transaction.date
+                    transactionPeer = transaction.peer
+                    if case let .peer(peer) = transaction.peer {
+                        toPeer = peer
+                    }
                 } else if transaction.flags.contains(.isReaction) {
                     titleText = strings.Stars_Transaction_Reaction_Title
                     descriptionText = ""
@@ -722,7 +743,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         )
                     )
                 ))
-            } else if let toPeer {
+            } else if let toPeer, !isRefProgram {
                 let title: String
                 if isSubscription {
                     if isBotSubscription {
@@ -751,7 +772,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             ),
                             action: {
                                 if delayedCloseOnOpenPeer {
-                                    component.openPeer(toPeer)
+                                    component.openPeer(toPeer, false)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
                                     })
@@ -844,6 +865,133 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         )
                     )
                 ))
+            }
+            
+            if case let .transaction(transaction, _) = subject {
+                //TODO:localize
+                if transaction.starrefCommissionPermille != nil {
+                    if transaction.starrefPeerId == nil {
+                        tableItems.append(.init(
+                            id: "reason",
+                            title: "Reason",
+                            component: AnyComponent(
+                                Button(
+                                    content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Affiliate Program", font: tableFont, textColor: tableLinkColor))
+                                    )),
+                                    action: {
+                                        if let toPeer {
+                                            component.openPeer(toPeer, true)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        }
+                                    }
+                                )
+                            ),
+                            insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
+                        ))
+                    }
+                    if let toPeer, transaction.starrefPeerId == nil {
+                        tableItems.append(.init(
+                            id: "miniapp",
+                            title: "Mini App",
+                            component: AnyComponent(
+                                Button(
+                                    content: AnyComponent(
+                                        PeerCellComponent(
+                                            context: component.context,
+                                            theme: theme,
+                                            peer: toPeer
+                                        )
+                                    ),
+                                    action: {
+                                        if delayedCloseOnOpenPeer {
+                                            component.openPeer(toPeer, false)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        } else {
+                                            if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                                chatController.playShakeAnimation()
+                                            }
+                                            component.cancel(true)
+                                        }
+                                    }
+                                )
+                            )
+                        ))
+                    }
+                }
+                if let starRefPeerId = transaction.starrefPeerId, let starRefPeer = state.peerMap[starRefPeerId] {
+                    //TODO:localize
+                    tableItems.append(.init(
+                        id: "to",
+                        title: "Affiliate",
+                        component: AnyComponent(
+                            Button(
+                                content: AnyComponent(
+                                    PeerCellComponent(
+                                        context: component.context,
+                                        theme: theme,
+                                        peer: starRefPeer
+                                    )
+                                ),
+                                action: {
+                                    if delayedCloseOnOpenPeer {
+                                        component.openPeer(starRefPeer, false)
+                                        Queue.mainQueue().after(1.0, {
+                                            component.cancel(false)
+                                        })
+                                    } else {
+                                        if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                            chatController.playShakeAnimation()
+                                        }
+                                        component.cancel(true)
+                                    }
+                                }
+                            )
+                        )
+                    ))
+                    if let toPeer {
+                        tableItems.append(.init(
+                            id: "referred",
+                            title: "Referred User",
+                            component: AnyComponent(
+                                Button(
+                                    content: AnyComponent(
+                                        PeerCellComponent(
+                                            context: component.context,
+                                            theme: theme,
+                                            peer: toPeer
+                                        )
+                                    ),
+                                    action: {
+                                        if delayedCloseOnOpenPeer {
+                                            component.openPeer(toPeer, true)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        } else {
+                                            if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                                chatController.playShakeAnimation()
+                                            }
+                                            component.cancel(true)
+                                        }
+                                    }
+                                )
+                            )
+                        ))
+                    }
+                }
+                if let starrefCommissionPermille = transaction.starrefCommissionPermille, transaction.starrefPeerId != nil {
+                    tableItems.append(.init(
+                        id: "commission",
+                        title: "Commission",
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(starrefCommissionPermille / 10)%", font: tableFont, textColor: tableTextColor))
+                        )),
+                        insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
+                    ))
+                }
             }
 
             if let transactionId {
@@ -1200,7 +1348,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     
     let context: AccountContext
     let subject: StarsTransactionScreen.Subject
-    let openPeer: (EnginePeer) -> Void
+    let openPeer: (EnginePeer, Bool) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
@@ -1210,7 +1358,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     init(
         context: AccountContext,
         subject: StarsTransactionScreen.Subject,
-        openPeer: @escaping (EnginePeer) -> Void,
+        openPeer: @escaping (EnginePeer, Bool) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
@@ -1363,7 +1511,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
     ) {
         self.context = context
         
-        var openPeerImpl: ((EnginePeer) -> Void)?
+        var openPeerImpl: ((EnginePeer, Bool) -> Void)?
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var openAppExamplesImpl: (() -> Void)?
@@ -1375,8 +1523,8 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             component: StarsTransactionSheetComponent(
                 context: context,
                 subject: subject,
-                openPeer: { peerId in
-                    openPeerImpl?(peerId)
+                openPeer: { peerId, isProfile in
+                    openPeerImpl?(peerId, isProfile)
                 },
                 openMessage: { messageId in
                     openMessageImpl?(messageId)
@@ -1402,7 +1550,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         self.navigationPresentation = .flatModal
         self.automaticallyControlPresentationContextLayout = false
         
-        openPeerImpl = { [weak self] peer in
+        openPeerImpl = { [weak self] peer, isProfile in
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
@@ -1415,7 +1563,13 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 guard let peer else {
                     return
                 }
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                if isProfile {
+                    if let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                        navigationController.pushViewController(controller)
+                    }
+                } else {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                }
             })
         }
         

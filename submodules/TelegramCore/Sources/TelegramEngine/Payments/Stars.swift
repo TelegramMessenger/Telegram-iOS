@@ -302,6 +302,10 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     }
     
     public static func +(lhs: StarsAmount, rhs: StarsAmount) -> StarsAmount {
+        if rhs.value < 0 || rhs.nanos < 0 {
+            return lhs - StarsAmount(value: abs(rhs.value), nanos: abs(rhs.nanos))
+        }
+        
         let totalNanos = Int64(lhs.nanos) + Int64(rhs.nanos)
         let overflow = totalNanos / 1_000_000_000
         let remainingNanos = totalNanos % 1_000_000_000
@@ -529,7 +533,7 @@ private final class StarsContextImpl {
         }
         var transactions = state.transactions
         if addTransaction {
-            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil), at: 0)
+            transactions.insert(.init(flags: [.isLocal], id: "\(arc4random())", count: balance, date: Int32(Date().timeIntervalSince1970), peer: .appStore, title: nil, description: nil, photo: nil, transactionDate: nil, transactionUrl: nil, paidMessageId: nil, giveawayMessageId: nil, media: [], subscriptionPeriod: nil, starGift: nil, floodskipNumber: nil, starrefCommissionPermille: nil, starrefPeerId: nil, starrefAmount: nil), at: 0)
         }
         
         self.updateState(StarsContext.State(flags: [.isPendingBalance], balance: max(StarsAmount(value: 0, nanos: 0), state.balance + balance), subscriptions: state.subscriptions, canLoadMoreSubscriptions: state.canLoadMoreSubscriptions, transactions: transactions, canLoadMoreTransactions: state.canLoadMoreTransactions, isLoading: state.isLoading))
@@ -552,10 +556,6 @@ private extension StarsContext.State.Transaction {
     init?(apiTransaction: Api.StarsTransaction, peerId: EnginePeer.Id?, transaction: Transaction) {
         switch apiTransaction {
         case let .starsTransaction(apiFlags, id, stars, date, transactionPeer, title, description, photo, transactionDate, transactionUrl, _, messageId, extendedMedia, subscriptionPeriod, giveawayPostId, starGift, floodskipNumber, starrefCommissionPermille, starrefPeer, starrefAmount):
-            let _ = starrefCommissionPermille
-            let _ = starrefPeer
-            let _ = starrefAmount
-            
             let parsedPeer: StarsContext.State.Transaction.Peer
             var paidMessageId: MessageId?
             var giveawayMessageId: MessageId?
@@ -611,7 +611,7 @@ private extension StarsContext.State.Transaction {
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber)
+            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber, starrefCommissionPermille: starrefCommissionPermille, starrefPeerId: starrefPeer.flatMap(\.peerId), starrefAmount: starrefAmount.flatMap(StarsAmount.init(apiAmount:)))
         }
     }
 }
@@ -686,6 +686,9 @@ public final class StarsContext {
             public let subscriptionPeriod: Int32?
             public let starGift: StarGift?
             public let floodskipNumber: Int32?
+            public let starrefCommissionPermille: Int32?
+            public let starrefPeerId: PeerId?
+            public let starrefAmount: StarsAmount?
             
             public init(
                 flags: Flags,
@@ -703,7 +706,10 @@ public final class StarsContext {
                 media: [Media],
                 subscriptionPeriod: Int32?,
                 starGift: StarGift?,
-                floodskipNumber: Int32?
+                floodskipNumber: Int32?,
+                starrefCommissionPermille: Int32?,
+                starrefPeerId: PeerId?,
+                starrefAmount: StarsAmount?
             ) {
                 self.flags = flags
                 self.id = id
@@ -721,6 +727,9 @@ public final class StarsContext {
                 self.subscriptionPeriod = subscriptionPeriod
                 self.starGift = starGift
                 self.floodskipNumber = floodskipNumber
+                self.starrefCommissionPermille = starrefCommissionPermille
+                self.starrefPeerId = starrefPeerId
+                self.starrefAmount = starrefAmount
             }
             
             public static func == (lhs: Transaction, rhs: Transaction) -> Bool {
@@ -770,6 +779,15 @@ public final class StarsContext {
                     return false
                 }
                 if lhs.floodskipNumber != rhs.floodskipNumber {
+                    return false
+                }
+                if lhs.starrefCommissionPermille != rhs.starrefCommissionPermille {
+                    return false
+                }
+                if lhs.starrefPeerId != rhs.starrefPeerId {
+                    return false
+                }
+                if lhs.starrefAmount != rhs.starrefAmount {
                     return false
                 }
                 return true

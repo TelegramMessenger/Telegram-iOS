@@ -632,7 +632,6 @@ func _internal_updateStarRefProgram(account: Account, id: EnginePeer.Id, program
 }
 
 public final class TelegramConnectedStarRefBotList : Equatable {
-    
     public final class Item: Equatable {
         public let peer: EnginePeer
         public let url: String

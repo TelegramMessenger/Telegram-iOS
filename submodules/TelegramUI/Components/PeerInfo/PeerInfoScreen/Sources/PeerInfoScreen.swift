@@ -8620,16 +8620,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         if let result {
                             mode = .active(JoinAffiliateProgramScreenMode.Active(
                                 targetPeer: accountPeer,
-                                link: result.url,
-                                userCount: Int(result.participants),
-                                copyLink: { [weak self] in
+                                bot: result,
+                                copyLink: { [weak self] result in
                                     guard let self else {
                                         return
                                     }
                                     //TODO:localize
                                     UIPasteboard.general.string = result.url
                                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(EnginePeer.user(peer).compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                 }
                             ))
                         } else {
@@ -8654,15 +8653,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                             programDuration: bot.durationMonths,
                                             mode: .active(JoinAffiliateProgramScreenMode.Active(
                                                 targetPeer: targetPeer,
-                                                link: bot.url,
-                                                userCount: Int(bot.participants),
-                                                copyLink: { [weak self] in
+                                                bot: bot,
+                                                copyLink: { [weak self] result in
                                                     guard let self else {
                                                         return
                                                     }
-                                                    UIPasteboard.general.string = bot.url
+                                                    UIPasteboard.general.string = result.url
                                                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(bot.commissionPermille / 10)%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(result.commissionPermille / 10)%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                                 }
                                             ))
                                         ))
