@@ -1186,7 +1186,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             guard let self else {
                 return
             }
-            //TODO:localize
             self.context.sharedContext.openWebApp(
                 context: self.context,
                 parentController: self,

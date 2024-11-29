@@ -43,6 +43,23 @@ private func textForTimeout(value: Int32) -> String {
     }
 }
 
+private func textForDurationMonths(strings: PresentationStrings, value: Int) -> (short: String, full: String) {
+    if value >= Int(Int32.max) {
+        return ("∞", strings.AffiliateProgram_DurationLifetime.uppercased())
+    }
+    if value > 12 {
+        return (
+            strings.AffiliateProgram_ValueShortYears(Int32(value / 12)),
+            strings.AffiliateProgram_ValueLongYears(Int32(value / 12))
+        )
+    } else {
+        return (
+            strings.AffiliateProgram_ValueShortMonths(Int32(value)),
+            strings.AffiliateProgram_ValueLongMonths(Int32(value))
+        )
+    }
+}
+
 final class AffiliateProgramSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -181,25 +198,25 @@ final class AffiliateProgramSetupScreenComponent: Component {
             if let durationMonths = programDuration {
                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
             } else {
-                durationTitle = "Lifetime"
+                durationTitle = environment.strings.AffiliateProgram_DurationLifetime
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             self.environment?.controller()?.present(tableAlert(
                 theme: presentationData.theme,
-                title: "Warning",
-                text: "Once you start the affiliate program, you won't be able to decrease its commission or duration. You can only increase these parameters or end the program, whuch will disable all previously distributed referral links.",
+                title: environment.strings.AffiliateSetup_AlertApply_Title,
+                text: environment.strings.AffiliateSetup_AlertApply_Text,
                 table: TableComponent(theme: environment.theme, items: [
-                    TableComponent.Item(id: 0, title: "Commission", component: AnyComponent(MultilineTextComponent(
+                    TableComponent.Item(id: 0, title: environment.strings.AffiliateSetup_AlertApply_SectionCommission, component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: commissionTitle, font: Font.regular(17.0), textColor: environment.theme.actionSheet.primaryTextColor))
                     ))),
-                    TableComponent.Item(id: 1, title: "Duration", component: AnyComponent(MultilineTextComponent(
+                    TableComponent.Item(id: 1, title: environment.strings.AffiliateSetup_AlertApply_SectionDuration, component: AnyComponent(MultilineTextComponent(
                         text: .plain(NSAttributedString(string: durationTitle, font: Font.regular(17.0), textColor: environment.theme.actionSheet.primaryTextColor))
                     )))
                 ]),
                 actions: [
-                    ComponentAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    ComponentAlertAction(type: .defaultAction, title: "Start", action: { [weak self] in
+                    ComponentAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
+                    ComponentAlertAction(type: .defaultAction, title: environment.strings.AffiliateSetup_AlertApply_Action, action: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -210,26 +227,17 @@ final class AffiliateProgramSetupScreenComponent: Component {
         }
         
         private func requestApplyEndProgram() {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             self.environment?.controller()?.present(standardTextAlertController(
                 theme: AlertControllerTheme(presentationData: presentationData),
-                title: "Warning",
-                text:
-"""
-If you end your affiliate program:
-
-• Any referral links already shared will be disabled in 24 hours.
-
-• All participating affiliates will be notified.
-
-• You will be able to start a new affiliate program only in 24 hours.
-""",
+                title: environment.strings.AffiliateSetup_AlertTerminate_Title,
+                text: environment.strings.AffiliateSetup_AlertTerminate_Text,
                 actions: [
                     TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultDestructiveAction, title: "End Anyway", action: { [weak self] in
+                    TextAlertAction(type: .defaultDestructiveAction, title: environment.strings.AffiliateSetup_AlertTerminate_Action, action: { [weak self] in
                         guard let self else {
                             return
                         }
@@ -291,7 +299,7 @@ If you end your affiliate program:
                 program: nil
             )
             |> deliverOnMainQueue).startStrict(completed: { [weak self] in
-                guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                guard let self, let component = self.component, let environment = self.environment, let controller = self.environment?.controller() else {
                     return
                 }
                 self.isApplying = false
@@ -300,7 +308,7 @@ If you end your affiliate program:
                 
                 if let navigationController = controller.navigationController, let index = navigationController.viewControllers.firstIndex(where: { $0 === controller }), index != 0 {
                     if let previousController = navigationController.viewControllers[index - 1] as? ViewController {
-                        previousController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_link_broken", scale: 0.065, colors: [:], title: "Affiliate Program Ended", text: "Participating affiliates have been notified. All referral links will be disabled in 24 hours.", customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        previousController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_link_broken", scale: 0.065, colors: [:], title: environment.strings.AffiliateSetup_ToastTerminated_Title, text: environment.strings.AffiliateSetup_ToastTerminated_Text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 }
                 controller.dismiss()
@@ -378,7 +386,7 @@ If you end your affiliate program:
                             }
                             UIPasteboard.general.string = bot.url
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(bot.commissionPermille))%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: presentationData.strings.AffiliateProgram_ToastLinkCopied_Title, text: presentationData.strings.AffiliateProgram_ToastLinkCopied_Text(formatPermille(bot.commissionPermille), bot.peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         }
                     ))
                 ))
@@ -417,9 +425,9 @@ If you end your affiliate program:
             var items: [ContextMenuItem] = []
             
             let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
-                (.profitability, "Profitability"),
-                (.revenue, "Revenue"),
-                (.date, "Date")
+                (.profitability, environment.strings.AffiliateProgram_SortSelectorProfitability),
+                (.revenue, environment.strings.AffiliateProgram_SortSelectorRevenue),
+                (.date, environment.strings.AffiliateProgram_SortSelectorDate)
             ]
             for (mode, title) in availableModes {
                 let isSelected = mode == self.suggestedSortMode
@@ -483,14 +491,14 @@ If you end your affiliate program:
                 self.isUpdating = false
             }
             
-            let durationItems: [(months: Int32, title: String, selectedTitle: String)] = [
-                (1, "1m", "1 MONTH"),
-                (3, "3m", "3 MONTHS"),
-                (6, "6m", "6 MONTHS"),
-                (12, "1y", "1 YEAR"),
-                (2 * 12, "2y", "2 YEARS"),
-                (3 * 12, "3y", "3 YEARS"),
-                (Int32.max, "∞", "LIFETIME")
+            let durationItems: [Int32] = [
+                1,
+                3,
+                6,
+                12,
+                2 * 12,
+                3 * 12,
+                Int32.max
             ]
             
             let environment = environment[EnvironmentType.self].value
@@ -630,11 +638,11 @@ If you end your affiliate program:
             let subtitleValue: String
             switch component.initialContent.mode {
             case .editProgram:
-                titleValue = "Affiliate Program"
-                subtitleValue = "Reward those who help grow your userbase."
+                titleValue = environment.strings.AffiliateSetup_TitleNew
+                subtitleValue = environment.strings.AffiliateSetup_TextNew
             case .connectedPrograms:
-                titleValue = "Affiliate Programs"
-                subtitleValue = "Earn a commission each time a user who first accessed a mini app through your referral link spends **Stars** within it."
+                titleValue = environment.strings.AffiliateSetup_TitleJoin
+                subtitleValue = environment.strings.AffiliateSetup_TextJoin
             }
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -696,36 +704,36 @@ If you end your affiliate program:
                 introItems = [
                     (
                         "Chat/Context Menu/Smile",
-                        "Share revenue with affiliates",
-                        "Set the commission for revenue generated by users referred to you."
+                        environment.strings.AffiliateSetup_IntroNew_Title1,
+                        environment.strings.AffiliateSetup_IntroNew_Text1
                     ),
                     (
                         "Chat/Context Menu/Channels",
-                        "Launch your affiliate program",
-                        "Telegram will feature your program for millions of potential affiliates."
+                        environment.strings.AffiliateSetup_IntroNew_Title2,
+                        environment.strings.AffiliateSetup_IntroNew_Text2
                     ),
                     (
                         "Chat/Context Menu/Link",
-                        "Let affiliates promote you",
-                        "Affiliates will share your referral link with their audience."
+                        environment.strings.AffiliateSetup_IntroNew_Title3,
+                        environment.strings.AffiliateSetup_IntroNew_Text3
                     )
                 ]
             case .connectedPrograms:
                 introItems = [
                     (
                         "Peer Info/RefProgram/IntroListSecure",
-                        "Reliable",
-                        "Receive guaranteed commissions for spending by users you refer."
+                        environment.strings.AffiliateSetup_IntroJoin_Title1,
+                        environment.strings.AffiliateSetup_IntroJoin_Text1
                     ),
                     (
                         "Peer Info/RefProgram/IntroListEye",
-                        "Transparent",
-                        "Track your commissions from referred users in real time."
+                        environment.strings.AffiliateSetup_IntroJoin_Title2,
+                        environment.strings.AffiliateSetup_IntroJoin_Text2
                     ),
                     (
                         "Peer Info/RefProgram/IntroListLike",
-                        "Simple",
-                        "Choose a mini app below, get your referral link, and start earning Stars."
+                        environment.strings.AffiliateSetup_IntroJoin_Title3,
+                        environment.strings.AffiliateSetup_IntroJoin_Text3
                     )
                 ]
             }
@@ -855,7 +863,7 @@ If you end your affiliate program:
                         theme: environment.theme,
                         header: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "COMMISSION",
+                                string: environment.strings.AffiliateSetup_SectionCommission,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -863,7 +871,7 @@ If you end your affiliate program:
                         )),
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Define the percentage of star revenue your affiliates earn for referring users to your bot.",
+                                string: environment.strings.AffiliateSetup_SectionCommissionFooter,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -911,10 +919,10 @@ If you end your affiliate program:
                 var selectedDurationIndex = 0
                 var durationMinValueIndex = 0
                 for i in 0 ..< durationItems.count {
-                    if self.durationValue == Int(durationItems[i].months) {
+                    if self.durationValue == Int(durationItems[i]) {
                         selectedDurationIndex = i
                     }
-                    if self.durationMinValue == Int(durationItems[i].months) {
+                    if self.durationMinValue == Int(durationItems[i]) {
                         durationMinValueIndex = i
                     }
                 }
@@ -925,7 +933,7 @@ If you end your affiliate program:
                         header: AnyComponent(HStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: "DURATION",
+                                    string: environment.strings.AffiliateSetup_SectionDuration,
                                     font: Font.regular(13.0),
                                     textColor: environment.theme.list.freeTextColor
                                 )),
@@ -933,7 +941,7 @@ If you end your affiliate program:
                             ))),
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(
-                                    string: durationItems[selectedDurationIndex].selectedTitle,
+                                    string: textForDurationMonths(strings: environment.strings, value: Int(durationItems[selectedDurationIndex])).full,
                                     font: Font.regular(13.0),
                                     textColor: environment.theme.list.freeTextColor
                                 )),
@@ -942,7 +950,7 @@ If you end your affiliate program:
                         ], spacing: 4.0, alignment: .alternatingLeftRight)),
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Set the duration for which affiliates will earn commissions from referred users.",
+                                string: environment.strings.AffiliateSetup_SectionDurationFooter,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -952,7 +960,9 @@ If you end your affiliate program:
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemSliderSelectorComponent(
                                 theme: environment.theme,
                                 content: .discrete(ListItemSliderSelectorComponent.Discrete(
-                                    values: durationItems.map(\.title),
+                                    values: durationItems.map {
+                                        textForDurationMonths(strings: environment.strings, value: Int($0)).short
+                                    },
                                     markPositions: true,
                                     selectedIndex: max(durationMinValueIndex, selectedDurationIndex),
                                     minSelectedIndex: durationMinValueIndex,
@@ -961,7 +971,7 @@ If you end your affiliate program:
                                         guard let self else {
                                             return
                                         }
-                                        self.durationValue = Int(durationItems[value].months)
+                                        self.durationValue = Int(durationItems[value])
                                         self.state?.updated(transition: .immediate)
                                     }
                                 ))
@@ -990,7 +1000,7 @@ If you end your affiliate program:
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "Explore what other mini apps offer.",
+                                string: environment.strings.AffiliateSetup_ExistingPrograms_Footer,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -1002,7 +1012,7 @@ If you end your affiliate program:
                                 title: AnyComponent(VStack([
                                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                         text: .plain(NSAttributedString(
-                                            string: "View Existing Programs",
+                                            string: environment.strings.AffiliateSetup_ExistingPrograms_Action,
                                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                             textColor: environment.theme.list.itemPrimaryTextColor
                                         )),
@@ -1045,7 +1055,7 @@ If you end your affiliate program:
                                 title: AnyComponent(VStack([
                                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                         text: .plain(NSAttributedString(
-                                            string: "End Affiliate Program",
+                                            string: environment.strings.AffiliateSetup_EndAction,
                                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                             textColor: environment.theme.list.itemDestructiveColor
                                         )),
@@ -1086,7 +1096,7 @@ If you end your affiliate program:
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(
-                            text: "By creating an affiliate program, you afree to the [terms and conditions](https://telegram.org/terms) of Affiliate Programs.",
+                            text: environment.strings.AffiliateSetup_TermsFooter,
                             attributes: MarkdownAttributes(
                                 body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
                                 bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.itemSecondaryTextColor),
@@ -1111,9 +1121,9 @@ If you end your affiliate program:
                     let remainingTime: Int32 = max(0, endDate - timestamp)
                     buttonText = textForTimeout(value: remainingTime)
                 } else if self.currentProgram != nil {
-                    buttonText = "Update Affiliate Program"
+                    buttonText = environment.strings.AffiliateSetup_UpdateTitle
                 } else {
-                    buttonText = "Start Affiliate Program"
+                    buttonText = environment.strings.AffiliateSetup_StartTitle
                 }
                 let bottomPanelButtonSize = self.bottomPanelButton.update(
                     transition: transition,
@@ -1187,7 +1197,7 @@ If you end your affiliate program:
                             if let durationMonths = item.durationMonths {
                                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
                             } else {
-                                durationTitle = "Lifetime"
+                                durationTitle = environment.strings.AffiliateProgram_DurationLifetime
                             }
                             let commissionTitle = "\(formatPermille(item.commissionPermille))%"
                             
@@ -1201,9 +1211,9 @@ If you end your affiliate program:
                                 
                                 let openTitle: String
                                 if case let .user(user) = item.peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
-                                    openTitle = "Open App"
+                                    openTitle = environment.strings.AffiliateSetup_ProgramMenu_OpenApp
                                 } else {
-                                    openTitle = "Open Bot"
+                                    openTitle = environment.strings.AffiliateSetup_ProgramMenu_OpenBot
                                 }
                                 itemList.append(.action(ContextMenuActionItem(text: openTitle, textColor: .primary, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
@@ -1239,7 +1249,7 @@ If you end your affiliate program:
                                     })
                                 })))
                                 
-                                itemList.append(.action(ContextMenuActionItem(text: "Copy Link", textColor: .primary, icon: { theme in
+                                itemList.append(.action(ContextMenuActionItem(text: environment.strings.AffiliateSetup_ProgramMenu_CopyLink, textColor: .primary, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                                 }, action: { [weak self] _, f in
                                     f(.default)
@@ -1251,10 +1261,10 @@ If you end your affiliate program:
                                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
                                     
                                     UIPasteboard.general.string = item.url
-                                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(item.commissionPermille))%** of what people who use it spend in **\(item.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: environment.strings.AffiliateProgram_ToastLinkCopied_Title, text: environment.strings.AffiliateProgram_ToastLinkCopied_Text(formatPermille(item.commissionPermille), item.peer.compactDisplayTitle ).string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                 })))
                                 
-                                itemList.append(.action(ContextMenuActionItem(text: "Leave", textColor: .destructive, icon: { theme in
+                                itemList.append(.action(ContextMenuActionItem(text: environment.strings.AffiliateSetup_ProgramMenu_Leave, textColor: .destructive, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] c, _ in
                                     c?.dismiss(completion: {
@@ -1314,7 +1324,7 @@ If you end your affiliate program:
                                     self.openConnectedBot(bot: item)
                                 },
                                 inlineActions: PeerListItemComponent.InlineActionsState(actions: [
-                                    PeerListItemComponent.InlineAction(id: 0, title: "Leave", color: .destructive, action: { [weak self] in
+                                    PeerListItemComponent.InlineAction(id: 0, title: environment.strings.AffiliateSetup_ProgramLeave, color: .destructive, action: { [weak self] in
                                         guard let self else {
                                             return
                                         }
@@ -1333,7 +1343,7 @@ If you end your affiliate program:
                                 theme: environment.theme,
                                 header: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(
-                                        string: "MY PROGRAMS",
+                                        string: environment.strings.AffiliateSetup_ConnectedSectionTitle,
                                         font: Font.regular(13.0),
                                         textColor: environment.theme.list.freeTextColor
                                     )),
@@ -1369,7 +1379,7 @@ If you end your affiliate program:
                             suggestedSectionItems.append(AnyComponentWithIdentity(id: "empty", component: AnyComponent(ZStack([
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(Rectangle(color: .clear, width: nil, height: 100.0))),
                                 AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(string: "No available programs yet.\nPlease check the page later.", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                                    text: .plain(NSAttributedString(string: environment.strings.AffiliateSetup_SuggestedSectionEmpty, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
                                     horizontalAlignment: .center,
                                     maximumNumberOfLines: 0,
                                     lineSpacing: 0.2
@@ -1382,7 +1392,7 @@ If you end your affiliate program:
                             if let durationMonths = item.program.durationMonths {
                                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
                             } else {
-                                durationTitle = "Lifetime"
+                                durationTitle = environment.strings.AffiliateProgram_DurationLifetime
                             }
                             
                             suggestedSectionItems.append(AnyComponentWithIdentity(id: item.peer.id, component: AnyComponent(PeerListItemComponent(
@@ -1476,7 +1486,7 @@ If you end your affiliate program:
                         var suggestedHeaderItems: [AnyComponentWithIdentity<Empty>] = []
                         suggestedHeaderItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: "PROGRAMS",
+                                string: environment.strings.AffiliateSetup_SuggestedSectionTitle,
                                 font: Font.regular(13.0),
                                 textColor: environment.theme.list.freeTextColor
                             )),

@@ -404,12 +404,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     transactionPeer = transaction.peer
                     isGift = true
                 } else if let starrefCommissionPermille = transaction.starrefCommissionPermille {
-                    //TODO:localize
                     isRefProgram = true
                     if transaction.starrefPeerId == nil {
-                        titleText = "\(formatPermille(starrefCommissionPermille))% Commission"
+                        titleText = strings.StarsTransaction_TitleCommission(formatPermille(starrefCommissionPermille)).string
                     } else {
-                        titleText = transaction.title ?? "Product"
+                        titleText = transaction.title ?? " "
                     }
                     descriptionText = ""
                     count = transaction.count
@@ -868,15 +867,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             }
             
             if case let .transaction(transaction, _) = subject {
-                //TODO:localize
                 if transaction.starrefCommissionPermille != nil {
                     if transaction.starrefPeerId == nil {
                         tableItems.append(.init(
                             id: "reason",
-                            title: "Reason",
+                            title: strings.StarsTransaction_StarRefReason_Title,
                             component: AnyComponent(
                                 Button(
-                                    content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Affiliate Program", font: tableFont, textColor: tableLinkColor))
+                                    content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.StarsTransaction_StarRefReason_Program, font: tableFont, textColor: tableLinkColor))
                                     )),
                                     action: {
                                         if let toPeer {
@@ -894,7 +892,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     if let toPeer, transaction.starrefPeerId == nil {
                         tableItems.append(.init(
                             id: "miniapp",
-                            title: "Mini App",
+                            title: strings.StarsTransaction_StarRefReason_Miniapp,
                             component: AnyComponent(
                                 Button(
                                     content: AnyComponent(
@@ -923,10 +921,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
                 if let starRefPeerId = transaction.starrefPeerId, let starRefPeer = state.peerMap[starRefPeerId] {
-                    //TODO:localize
                     tableItems.append(.init(
                         id: "to",
-                        title: "Affiliate",
+                        title: strings.StarsTransaction_StarRefReason_Affiliate,
                         component: AnyComponent(
                             Button(
                                 content: AnyComponent(
@@ -955,7 +952,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     if let toPeer {
                         tableItems.append(.init(
                             id: "referred",
-                            title: "Referred User",
+                            title: strings.StarsTransaction_StarRefReason_Referred,
                             component: AnyComponent(
                                 Button(
                                     content: AnyComponent(
