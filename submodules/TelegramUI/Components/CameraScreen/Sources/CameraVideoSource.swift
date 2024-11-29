@@ -21,8 +21,8 @@ final class CameraVideoSource: VideoSource {
     public init?() {
         self.device = MetalEngine.shared.device
                 
-        self.cameraVideoOutput = CameraVideoOutput(sink: { [weak self] buffer in
-            self?.push(buffer)
+        self.cameraVideoOutput = CameraVideoOutput(sink: { [weak self] buffer, mirror in
+            self?.push(buffer, mirror: mirror)
         })
 
         CVMetalTextureCacheCreate(nil, nil, self.device, nil, &self.textureCache)
@@ -41,7 +41,7 @@ final class CameraVideoSource: VideoSource {
         }
     }
     
-    private func push(_ sampleBuffer: CMSampleBuffer) {
+    private func push(_ sampleBuffer: CMSampleBuffer, mirror: Bool) {
         guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
@@ -71,7 +71,7 @@ final class CameraVideoSource: VideoSource {
                 uv: uvTexture
             )),
             dataBuffer: Output.NativeDataBuffer(pixelBuffer: buffer),
-            mirrorDirection: [],
+            mirrorDirection: mirror ? [.vertical] : [],
             sourceId: self.sourceId
         )
         

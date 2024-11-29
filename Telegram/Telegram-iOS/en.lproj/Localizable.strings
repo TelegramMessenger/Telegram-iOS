@@ -13297,3 +13297,5 @@ Sorry for the inconvenience.";
 "WebApp.ShareMessage.PreviewTitle" = "MESSAGE PREVIEW";
 "WebApp.ShareMessage.Info" = "%@ mini app suggests you to send this message to a chat you select.";
 "WebApp.ShareMessage.Share" = "Share With...";
+
+"Notification.Gift" = "Gift";

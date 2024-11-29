@@ -3208,8 +3208,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         if self.controller?.isEmbeddedEditor == true {
                             
                         } else {
-                            self.previewContainerView.alpha = 1.0
-                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
+                            if case .videoCollage = subject {
+                                Queue.mainQueue().after(0.7) {
+                                    self.previewContainerView.alpha = 1.0
+                                    self.previewContainerView.layer.allowsGroupOpacity = true
+                                    self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                                        self.previewContainerView.layer.allowsGroupOpacity = false
+                                        self.previewContainerView.alpha = 1.0
+                                        self.backgroundDimView.isHidden = false
+                                    })
+                                }
+                            } else if  CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
+                                self.previewContainerView.alpha = 1.0
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                     self.previewContainerView.layer.allowsGroupOpacity = false
@@ -3217,6 +3227,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     self.backgroundDimView.isHidden = false
                                 })
                             } else {
+                                self.previewContainerView.alpha = 1.0
                                 self.backgroundDimView.isHidden = false
                             }
                         }
@@ -7736,8 +7747,53 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
                 exportSubject = .single(.video(asset: asset, isStory: true))
             case let .videoCollage(items):
-                let _ = items
-                exportSubject = .complete()
+                var maxDurationItem: (Double, Subject.VideoCollageItem)?
+                for item in items {
+                    switch item.content {
+                    case .image:
+                        break
+                    case let .video(_, duration):
+                        if let (maxDuration, _) = maxDurationItem {
+                            if duration > maxDuration {
+                                maxDurationItem = (duration, item)
+                            }
+                        } else {
+                            maxDurationItem = (duration, item)
+                        }
+                    case let .asset(asset):
+                        if let (maxDuration, _) = maxDurationItem {
+                            if asset.duration > maxDuration {
+                                maxDurationItem = (asset.duration, item)
+                            }
+                        } else {
+                            maxDurationItem = (asset.duration, item)
+                        }
+                    }
+                }
+                guard let (_, mainItem) = maxDurationItem else {
+                    fatalError()
+                }
+                let assetSignal: Signal<AVAsset, NoError>
+                switch mainItem.content {
+                case let .video(path, _):
+                    assetSignal = .single(AVURLAsset(url: NSURL(fileURLWithPath: path) as URL))
+                case let .asset(asset):
+                    assetSignal = Signal { subscriber in
+                        PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
+                            if let avAsset {
+                                subscriber.putNext(avAsset)
+                                subscriber.putCompletion()
+                            }
+                        }
+                        return EmptyDisposable
+                    }
+                default:
+                    fatalError()
+                }
+                exportSubject = assetSignal
+                |> map { asset in
+                    return .video(asset: asset, isStory: true)
+                }
             case let .image(image, _, _, _):
                 exportSubject = .single(.image(image: image))
             case let .asset(asset):

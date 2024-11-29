@@ -379,18 +379,19 @@ private final class CameraContext {
                     return
                 }
                 
+                var front = false
+                if #available(iOS 13.0, *) {
+                    front = connection.inputPorts.first?.sourceDevicePosition == .front
+                }
+                
                 if sampleBuffer.type == kCMMediaType_Video {
                     Queue.mainQueue().async {
-                        self.videoOutput?.push(sampleBuffer)
+                        self.videoOutput?.push(sampleBuffer, mirror: front)
                     }
                 }
                 
                 let timestamp = CACurrentMediaTime()
                 if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording || !self.savedSnapshot {
-                    var front = false
-                    if #available(iOS 13.0, *) {
-                        front = connection.inputPorts.first?.sourceDevicePosition == .front
-                    }
                     self.savePreviewSnapshot(pixelBuffer: pixelBuffer, front: front)
                     self.lastSnapshotTimestamp = timestamp
                     self.savedSnapshot = true
@@ -1140,13 +1141,13 @@ public enum CameraRecordingError {
 }
 
 public class CameraVideoOutput {
-    private let sink: (CMSampleBuffer) -> Void
+    private let sink: (CMSampleBuffer, Bool) -> Void
     
-    public init(sink: @escaping (CMSampleBuffer) -> Void) {
+    public init(sink: @escaping (CMSampleBuffer, Bool) -> Void) {
         self.sink = sink
     }
     
-    func push(_ buffer: CMSampleBuffer) {
-        self.sink(buffer)
+    func push(_ buffer: CMSampleBuffer, mirror: Bool) {
+        self.sink(buffer, mirror)
     }
 }
