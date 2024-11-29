@@ -113,7 +113,7 @@ private enum ParsedUrl {
     case internalUrl(ParsedInternalUrl)
 }
 
-public func parseInternalUrl(sharedContext: SharedAccountContext, query: String) -> ParsedInternalUrl? {
+public func parseInternalUrl(sharedContext: SharedAccountContext, context: AccountContext?, query: String) -> ParsedInternalUrl? {
     var query = query
     if query.hasPrefix("s/") {
         query = String(query[query.index(query.startIndex, offsetBy: 2)...])
@@ -270,7 +270,12 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, query: String)
                                     }
                                     return .peer(.name(peerName), .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
-                                    let linkRefPrefix = "_tgref_"
+                                    var linkRefPrefix = "_tgr_"
+                                    if let context {
+                                        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["starref_start_param_prefixes"] as? String {
+                                            linkRefPrefix = value
+                                        }
+                                    }
                                     if value.hasPrefix(linkRefPrefix) {
                                         let referrer = String(value[value.index(value.startIndex, offsetBy: linkRefPrefix.count)...])
                                         return .peer(.name(peerName), .referrer(referrer))
@@ -1139,14 +1144,14 @@ public func parseProxyUrl(sharedContext: SharedAccountContext, url: String) -> (
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .proxy(host, port, username, password, secret) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .proxy(host, port, username, password, secret) = internalUrl {
                     return (host, port, username, password, secret)
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .proxy(host, port, username, password, secret) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .proxy(host, port, username, password, secret) = internalUrl {
             return (host, port, username, password, secret)
         }
     }
@@ -1160,14 +1165,14 @@ public func parseStickerPackUrl(sharedContext: SharedAccountContext, url: String
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .stickerPack(name, _) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .stickerPack(name, _) = internalUrl {
                     return name
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .stickerPack(name, _) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .stickerPack(name, _) = internalUrl {
             return name
         }
     }
@@ -1181,14 +1186,14 @@ public func parseWallpaperUrl(sharedContext: SharedAccountContext, url: String) 
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: String(url[basePrefix.endIndex...])), case let .wallpaper(wallpaper) = internalUrl {
                     return wallpaper
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query), case let .wallpaper(wallpaper) = internalUrl {
             return wallpaper
         }
     }
@@ -1196,20 +1201,20 @@ public func parseWallpaperUrl(sharedContext: SharedAccountContext, url: String) 
     return nil
 }
 
-public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+public func parseAdUrl(sharedContext: SharedAccountContext, context: AccountContext, url: String) -> ParsedInternalUrl? {
     let schemes = ["http://", "https://", ""]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])), case .peer = internalUrl {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: String(url[basePrefix.endIndex...])), case .peer = internalUrl {
                     return internalUrl
                 }
             }
         }
     }
     if let parsedUrl = URL(string: url), parsedUrl.scheme == "tg", let host = parsedUrl.host, let query = parsedUrl.query {
-        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query), case .peer = internalUrl {
+        if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: host + "?" + query), case .peer = internalUrl {
             return internalUrl
         }
     }
@@ -1217,13 +1222,13 @@ public func parseAdUrl(sharedContext: SharedAccountContext, url: String) -> Pars
     return nil
 }
 
-public func parseFullInternalUrl(sharedContext: SharedAccountContext, url: String) -> ParsedInternalUrl? {
+public func parseFullInternalUrl(sharedContext: SharedAccountContext, context: AccountContext, url: String) -> ParsedInternalUrl? {
     let schemes = ["http://", "https://", ""]
     for basePath in baseTelegramMePaths {
         for scheme in schemes {
             let basePrefix = scheme + basePath + "/"
             if url.lowercased().hasPrefix(basePrefix) {
-                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, query: String(url[basePrefix.endIndex...])) {
+                if let internalUrl = parseInternalUrl(sharedContext: sharedContext, context: context, query: String(url[basePrefix.endIndex...])) {
                     return internalUrl
                 }
             }
@@ -1309,7 +1314,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                         }
                     }
                     if url.lowercased().hasPrefix(basePrefix) {
-                        if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, query: String(url[basePrefix.endIndex...])) {
+                        if let internalUrl = parseInternalUrl(sharedContext: context.sharedContext, context: context, query: String(url[basePrefix.endIndex...])) {
                             return resolveInternalUrl(context: context, url: internalUrl)
                             |> map { result -> ResolveUrlResult in
                                 switch result {

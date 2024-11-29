@@ -28,6 +28,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
     let sourcePeer: EnginePeer
     let commissionPermille: Int32
     let programDuration: Int32?
+    let revenuePerUser: Double
     let mode: JoinAffiliateProgramScreen.Mode
     
     init(
@@ -35,12 +36,14 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         sourcePeer: EnginePeer,
         commissionPermille: Int32,
         programDuration: Int32?,
+        revenuePerUser: Double,
         mode: JoinAffiliateProgramScreen.Mode
     ) {
         self.context = context
         self.sourcePeer = sourcePeer
         self.commissionPermille = commissionPermille
         self.programDuration = programDuration
+        self.revenuePerUser = revenuePerUser
         self.mode = mode
     }
     
@@ -86,16 +89,18 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         private var toast: ComponentView<Empty>?
         
         private let sourceAvatar = ComponentView<Empty>()
+        private let sourceAvatarBadge = ComponentView<Empty>()
         private let targetAvatar = ComponentView<Empty>()
         private let targetAvatarBadge = ComponentView<Empty>()
         private let sourceTargetArrow = UIImageView()
         
         private let linkIconBackground = ComponentView<Empty>()
         private let linkIcon = ComponentView<Empty>()
-        private let linkIconBadge = ComponentView<Empty>()
+        private var linkIconBadge: ComponentView<Empty>?
         
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
+        private var dailyRevenueText: ComponentView<Empty>?
         private let titleTransformContainer: UIView
         private let bottomPanelContainer: UIView
         private let actionButton = ComponentView<Empty>()
@@ -119,11 +124,16 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var currentTargetPeer: EnginePeer?
+        private var currentMode: JoinAffiliateProgramScreen.Mode?
         
         private var possibleTargetPeers: [EnginePeer] = []
         private var possibleTargetPeersDisposable: Disposable?
         
+        private var changeTargetPeerDisposable: Disposable?
+        private var isChangingTargetPeer: Bool = false
+        
         private var cachedCloseImage: UIImage?
+        private var inlineTextStarImage: UIImage?
         
         override init(frame: CGRect) {
             self.bottomOverscrollLimit = 200.0
@@ -194,6 +204,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         deinit {
             self.possibleTargetPeersDisposable?.dispose()
+            self.changeTargetPeerDisposable?.dispose()
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -337,7 +348,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
                 return
             }
-            guard case let .join(join) = component.mode else {
+            guard let currentTargetPeer = self.currentTargetPeer else {
                 return
             }
             
@@ -346,7 +357,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             
             let peers: [EnginePeer] = self.possibleTargetPeers.isEmpty ? [
-                join.initialTargetPeer
+                currentTargetPeer
             ] : self.possibleTargetPeers
             
             let avatarSize = CGSize(width: 30.0, height: 30.0)
@@ -360,14 +371,80 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 } else {
                     peerLabel = "bot"
                 }
-                items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(peerLabel), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize)), action: { [weak self] c, _ in
+                let isSelected = peer.id == self.currentTargetPeer?.id
+                let accentColor = environment.theme.list.itemAccentColor
+                let avatarSignal = peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize)
+                |> map { image in
+                    let context = DrawingContext(size: avatarSize, scale: 0.0, clear: true)
+                    context?.withContext { c in
+                        UIGraphicsPushContext(c)
+                        defer {
+                            UIGraphicsPopContext()
+                        }
+                        if isSelected {
+                            
+                        }
+                        c.saveGState()
+                        let scaleFactor = (avatarSize.width - 3.0 * 2.0) / avatarSize.width
+                        if isSelected {
+                            c.translateBy(x: avatarSize.width * 0.5, y: avatarSize.height * 0.5)
+                            c.scaleBy(x: scaleFactor, y: scaleFactor)
+                            c.translateBy(x: -avatarSize.width * 0.5, y: -avatarSize.height * 0.5)
+                        }
+                        if let image {
+                            image.draw(in: CGRect(origin: CGPoint(), size: avatarSize))
+                        }
+                        c.restoreGState()
+                        
+                        if isSelected {
+                            c.setStrokeColor(accentColor.cgColor)
+                            let lineWidth: CGFloat = 1.0 + UIScreenPixel
+                            c.setLineWidth(lineWidth)
+                            c.strokeEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                        }
+                    }
+                    return context?.generateImage()
+                }
+                items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(peerLabel), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: avatarSignal), action: { [weak self] c, _ in
                     c?.dismiss(completion: {})
                     
-                    guard let self else {
+                    guard let self, let currentMode = self.currentMode, let component = self.component else {
+                        return
+                    }
+                    if self.currentTargetPeer?.id == peer.id {
                         return
                     }
                     
                     self.currentTargetPeer = peer
+                    
+                    switch currentMode {
+                    case .join:
+                        self.currentTargetPeer = peer
+                    case let .active(active):
+                        self.isChangingTargetPeer = true
+                        self.changeTargetPeerDisposable?.dispose()
+                        self.changeTargetPeerDisposable = (component.context.engine.peers.connectStarRefBot(id: peer.id, botId: component.sourcePeer.id)
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.isChangingTargetPeer = false
+                            
+                            self.currentMode = .active(JoinAffiliateProgramScreen.Mode.Active(
+                                targetPeer: peer,
+                                bot: result,
+                                copyLink: active.copyLink
+                            ))
+                            self.state?.updated(transition: .immediate)
+                        }, error: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isChangingTargetPeer = false
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
+                    
                     self.state?.updated(transition: .immediate)
                 })))
             }
@@ -389,7 +466,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
+            let currentMode = self.currentMode ?? component.mode
+            
             if self.component == nil {
+                self.currentMode = component.mode
+                
                 var loadPossibleTargetPeers = false
                 switch component.mode {
                 case let .join(join):
@@ -461,7 +542,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             let clippingY: CGFloat
             
-            if let currentTargetPeer = self.currentTargetPeer, case .join = component.mode {
+            if let currentTargetPeer = self.currentTargetPeer, case .join = currentMode {
                 contentHeight += 34.0
                 
                 let sourceAvatarSize = self.sourceAvatar.update(
@@ -501,25 +582,71 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     transition.setFrame(view: targetAvatarView, frame: targetAvatarFrame)
                 }
                 
-                let badgeIconInset: CGFloat = 2.0
+                if component.revenuePerUser != 0.0 {
+                    var revenueString = String(format: "%.1f", component.revenuePerUser)
+                    if revenueString.hasSuffix(".0") {
+                        revenueString = String(revenueString[revenueString.startIndex ..< revenueString.index(revenueString.endIndex, offsetBy: -2)])
+                    }
+                    let sourceAvatarBadgeSize = self.sourceAvatarBadge.update(
+                        transition: transition,
+                        component: AnyComponent(BorderedBadgeComponent(
+                            backgroundColor: environment.theme.list.itemDisclosureActions.constructive.fillColor,
+                            cutoutColor: environment.theme.list.plainBackgroundColor,
+                            content: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(TransformContents(
+                                    content: AnyComponent(BundleIconComponent(
+                                        name: "Premium/PremiumStar",
+                                        tintColor: environment.theme.list.itemDisclosureActions.constructive.foregroundColor,
+                                        scaleFactor: 0.58
+                                    )),
+                                    fixedSize: CGSize(width: 13.0, height: 10.0),
+                                    translation: CGPoint(x: 0.0, y: 1.0 + UIScreenPixel)
+                                ))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: revenueString, font: Font.regular(13.0), textColor: environment.theme.list.itemDisclosureActions.constructive.foregroundColor))
+                                )))
+                            ], spacing: 2.0)),
+                            insets: UIEdgeInsets(top: 3.0, left: 6.0, bottom: 3.0, right: 6.0),
+                            cutoutWidth: 1.0 + UIScreenPixel)
+                        ),
+                        environment: {},
+                        containerSize: CGSize(width: 100.0, height: 100.0)
+                    )
+                    let sourceAvatarBadgeFrame = CGRect(origin: CGPoint(x: sourceAvatarFrame.minX + floor((sourceAvatarFrame.width - sourceAvatarBadgeSize.width) * 0.5), y: sourceAvatarFrame.maxY - 7.0 - floor(sourceAvatarBadgeSize.height * 0.5)), size: sourceAvatarBadgeSize)
+                    if let sourceAvatarBadgeView = self.sourceAvatarBadge.view {
+                        if sourceAvatarBadgeView.superview == nil {
+                            self.scrollContentView.addSubview(sourceAvatarBadgeView)
+                        }
+                        transition.setFrame(view: sourceAvatarBadgeView, frame: sourceAvatarBadgeFrame)
+                    }
+                }
+                
                 let targetAvatarBadgeSize = self.targetAvatarBadge.update(
                     transition: transition,
                     component: AnyComponent(BorderedBadgeComponent(
-                        backgroundColor: UIColor(rgb: 0x8A7AFF),
+                        backgroundColor: environment.theme.list.itemCheckColors.fillColor,
                         cutoutColor: environment.theme.list.plainBackgroundColor,
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Premium/PremiumStar",
-                            tintColor: .white,
-                            scaleFactor: 0.95
-                        )),
-                        insets: UIEdgeInsets(top: badgeIconInset, left: badgeIconInset, bottom: badgeIconInset, right: badgeIconInset),
-                        aspect: 1.0,
-                        cutoutWidth: 1.0 + UIScreenPixel
-                    )),
+                        content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: 0, component: AnyComponent(TransformContents(
+                                    content: AnyComponent(BundleIconComponent(
+                                        name: "Media Editor/Link",
+                                        tintColor: environment.theme.list.itemCheckColors.foregroundColor,
+                                        scaleFactor: 0.75
+                                    )),
+                                    translation: CGPoint(x: 0.0, y: 0.0)
+                                ))
+                            ),
+                            AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: "\(formatPermille(component.commissionPermille))%", font: Font.regular(13.0), textColor: environment.theme.list.itemCheckColors.foregroundColor))
+                            )))
+                        ], spacing: 2.0)),
+                        insets: UIEdgeInsets(top: 3.0, left: 6.0, bottom: 3.0, right: 6.0),
+                        cutoutWidth: 1.0 + UIScreenPixel)
+                    ),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)
                 )
-                let targetAvatarBadgeFrame = CGRect(origin: CGPoint(x: targetAvatarFrame.maxX + 3.0 - targetAvatarBadgeSize.width, y: targetAvatarFrame.maxY + 3.0 - targetAvatarBadgeSize.height), size: targetAvatarBadgeSize)
+                let targetAvatarBadgeFrame = CGRect(origin: CGPoint(x: targetAvatarFrame.minX + floor((targetAvatarFrame.width - targetAvatarBadgeSize.width) * 0.5), y: targetAvatarFrame.maxY - 7.0 - floor(targetAvatarBadgeSize.height * 0.5)), size: targetAvatarBadgeSize)
                 if let targetAvatarBadgeView = self.targetAvatarBadge.view {
                     if targetAvatarBadgeView.superview == nil {
                         self.scrollContentView.addSubview(targetAvatarBadgeView)
@@ -553,7 +680,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     }
                     transition.setFrame(view: self.sourceTargetArrow, frame: sourceTargetArrowFrame)
                 }
-            } else if case let .active(active) = component.mode {
+            } else if case let .active(active) = currentMode {
                 contentHeight += 31.0
                 
                 let linkIconBackgroundSize = self.linkIconBackground.update(
@@ -592,8 +719,18 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     transition.setFrame(view: linkIconView, frame: linkIconFrame)
                 }
                 
-                if active.userCount != 0 {
-                    let linkIconBadgeSize = self.linkIconBadge.update(
+                if active.bot.participants != 0 {
+                    let linkIconBadge: ComponentView<Empty>
+                    var linkIconBadgeTransition = transition
+                    if let current = self.linkIconBadge {
+                        linkIconBadge = current
+                    } else {
+                        linkIconBadgeTransition = linkIconBadgeTransition.withAnimation(.none)
+                        linkIconBadge = ComponentView()
+                        self.linkIconBadge = linkIconBadge
+                    }
+                    
+                    let linkIconBadgeSize = linkIconBadge.update(
                         transition: .immediate,
                         component: AnyComponent(BorderedBadgeComponent(
                             backgroundColor: UIColor(rgb: 0x34C759),
@@ -605,7 +742,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                                     scaleFactor: 1.0
                                 ))),
                                 AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(string: "\(active.userCount)", font: Font.bold(14.0), textColor: .white))
+                                    text: .plain(NSAttributedString(string: "\(active.bot.participants)", font: Font.bold(14.0), textColor: .white))
                                 )))
                             ], spacing: 4.0)),
                             insets: UIEdgeInsets(top: 4.0, left: 9.0, bottom: 4.0, right: 8.0),
@@ -615,18 +752,21 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         containerSize: CGSize(width: 100.0, height: 100.0)
                     )
                     let linkIconBadgeFrame = CGRect(origin: CGPoint(x: linkIconBackgroundFrame.minX + floor((linkIconBackgroundFrame.width - linkIconBadgeSize.width) * 0.5), y: linkIconBackgroundFrame.maxY - floor(linkIconBadgeSize.height * 0.5)), size: linkIconBadgeSize)
-                    if let linkIconBadgeView = self.linkIconBadge.view {
+                    if let linkIconBadgeView = linkIconBadge.view {
                         if linkIconBadgeView.superview == nil {
                             self.scrollContentView.addSubview(linkIconBadgeView)
                         }
-                        transition.setFrame(view: linkIconBadgeView, frame: linkIconBadgeFrame)
+                        linkIconBadgeTransition.setFrame(view: linkIconBadgeView, frame: linkIconBadgeFrame)
                     }
+                } else if let linkIconBadge = self.linkIconBadge {
+                    self.linkIconBadge = nil
+                    linkIconBadge.view?.removeFromSuperview()
                 }
                 
                 contentHeight += linkIconBackgroundSize.height + 21.0
             }
             
-            let commissionTitle = "\(component.commissionPermille / 10)%"
+            let commissionTitle = "\(formatPermille(component.commissionPermille))%"
             let durationTitle: String
             if let durationMonths = component.programDuration {
                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
@@ -635,12 +775,22 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             
             let titleString: String
-            let subtitleString: String
+            var subtitleString: String
+            var dailyRevenueString: String?
             let termsString: String
-            switch component.mode {
+            switch currentMode {
             case .join:
                 titleString = "Affiliate Program"
                 subtitleString = "**\(component.sourcePeer.compactDisplayTitle)** will share **\(commissionTitle)** of the revenue from each user you refer to it for **\(durationTitle)**."
+                
+                if component.revenuePerUser != 0.0 {
+                    var revenueString = String(format: "%.1f", component.revenuePerUser)
+                    if revenueString.hasSuffix(".0") {
+                        revenueString = String(revenueString[revenueString.startIndex ..< revenueString.index(revenueString.endIndex, offsetBy: -2)])
+                    }
+                    dailyRevenueString = "Daily revenue per user: #**\(revenueString)**"
+                }
+                
                 termsString = "By joining this program, you afree to the [terms and conditions](https://telegram.org/terms) of Affiliate Programs."
             case let .active(active):
                 titleString = "Referral Link"
@@ -651,12 +801,12 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     timeString = "for **\(durationTitle)** after they follow your link."
                 }
                 subtitleString = "Share this link with your users to earn a **\(commissionTitle)** commission on their spending in **\(component.sourcePeer.compactDisplayTitle)** \(timeString)."
-                if active.userCount == 0 {
+                if active.bot.participants == 0 {
                     termsString = "No one opened \(component.sourcePeer.compactDisplayTitle) through this link yet."
-                } else if active.userCount == 1 {
+                } else if active.bot.participants == 1 {
                     termsString = "1 user opened \(component.sourcePeer.compactDisplayTitle) through this link."
                 } else {
-                    termsString = "\(active.userCount) users opened \(component.sourcePeer.compactDisplayTitle) through this link."
+                    termsString = "\(active.bot.participants) users opened \(component.sourcePeer.compactDisplayTitle) through this link."
                 }
             }
             let titleSize = self.title.update(
@@ -711,11 +861,119 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 transition.setPosition(view: subtitleView, position: subtitleFrame.center)
                 subtitleView.bounds = CGRect(origin: CGPoint(), size: subtitleFrame.size)
             }
-            contentHeight += subtitleSize.height + 23.0
+            contentHeight += subtitleSize.height
+            
+            if let dailyRevenueString {
+                let dailyRevenueText: ComponentView<Empty>
+                if let current = self.dailyRevenueText {
+                    dailyRevenueText = current
+                } else {
+                    dailyRevenueText = ComponentView()
+                    self.dailyRevenueText = dailyRevenueText
+                }
+                
+                var inlineTextStarImage: UIImage?
+                if let current = self.inlineTextStarImage {
+                    inlineTextStarImage = current
+                } else {
+                    if let image = UIImage(bundleImageName: "Premium/Stars/StarSmall") {
+                        let starInsets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+                        inlineTextStarImage = generateImage(CGSize(width: starInsets.left + image.size.width + starInsets.right, height: image.size.height), rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            UIGraphicsPushContext(context)
+                            defer {
+                                UIGraphicsPopContext()
+                            }
+                            
+                            image.draw(at: CGPoint(x: starInsets.left, y: starInsets.top))
+                        })?.withRenderingMode(.alwaysOriginal)
+                        self.inlineTextStarImage = inlineTextStarImage
+                    }
+                }
+                
+                let attributedDailyRevenueString = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(dailyRevenueString, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                    bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: environment.theme.list.itemPrimaryTextColor),
+                    link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: environment.theme.list.itemAccentColor),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ), textAlignment: .center))
+                if let range = attributedDailyRevenueString.string.range(of: "#"), let starImage = inlineTextStarImage {
+                    final class RunDelegateData {
+                        let ascent: CGFloat
+                        let descent: CGFloat
+                        let width: CGFloat
+                        
+                        init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+                            self.ascent = ascent
+                            self.descent = descent
+                            self.width = width
+                        }
+                    }
+                    
+                    let runDelegateData = RunDelegateData(
+                        ascent: Font.regular(15.0).ascender,
+                        descent: Font.regular(15.0).descender,
+                        width: starImage.size.width + 2.0
+                    )
+                    var callbacks = CTRunDelegateCallbacks(
+                        version: kCTRunDelegateCurrentVersion,
+                        dealloc: { dataRef in
+                            Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                        },
+                        getAscent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().ascent
+                        },
+                        getDescent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().descent
+                        },
+                        getWidth: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().width
+                        }
+                    )
+                    if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                        attributedDailyRevenueString.addAttribute(NSAttributedString.Key(kCTRunDelegateAttributeName as String), value: runDelegate, range: NSRange(range, in: attributedDailyRevenueString.string))
+                    }
+                    attributedDailyRevenueString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: attributedDailyRevenueString.string))
+                    attributedDailyRevenueString.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff), range: NSRange(range, in: attributedDailyRevenueString.string))
+                    attributedDailyRevenueString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedDailyRevenueString.string))
+                }
+                
+                let dailyRevenueTextSize = dailyRevenueText.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(attributedDailyRevenueString),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.2
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                )
+                contentHeight += 16.0
+                let dailyRevenueTextFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - dailyRevenueTextSize.width) * 0.5), y: contentHeight), size: dailyRevenueTextSize)
+                if let dailyRevenueTextView = dailyRevenueText.view {
+                    if dailyRevenueTextView.superview == nil {
+                        self.scrollContentView.addSubview(dailyRevenueTextView)
+                    }
+                    transition.setPosition(view: dailyRevenueTextView, position: dailyRevenueTextFrame.center)
+                    dailyRevenueTextView.bounds = CGRect(origin: CGPoint(), size: dailyRevenueTextFrame.size)
+                }
+                contentHeight += dailyRevenueTextSize.height
+            } else if let dailyRevenueText = self.dailyRevenueText {
+                self.dailyRevenueText = nil
+                dailyRevenueText.view?.removeFromSuperview()
+            }
+            
+            contentHeight += 23.0
             
             var displayTargetPeer = false
             var isTargetPeerSelectable = false
-            switch component.mode {
+            switch currentMode {
             case let .join(join):
                 displayTargetPeer = join.canSelectTargetPeer
                 isTargetPeerSelectable = join.canSelectTargetPeer
@@ -777,8 +1035,8 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             contentHeight += 12.0
             
-            if case let .active(active) = component.mode {
-                var cleanLink = active.link
+            if case let .active(active) = currentMode {
+                var cleanLink = active.bot.url
                 let removePrefixes: [String] = ["http://", "https://"]
                 for prefix in removePrefixes {
                     if cleanLink.hasPrefix(prefix) {
@@ -801,11 +1059,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         minSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0),
                         contentInsets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0),
                         action: { [weak self] in
-                            guard let self, let component = self.component, case let .active(active) = component.mode else {
+                            guard let self, case let .active(active) = self.currentMode else {
                                 return
                             }
                             self.environment?.controller()?.dismiss()
-                            active.copyLink()
+                            active.copyLink(active.bot)
                         },
                         animateAlpha: true,
                         animateScale: false,
@@ -820,13 +1078,14 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         self.scrollContentView.addSubview(linkTextView)
                     }
                     transition.setFrame(view: linkTextView, frame: linkTextFrame)
+                    transition.setAlpha(view: linkTextView, alpha: self.isChangingTargetPeer ? 0.6 : 1.0)
                 }
                 contentHeight += linkTextSize.height
                 contentHeight += 24.0
             }
             
             let actionButtonTitle: String
-            switch component.mode {
+            switch currentMode {
             case .join:
                 actionButtonTitle = "Join Program"
             case .active:
@@ -853,18 +1112,18 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     isEnabled: true,
                     displaysProgress: false,
                     action: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self, let currentMode = self.currentMode else {
                             return
                         }
                         self.environment?.controller()?.dismiss()
                         
-                        switch component.mode {
+                        switch currentMode {
                         case let .join(join):
                             if let currentTargetPeer = self.currentTargetPeer {
                                 join.completion(currentTargetPeer)
                             }
                         case let .active(active):
-                            active.copyLink()
+                            active.copyLink(active.bot)
                         }
                     }
                 )),
@@ -928,7 +1187,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: environment.safeInsets.bottom, topInset: topInset)
             
-            if case .active = component.mode {
+            if case .active = currentMode {
                 let toast: ComponentView<Empty>
                 if let current = self.toast {
                     toast = current
@@ -1027,6 +1286,7 @@ public class JoinAffiliateProgramScreen: ViewControllerComponentContainer {
         sourcePeer: EnginePeer,
         commissionPermille: Int32,
         programDuration: Int32?,
+        revenuePerUser: Double,
         mode: Mode
     ) {
         self.context = context
@@ -1036,6 +1296,7 @@ public class JoinAffiliateProgramScreen: ViewControllerComponentContainer {
             sourcePeer: sourcePeer,
             commissionPermille: commissionPermille,
             programDuration: programDuration,
+            revenuePerUser: revenuePerUser,
             mode: mode
         ), navigationBarAppearance: .none)
         

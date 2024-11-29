@@ -65,6 +65,12 @@ final class AffiliateProgramSetupScreenComponent: Component {
         return true
     }
     
+    private class ScrollView: UIScrollView {
+        override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
+        }
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
         
@@ -115,11 +121,11 @@ final class AffiliateProgramSetupScreenComponent: Component {
         
         private var suggestedStarBotList: TelegramSuggestedStarRefBotList?
         private var suggestedStarBotListDisposable: Disposable?
-        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .date
+        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .profitability
         private var isSuggestedSortModeUpdating: Bool = false
         
         override init(frame: CGRect) {
-            self.scrollView = UIScrollView()
+            self.scrollView = ScrollView()
             self.scrollView.showsVerticalScrollIndicator = true
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.scrollsToTop = false
@@ -170,10 +176,10 @@ final class AffiliateProgramSetupScreenComponent: Component {
             let programPermille: Int32 = Int32(self.commissionPermille)
             let programDuration: Int32? = self.durationValue == Int(Int32.max) ? nil : Int32(self.durationValue)
             
-            let commissionTitle: String = "\(programPermille / 10)%"
+            let commissionTitle: String = "\(formatPermille(programPermille))%"
             let durationTitle: String
             if let durationMonths = programDuration {
-                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
+                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
             } else {
                 durationTitle = "Lifetime"
             }
@@ -362,17 +368,17 @@ If you end your affiliate program:
                     sourcePeer: bot.peer,
                     commissionPermille: bot.commissionPermille,
                     programDuration: bot.durationMonths,
+                    revenuePerUser: bot.participants == 0 ? 0.0 : Double(bot.revenue) / Double(bot.participants),
                     mode: .active(JoinAffiliateProgramScreenMode.Active(
                         targetPeer: targetPeer,
-                        link: bot.url,
-                        userCount: Int(bot.participants),
-                        copyLink: { [weak self] in
+                        bot: bot,
+                        copyLink: { [weak self] bot in
                             guard let self, let component = self.component else {
                                 return
                             }
                             UIPasteboard.general.string = bot.url
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
-                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(bot.commissionPermille / 10)%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(bot.commissionPermille))%** of what people who use it spend in **\(bot.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         }
                     ))
                 ))
@@ -411,9 +417,9 @@ If you end your affiliate program:
             var items: [ContextMenuItem] = []
             
             let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
-                (.date, "Date"),
+                (.profitability, "Profitability"),
                 (.revenue, "Revenue"),
-                (.profitability, "Profitability")
+                (.date, "Date")
             ]
             for (mode, title) in availableModes {
                 let isSelected = mode == self.suggestedSortMode
@@ -455,6 +461,20 @@ If you end your affiliate program:
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, actionsOnTop: false)), items: .single(ContextController.Items(id: AnyHashable(0), content: .list(items))), gesture: nil)
             controller.presentInGlobalOverlay(contextController)
+        }
+        
+        private func openExistingAffiliatePrograms() {
+            guard let component = self.component else {
+                return
+            }
+            let _ = (component.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: component.context, peerId: component.initialContent.peerId, mode: .connectedPrograms)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                guard let self, let component = self.component else {
+                    return
+                }
+                let setupScreen = component.context.sharedContext.makeAffiliateProgramSetupScreen(context: component.context, initialData: initialData)
+                self.environment?.controller()?.push(setupScreen)
+            })
         }
         
         func update(component: AffiliateProgramSetupScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
@@ -537,13 +557,15 @@ If you end your affiliate program:
                             self.commissionPermille = 10
                             self.commissionSliderValue = 0.0
                             self.commissionMinPermille = 10
-                            self.durationValue = 10
+                            self.durationValue = 1
+                            self.durationMinValue = 0
                         }
                     } else {
                         self.commissionPermille = 10
                         self.commissionSliderValue = 0.0
                         self.commissionMinPermille = 10
-                        self.durationValue = 10
+                        self.durationValue = 1
+                        self.durationMinValue = 0
                     }
                 case .connectedPrograms:
                     self.connectedStarBotListDisposable = (component.context.engine.peers.requestConnectedStarRefBots(
@@ -855,7 +877,7 @@ If you end your affiliate program:
                                     minValue: commissionMinSliderValue,
                                     lowerBoundTitle: "1%",
                                     upperBoundTitle: "90%",
-                                    title: "\(self.commissionPermille / 10)%",
+                                    title: "\(formatPermille(self.commissionPermille))%",
                                     valueUpdated: { [weak self] value in
                                         guard let self else {
                                             return
@@ -992,8 +1014,7 @@ If you end your affiliate program:
                                     guard let self else {
                                         return
                                     }
-                                    
-                                    let _ = self
+                                    self.openExistingAffiliatePrograms()
                                 }
                             )))
                         ],
@@ -1164,11 +1185,11 @@ If you end your affiliate program:
                         for item in connectedStarBotList.items {
                             let durationTitle: String
                             if let durationMonths = item.durationMonths {
-                                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
+                                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
                             } else {
                                 durationTitle = "Lifetime"
                             }
-                            let commissionTitle = "\(item.commissionPermille / 10)%"
+                            let commissionTitle = "\(formatPermille(item.commissionPermille))%"
                             
                             let itemContextAction: (EnginePeer, ContextExtractedContentContainingView, ContextGesture?) -> Void = { [weak self] peer, sourceView, gesture in
                                 guard let self, let component = self.component, let environment = self.environment else {
@@ -1230,7 +1251,7 @@ If you end your affiliate program:
                                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
                                     
                                     UIPasteboard.general.string = item.url
-                                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(item.commissionPermille / 10)%** of what people who use it spend in **\(item.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    environment.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(item.commissionPermille))%** of what people who use it spend in **\(item.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                 })))
                                 
                                 itemList.append(.action(ContextMenuActionItem(text: "Leave", textColor: .destructive, icon: { theme in
@@ -1344,11 +1365,22 @@ If you end your affiliate program:
                     }
                     do {
                         var suggestedSectionItems: [AnyComponentWithIdentity<Empty>] = []
+                        if suggestedStarBotListItems.isEmpty {
+                            suggestedSectionItems.append(AnyComponentWithIdentity(id: "empty", component: AnyComponent(ZStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(Rectangle(color: .clear, width: nil, height: 100.0))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: "No available programs yet.\nPlease check the page later.", font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                                    horizontalAlignment: .center,
+                                    maximumNumberOfLines: 0,
+                                    lineSpacing: 0.2
+                                )))
+                            ]))))
+                        }
                         for item in suggestedStarBotListItems {
-                            let commissionTitle = "\(item.program.commissionPermille / 10)%"
+                            let commissionTitle = "\(formatPermille(item.program.commissionPermille))%"
                             let durationTitle: String
                             if let durationMonths = item.program.durationMonths {
-                                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
+                                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
                             } else {
                                 durationTitle = "Lifetime"
                             }
@@ -1404,6 +1436,7 @@ If you end your affiliate program:
                                             sourcePeer: botPeer,
                                             commissionPermille: item.program.commissionPermille,
                                             programDuration: item.program.durationMonths,
+                                            revenuePerUser: item.program.dailyRevenuePerUser?.totalValue ?? 0.0,
                                             mode: .join(JoinAffiliateProgramScreenMode.Join(
                                                 initialTargetPeer: targetPeer,
                                                 canSelectTargetPeer: false,
@@ -1440,31 +1473,34 @@ If you end your affiliate program:
                             ))))
                         }
                         
+                        var suggestedHeaderItems: [AnyComponentWithIdentity<Empty>] = []
+                        suggestedHeaderItems.append(AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
+                            text: .plain(NSAttributedString(
+                                string: "PROGRAMS",
+                                font: Font.regular(13.0),
+                                textColor: environment.theme.list.freeTextColor
+                            )),
+                            maximumNumberOfLines: 0
+                        ))))
+                        if suggestedStarBotListItems.count > 1 {
+                            suggestedHeaderItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BotSectionSortButtonComponent(
+                                theme: environment.theme,
+                                strings: environment.strings,
+                                sortMode: self.suggestedSortMode,
+                                action: { [weak self] sourceView in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openSortModeMenu(sourceView: sourceView)
+                                }
+                            ))))
+                        }
+                        
                         let suggestedProgramsSectionSize = self.suggestedProgramsSection.update(
                             transition: transition,
                             component: AnyComponent(ListSectionComponent(
                                 theme: environment.theme,
-                                header: AnyComponent(HStack([
-                                    AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                        text: .plain(NSAttributedString(
-                                            string: "PROGRAMS",
-                                            font: Font.regular(13.0),
-                                            textColor: environment.theme.list.freeTextColor
-                                        )),
-                                        maximumNumberOfLines: 0
-                                    ))),
-                                    AnyComponentWithIdentity(id: 1, component: AnyComponent(BotSectionSortButtonComponent(
-                                        theme: environment.theme,
-                                        strings: environment.strings,
-                                        sortMode: self.suggestedSortMode,
-                                        action: { [weak self] sourceView in
-                                            guard let self else {
-                                                return
-                                            }
-                                            self.openSortModeMenu(sourceView: sourceView)
-                                        }
-                                    )))
-                                ], spacing: 4.0, alignment: .alternatingLeftRight)),
+                                header: AnyComponent(HStack(suggestedHeaderItems, spacing: 4.0, alignment: .alternatingLeftRight)),
                                 footer: nil,
                                 items: suggestedSectionItems,
                                 displaySeparators: true
@@ -1479,19 +1515,12 @@ If you end your affiliate program:
                                 self.scrollView.addSubview(suggestedProgramsSectionView)
                             }
                             transition.setFrame(view: suggestedProgramsSectionView, frame: suggestedProgramsSectionFrame)
-                            if !suggestedStarBotListItems.isEmpty {
-                                suggestedProgramsSectionView.isHidden = false
-                            } else {
-                                suggestedProgramsSectionView.isHidden = true
-                            }
                             
                             suggestedProgramsSectionView.contentViewImpl.alpha = self.isSuggestedSortModeUpdating ? 0.6 : 1.0
                             suggestedProgramsSectionView.contentViewImpl.isUserInteractionEnabled = !self.isSuggestedSortModeUpdating
                         }
-                        if !suggestedStarBotListItems.isEmpty {
-                            contentHeight += suggestedProgramsSectionSize.height
-                            contentHeight += sectionSpacing
-                        }
+                        contentHeight += suggestedProgramsSectionSize.height
+                        contentHeight += sectionSpacing
                     }
                 }
             }

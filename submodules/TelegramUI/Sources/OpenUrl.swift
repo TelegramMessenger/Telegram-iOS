@@ -114,7 +114,7 @@ public func parseConfirmationCodeUrl(sharedContext: SharedAccountContext, url: U
         }
     }
     if url.scheme == "tg" {
-        if let host = url.host, let query = url.query, let parsedUrl = parseInternalUrl(sharedContext: sharedContext, query: host + "?" + query) {
+        if let host = url.host, let query = url.query, let parsedUrl = parseInternalUrl(sharedContext: sharedContext, context: nil, query: host + "?" + query) {
             switch parsedUrl {
                 case let .confirmationCode(code):
                     return code

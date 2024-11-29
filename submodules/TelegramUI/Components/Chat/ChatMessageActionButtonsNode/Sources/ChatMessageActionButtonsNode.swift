@@ -180,7 +180,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
                 case let .url(value):
                     var isApp = false
-                    if isTelegramMeLink(value), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, url: value) {
+                    if isTelegramMeLink(value), let internalUrl = parseFullInternalUrl(sharedContext: context.sharedContext, context: context, url: value) {
                         if case .peer(_, .appStart) = internalUrl {
                             isApp = true
                         } else if case .peer(_, .attachBotStart) = internalUrl {
