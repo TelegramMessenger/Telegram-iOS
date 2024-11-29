@@ -364,9 +364,8 @@ If you end your affiliate program:
                     programDuration: bot.durationMonths,
                     mode: .active(JoinAffiliateProgramScreenMode.Active(
                         targetPeer: targetPeer,
-                        link: bot.url,
-                        userCount: Int(bot.participants),
-                        copyLink: { [weak self] in
+                        bot: bot,
+                        copyLink: { [weak self] bot in
                             guard let self, let component = self.component else {
                                 return
                             }

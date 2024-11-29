@@ -119,9 +119,13 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         private var topOffsetDistance: CGFloat?
         
         private var currentTargetPeer: EnginePeer?
+        private var currentMode: JoinAffiliateProgramScreen.Mode?
         
         private var possibleTargetPeers: [EnginePeer] = []
         private var possibleTargetPeersDisposable: Disposable?
+        
+        private var changeTargetPeerDisposable: Disposable?
+        private var isChangingTargetPeer: Bool = false
         
         private var cachedCloseImage: UIImage?
         
@@ -194,6 +198,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         deinit {
             self.possibleTargetPeersDisposable?.dispose()
+            self.changeTargetPeerDisposable?.dispose()
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -337,7 +342,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
                 return
             }
-            guard case let .join(join) = component.mode else {
+            guard let currentTargetPeer = self.currentTargetPeer else {
                 return
             }
             
@@ -346,7 +351,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             
             let peers: [EnginePeer] = self.possibleTargetPeers.isEmpty ? [
-                join.initialTargetPeer
+                currentTargetPeer
             ] : self.possibleTargetPeers
             
             let avatarSize = CGSize(width: 30.0, height: 30.0)
@@ -360,14 +365,80 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 } else {
                     peerLabel = "bot"
                 }
-                items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(peerLabel), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize)), action: { [weak self] c, _ in
+                let isSelected = peer.id == self.currentTargetPeer?.id
+                let accentColor = environment.theme.list.itemAccentColor
+                let avatarSignal = peerAvatarCompleteImage(account: component.context.account, peer: peer, size: avatarSize)
+                |> map { image in
+                    let context = DrawingContext(size: avatarSize, scale: 0.0, clear: true)
+                    context?.withContext { c in
+                        UIGraphicsPushContext(c)
+                        defer {
+                            UIGraphicsPopContext()
+                        }
+                        if isSelected {
+                            
+                        }
+                        c.saveGState()
+                        let scaleFactor = (avatarSize.width - 3.0 * 2.0) / avatarSize.width
+                        if isSelected {
+                            c.translateBy(x: avatarSize.width * 0.5, y: avatarSize.height * 0.5)
+                            c.scaleBy(x: scaleFactor, y: scaleFactor)
+                            c.translateBy(x: -avatarSize.width * 0.5, y: -avatarSize.height * 0.5)
+                        }
+                        if let image {
+                            image.draw(in: CGRect(origin: CGPoint(), size: avatarSize))
+                        }
+                        c.restoreGState()
+                        
+                        if isSelected {
+                            c.setStrokeColor(accentColor.cgColor)
+                            let lineWidth: CGFloat = 1.0 + UIScreenPixel
+                            c.setLineWidth(lineWidth)
+                            c.strokeEllipse(in: CGRect(origin: CGPoint(), size: avatarSize).insetBy(dx: lineWidth * 0.5, dy: lineWidth * 0.5))
+                        }
+                    }
+                    return context?.generateImage()
+                }
+                items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .secondLineWithValue(peerLabel), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: avatarSignal), action: { [weak self] c, _ in
                     c?.dismiss(completion: {})
                     
-                    guard let self else {
+                    guard let self, let currentMode = self.currentMode, let component = self.component else {
+                        return
+                    }
+                    if self.currentTargetPeer?.id == peer.id {
                         return
                     }
                     
                     self.currentTargetPeer = peer
+                    
+                    switch currentMode {
+                    case .join:
+                        self.currentTargetPeer = peer
+                    case let .active(active):
+                        self.isChangingTargetPeer = true
+                        self.changeTargetPeerDisposable?.dispose()
+                        self.changeTargetPeerDisposable = (component.context.engine.peers.connectStarRefBot(id: peer.id, botId: component.sourcePeer.id)
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                            guard let self else {
+                                return
+                            }
+                            self.isChangingTargetPeer = false
+                            
+                            self.currentMode = .active(JoinAffiliateProgramScreen.Mode.Active(
+                                targetPeer: peer,
+                                bot: result,
+                                copyLink: active.copyLink
+                            ))
+                            self.state?.updated(transition: .immediate)
+                        }, error: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isChangingTargetPeer = false
+                            self.state?.updated(transition: .immediate)
+                        })
+                    }
+                    
                     self.state?.updated(transition: .immediate)
                 })))
             }
@@ -389,7 +460,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
+            let currentMode = self.currentMode ?? component.mode
+            
             if self.component == nil {
+                self.currentMode = component.mode
+                
                 var loadPossibleTargetPeers = false
                 switch component.mode {
                 case let .join(join):
@@ -461,7 +536,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             let clippingY: CGFloat
             
-            if let currentTargetPeer = self.currentTargetPeer, case .join = component.mode {
+            if let currentTargetPeer = self.currentTargetPeer, case .join = currentMode {
                 contentHeight += 34.0
                 
                 let sourceAvatarSize = self.sourceAvatar.update(
@@ -592,7 +667,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     transition.setFrame(view: linkIconView, frame: linkIconFrame)
                 }
                 
-                if active.userCount != 0 {
+                if active.bot.participants != 0 {
                     let linkIconBadgeSize = self.linkIconBadge.update(
                         transition: .immediate,
                         component: AnyComponent(BorderedBadgeComponent(
@@ -605,7 +680,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                                     scaleFactor: 1.0
                                 ))),
                                 AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                    text: .plain(NSAttributedString(string: "\(active.userCount)", font: Font.bold(14.0), textColor: .white))
+                                    text: .plain(NSAttributedString(string: "\(active.bot.participants)", font: Font.bold(14.0), textColor: .white))
                                 )))
                             ], spacing: 4.0)),
                             insets: UIEdgeInsets(top: 4.0, left: 9.0, bottom: 4.0, right: 8.0),
@@ -637,7 +712,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let titleString: String
             let subtitleString: String
             let termsString: String
-            switch component.mode {
+            switch currentMode {
             case .join:
                 titleString = "Affiliate Program"
                 subtitleString = "**\(component.sourcePeer.compactDisplayTitle)** will share **\(commissionTitle)** of the revenue from each user you refer to it for **\(durationTitle)**."
@@ -651,12 +726,12 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     timeString = "for **\(durationTitle)** after they follow your link."
                 }
                 subtitleString = "Share this link with your users to earn a **\(commissionTitle)** commission on their spending in **\(component.sourcePeer.compactDisplayTitle)** \(timeString)."
-                if active.userCount == 0 {
+                if active.bot.participants == 0 {
                     termsString = "No one opened \(component.sourcePeer.compactDisplayTitle) through this link yet."
-                } else if active.userCount == 1 {
+                } else if active.bot.participants == 1 {
                     termsString = "1 user opened \(component.sourcePeer.compactDisplayTitle) through this link."
                 } else {
-                    termsString = "\(active.userCount) users opened \(component.sourcePeer.compactDisplayTitle) through this link."
+                    termsString = "\(active.bot.participants) users opened \(component.sourcePeer.compactDisplayTitle) through this link."
                 }
             }
             let titleSize = self.title.update(
@@ -777,8 +852,8 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             contentHeight += 12.0
             
-            if case let .active(active) = component.mode {
-                var cleanLink = active.link
+            if case let .active(active) = currentMode {
+                var cleanLink = active.bot.url
                 let removePrefixes: [String] = ["http://", "https://"]
                 for prefix in removePrefixes {
                     if cleanLink.hasPrefix(prefix) {
@@ -805,7 +880,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                                 return
                             }
                             self.environment?.controller()?.dismiss()
-                            active.copyLink()
+                            active.copyLink(active.bot)
                         },
                         animateAlpha: true,
                         animateScale: false,
@@ -826,7 +901,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             
             let actionButtonTitle: String
-            switch component.mode {
+            switch currentMode {
             case .join:
                 actionButtonTitle = "Join Program"
             case .active:
@@ -864,7 +939,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                                 join.completion(currentTargetPeer)
                             }
                         case let .active(active):
-                            active.copyLink()
+                            active.copyLink(active.bot)
                         }
                     }
                 )),
@@ -928,7 +1003,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             self.itemLayout = ItemLayout(containerSize: availableSize, containerInset: containerInset, bottomInset: environment.safeInsets.bottom, topInset: topInset)
             
-            if case .active = component.mode {
+            if case .active = currentMode {
                 let toast: ComponentView<Empty>
                 if let current = self.toast {
                     toast = current
