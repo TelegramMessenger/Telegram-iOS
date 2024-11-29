@@ -752,7 +752,7 @@ func  _internal_requestConnectedStarRefBots(account: Account, id: EnginePeer.Id,
 public final class TelegramSuggestedStarRefBotList: Equatable {
     public enum SortMode {
         case date
-        case commission
+        case profitability
         case revenue
     }
     
@@ -805,7 +805,7 @@ func _internal_requestSuggestedStarRefBots(account: Account, id: EnginePeer.Id, 
             flags |= 1 << 0
         case .date:
             flags |= 1 << 1
-        case .commission:
+        case .profitability:
             break
         }
         return account.network.request(Api.functions.payments.getSuggestedStarRefBots(
@@ -1005,6 +1005,51 @@ func _internal_getStarRefBotConnection(account: Account, id: EnginePeer.Id, targ
                     }
                 }
             }
+        }
+    }
+}
+
+func _internal_getPossibleStarRefBotTargets(account: Account) -> Signal<[EnginePeer], NoError> {
+    return combineLatest(
+        account.network.request(Api.functions.bots.getAdminedBots())
+        |> `catch` { _ -> Signal<[Api.User], NoError> in
+            return .single([])
+        },
+        account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: 0))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in
+            return .single(nil)
+        }
+    )
+    |> mapToSignal { apiBots, apiChannels -> Signal<[EnginePeer], NoError> in
+        return account.postbox.transaction { transaction -> [EnginePeer] in
+            var result: [EnginePeer] = []
+            
+            if let peer = transaction.getPeer(account.peerId) {
+                result.append(EnginePeer(peer))
+            }
+            
+            updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: apiBots))
+            for bot in apiBots {
+                if let peer = transaction.getPeer(bot.peerId) {
+                    result.append(EnginePeer(peer))
+                }
+            }
+            
+            if let apiChannels {
+                switch apiChannels {
+                case let .chats(chats), let .chatsSlice(_, chats):
+                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(chats: chats, users: []))
+                    
+                    for chat in chats {
+                        if let peer = transaction.getPeer(chat.peerId) {
+                            result.append(EnginePeer(peer))
+                        }
+                    }
+                }
+            }
+            
+            return result
         }
     }
 }

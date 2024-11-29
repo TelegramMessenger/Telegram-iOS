@@ -1656,6 +1656,10 @@ public extension TelegramEngine {
         public func getStarRefBotConnection(id: EnginePeer.Id, targetId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> {
             return _internal_getStarRefBotConnection(account: self.account, id: id, targetId: targetId)
         }
+        
+        public func getPossibleStarRefBotTargets() -> Signal<[EnginePeer], NoError> {
+            return _internal_getPossibleStarRefBotTargets(account: self.account)
+        }
     }
 }
 

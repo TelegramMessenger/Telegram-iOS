@@ -413,7 +413,7 @@ If you end your affiliate program:
             let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
                 (.date, "Date"),
                 (.revenue, "Revenue"),
-                (.commission, "Commission")
+                (.profitability, "Profitability")
             ]
             for (mode, title) in availableModes {
                 let isSelected = mode == self.suggestedSortMode
