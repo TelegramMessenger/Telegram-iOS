@@ -121,7 +121,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
         
         private var suggestedStarBotList: TelegramSuggestedStarRefBotList?
         private var suggestedStarBotListDisposable: Disposable?
-        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .date
+        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .profitability
         private var isSuggestedSortModeUpdating: Bool = false
         
         override init(frame: CGRect) {
@@ -417,9 +417,9 @@ If you end your affiliate program:
             var items: [ContextMenuItem] = []
             
             let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
-                (.date, "Date"),
+                (.profitability, "Profitability"),
                 (.revenue, "Revenue"),
-                (.profitability, "Profitability")
+                (.date, "Date")
             ]
             for (mode, title) in availableModes {
                 let isSelected = mode == self.suggestedSortMode
@@ -1363,6 +1363,13 @@ If you end your affiliate program:
                     }
                     do {
                         var suggestedSectionItems: [AnyComponentWithIdentity<Empty>] = []
+                        if suggestedStarBotListItems.isEmpty {
+                            suggestedSectionItems.append(AnyComponentWithIdentity(id: "empty", component: AnyComponent(TransformContents(
+                                content: AnyComponent(),
+                                fixedSize: CGSize(width: 1.0, height: 100.0),
+                                translation: CGPoint()
+                            ))))
+                        }
                         for item in suggestedStarBotListItems {
                             let commissionTitle = "\(item.program.commissionPermille / 10)%"
                             let durationTitle: String
