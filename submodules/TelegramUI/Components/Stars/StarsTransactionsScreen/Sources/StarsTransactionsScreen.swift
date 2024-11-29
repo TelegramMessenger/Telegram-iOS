@@ -679,9 +679,8 @@ final class StarsTransactionsScreenComponent: Component {
                         header: nil,
                         footer: nil,
                         items: [
-                            //TODO:localize
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(ListItemComponentAdaptor(
-                                itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesSettings.earnStars, title: "Earn Stars", titleBadge: presentationData.strings.Settings_New, label: "Distribute links to mini apps and earn a share of their revenue in Stars.", labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
+                                itemGenerator: ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), icon: PresentationResourcesSettings.earnStars, title: environment.strings.Monetization_EarnStarsInfo_Title, titleBadge: presentationData.strings.Settings_New, label: environment.strings.Monetization_EarnStarsInfo_Text, labelStyle: .multilineDetailText, sectionId: 0, style: .blocks, action: {
                                 }),
                                 params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true),
                                 action: { [weak self] in

@@ -1443,14 +1443,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             if items[.botAffiliateProgram] == nil {
                                 items[.botAffiliateProgram] = []
                             }
-                            //TODO:localize
                             let programTitleValue: String
                             programTitleValue = "\(formatPermille(starRefProgram.commissionPermille))%"
-                            //TODO:localize
-                            items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                            items[.botAffiliateProgram]!.append(PeerInfoScreenDisclosureItem(id: 0, label: .labelBadge(programTitleValue), additionalBadgeLabel: nil, text: presentationData.strings.PeerInfo_ItemAffiliateProgram_Title, icon: PresentationResourcesSettings.affiliateProgram, action: {
                                 interaction.editingOpenAffiliateProgram()
                             }))
-                            items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: "Share a link to \(EnginePeer.user(user).compactDisplayTitle) with your friends and and earn \(formatPermille(starRefProgram.commissionPermille))% of their spending there."))
+                            items[.botAffiliateProgram]!.append(PeerInfoScreenCommentItem(id: 1, text: presentationData.strings.PeerInfo_ItemAffiliateProgram_Footer(EnginePeer.user(user).compactDisplayTitle, formatPermille(starRefProgram.commissionPermille)).string))
                         }
                     }
                 }
@@ -1960,14 +1958,13 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 if canSetupRefProgram {
-                    //TODO:localize
                     let programTitleValue: PeerInfoScreenDisclosureItem.Label
                     if let cachedData = data.cachedData as? CachedUserData, let starRefProgram = cachedData.starRefProgram, starRefProgram.endDate == nil {
                         programTitleValue = .labelBadge("\(formatPermille(starRefProgram.commissionPermille))%")
                     } else {
-                        programTitleValue = .text("Off")
+                        programTitleValue = .text(presentationData.strings.PeerInfo_ItemAffiliateProgram_ValueOff)
                     }
-                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Program", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                    items[.peerDataSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliateProgram, label: programTitleValue, additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.PeerInfo_ItemAffiliateProgram_Title, icon: PresentationResourcesSettings.affiliateProgram, action: {
                         interaction.editingOpenAffiliateProgram()
                     }))
                 }
@@ -2232,7 +2229,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                     
                     if canJoinRefProgram {
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliatePrograms, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: "Affiliate Programs", icon: PresentationResourcesSettings.affiliateProgram, action: {
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAffiliatePrograms, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.PeerInfo_ItemAffiliatePrograms_Title, icon: PresentationResourcesSettings.affiliateProgram, action: {
                             interaction.editingOpenAffiliateProgram()
                         }))
                     }
@@ -8659,10 +8656,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     guard let self else {
                                         return
                                     }
-                                    //TODO:localize
                                     UIPasteboard.general.string = result.url
                                     let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 })
-                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: "Link copied to clipboard", text: "Share this link and earn **\(formatPermille(result.commissionPermille))%** of what people who use it spend in **\(result.peer.compactDisplayTitle)**!"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: presentationData.strings.AffiliateProgram_ToastLinkCopied_Title, text: presentationData.strings.AffiliateProgram_ToastLinkCopied_Text(formatPermille(result.commissionPermille), result.peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                 }
                             ))
                         } else {

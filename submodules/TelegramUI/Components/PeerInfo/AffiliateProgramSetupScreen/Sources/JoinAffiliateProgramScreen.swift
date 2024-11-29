@@ -365,11 +365,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             for peer in peers {
                 let peerLabel: String
                 if peer.id == component.context.account.peerId {
-                    peerLabel = "personal account"
+                    peerLabel = environment.strings.AffiliateProgram_PeerTypeSelf
                 } else if case .channel = peer {
-                    peerLabel = "channel"
+                    peerLabel = environment.strings.Channel_Status
                 } else {
-                    peerLabel = "bot"
+                    peerLabel = environment.strings.Bot_GenericBotStatus
                 }
                 let isSelected = peer.id == self.currentTargetPeer?.id
                 let accentColor = environment.theme.list.itemAccentColor
@@ -767,12 +767,6 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             }
             
             let commissionTitle = "\(formatPermille(component.commissionPermille))%"
-            let durationTitle: String
-            if let durationMonths = component.programDuration {
-                durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
-            } else {
-                durationTitle = "lifetime"
-            }
             
             let titleString: String
             var subtitleString: String
@@ -780,34 +774,40 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let termsString: String
             switch currentMode {
             case .join:
-                titleString = "Affiliate Program"
-                subtitleString = "**\(component.sourcePeer.compactDisplayTitle)** will share **\(commissionTitle)** of the revenue from each user you refer to it for **\(durationTitle)**."
+                titleString = environment.strings.AffiliateProgram_JoinTitle
+                
+                if let programDuration = component.programDuration {
+                    if programDuration < 12 {
+                        subtitleString = environment.strings.AffiliateProgram_JoinSubtitleMonths(Int32(programDuration)).replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
+                    } else {
+                        subtitleString = environment.strings.AffiliateProgram_JoinSubtitleYears(Int32(programDuration / 12)).replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
+                    }
+                } else {
+                    subtitleString = environment.strings.AffiliateProgram_JoinSubtitleLifetime.replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
+                }
                 
                 if component.revenuePerUser != 0.0 {
                     var revenueString = String(format: "%.1f", component.revenuePerUser)
                     if revenueString.hasSuffix(".0") {
                         revenueString = String(revenueString[revenueString.startIndex ..< revenueString.index(revenueString.endIndex, offsetBy: -2)])
                     }
-                    dailyRevenueString = "Daily revenue per user: #**\(revenueString)**"
+                    dailyRevenueString = environment.strings.AffiliateProgram_DailyRevenueText(revenueString).string
                 }
                 
-                termsString = "By joining this program, you afree to the [terms and conditions](https://telegram.org/terms) of Affiliate Programs."
+                termsString = environment.strings.AffiliateProgram_JoinTerms
             case let .active(active):
-                titleString = "Referral Link"
-                let timeString: String
-                if component.programDuration == nil {
-                    timeString = "**forever** after they follow your link."
+                titleString = environment.strings.AffiliateProgram_LinkTitle
+                if let programDuration = component.programDuration {
+                    if programDuration < 12 {
+                        subtitleString = environment.strings.AffiliateProgram_LinkSubtitleMonths(Int32(programDuration)).replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
+                    } else {
+                        subtitleString = environment.strings.AffiliateProgram_LinkSubtitleYears(Int32(programDuration / 12)).replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
+                    }
                 } else {
-                    timeString = "for **\(durationTitle)** after they follow your link."
+                    subtitleString = environment.strings.AffiliateProgram_LinkSubtitleLifetime.replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle).replacingOccurrences(of: "{commission}", with: commissionTitle)
                 }
-                subtitleString = "Share this link with your users to earn a **\(commissionTitle)** commission on their spending in **\(component.sourcePeer.compactDisplayTitle)** \(timeString)."
-                if active.bot.participants == 0 {
-                    termsString = "No one opened \(component.sourcePeer.compactDisplayTitle) through this link yet."
-                } else if active.bot.participants == 1 {
-                    termsString = "1 user opened \(component.sourcePeer.compactDisplayTitle) through this link."
-                } else {
-                    termsString = "\(active.bot.participants) users opened \(component.sourcePeer.compactDisplayTitle) through this link."
-                }
+                
+                termsString = environment.strings.AffiliateProgram_UserCountFooter(Int32(active.bot.participants)).replacingOccurrences(of: "{bot}", with: component.sourcePeer.compactDisplayTitle)
             }
             let titleSize = self.title.update(
                 transition: .immediate,
@@ -986,7 +986,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 let targetTextSize = self.targetText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "Commission will be sent to:", font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
+                        text: .plain(NSAttributedString(string: environment.strings.AffiliateProgram_CommistionDestinationText, font: Font.regular(15.0), textColor: environment.theme.list.itemPrimaryTextColor)),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2
@@ -1087,9 +1087,9 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let actionButtonTitle: String
             switch currentMode {
             case .join:
-                actionButtonTitle = "Join Program"
+                actionButtonTitle = environment.strings.AffiliateProgram_ActionJoin
             case .active:
-                actionButtonTitle = "Copy Link"
+                actionButtonTitle = environment.strings.AffiliateProgram_ActionCopyLink
             }
             let actionButtonSize = self.actionButton.update(
                 transition: transition,
@@ -1207,11 +1207,11 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                         )),
                         content: AnyComponent(VStack([
                             AnyComponentWithIdentity(id: 0, component: AnyComponent(MultilineTextComponent(
-                                text: .markdown(text: "Program joined", attributes: MarkdownAttributes(body: bold, bold: bold, link: body, linkAttribute: { _ in nil })),
+                                text: .markdown(text: environment.strings.AffiliateProgram_ToastJoined_Title, attributes: MarkdownAttributes(body: bold, bold: bold, link: body, linkAttribute: { _ in nil })),
                                 maximumNumberOfLines: 0
                             ))),
                             AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                                text: .markdown(text: "You can now copy the referral link.", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
+                                text: .markdown(text: environment.strings.AffiliateProgram_ToastJoined_Text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil })),
                                 maximumNumberOfLines: 0
                             )))
                         ], alignment: .left, spacing: 6.0)),
@@ -1920,11 +1920,11 @@ final class BotSectionSortButtonComponent: Component {
             let sortByString: String
             switch component.sortMode {
             case .date:
-                sortByString = "SORT BY [DATE]()"
+                sortByString = component.strings.AffiliateSetup_SortSectionHeader_Date
             case .profitability:
-                sortByString = "SORT BY [PROFITABILITY]()"
+                sortByString = component.strings.AffiliateSetup_SortSectionHeader_Profitability
             case .revenue:
-                sortByString = "SORT BY [REVENUE]()"
+                sortByString = component.strings.AffiliateSetup_SortSectionHeader_Revenue
             }
             let textSize = self.text.update(
                 transition: .immediate,

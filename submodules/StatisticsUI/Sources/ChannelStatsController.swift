@@ -1219,8 +1219,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.presentCpmLocked()
                 })
             case .earnStarsInfo:
-                //TODO:localize
-                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.earnStars, title: "Earn Stars", titleBadge: presentationData.strings.Settings_New, label: "Distribute links to mini apps and earn a share of their revenue in Stars.", labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, icon: PresentationResourcesSettings.earnStars, title: presentationData.strings.Monetization_EarnStarsInfo_Title, titleBadge: presentationData.strings.Settings_New, label: presentationData.strings.Monetization_EarnStarsInfo_Text, labelStyle: .multilineDetailText, sectionId: self.section, style: .blocks, action: {
                     arguments.openEarnStars()
                 })
         }
@@ -1702,7 +1701,6 @@ private func monetizationEntries(
     if displayStarsTransactions {
         if !addedTransactionsTabs {
             if canJoinRefPrograms {
-                //TODO:localize
                 entries.append(.earnStarsInfo)
             }
             

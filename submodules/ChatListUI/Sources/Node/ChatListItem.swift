@@ -3098,8 +3098,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var actionButtonTitleNodeLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             if case .none = badgeContent, case .none = mentionBadgeContent, case let .chat(itemPeer) = contentPeer, case let .user(user) = itemPeer.chatMainPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
-                //TODO:localize
-                actionButtonTitleNodeLayoutAndApply = makeActionButtonTitleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "OPEN", font: Font.semibold(15.0), textColor: theme.unreadBadgeActiveTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                actionButtonTitleNodeLayoutAndApply = makeActionButtonTitleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.ChatList_InlineButtonOpenApp, font: Font.semibold(15.0), textColor: theme.unreadBadgeActiveTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             var badgeSize: CGFloat = 0.0
