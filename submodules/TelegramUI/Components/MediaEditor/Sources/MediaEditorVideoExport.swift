@@ -216,6 +216,7 @@ public final class MediaEditorVideoExport {
         }
         
         var skippingUpdate = false
+        var initialized = false
     }
     private var additionalVideoOutput: [Int: VideoOutput] = [:]
     
@@ -761,10 +762,32 @@ public final class MediaEditorVideoExport {
             for i in 0 ..< self.additionalVideoOutput.count {
                 if let additionalVideoOutput = self.additionalVideoOutput[i] {
                     if let mainTimestamp, mainTimestamp < additionalVideoOutput.startTime {
-                        
+                        if !self.configuration.values.collage.isEmpty && !additionalVideoOutput.initialized {
+                            additionalVideoOutput.initialized = true
+                            if case let .videoOutput(videoOutput) = additionalVideoOutput.output {
+                                if let _ = videoOutput.copyNextSampleBuffer(), let sampleBuffer = videoOutput.copyNextSampleBuffer() {
+                                    if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
+                                        additionalInput.append(.videoBuffer(VideoPixelBuffer(
+                                            pixelBuffer: pixelBuffer,
+                                            rotation: additionalVideoOutput.textureRotation,
+                                            timestamp: .zero
+                                        ), additionalVideoOutput.rect))
+                                    } else {
+                                        additionalInput.append(nil)
+                                    }
+                                } else {
+                                    additionalInput.append(nil)
+                                }
+                            } else {
+                                additionalInput.append(nil)
+                            }
+                        } else {
+                            additionalInput.append(nil)
+                        }
                     } else {
                         if additionalVideoOutput.skippingUpdate {
                             additionalVideoOutput.skippingUpdate = false
+                            additionalInput.append(nil)
                         } else {
                             switch additionalVideoOutput.output {
                             case let .image(image):
@@ -787,6 +810,8 @@ public final class MediaEditorVideoExport {
                                            self.statusValue = .progress(Float(progress))
                                            updatedProgress = true
                                        }
+                                   } else {
+                                       additionalInput.append(nil)
                                    }
                                    if let mainComposeFramerate = self.mainComposeFramerate {
                                        let additionalFrameRate = round(additionalVideoOutput.frameRate / 30.0) * 30.0
@@ -794,7 +819,9 @@ public final class MediaEditorVideoExport {
                                            additionalVideoOutput.skippingUpdate = true
                                        }
                                    }
-                               }
+                                } else {
+                                    additionalInput.append(nil)
+                                }
                             }
                         }
                     }

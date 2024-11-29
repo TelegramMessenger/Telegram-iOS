@@ -2590,6 +2590,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                 transition.setAlpha(view: view, alpha: 0.0)
             }
+            if let view = self.componentHost.findTaggedView(tag: collageButtonTag) {
+                view.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+                transition.setAlpha(view: view, alpha: 0.0)
+            }
             if let view = self.componentHost.findTaggedView(tag: zoomControlTag) {
                 transition.setAlpha(view: view, alpha: 0.0)
             }
@@ -2677,6 +2681,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     transition.setAlpha(view: view, alpha: 1.0)
                 }
                 if let view = self.componentHost.findTaggedView(tag: flashButtonTag) {
+                    view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                    transition.setAlpha(view: view, alpha: 1.0)
+                }
+                if let view = self.componentHost.findTaggedView(tag: collageButtonTag) {
                     view.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
                     transition.setAlpha(view: view, alpha: 1.0)
                 }
