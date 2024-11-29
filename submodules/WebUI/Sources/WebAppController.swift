@@ -2790,7 +2790,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }, openSettings: {
                 context.sharedContext.applicationBindings.openSettings()
             }, { [weak self, weak controller] authorized in
-                guard let controller else {
+                guard let controller, authorized else {
                     return
                 }
                 let context = controller.context
@@ -2849,7 +2849,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
                             TelegramEngine.EngineData.Item.Peer.Peer(id: botId)
                         )
-                                 |> deliverOnMainQueue).start(next: { [weak self, weak controller] accountPeer, botPeer in
+                        |> deliverOnMainQueue).start(next: { [weak self, weak controller] accountPeer, botPeer in
                             guard let accountPeer, let botPeer, let controller else {
                                 return
                             }
