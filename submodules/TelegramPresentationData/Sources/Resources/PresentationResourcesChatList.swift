@@ -259,6 +259,12 @@ public struct PresentationResourcesChatList {
         })
     }
     
+    public static func giftIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListGiftIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GiftIcon"), color: theme.chatList.muteIconColor)
+        })
+    }
+    
     public static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListVerifiedIcon.rawValue, { theme in
             if let backgroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconForeground") {

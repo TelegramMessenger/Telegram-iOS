@@ -2081,6 +2081,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
             var currentStoryIcon: UIImage?
+            var currentGiftIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -2254,6 +2255,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var displayForwardedIcon = false
             var displayStoryReplyIcon = false
+            var displayGiftIcon = false
             var ignoreForwardedIcon = false
             
             switch contentData {
@@ -2562,6 +2564,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 displayForwardedIcon = true
                             } else if let _ = message.attributes.first(where: { $0 is ReplyStoryAttribute }) {
                                 displayStoryReplyIcon = true
+                            } else {
+                                for media in message.media {
+                                    if let action = media as? TelegramMediaAction {
+                                        switch action.action {
+                                        case .giftPremium, .giftStars, .starGift:
+                                            displayGiftIcon = true
+                                        case let .giftCode(_, _, _, boostPeerId, _, _, _, _, _, _, _):
+                                            if boostPeerId == nil {
+                                                displayGiftIcon = true
+                                            }
+                                        default:
+                                            break
+                                        }
+                                    }
+                                    break
+                                }
                             }
                         }
                 
@@ -2716,6 +2734,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentStoryIcon = PresentationResourcesChatList.storyReplyIcon(item.presentationData.theme)
             }
             
+            if displayGiftIcon {
+                currentGiftIcon = PresentationResourcesChatList.giftIcon(item.presentationData.theme)
+            }
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
                 if !contentImageSpecs.isEmpty {
@@ -2727,6 +2749,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let currentStoryIcon {
                 textLeftCutout += currentStoryIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
+            }
+            
+            if let currentGiftIcon {
+                textLeftCutout += currentGiftIcon.size.width
                 if !contentImageSpecs.isEmpty {
                     textLeftCutout += forwardedIconSpacing
                 } else {
@@ -4261,6 +4292,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         messageTypeIconOffset.y += 3.0
                     } else if let currentStoryIcon {
                         messageTypeIcon = currentStoryIcon
+                    } else if let currentGiftIcon {
+                        messageTypeIcon = currentGiftIcon
+                        messageTypeIconOffset.y -= 2.0 - UIScreenPixel
                     }
                     
                     if let messageTypeIcon {
