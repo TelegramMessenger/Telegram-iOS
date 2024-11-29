@@ -7873,16 +7873,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func searchStickers(flags: Int32, q: String, langCode: String, offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickers>) {
+                static func searchStickers(flags: Int32, q: String, emoticon: String, langCode: [String], offset: Int32, limit: Int32, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickers>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1277568311)
+                    buffer.appendInt32(699516522)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(q, buffer: buffer, boxed: false)
-                    serializeString(langCode, buffer: buffer, boxed: false)
+                    serializeString(emoticon, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(langCode.count))
+                    for item in langCode {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
                     serializeInt32(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.searchStickers", parameters: [("flags", String(describing: flags)), ("q", String(describing: q)), ("langCode", String(describing: langCode)), ("offset", String(describing: offset)), ("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FoundStickers? in
+                    return (FunctionDescription(name: "messages.searchStickers", parameters: [("flags", String(describing: flags)), ("q", String(describing: q)), ("emoticon", String(describing: emoticon)), ("langCode", String(describing: langCode)), ("offset", String(describing: offset)), ("limit", String(describing: limit)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FoundStickers? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.FoundStickers?
                         if let signature = reader.readInt32() {

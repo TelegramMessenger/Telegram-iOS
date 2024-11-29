@@ -1636,6 +1636,8 @@ final class BotSectionSortButtonComponent: Component {
                 sortByString = "SORT BY [DATE]()"
             case .commission:
                 sortByString = "SORT BY [COMMISSION]()"
+            case .revenue:
+                sortByString = "SORT BY [REVENUE]()"
             }
             let textSize = self.text.update(
                 transition: .immediate,

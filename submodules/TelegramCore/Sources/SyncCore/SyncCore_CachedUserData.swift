@@ -627,17 +627,24 @@ extension TelegramBusinessChatLinks {
 }
 
 public final class TelegramStarRefProgram: Codable, Equatable {
+    public let botId: PeerId
     public let commissionPermille: Int32
     public let durationMonths: Int32?
     public let endDate: Int32?
+    public let dailyRevenuePerUser: StarsAmount?
     
-    public init(commissionPermille: Int32, durationMonths: Int32?, endDate: Int32?) {
+    public init(botId: PeerId, commissionPermille: Int32, durationMonths: Int32?, endDate: Int32?, dailyRevenuePerUser: StarsAmount?) {
+        self.botId = botId
         self.commissionPermille = commissionPermille
         self.durationMonths = durationMonths
         self.endDate = endDate
+        self.dailyRevenuePerUser = dailyRevenuePerUser
     }
     
     public static func ==(lhs: TelegramStarRefProgram, rhs: TelegramStarRefProgram) -> Bool {
+        if lhs.botId != rhs.botId {
+            return false
+        }
         if lhs.commissionPermille != rhs.commissionPermille {
             return false
         }
@@ -647,6 +654,9 @@ public final class TelegramStarRefProgram: Codable, Equatable {
         if lhs.endDate != rhs.endDate {
             return false
         }
+        if lhs.dailyRevenuePerUser != rhs.dailyRevenuePerUser {
+            return false
+        }
         return true
     }
 }
@@ -654,8 +664,8 @@ public final class TelegramStarRefProgram: Codable, Equatable {
 extension TelegramStarRefProgram {
     convenience init(apiStarRefProgram: Api.StarRefProgram) {
         switch apiStarRefProgram {
-        case let .starRefProgram(_, commissionPermille, durationMonths, endDate):
-            self.init(commissionPermille: commissionPermille, durationMonths: durationMonths, endDate: endDate)
+        case let .starRefProgram(_, botId, commissionPermille, durationMonths, endDate, dailyRevenuePerUser):
+            self.init(botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), commissionPermille: commissionPermille, durationMonths: durationMonths, endDate: endDate, dailyRevenuePerUser: dailyRevenuePerUser.flatMap(StarsAmount.init(apiAmount:)))
         }
     }
 }

@@ -903,7 +903,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[1237678029] = { return Api.StarGift.parse_starGift($0) }
-    dict[708628759] = { return Api.StarRefProgram.parse_starRefProgram($0) }
+    dict[-586389774] = { return Api.StarRefProgram.parse_starRefProgram($0) }
     dict[-1145654109] = { return Api.StarsAmount.parse_starsAmount($0) }
     dict[1577421297] = { return Api.StarsGiftOption.parse_starsGiftOption($0) }
     dict[-1798404822] = { return Api.StarsGiveawayOption.parse_starsGiveawayOption($0) }
@@ -950,7 +950,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1870436597] = { return Api.StoryView.parse_storyViewPublicForward($0) }
     dict[-1116418231] = { return Api.StoryView.parse_storyViewPublicRepost($0) }
     dict[-1923523370] = { return Api.StoryViews.parse_storyViews($0) }
-    dict[642695037] = { return Api.SuggestedBotStarRef.parse_suggestedBotStarRef($0) }
     dict[1964978502] = { return Api.TextWithEntities.parse_textWithEntities($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -1371,7 +1370,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-919881925] = { return Api.payments.StarsRevenueStats.parse_starsRevenueStats($0) }
     dict[497778871] = { return Api.payments.StarsRevenueWithdrawalUrl.parse_starsRevenueWithdrawalUrl($0) }
     dict[1822222573] = { return Api.payments.StarsStatus.parse_starsStatus($0) }
-    dict[-937776981] = { return Api.payments.SuggestedStarRefBots.parse_suggestedStarRefBots($0) }
+    dict[-1261053863] = { return Api.payments.SuggestedStarRefBots.parse_suggestedStarRefBots($0) }
     dict[1801827607] = { return Api.payments.UserStarGifts.parse_userStarGifts($0) }
     dict[-784000893] = { return Api.payments.ValidatedRequestedInfo.parse_validatedRequestedInfo($0) }
     dict[541839704] = { return Api.phone.ExportedGroupCallInvite.parse_exportedGroupCallInvite($0) }
@@ -2110,8 +2109,6 @@ public extension Api {
             case let _1 as Api.StoryView:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryViews:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.SuggestedBotStarRef:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.TextWithEntities:
                 _1.serialize(buffer, boxed)

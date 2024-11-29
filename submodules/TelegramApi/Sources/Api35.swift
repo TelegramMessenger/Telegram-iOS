@@ -214,13 +214,13 @@ public extension Api.payments {
 }
 public extension Api.payments {
     enum SuggestedStarRefBots: TypeConstructorDescription {
-        case suggestedStarRefBots(flags: Int32, count: Int32, suggestedBots: [Api.SuggestedBotStarRef], users: [Api.User], nextOffset: String?)
+        case suggestedStarRefBots(flags: Int32, count: Int32, suggestedBots: [Api.StarRefProgram], users: [Api.User], nextOffset: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .suggestedStarRefBots(let flags, let count, let suggestedBots, let users, let nextOffset):
                     if boxed {
-                        buffer.appendInt32(-937776981)
+                        buffer.appendInt32(-1261053863)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
@@ -251,9 +251,9 @@ public extension Api.payments {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Api.SuggestedBotStarRef]?
+            var _3: [Api.StarRefProgram]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SuggestedBotStarRef.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarRefProgram.self)
             }
             var _4: [Api.User]?
             if let _ = reader.readInt32() {
