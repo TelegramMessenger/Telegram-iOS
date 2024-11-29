@@ -281,11 +281,15 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     }
     
     public var stringValue: String {
+        return "\(totalValue)"
+    }
+    
+    public var totalValue: Double {
         if self.nanos == 0 {
-            return "\(self.value)"
+            return Double(self.value)
         } else {
             let totalValue = (Double(self.value) * 1e9 + Double(self.nanos)) / 1e9
-            return "\(totalValue)"
+            return totalValue
         }
     }
     
