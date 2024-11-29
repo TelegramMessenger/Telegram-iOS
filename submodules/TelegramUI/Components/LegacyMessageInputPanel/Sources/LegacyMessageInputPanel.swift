@@ -15,6 +15,7 @@ import ContextUI
 import TooltipUI
 import LegacyMessageInputPanelInputView
 import UndoUI
+import TelegramNotices
 
 public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let context: AccountContext
@@ -357,7 +358,6 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     }
     
     private func toggleIsCaptionAbove() {
-        //TODO:localize
         self.currentIsCaptionAbove = !self.currentIsCaptionAbove
         self.captionIsAboveUpdated?(self.currentIsCaptionAbove)
         self.update(transition: .animated(duration: 0.3, curve: .spring))
@@ -366,8 +366,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
-        let title = self.currentIsCaptionAbove ? "Caption moved up" : "Caption moved down"
-        let text = self.currentIsCaptionAbove ? "Text will be shown above the media." : "Text will be shown below the media."
+        let title = self.currentIsCaptionAbove ? presentationData.strings.MediaPicker_InvertCaption_Updated_Up_Title : presentationData.strings.MediaPicker_InvertCaption_Updated_Down_Title
+        let text = self.currentIsCaptionAbove ? presentationData.strings.MediaPicker_InvertCaption_Updated_Up_Text : presentationData.strings.MediaPicker_InvertCaption_Updated_Down_Title
         let animationName = self.currentIsCaptionAbove ? "message_preview_sort_above" : "message_preview_sort_below"
         
         let controller = UndoOverlayController(
@@ -498,30 +498,43 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         }
         self.dismissAllTooltips()
         
-        let parentFrame = superview.convert(superview.bounds, to: nil)
-        let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
-        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX + 2.0, y: absoluteFrame.minY + 6.0), size: CGSize())
         
-        //TODO:localize
-        let text = "Tap here to move caption up."
-        let tooltipController = TooltipScreen(
-            account: self.context.account,
-            sharedContext: self.context.sharedContext,
-            text: .plain(text: text),
-            balancedTextLayout: false,
-            style: .customBlur(UIColor(rgb: 0x18181a), 4.0),
-            arrowStyle: .small,
-            icon: nil,
-            location: .point(location, .bottom),
-            displayDuration: .default,
-            inset: 4.0,
-            cornerRadius: 10.0,
-            shouldDismissOnTouch: { _, _ in
-                return .ignore
+        let _ = (ApplicationSpecificNotice.getCaptionAboveMediaTooltip(accountManager: self.context.sharedContext.accountManager)
+        |> deliverOnMainQueue).start(next: { [weak self] count in
+            guard let self else {
+                return
             }
-        )
-        self.tooltipController = tooltipController
-        self.present(tooltipController)
+            if count > 2 {
+                return
+            }
+            
+            let parentFrame = superview.convert(superview.bounds, to: nil)
+            let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
+            let location = CGRect(origin: CGPoint(x: absoluteFrame.midX + 2.0, y: absoluteFrame.minY + 6.0), size: CGSize())
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            
+            let tooltipController = TooltipScreen(
+                account: self.context.account,
+                sharedContext: self.context.sharedContext,
+                text: .plain(text: presentationData.strings.MediaPicker_InvertCaptionTooltip),
+                balancedTextLayout: false,
+                style: .customBlur(UIColor(rgb: 0x18181a), 4.0),
+                arrowStyle: .small,
+                icon: nil,
+                location: .point(location, .bottom),
+                displayDuration: .default,
+                inset: 4.0,
+                cornerRadius: 10.0,
+                shouldDismissOnTouch: { _, _ in
+                    return .ignore
+                }
+            )
+            self.tooltipController = tooltipController
+            self.present(tooltipController)
+            
+            let _ = ApplicationSpecificNotice.incrementCaptionAboveMediaTooltip(accountManager: self.context.sharedContext.accountManager).start()
+        })
     }
     
     public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

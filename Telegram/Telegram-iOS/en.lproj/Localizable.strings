@@ -13300,6 +13300,19 @@ Sorry for the inconvenience.";
 
 "Notification.Gift" = "Gift";
 
+"WebBrowser.PassExistsError" = "This pass is already added to Wallet.";
+
+"Chat.VideoProcessingInfo" = "The video will be published once converted and optimized.";
+
+"Camera.CollageManagementTooltip" = "Tap a tile to delete or reorder it.";
+"Camera.CollageReorderingInfo" = "Hold and drag tiles to reorder them.";
+
+"MediaPicker.InvertCaptionTooltip" = "Tap here to move caption up.";
+"MediaPicker.InvertCaption.Updated.Up.Title" = "Caption moved up";
+"MediaPicker.InvertCaption.Updated.Up.Text" = "Text will be shown above the media.";
+"MediaPicker.InvertCaption.Updated.Down.Title" = "Caption moved down";
+"MediaPicker.InvertCaption.Updated.Down.Text" = "Text will be shown below the media.";
+
 "AffiliateSetup.AlertTerminate.Title" = "Warning";
 "AffiliateSetup.AlertTerminate.Text" = "If you end your affiliate program:\n\n• Any referral links already shared will be disabled in 24 hours.\n\n• All participating affiliates will be notified.\n\n• You will be able to start a new affiliate program only in 24 hours.";
 "AffiliateSetup.AlertTerminate.Action" = "End Anyway";

@@ -568,11 +568,23 @@ private final class CameraScreenComponent: CombinedComponent {
         }
         
         func toggleCollageCamera() {
-            guard let controller = self.getController(), let _ = controller.camera else {
+            guard let controller = self.getController(), let camera = controller.camera else {
                 return
             }
+            let currentTimestamp = CACurrentMediaTime()
+            if let lastDualCameraTimestamp = self.lastDualCameraTimestamp, currentTimestamp - lastDualCameraTimestamp < 1.5 {
+                return
+            }
+            if let lastFlipTimestamp = self.lastFlipTimestamp, currentTimestamp - lastFlipTimestamp < 1.0 {
+                return
+            }
+            self.lastDualCameraTimestamp = currentTimestamp
             
             controller.node.dismissAllTooltips()
+            
+            if controller.cameraState.isDualCameraEnabled {
+                camera.setDualCameraEnabled(false)
+            }
             
             if controller.cameraState.isCollageEnabled {
                 self.displayingCollageSelection = !self.displayingCollageSelection
@@ -580,7 +592,9 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 let isEnabled = !controller.cameraState.isCollageEnabled
                 self.displayingCollageSelection = isEnabled
-                controller.updateCameraState({ $0.updatedIsCollageEnabled(isEnabled).updatedCollageProgress(0.0) }, transition: .spring(duration: 0.3))
+                controller.updateCameraState({
+                    $0.updatedIsCollageEnabled(isEnabled).updatedCollageProgress(0.0).updatedIsDualCameraEnabled(false)
+                }, transition: .spring(duration: 0.3))
             }
             self.hapticFeedback.impact(.light)
         }
@@ -635,9 +649,8 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.displayingCollageSelection = false
                 self.updated(transition: .spring(duration: 0.3))
                 
-                //TODO:localize
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let tooltipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Tap a tile to delete or reorder it.", timeout: 3.0, customUndoText: nil), elevatedLayout: false, action: { _ in
+                let tooltipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Camera_CollageManagementTooltip, timeout: 2.0, customUndoText: nil), elevatedLayout: false, action: { _ in
                     return true
                 })
                 controller.present(tooltipController, in: .current)
@@ -1279,68 +1292,66 @@ private final class CameraScreenComponent: CombinedComponent {
                             nextButtonX -= dualButton.size.width + 16.0
                         }
                         
-                        if !component.cameraState.isDualCameraEnabled {
-                            let collageButton = collageButton.update(
-                                component: CameraButton(
-                                    content: AnyComponentWithIdentity(
-                                        id: "collage",
-                                        component: AnyComponent(
-                                            CollageIconComponent(
-                                                grid: component.cameraState.collageGrid,
-                                                crossed: false,
-                                                isSelected: component.cameraState.isCollageEnabled,
-                                                tintColor: controlsTintColor
-                                            )
+                        let collageButton = collageButton.update(
+                            component: CameraButton(
+                                content: AnyComponentWithIdentity(
+                                    id: "collage",
+                                    component: AnyComponent(
+                                        CollageIconComponent(
+                                            grid: component.cameraState.collageGrid,
+                                            crossed: false,
+                                            isSelected: component.cameraState.isCollageEnabled,
+                                            tintColor: controlsTintColor
                                         )
-                                    ),
-                                    action: { [weak state] in
-                                        if let state {
-                                            state.toggleCollageCamera()
-                                        }
+                                    )
+                                ),
+                                action: { [weak state] in
+                                    if let state {
+                                        state.toggleCollageCamera()
                                     }
-                                ).tagged(collageButtonTag),
-                                availableSize: CGSize(width: 40.0, height: 40.0),
+                                }
+                            ).tagged(collageButtonTag),
+                            availableSize: CGSize(width: 40.0, height: 40.0),
+                            transition: .immediate
+                        )
+                        var collageButtonX = nextButtonX
+                        if rightMostButtonWidth.isZero {
+                            collageButtonX = availableSize.width - topControlInset - collageButton.size.width / 2.0 - 5.0
+                        }
+                        context.add(collageButton
+                            .position(CGPoint(x: collageButtonX, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + collageButton.size.height / 2.0 + 2.0))
+                            .appear(.default(scale: true))
+                            .disappear(.default(scale: true))
+                            .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
+                        )
+                        nextButtonX -= collageButton.size.width
+                        
+                        if state.displayingCollageSelection {
+                            let collageCarousel = collageCarousel.update(
+                                component: CollageIconCarouselComponent(
+                                    grids: collageGrids.filter { $0 != component.cameraState.collageGrid },
+                                    selected: { [weak state] grid in
+                                        state?.updateCollageGrid(grid)
+                                    }
+                                ),
+                                availableSize: CGSize(width: nextButtonX + 4.0, height: 40.0),
                                 transition: .immediate
                             )
-                            var collageButtonX = nextButtonX
-                            if rightMostButtonWidth.isZero {
-                                collageButtonX = availableSize.width - topControlInset - collageButton.size.width / 2.0 - 5.0
-                            }
-                            context.add(collageButton
-                                .position(CGPoint(x: collageButtonX, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + collageButton.size.height / 2.0 + 2.0))
-                                .appear(.default(scale: true))
-                                .disappear(.default(scale: true))
-                                .shadow(Shadow(color: UIColor(white: 0.0, alpha: 0.25), radius: 3.0, offset: .zero))
+                            context.add(collageCarousel
+                                .position(CGPoint(x: collageCarousel.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + collageCarousel.size.height / 2.0 + 2.0))
+                                .appear(ComponentTransition.Appear({ _, view, transition in
+                                    if let view = view as? CollageIconCarouselComponent.View, !transition.animation.isImmediate {
+                                        view.animateIn()
+                                    }
+                                }))
+                                .disappear(ComponentTransition.Disappear({ view, transition, completion in
+                                    if let view = view as? CollageIconCarouselComponent.View, !transition.animation.isImmediate {
+                                        view.animateOut(completion: completion)
+                                    } else {
+                                        completion()
+                                    }
+                                }))
                             )
-                            nextButtonX -= collageButton.size.width
-                            
-                            if state.displayingCollageSelection {
-                                let collageCarousel = collageCarousel.update(
-                                    component: CollageIconCarouselComponent(
-                                        grids: collageGrids.filter { $0 != component.cameraState.collageGrid },
-                                        selected: { [weak state] grid in
-                                            state?.updateCollageGrid(grid)
-                                        }
-                                    ),
-                                    availableSize: CGSize(width: nextButtonX + 4.0, height: 40.0),
-                                    transition: .immediate
-                                )
-                                context.add(collageCarousel
-                                    .position(CGPoint(x: collageCarousel.size.width / 2.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + collageCarousel.size.height / 2.0 + 2.0))
-                                    .appear(ComponentTransition.Appear({ _, view, transition in
-                                        if let view = view as? CollageIconCarouselComponent.View, !transition.animation.isImmediate {
-                                            view.animateIn()
-                                        }
-                                    }))
-                                    .disappear(ComponentTransition.Disappear({ view, transition, completion in
-                                        if let view = view as? CollageIconCarouselComponent.View, !transition.animation.isImmediate {
-                                            view.animateOut(completion: completion)
-                                        } else {
-                                            completion()
-                                        }
-                                    }))
-                                )
-                            }
                         }
                     }
                 }

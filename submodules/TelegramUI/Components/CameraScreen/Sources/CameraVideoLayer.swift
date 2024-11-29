@@ -299,7 +299,7 @@ final class CameraVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             
             encoder.setFragmentTexture(blurredTexture, index: 0)
             
-            var brightness: Float = 0.85
+            var brightness: Float = 0.95
             var saturation: Float = 1.3
             var overlay: SIMD4<Float> = SIMD4<Float>()
             encoder.setFragmentBytes(&brightness, length: 4, index: 0)

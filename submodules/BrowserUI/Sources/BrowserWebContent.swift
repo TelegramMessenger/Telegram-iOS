@@ -896,8 +896,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                 if let data = try? Data(contentsOf: url), let pass = try? PKPass(data: data) {
                     let passLibrary = PKPassLibrary()
                     if passLibrary.containsPass(pass) {
-                        //TODO:localize
-                        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: "This pass is already added to Wallet.", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})])
+                        let alertController = textAlertController(context: self.context, updatedPresentationData: nil, title: nil, text: self.presentationData.strings.WebBrowser_PassExistsError, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: {})])
                         self.present(alertController, nil)
                     } else if let controller = PKAddPassesViewController(pass: pass) {
                         self.getNavigationController()?.view.window?.rootViewController?.present(controller, animated: true)
