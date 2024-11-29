@@ -234,6 +234,13 @@ final class CameraCollage {
         self.uniqueIds.append(Int64.random(in: .min ... .max))
     }
     
+    func getItem(id: Int64) -> CaptureResult? {
+        guard let index = self.uniqueIds.firstIndex(where: { $0 == id }) else {
+            return nil
+        }
+        return self.results[index]
+    }
+    
     private func checkResults() {
         self.results = self.results.filter { $0.content != nil }
     }

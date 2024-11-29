@@ -1149,6 +1149,11 @@ public final class MediaEditor {
     
     public func setVideoIsMuted(_ videoIsMuted: Bool) {
         self.player?.isMuted = videoIsMuted
+        if !self.values.collage.isEmpty {
+            for player in self.additionalPlayers {
+                player.isMuted = videoIsMuted
+            }
+        }
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedVideoIsMuted(videoIsMuted)
         }
@@ -1857,9 +1862,11 @@ public final class MediaEditor {
     
     public func collageItemIndexForTrackId(_ trackId: Int32) -> Int? {
         var collageIndex = -1
-        var trackIndex = 0
+        var trackIndex = -1
         for item in self.values.collage {
-            if case .videoFile = item.content {
+            if case .main = item.content {
+                trackIndex += 1
+            } else if case .videoFile = item.content {
                 trackIndex += 1
             } else if case .asset(_, true) = item.content {
                 trackIndex += 1

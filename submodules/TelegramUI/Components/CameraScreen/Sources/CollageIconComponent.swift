@@ -213,7 +213,7 @@ final class CollageIconCarouselComponent: Component {
             self.state = state
             
             let inset: CGFloat = 27.0
-            let spacing: CGFloat = 8.0
+            let spacing: CGFloat = availableSize.width > 290.0 ? 7.0 : 8.0
             var contentWidth: CGFloat = inset
             let buttonSize = CGSize(width: 40.0, height: 40.0)
             
@@ -275,7 +275,7 @@ final class CollageIconCarouselComponent: Component {
             self.clippingView.frame = CGRect(origin: .zero, size: availableSize)
             
             if self.clippingView.mask == nil {
-                if let maskImage = generateGradientImage(size: CGSize(width: 42.0, height: 10.0), colors: [UIColor.clear, UIColor.black, UIColor.black, UIColor.clear], locations: [0.0, 0.3, 0.7, 1.0], direction: .horizontal) {
+                if let maskImage = generateGradientImage(size: CGSize(width: 42.0, height: 10.0), colors: [UIColor.clear, UIColor.black, UIColor.black, UIColor.clear], locations: [0.0, 0.2, 0.8, 1.0], direction: .horizontal) {
                     let maskView = UIImageView(image: maskImage.stretchableImage(withLeftCapWidth: 13, topCapHeight: 0))
                     self.clippingView.mask = maskView
                 }

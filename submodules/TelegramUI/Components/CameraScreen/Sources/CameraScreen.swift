@@ -130,6 +130,7 @@ enum CameraScreenTransition {
     case animateIn
     case animateOut
     case finishedAnimateIn
+    case flashModeChanged
 }
 
 private let cancelButtonTag = GenericComponentViewTag()
@@ -1134,6 +1135,9 @@ private final class CameraScreenComponent: CombinedComponent {
                 
                 let flashContentComponent: AnyComponentWithIdentity<Empty>
                 if component.hasAppeared {
+                    let animationHint = context.transition.userData(CameraScreenTransition.self)
+                    let shouldAnimateIcon = component.cameraState.flashModeDidChange && animationHint == .flashModeChanged
+                    
                     let flashIconName: String
                     switch component.cameraState.flashMode {
                     case .off:
@@ -1157,7 +1161,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             LottieAnimationComponent(
                                 animation: LottieAnimationComponent.AnimationItem(
                                     name: flashIconName,
-                                    mode: !component.cameraState.flashModeDidChange ? .still(position: .end) : .animating(loop: false),
+                                    mode: shouldAnimateIcon ? .animating(loop: false) : .still(position: .end),
                                     range: nil,
                                     waitForCompletion: false
                                 ),
@@ -1318,7 +1322,7 @@ private final class CameraScreenComponent: CombinedComponent {
                                             state?.updateCollageGrid(grid)
                                         }
                                     ),
-                                    availableSize: CGSize(width: nextButtonX, height: 40.0),
+                                    availableSize: CGSize(width: nextButtonX + 4.0, height: 40.0),
                                     transition: .immediate
                                 )
                                 context.add(collageCarousel
@@ -2103,7 +2107,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 let previousState = self.cameraState
                 self.cameraState = self.cameraState.updatedPosition(position).updatedFlashMode(flashMode)
                 if !self.animatingDualCameraPositionSwitch {
-                    self.requestUpdateLayout(transition: .easeInOut(duration: 0.2))
+                    var transition: ComponentTransition = .easeInOut(duration: 0.2)
+                    if previousState.flashMode != flashMode {
+                        transition = transition.withUserData(CameraScreenTransition.flashModeChanged)
+                    }
+                    self.requestUpdateLayout(transition: transition)
                 }
                 
                 if previousState.position != self.cameraState.position {
@@ -2255,15 +2263,15 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             case .began:
                 break
             case .changed:
-                if case .none = self.cameraState.recording, self.cameraState.collageProgress.isZero {
+                if case .none = self.cameraState.recording {
                     if case .compact = layout.metrics.widthClass {
                         switch controller.mode {
                         case .story:
-                            if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared {
+                            if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared && self.cameraState.collageProgress.isZero {
                                 self.isDismissing = true
                                 let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                                 controller.updateTransitionProgress(transitionFraction, transition: .immediate)
-                            } else if translation.y < -10.0 && abs(translation.y) > abs(translation.x) {
+                            } else if translation.y < -10.0 && abs(translation.y) > abs(translation.x) && self.cameraState.collageProgress < 1.0 {
                                 controller.presentGallery(fromGesture: true)
                                 gestureRecognizer.isEnabled = false
                                 gestureRecognizer.isEnabled = true
@@ -2592,7 +2600,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 view.animateOutToEditor(transition: transition)
             }
             
-            Queue.mainQueue().after(1.0, {
+            Queue.mainQueue().after(2.0, {
                 if self.cameraState.isCollageEnabled {
                     self.collage = nil
                     if let collageView = self.collageView {

@@ -3208,8 +3208,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         if self.controller?.isEmbeddedEditor == true {
                             
                         } else {
-                            self.previewContainerView.alpha = 1.0
-                            if CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
+                            if case .videoCollage = subject {
+                                Queue.mainQueue().after(0.7) {
+                                    self.previewContainerView.alpha = 1.0
+                                    self.previewContainerView.layer.allowsGroupOpacity = true
+                                    self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                                        self.previewContainerView.layer.allowsGroupOpacity = false
+                                        self.previewContainerView.alpha = 1.0
+                                        self.backgroundDimView.isHidden = false
+                                    })
+                                }
+                            } else if  CACurrentMediaTime() - self.initializationTimestamp > 0.2, case .image = subject {
+                                self.previewContainerView.alpha = 1.0
                                 self.previewContainerView.layer.allowsGroupOpacity = true
                                 self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
                                     self.previewContainerView.layer.allowsGroupOpacity = false
@@ -3217,6 +3227,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     self.backgroundDimView.isHidden = false
                                 })
                             } else {
+                                self.previewContainerView.alpha = 1.0
                                 self.backgroundDimView.isHidden = false
                             }
                         }

@@ -247,96 +247,66 @@ final class CameraVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             computeEncoder.endEncoding()
         })
         
-        if !self.blurredLayer.isHidden {
-            guard let downscaledTexture = self.downscaledTexture?.get(context: context), let blurredHorizontalTexture = self.blurredHorizontalTexture?.get(context: context), let blurredVerticalTexture = self.blurredVerticalTexture?.get(context: context) else {
-                return
+        guard let downscaledTexture = self.downscaledTexture?.get(context: context), let blurredHorizontalTexture = self.blurredHorizontalTexture?.get(context: context), let blurredVerticalTexture = self.blurredVerticalTexture?.get(context: context) else {
+            return
+        }
+        
+        let blurredTexture = context.compute(state: BlurState.self, inputs: rgbaTexture.placeholer, downscaledTexture.placeholer, blurredHorizontalTexture.placeholer, blurredVerticalTexture.placeholer, commands: { commandBuffer, blurState, rgbaTexture, downscaledTexture, blurredHorizontalTexture, blurredVerticalTexture -> MTLTexture? in
+            guard let rgbaTexture, let downscaledTexture, let blurredHorizontalTexture, let blurredVerticalTexture else {
+                return nil
             }
             
-            let blurredTexture = context.compute(state: BlurState.self, inputs: rgbaTexture.placeholer, downscaledTexture.placeholer, blurredHorizontalTexture.placeholer, blurredVerticalTexture.placeholer, commands: { commandBuffer, blurState, rgbaTexture, downscaledTexture, blurredHorizontalTexture, blurredVerticalTexture -> MTLTexture? in
-                guard let rgbaTexture, let downscaledTexture, let blurredHorizontalTexture, let blurredVerticalTexture else {
+            blurState.downscaleKernel.encode(commandBuffer: commandBuffer, sourceTexture: rgbaTexture, destinationTexture: downscaledTexture)
+            
+            do {
+                guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
                     return nil
                 }
                 
-                blurState.downscaleKernel.encode(commandBuffer: commandBuffer, sourceTexture: rgbaTexture, destinationTexture: downscaledTexture)
+                let threadgroupSize = MTLSize(width: 16, height: 16, depth: 1)
+                let threadgroupCount = MTLSize(width: (downscaledTexture.width + threadgroupSize.width - 1) / threadgroupSize.width, height: (downscaledTexture.height + threadgroupSize.height - 1) / threadgroupSize.height, depth: 1)
                 
-                do {
-                    guard let computeEncoder = commandBuffer.makeComputeCommandEncoder() else {
-                        return nil
-                    }
-                    
-                    let threadgroupSize = MTLSize(width: 16, height: 16, depth: 1)
-                    let threadgroupCount = MTLSize(width: (downscaledTexture.width + threadgroupSize.width - 1) / threadgroupSize.width, height: (downscaledTexture.height + threadgroupSize.height - 1) / threadgroupSize.height, depth: 1)
-                    
-                    computeEncoder.setComputePipelineState(blurState.computePipelineStateHorizontal)
-                    computeEncoder.setTexture(downscaledTexture, index: 0)
-                    computeEncoder.setTexture(blurredHorizontalTexture, index: 1)
-                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
-                    
-                    computeEncoder.setComputePipelineState(blurState.computePipelineStateVertical)
-                    computeEncoder.setTexture(blurredHorizontalTexture, index: 0)
-                    computeEncoder.setTexture(blurredVerticalTexture, index: 1)
-                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
-                    
-                    computeEncoder.endEncoding()
-                }
+                computeEncoder.setComputePipelineState(blurState.computePipelineStateHorizontal)
+                computeEncoder.setTexture(downscaledTexture, index: 0)
+                computeEncoder.setTexture(blurredHorizontalTexture, index: 1)
+                computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
                 
-                return blurredVerticalTexture
-            })
+                computeEncoder.setComputePipelineState(blurState.computePipelineStateVertical)
+                computeEncoder.setTexture(blurredHorizontalTexture, index: 0)
+                computeEncoder.setTexture(blurredVerticalTexture, index: 1)
+                computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                
+                computeEncoder.endEncoding()
+            }
             
-            context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self.blurredLayer, inputs: blurredTexture, commands: { encoder, placement, blurredTexture in
-                guard let blurredTexture else {
-                    return
-                }
-                let effectiveRect = placement.effectiveRect
-                
-                var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
-                encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
-                
-                var mirror = SIMD2<UInt32>(
-                    videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
-                    videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
-                )
-                encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
-                
-                encoder.setFragmentTexture(blurredTexture, index: 0)
-                
-                var brightness: Float = 0.85
-                var saturation: Float = 1.3
-                var overlay: SIMD4<Float> = SIMD4<Float>()
-                encoder.setFragmentBytes(&brightness, length: 4, index: 0)
-                encoder.setFragmentBytes(&saturation, length: 4, index: 1)
-                encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
-                
-                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-            })
-        }
-    
-//        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, inputs: rgbaTexture.placeholer, commands: { encoder, placement, rgbaTexture in
-//            guard let rgbaTexture else {
-//                return
-//            }
-//            
-//            let effectiveRect = placement.effectiveRect
-//            
-//            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
-//            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
-//            
-//            var mirror = SIMD2<UInt32>(
-//                videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
-//                videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
-//            )
-//            encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
-//            
-//            encoder.setFragmentTexture(rgbaTexture, index: 0)
-//            
-//            var brightness: Float = 1.0
-//            var saturation: Float = 1.0
-//            var overlay: SIMD4<Float> = SIMD4<Float>()
-//            encoder.setFragmentBytes(&brightness, length: 4, index: 0)
-//            encoder.setFragmentBytes(&saturation, length: 4, index: 1)
-//            encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
-//            
-//            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-//        })
+            return blurredVerticalTexture
+        })
+        
+        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self.blurredLayer, inputs: blurredTexture, commands: { encoder, placement, blurredTexture in
+            guard let blurredTexture else {
+                return
+            }
+            let effectiveRect = placement.effectiveRect
+            
+            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
+            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+            
+            var mirror = SIMD2<UInt32>(
+                videoTextures.mirrorDirection.contains(.horizontal) ? 1 : 0,
+                videoTextures.mirrorDirection.contains(.vertical) ? 1 : 0
+            )
+            encoder.setVertexBytes(&mirror, length: 2 * 4, index: 1)
+            
+            encoder.setFragmentTexture(blurredTexture, index: 0)
+            
+            var brightness: Float = 0.85
+            var saturation: Float = 1.3
+            var overlay: SIMD4<Float> = SIMD4<Float>()
+            encoder.setFragmentBytes(&brightness, length: 4, index: 0)
+            encoder.setFragmentBytes(&saturation, length: 4, index: 1)
+            encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
+            
+            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        })
     }
 }
