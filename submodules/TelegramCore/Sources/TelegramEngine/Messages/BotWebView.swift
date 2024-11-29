@@ -752,28 +752,24 @@ func  _internal_requestConnectedStarRefBots(account: Account, id: EnginePeer.Id,
 public final class TelegramSuggestedStarRefBotList: Equatable {
     public enum SortMode {
         case date
-        case commission
+        case profitability
+        case revenue
     }
     
     public final class Item: Equatable {
         public let peer: EnginePeer
-        public let commissionPermille: Int32
-        public let durationMonths: Int32?
+        public let program: TelegramStarRefProgram
         
-        public init(peer: EnginePeer, commissionPermille: Int32, durationMonths: Int32?) {
+        public init(peer: EnginePeer, program: TelegramStarRefProgram) {
             self.peer = peer
-            self.commissionPermille = commissionPermille
-            self.durationMonths = durationMonths
+            self.program = program
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.peer != rhs.peer {
                 return false
             }
-            if lhs.commissionPermille != rhs.commissionPermille {
-                return false
-            }
-            if lhs.durationMonths != rhs.durationMonths {
+            if lhs.program != rhs.program {
                 return false
             }
             return true
@@ -795,7 +791,7 @@ public final class TelegramSuggestedStarRefBotList: Equatable {
     }
 }
 
-func _internal_requestSuggestedStarRefBots(account: Account, id: EnginePeer.Id, orderByCommission: Bool, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
+func _internal_requestSuggestedStarRefBots(account: Account, id: EnginePeer.Id, sortMode: TelegramSuggestedStarRefBotList.SortMode, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(id).flatMap(apiInputPeer)
     }
@@ -804,8 +800,13 @@ func _internal_requestSuggestedStarRefBots(account: Account, id: EnginePeer.Id, 
             return .single(nil)
         }
         var flags: Int32 = 0
-        if orderByCommission {
-            flags |= 1 << 2
+        switch sortMode {
+        case .revenue:
+            flags |= 1 << 0
+        case .date:
+            flags |= 1 << 1
+        case .profitability:
+            break
         }
         return account.network.request(Api.functions.payments.getSuggestedStarRefBots(
             flags: flags,
@@ -827,18 +828,15 @@ func _internal_requestSuggestedStarRefBots(account: Account, id: EnginePeer.Id, 
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: users))
                     
                     var items: [TelegramSuggestedStarRefBotList.Item] = []
-                    for suggestedBot in suggestedBots {
-                        switch suggestedBot {
-                        case let .suggestedBotStarRef(_, botId, commissionPermille, durationMonths):
-                            guard let botPeer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))) else {
-                                continue
-                            }
-                            items.append(TelegramSuggestedStarRefBotList.Item(
-                                peer: EnginePeer(botPeer),
-                                commissionPermille: commissionPermille,
-                                durationMonths: durationMonths
-                            ))
+                    for starRefProgram in suggestedBots {
+                        let parsedProgram = TelegramStarRefProgram(apiStarRefProgram: starRefProgram)
+                        guard let botPeer = transaction.getPeer(parsedProgram.botId) else {
+                            continue
                         }
+                        items.append(TelegramSuggestedStarRefBotList.Item(
+                            peer: EnginePeer(botPeer),
+                            program: parsedProgram
+                        ))
                     }
                     
                     return TelegramSuggestedStarRefBotList(items: items, totalCount: Int(count), nextOffset: nextOffset)
@@ -1007,6 +1005,51 @@ func _internal_getStarRefBotConnection(account: Account, id: EnginePeer.Id, targ
                     }
                 }
             }
+        }
+    }
+}
+
+func _internal_getPossibleStarRefBotTargets(account: Account) -> Signal<[EnginePeer], NoError> {
+    return combineLatest(
+        account.network.request(Api.functions.bots.getAdminedBots())
+        |> `catch` { _ -> Signal<[Api.User], NoError> in
+            return .single([])
+        },
+        account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: 0))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.Chats?, NoError> in
+            return .single(nil)
+        }
+    )
+    |> mapToSignal { apiBots, apiChannels -> Signal<[EnginePeer], NoError> in
+        return account.postbox.transaction { transaction -> [EnginePeer] in
+            var result: [EnginePeer] = []
+            
+            if let peer = transaction.getPeer(account.peerId) {
+                result.append(EnginePeer(peer))
+            }
+            
+            updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(users: apiBots))
+            for bot in apiBots {
+                if let peer = transaction.getPeer(bot.peerId) {
+                    result.append(EnginePeer(peer))
+                }
+            }
+            
+            if let apiChannels {
+                switch apiChannels {
+                case let .chats(chats), let .chatsSlice(_, chats):
+                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(chats: chats, users: []))
+                    
+                    for chat in chats {
+                        if let peer = transaction.getPeer(chat.peerId) {
+                            result.append(EnginePeer(peer))
+                        }
+                    }
+                }
+            }
+            
+            return result
         }
     }
 }

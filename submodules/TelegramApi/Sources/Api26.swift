@@ -273,54 +273,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SuggestedBotStarRef: TypeConstructorDescription {
-        case suggestedBotStarRef(flags: Int32, botId: Int64, commissionPermille: Int32, durationMonths: Int32?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .suggestedBotStarRef(let flags, let botId, let commissionPermille, let durationMonths):
-                    if boxed {
-                        buffer.appendInt32(642695037)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(botId, buffer: buffer, boxed: false)
-                    serializeInt32(commissionPermille, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(durationMonths!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .suggestedBotStarRef(let flags, let botId, let commissionPermille, let durationMonths):
-                return ("suggestedBotStarRef", [("flags", flags as Any), ("botId", botId as Any), ("commissionPermille", commissionPermille as Any), ("durationMonths", durationMonths as Any)])
-    }
-    }
-    
-        public static func parse_suggestedBotStarRef(_ reader: BufferReader) -> SuggestedBotStarRef? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.SuggestedBotStarRef.suggestedBotStarRef(flags: _1!, botId: _2!, commissionPermille: _3!, durationMonths: _4)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum TextWithEntities: TypeConstructorDescription {
         case textWithEntities(text: String, entities: [Api.MessageEntity])
     

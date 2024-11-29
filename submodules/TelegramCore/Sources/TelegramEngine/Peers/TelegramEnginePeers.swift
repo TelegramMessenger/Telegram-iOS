@@ -1641,8 +1641,8 @@ public extension TelegramEngine {
             return _internal_requestConnectedStarRefBots(account: self.account, id: id, offset: offset, limit: limit)
         }
         
-        public func requestSuggestedStarRefBots(id: EnginePeer.Id, orderByCommission: Bool, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
-            return _internal_requestSuggestedStarRefBots(account: self.account, id: id, orderByCommission: orderByCommission, offset: offset, limit: limit)
+        public func requestSuggestedStarRefBots(id: EnginePeer.Id, sortMode: TelegramSuggestedStarRefBotList.SortMode, offset: String?, limit: Int) -> Signal<TelegramSuggestedStarRefBotList?, NoError> {
+            return _internal_requestSuggestedStarRefBots(account: self.account, id: id, sortMode: sortMode, offset: offset, limit: limit)
         }
         
         public func connectStarRefBot(id: EnginePeer.Id, botId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item, ConnectStarRefBotError> {
@@ -1655,6 +1655,10 @@ public extension TelegramEngine {
         
         public func getStarRefBotConnection(id: EnginePeer.Id, targetId: EnginePeer.Id) -> Signal<TelegramConnectedStarRefBotList.Item?, NoError> {
             return _internal_getStarRefBotConnection(account: self.account, id: id, targetId: targetId)
+        }
+        
+        public func getPossibleStarRefBotTargets() -> Signal<[EnginePeer], NoError> {
+            return _internal_getPossibleStarRefBotTargets(account: self.account)
         }
     }
 }

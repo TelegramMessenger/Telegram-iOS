@@ -120,6 +120,9 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         private var currentTargetPeer: EnginePeer?
         
+        private var possibleTargetPeers: [EnginePeer] = []
+        private var possibleTargetPeersDisposable: Disposable?
+        
         private var cachedCloseImage: UIImage?
         
         override init(frame: CGRect) {
@@ -187,6 +190,10 @@ private final class JoinAffiliateProgramScreenComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.possibleTargetPeersDisposable?.dispose()
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -338,9 +345,9 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
             
-            let peers: [EnginePeer] = [
+            let peers: [EnginePeer] = self.possibleTargetPeers.isEmpty ? [
                 join.initialTargetPeer
-            ]
+            ] : self.possibleTargetPeers
             
             let avatarSize = CGSize(width: 30.0, height: 30.0)
             
@@ -383,11 +390,24 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
             if self.component == nil {
+                var loadPossibleTargetPeers = false
                 switch component.mode {
                 case let .join(join):
                     self.currentTargetPeer = join.initialTargetPeer
+                    loadPossibleTargetPeers = join.canSelectTargetPeer
                 case let .active(active):
                     self.currentTargetPeer = active.targetPeer
+                    loadPossibleTargetPeers = true
+                }
+                
+                if loadPossibleTargetPeers {
+                    self.possibleTargetPeersDisposable = (component.context.engine.peers.getPossibleStarRefBotTargets()
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] result in
+                        guard let self else {
+                            return
+                        }
+                        self.possibleTargetPeers = result
+                    })
                 }
             }
             
@@ -701,6 +721,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                 isTargetPeerSelectable = join.canSelectTargetPeer
             case .active:
                 displayTargetPeer = true
+                isTargetPeerSelectable = true
             }
             
             if displayTargetPeer {
@@ -1154,7 +1175,7 @@ private final class PeerBadgeComponent: Component {
             if let current = self.avatarNode {
                 avatarNode = current
             } else {
-                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
+                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(avatarDiameter * 0.5)))
                 avatarNode.isUserInteractionEnabled = false
                 avatarNode.displaysAsynchronously = false
                 self.avatarNode = avatarNode
@@ -1252,18 +1273,13 @@ private final class AvatarComponent: Component {
     }
 
     final class View: UIView {
-        private let avatarNode: AvatarNode
+        private var avatarNode: AvatarNode?
         
         private var component: AvatarComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 18.0))
-            self.avatarNode.displaysAsynchronously = false
-            
             super.init(frame: frame)
-            
-            self.addSubnode(self.avatarNode)
         }
         
         required init?(coder: NSCoder) {
@@ -1276,14 +1292,24 @@ private final class AvatarComponent: Component {
             
             let size = component.size ?? availableSize
 
-            self.avatarNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.avatarNode.setPeer(
+            let avatarNode: AvatarNode
+            if let current = self.avatarNode {
+                avatarNode = current
+            } else {
+                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(size.width * 0.5)))
+                avatarNode.displaysAsynchronously = false
+                self.avatarNode = avatarNode
+                self.addSubview(avatarNode.view)
+            }
+            avatarNode.frame = CGRect(origin: CGPoint(), size: size)
+            avatarNode.setPeer(
                 context: component.context,
                 theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                 peer: component.peer,
                 synchronousLoad: true,
                 displayDimensions: size
             )
+            avatarNode.updateSize(size: size)
             
             return size
         }
@@ -1634,8 +1660,10 @@ final class BotSectionSortButtonComponent: Component {
             switch component.sortMode {
             case .date:
                 sortByString = "SORT BY [DATE]()"
-            case .commission:
-                sortByString = "SORT BY [COMMISSION]()"
+            case .profitability:
+                sortByString = "SORT BY [PROFITABILITY]()"
+            case .revenue:
+                sortByString = "SORT BY [REVENUE]()"
             }
             let textSize = self.text.update(
                 transition: .immediate,
@@ -1730,7 +1758,7 @@ final class PeerBadgeAvatarComponent: Component {
     }
 
     final class View: UIView {
-        private let avatarNode: AvatarNode
+        private var avatarNode: AvatarNode?
         
         private let badgeBackground = UIImageView()
         private let badgeIcon = UIImageView()
@@ -1742,12 +1770,7 @@ final class PeerBadgeAvatarComponent: Component {
         private static let badgeIconImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Links/Link"), color: .white)?.withRenderingMode(.alwaysTemplate)
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
-            self.avatarNode.displaysAsynchronously = false
-            
             super.init(frame: frame)
-            
-            self.addSubnode(self.avatarNode)
         }
         
         required init?(coder: NSCoder) {
@@ -1763,8 +1786,18 @@ final class PeerBadgeAvatarComponent: Component {
 
             let badgeFrame = CGRect(origin: CGPoint(x: size.width - badgeSize, y: size.height - badgeSize), size: CGSize(width: badgeSize, height: badgeSize))
             
-            self.avatarNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.avatarNode.setPeer(
+            let avatarNode: AvatarNode
+            if let current = self.avatarNode {
+                avatarNode = current
+            } else {
+                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(size.width * 0.5)))
+                avatarNode.displaysAsynchronously = false
+                self.avatarNode = avatarNode
+                self.addSubview(avatarNode.view)
+            }
+            
+            avatarNode.frame = CGRect(origin: CGPoint(), size: size)
+            avatarNode.setPeer(
                 context: component.context,
                 theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                 peer: component.peer,

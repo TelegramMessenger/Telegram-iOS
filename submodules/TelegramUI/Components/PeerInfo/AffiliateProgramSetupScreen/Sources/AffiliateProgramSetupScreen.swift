@@ -412,7 +412,8 @@ If you end your affiliate program:
             
             let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
                 (.date, "Date"),
-                (.commission, "Commission")
+                (.revenue, "Revenue"),
+                (.profitability, "Profitability")
             ]
             for (mode, title) in availableModes {
                 let isSelected = mode == self.suggestedSortMode
@@ -436,7 +437,7 @@ If you end your affiliate program:
                         self.suggestedStarBotListDisposable?.dispose()
                         self.suggestedStarBotListDisposable = (component.context.engine.peers.requestSuggestedStarRefBots(
                             id: component.initialContent.peerId,
-                            orderByCommission: self.suggestedSortMode == .commission,
+                            sortMode: self.suggestedSortMode,
                             offset: nil,
                             limit: 100)
                         |> deliverOnMainQueue).startStrict(next: { [weak self] list in
@@ -559,7 +560,7 @@ If you end your affiliate program:
                     
                     self.suggestedStarBotListDisposable = (component.context.engine.peers.requestSuggestedStarRefBots(
                         id: component.initialContent.peerId,
-                        orderByCommission: false,
+                        sortMode: self.suggestedSortMode,
                         offset: nil,
                         limit: 100)
                     |> deliverOnMainQueue).startStrict(next: { [weak self] list in
@@ -1344,9 +1345,9 @@ If you end your affiliate program:
                     do {
                         var suggestedSectionItems: [AnyComponentWithIdentity<Empty>] = []
                         for item in suggestedStarBotListItems {
-                            let commissionTitle = "\(item.commissionPermille / 10)%"
+                            let commissionTitle = "\(item.program.commissionPermille / 10)%"
                             let durationTitle: String
-                            if let durationMonths = item.durationMonths {
+                            if let durationMonths = item.program.durationMonths {
                                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (24 * 60 * 60))
                             } else {
                                 durationTitle = "Lifetime"
@@ -1401,8 +1402,8 @@ If you end your affiliate program:
                                         self.environment?.controller()?.push(JoinAffiliateProgramScreen(
                                             context: component.context,
                                             sourcePeer: botPeer,
-                                            commissionPermille: item.commissionPermille,
-                                            programDuration: item.durationMonths,
+                                            commissionPermille: item.program.commissionPermille,
+                                            programDuration: item.program.durationMonths,
                                             mode: .join(JoinAffiliateProgramScreenMode.Join(
                                                 initialTargetPeer: targetPeer,
                                                 canSelectTargetPeer: false,
