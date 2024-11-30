@@ -1091,17 +1091,17 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         self.videoTransparentFramesContainer.layer.cornerRadius = framesCornerRadius
         self.videoOpaqueFramesContainer.layer.cornerRadius = framesCornerRadius
         
-
         let scrubberSize = CGSize(width: availableSize.width, height: isSelected ? fullTrackHeight : collapsedTrackHeight)
         
         var screenSpanDuration = duration
-        if track.isAudio && track.isMain {
+        if track.isAudio && track.isMain && !track.isTimeline {
             screenSpanDuration = min(30.0, track.duration)
         }
         
         let minimalAudioWidth = handleWidth * 2.0
         var containerTotalWidth = scrubberSize.width
-        if track.isAudio || !track.isMain, screenSpanDuration > 0.0 {
+        
+        if !track.isTimeline, track.isAudio || !track.isMain, screenSpanDuration > 0.0 {
             let trackFraction = track.duration / screenSpanDuration
             if trackFraction < 1.0 - .ulpOfOne || trackFraction > 1.0 + .ulpOfOne {
                 containerTotalWidth = max(minimalAudioWidth, ceil(availableSize.width * trackFraction))
@@ -1761,6 +1761,14 @@ private extension MediaScrubberComponent.Track {
     var isAudio: Bool {
         if case .audio = self.content {
             return true
+        } else {
+            return false
+        }
+    }
+    
+    var isTimeline: Bool {
+        if case let .audio(_, _, _, _, isTimeline) = self {
+            return isTimeline
         } else {
             return false
         }

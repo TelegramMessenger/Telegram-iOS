@@ -681,13 +681,13 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 var delayAppearance = false
                 if let snapshotView = self.snapshotView {
                     if snapshotView is UIImageView {
-                        
+      
                     } else {
                         delayAppearance = true
-                        Queue.mainQueue().after(0.2, {
-                            snapshotView.removeFromSuperview()
-                        })
                     }
+                    Queue.mainQueue().after(0.2, {
+                        snapshotView.removeFromSuperview()
+                    })
                     self.snapshotView = nil
                 }
                 if let previewLayer = self.previewLayer {

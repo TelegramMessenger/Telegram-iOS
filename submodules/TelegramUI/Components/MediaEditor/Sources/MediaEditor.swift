@@ -188,7 +188,7 @@ public final class MediaEditor {
     
     private var additionalPlayers: [AVPlayer] = []
     private let additionalPlayersPromise = Promise<[AVPlayer]>([])
-    private var additionalPlayerAudioMix: AVMutableAudioMix?
+    private var additionalPlayerAudioMixes: [AVMutableAudioMix] = []
     
     private var audioPlayer: AVPlayer?
     private let audioPlayerPromise = Promise<AVPlayer?>(nil)
@@ -1756,7 +1756,7 @@ public final class MediaEditor {
             self.additionalPlayers.forEach { $0.pause() }
             self.additionalPlayers = []
             self.additionalPlayersPromise.set(.single([]))
-            self.additionalPlayerAudioMix = nil
+            self.additionalPlayerAudioMixes = []
             
             if let textureSource = self.renderer.textureSource as? UniversalTextureSource {
                 textureSource.forceUpdates = true
@@ -1837,19 +1837,29 @@ public final class MediaEditor {
                 }
                 var additionalInputs: [UniversalTextureSource.Input] = []
                 var additionalPlayers: [AVPlayer] = []
+                var audioMixes: [AVMutableAudioMix] = []
                 
                 for (input, player, volume) in results {
                     additionalInputs.append(input)
                     if let player {
-                        if let volume {
-                            player.volume = Float(volume)
-                        }
                         additionalPlayers.append(player)
+                        
+                        if let asset = player.currentItem?.asset {
+                            let audioMix = AVMutableAudioMix()
+                            let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+                            if let volume {
+                                audioMixInputParameters.setVolume(Float(volume), at: .zero)
+                            }
+                            audioMix.inputParameters = [audioMixInputParameters]
+                            player.currentItem?.audioMix = audioMix
+                            audioMixes.append(audioMix)
+                        }
                     }
                 }
                 
                 self.additionalPlayers = additionalPlayers
                 self.additionalPlayersPromise.set(.single(additionalPlayers))
+                self.additionalPlayerAudioMixes = audioMixes
                 
                 (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInputs(additionalInputs)
                 
@@ -1878,7 +1888,7 @@ public final class MediaEditor {
             
             self.additionalPlayers = [player]
             self.additionalPlayersPromise.set(.single([player]))
-            self.additionalPlayerAudioMix = audioMix
+            self.additionalPlayerAudioMixes = [audioMix]
             
             (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInputs([.video(playerItem, nil)])
         }
@@ -1991,11 +2001,21 @@ public final class MediaEditor {
             }
         }
         
-        if let audioMix = self.additionalPlayerAudioMix, let asset = self.additionalPlayers.first?.currentItem?.asset {
-            let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
-            audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
-            audioMix.inputParameters = [audioMixInputParameters]
-            self.additionalPlayers.first?.currentItem?.audioMix = audioMix
+        if let trackId {
+            if let index = self.playerIndexForTrackId(trackId), index < self.additionalPlayerAudioMixes.count && index < self.additionalPlayers.count, let asset = self.additionalPlayers[index].currentItem?.asset {
+                let audioMix = self.additionalPlayerAudioMixes[index]
+                let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+                audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
+                audioMix.inputParameters = [audioMixInputParameters]
+                self.additionalPlayers[index].currentItem?.audioMix = audioMix
+            }
+        } else {
+            if let audioMix = self.additionalPlayerAudioMixes.first, let asset = self.additionalPlayers.first?.currentItem?.asset {
+                let audioMixInputParameters = AVMutableAudioMixInputParameters(track: asset.tracks(withMediaType: .audio).first)
+                audioMixInputParameters.setVolume(Float(volume ?? 1.0), at: .zero)
+                audioMix.inputParameters = [audioMixInputParameters]
+                self.additionalPlayers.first?.currentItem?.audioMix = audioMix
+            }
         }
     }
     
