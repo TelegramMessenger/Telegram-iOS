@@ -1767,7 +1767,7 @@ private extension MediaScrubberComponent.Track {
     }
     
     var isTimeline: Bool {
-        if case let .audio(_, _, _, _, isTimeline) = self {
+        if case let .audio(_, _, _, _, isTimeline) = self.content {
             return isTimeline
         } else {
             return false
