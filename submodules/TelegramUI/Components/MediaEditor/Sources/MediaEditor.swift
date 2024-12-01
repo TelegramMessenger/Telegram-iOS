@@ -1732,11 +1732,11 @@ public final class MediaEditor {
         }
         
         self.updateValues(mode: .skipRendering) { values in
-            var values = values.withUpdatedCollage(collage)
-            if mainVideoIsMuted {
-                values = values.withUpdatedVideoVolume(0.0)
-            }
-            return values
+            return values.withUpdatedCollage(collage)
+        }
+        
+        if mainVideoIsMuted {
+            self.setVideoVolume(0.0)
         }
                 
         self.setupAdditionalVideoPlayback()
