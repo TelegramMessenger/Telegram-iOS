@@ -333,6 +333,11 @@ public final class AccountStateManager {
             return self.sentScheduledMessageIdsPipe.signal()
         }
         
+        fileprivate let starRefBotConnectionEventsPipe = ValuePipe<StarRefBotConnectionEvent>()
+        public var starRefBotConnectionEvents: Signal<StarRefBotConnectionEvent, NoError> {
+            return self.starRefBotConnectionEventsPipe.signal()
+        }
+        
         private var updatedWebpageContexts: [MediaId: UpdatedWebpageSubscriberContext] = [:]
         private var updatedPeersNearbyContext = UpdatedPeersNearbySubscriberContext()
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
@@ -1804,6 +1809,10 @@ public final class AccountStateManager {
                 self.removePossiblyDeliveredMessagesUniqueIds.merge(uniqueIds, uniquingKeysWith: { _, rhs in rhs })
             }
         }
+        
+        func addStarRefBotConnectionEvent(event: StarRefBotConnectionEvent) {
+            self.starRefBotConnectionEventsPipe.putNext(event)
+        }
     }
     
     private let impl: QueueLocalObject<Impl>
@@ -2182,6 +2191,18 @@ public final class AccountStateManager {
     
     public func synchronouslyIsMessageDeletedRemotely(ids: [EngineMessage.Id]) -> [EngineMessage.Id] {
         return self.messagesRemovedContext.synchronouslyIsMessageDeletedRemotely(ids: ids)
+    }
+    
+    func starRefBotConnectionEvents() -> Signal<StarRefBotConnectionEvent, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.starRefBotConnectionEventsPipe.signal().start(next: subscriber.putNext)
+        }
+    }
+    
+    func addStarRefBotConnectionEvent(event: StarRefBotConnectionEvent) {
+        self.impl.with { impl in
+            impl.addStarRefBotConnectionEvent(event: event)
+        }
     }
 }
 
