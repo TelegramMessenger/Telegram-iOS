@@ -281,7 +281,7 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     }
     
     public var stringValue: String {
-        return totalValue.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", totalValue) : String(totalValue)
+        return totalValue.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", totalValue) :  String(format: "%.02f", totalValue)
     }
     
     public var totalValue: Double {
