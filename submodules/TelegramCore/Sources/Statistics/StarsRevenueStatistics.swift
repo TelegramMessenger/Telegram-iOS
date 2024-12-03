@@ -146,7 +146,7 @@ extension StarsRevenueStats.Balances {
     init(apiStarsRevenueStatus: Api.StarsRevenueStatus) {
         switch apiStarsRevenueStatus {
         case let .starsRevenueStatus(flags, currentBalance, availableBalance, overallRevenue, nextWithdrawalAt):
-            self.init(currentBalance: StarsAmount(value: currentBalance, nanos: 0), availableBalance: StarsAmount(value: availableBalance, nanos: 0), overallRevenue: StarsAmount(value: overallRevenue, nanos: 0), withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
+            self.init(currentBalance: StarsAmount(apiAmount: currentBalance), availableBalance: StarsAmount(apiAmount: availableBalance), overallRevenue: StarsAmount(apiAmount: overallRevenue), withdrawEnabled: ((flags & (1 << 0)) != 0), nextWithdrawalTimestamp: nextWithdrawalAt)
         }
     }
 }
