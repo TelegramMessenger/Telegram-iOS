@@ -896,10 +896,10 @@ public enum JoinAffiliateProgramScreenMode {
 
     public final class Active {
         public let targetPeer: EnginePeer
-        public let bot: TelegramConnectedStarRefBotList.Item
-        public let copyLink: (TelegramConnectedStarRefBotList.Item) -> Void
+        public let bot: EngineConnectedStarRefBotsContext.Item
+        public let copyLink: (EngineConnectedStarRefBotsContext.Item) -> Void
         
-        public init(targetPeer: EnginePeer, bot: TelegramConnectedStarRefBotList.Item, copyLink: @escaping (TelegramConnectedStarRefBotList.Item) -> Void) {
+        public init(targetPeer: EnginePeer, bot: EngineConnectedStarRefBotsContext.Item, copyLink: @escaping (EngineConnectedStarRefBotsContext.Item) -> Void) {
             self.targetPeer = targetPeer
             self.bot = bot
             self.copyLink = copyLink
