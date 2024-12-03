@@ -127,18 +127,23 @@ final class AffiliateProgramSetupScreenComponent: Component {
         private var durationValue: Int = 0
         private var durationMinValue: Int = 0
         
+        private var ignoreScrolling: Bool = false
+        
         private var isApplying: Bool = false
         private var applyDisposable: Disposable?
         
         private var currentProgram: TelegramStarRefProgram?
         private var programEndTimer: Foundation.Timer?
         
-        private var connectedStarBotList: TelegramConnectedStarRefBotList?
-        private var connectedStarBotListDisposable: Disposable?
+        private var connectedStarBots: EngineConnectedStarRefBotsContext?
+        private var connectedStarBotsState: EngineConnectedStarRefBotsContext.State?
+        private var connectedStarBotsStateDisposable: Disposable?
+        private var expectedManualRemoveConnectedBotUrl: String?
         
-        private var suggestedStarBotList: TelegramSuggestedStarRefBotList?
-        private var suggestedStarBotListDisposable: Disposable?
-        private var suggestedSortMode: TelegramSuggestedStarRefBotList.SortMode = .profitability
+        private var suggestedStarBots: EngineSuggestedStarRefBotsContext?
+        private var suggestedStarBotsState: EngineSuggestedStarRefBotsContext.State?
+        private var suggestedStarBotsStateDisposable: Disposable?
+        
         private var isSuggestedSortModeUpdating: Bool = false
         
         override init(frame: CGRect) {
@@ -169,8 +174,8 @@ final class AffiliateProgramSetupScreenComponent: Component {
         deinit {
             self.applyDisposable?.dispose()
             self.programEndTimer?.invalidate()
-            self.connectedStarBotListDisposable?.dispose()
-            self.suggestedStarBotListDisposable?.dispose()
+            self.connectedStarBotsStateDisposable?.dispose()
+            self.suggestedStarBotsStateDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -182,7 +187,9 @@ final class AffiliateProgramSetupScreenComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: .immediate)
+            if !self.ignoreScrolling {
+                self.updateScrolling(transition: .immediate)
+            }
         }
         
         private func requestApplyProgram() {
@@ -353,9 +360,27 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 alphaTransition.setAlpha(view: bottomPanelBackgroundView, alpha: bottomPanelAlpha)
                 alphaTransition.setAlpha(layer: self.bottomPanelSeparator, alpha: bottomPanelAlpha)
             }
+            
+            if self.scrollView.bounds.maxY >= self.scrollView.contentSize.height - 100.0 {
+                var shouldLoadMoreConnected = false
+                if let connectedStarBotsState = self.connectedStarBotsState, connectedStarBotsState.isLoaded, connectedStarBotsState.nextOffset != nil {
+                    shouldLoadMoreConnected = true
+                }
+                
+                var shouldLoadMoreSuggested = false
+                if let suggestedStarBotsState = self.suggestedStarBotsState, suggestedStarBotsState.isLoaded, suggestedStarBotsState.nextOffset != nil {
+                    shouldLoadMoreSuggested = true
+                }
+                
+                if shouldLoadMoreConnected {
+                    self.connectedStarBots?.loadMore()
+                } else if shouldLoadMoreSuggested {
+                    self.suggestedStarBots?.loadMore()
+                }
+            }
         }
         
-        private func openConnectedBot(bot: TelegramConnectedStarRefBotList.Item) {
+        private func openConnectedBot(bot: EngineConnectedStarRefBotsContext.Item) {
             guard let component = self.component else {
                 return
             }
@@ -393,44 +418,28 @@ final class AffiliateProgramSetupScreenComponent: Component {
             })
         }
         
-        private func leaveProgram(bot: TelegramConnectedStarRefBotList.Item) {
-            guard let component = self.component else {
-                return
-            }
-            
-            let _ = (component.context.engine.peers.removeConnectedStarRefBot(id: component.initialContent.peerId, link: bot.url)
-            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
-                guard let self else {
-                    return
-                }
-                if let connectedStarBotList = self.connectedStarBotList {
-                    var updatedItems = connectedStarBotList.items
-                    if let index = updatedItems.firstIndex(where: { $0.peer.id == bot.peer.id }) {
-                        updatedItems.remove(at: index)
-                    }
-                    self.connectedStarBotList = TelegramConnectedStarRefBotList(
-                        items: updatedItems,
-                        totalCount: connectedStarBotList.totalCount + 1
-                    )
-                    self.state?.updated(transition: .immediate)
-                }
-            })
+        private func leaveProgram(bot: EngineConnectedStarRefBotsContext.Item) {
+            self.expectedManualRemoveConnectedBotUrl = bot.url
+            self.connectedStarBots?.remove(url: bot.url)
         }
         
         private func openSortModeMenu(sourceView: UIView) {
             guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
                 return
             }
+            guard let suggestedStarBots = self.suggestedStarBots else {
+                return
+            }
             
             var items: [ContextMenuItem] = []
             
-            let availableModes: [(TelegramSuggestedStarRefBotList.SortMode, String)] = [
+            let availableModes: [(EngineSuggestedStarRefBotsContext.SortMode, String)] = [
                 (.profitability, environment.strings.AffiliateProgram_SortSelectorProfitability),
                 (.revenue, environment.strings.AffiliateProgram_SortSelectorRevenue),
                 (.date, environment.strings.AffiliateProgram_SortSelectorDate)
             ]
             for (mode, title) in availableModes {
-                let isSelected = mode == self.suggestedSortMode
+                let isSelected = mode == suggestedStarBots.sortMode
                 items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
                     if isSelected {
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.actionSheet.primaryTextColor)
@@ -443,23 +452,20 @@ final class AffiliateProgramSetupScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    if self.suggestedSortMode != mode {
-                        self.suggestedSortMode = mode
+                    if self.suggestedStarBots?.sortMode != mode {
                         self.isSuggestedSortModeUpdating = true
                         self.state?.updated(transition: .immediate)
                         
-                        self.suggestedStarBotListDisposable?.dispose()
-                        self.suggestedStarBotListDisposable = (component.context.engine.peers.requestSuggestedStarRefBots(
-                            id: component.initialContent.peerId,
-                            sortMode: self.suggestedSortMode,
-                            offset: nil,
-                            limit: 100)
-                        |> deliverOnMainQueue).startStrict(next: { [weak self] list in
+                        let suggestedStarBots = component.context.engine.peers.suggestedStarRefBots(id: component.initialContent.peerId, sortMode: mode)
+                        self.suggestedStarBots = suggestedStarBots
+                        self.suggestedStarBotsStateDisposable?.dispose()
+                        self.suggestedStarBotsStateDisposable = (suggestedStarBots.state
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                             guard let self else {
                                 return
                             }
-                            self.suggestedStarBotList = list
                             self.isSuggestedSortModeUpdating = false
+                            self.suggestedStarBotsState = state
                             self.state?.updated(transition: .immediate)
                         })
                     }
@@ -489,6 +495,11 @@ final class AffiliateProgramSetupScreenComponent: Component {
             self.isUpdating = true
             defer {
                 self.isUpdating = false
+            }
+            
+            var transition = transition
+            if !self.scrollView.isDecelerating && !self.scrollView.isDragging {
+                transition = transition.withUserData(PeerBadgeAvatarComponent.SynchronousLoadHint())
             }
             
             let durationItems: [Int32] = [
@@ -576,28 +587,35 @@ final class AffiliateProgramSetupScreenComponent: Component {
                         self.durationMinValue = 0
                     }
                 case .connectedPrograms:
-                    self.connectedStarBotListDisposable = (component.context.engine.peers.requestConnectedStarRefBots(
-                        id: component.initialContent.peerId,
-                        offset: nil,
-                        limit: 100)
-                    |> deliverOnMainQueue).startStrict(next: { [weak self] list in
+                    let connectedStarBots = component.context.engine.peers.connectedStarRefBots(id: component.initialContent.peerId)
+                    self.connectedStarBots = connectedStarBots
+                    self.connectedStarBotsStateDisposable = (connectedStarBots.state
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                         guard let self else {
                             return
                         }
-                        self.connectedStarBotList = list
-                        self.state?.updated(transition: .immediate)
+                        var transition: ComponentTransition = .immediate
+                        if let expectedManualRemoveConnectedBotUrl = self.expectedManualRemoveConnectedBotUrl {
+                            self.expectedManualRemoveConnectedBotUrl = nil
+                            
+                            if let currentState = self.connectedStarBotsState {
+                                if currentState.items.count == state.items.count + 1 && currentState.items.contains(where: { $0.url == expectedManualRemoveConnectedBotUrl }) && !state.items.contains(where: { $0.url == expectedManualRemoveConnectedBotUrl }) {
+                                    transition = .easeInOut(duration: 0.25)
+                                }
+                            }
+                        }
+                        self.connectedStarBotsState = state
+                        self.state?.updated(transition: transition)
                     })
                     
-                    self.suggestedStarBotListDisposable = (component.context.engine.peers.requestSuggestedStarRefBots(
-                        id: component.initialContent.peerId,
-                        sortMode: self.suggestedSortMode,
-                        offset: nil,
-                        limit: 100)
-                    |> deliverOnMainQueue).startStrict(next: { [weak self] list in
+                    let suggestedStarBots = component.context.engine.peers.suggestedStarRefBots(id: component.initialContent.peerId, sortMode: .profitability)
+                    self.suggestedStarBots = suggestedStarBots
+                    self.suggestedStarBotsStateDisposable = (suggestedStarBots.state
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] state in
                         guard let self else {
                             return
                         }
-                        self.suggestedStarBotList = list
+                        self.suggestedStarBotsState = state
                         self.state?.updated(transition: .immediate)
                     })
                 }
@@ -1187,12 +1205,12 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 
                 contentHeight += bottomPanelFrame.height
             case .connectedPrograms:
-                if let connectedStarBotList = self.connectedStarBotList, let suggestedStarBotList = self.suggestedStarBotList {
-                    let suggestedStarBotListItems = suggestedStarBotList.items.filter({ item in !connectedStarBotList.items.contains(where: { $0.peer.id == item.peer.id }) })
+                if let connectedStarBotsState = self.connectedStarBotsState, connectedStarBotsState.isLoaded, let suggestedStarBots = self.suggestedStarBots, let suggestedStarBotsState = self.suggestedStarBotsState, suggestedStarBotsState.isLoaded {
+                    let suggestedStarBotListItems = suggestedStarBotsState.items.filter({ item in !connectedStarBotsState.items.contains(where: { $0.peer.id == item.peer.id }) })
                     
                     do {
                         var activeSectionItems: [AnyComponentWithIdentity<Empty>] = []
-                        for item in connectedStarBotList.items {
+                        for item in connectedStarBotsState.items {
                             let durationTitle: String
                             if let durationMonths = item.durationMonths {
                                 durationTitle = timeIntervalString(strings: environment.strings, value: durationMonths * (30 * 24 * 60 * 60))
@@ -1362,13 +1380,9 @@ final class AffiliateProgramSetupScreenComponent: Component {
                                 self.scrollView.addSubview(activeProgramsSectionView)
                             }
                             transition.setFrame(view: activeProgramsSectionView, frame: activeProgramsSectionFrame)
-                            if let connectedStarBotList = self.connectedStarBotList, !connectedStarBotList.items.isEmpty {
-                                activeProgramsSectionView.isHidden = false
-                            } else {
-                                activeProgramsSectionView.isHidden = true
-                            }
+                            transition.setAlpha(view: activeProgramsSectionView, alpha: connectedStarBotsState.items.isEmpty ? 0.0 : 1.0)
                         }
-                        if let connectedStarBotList = self.connectedStarBotList, !connectedStarBotList.items.isEmpty {
+                        if !connectedStarBotsState.items.isEmpty {
                             contentHeight += activeProgramsSectionSize.height
                             contentHeight += sectionSpacing
                         }
@@ -1454,24 +1468,13 @@ final class AffiliateProgramSetupScreenComponent: Component {
                                                     guard let self, let component = self.component else {
                                                         return
                                                     }
+                                                    
                                                     let _ = (component.context.engine.peers.connectStarRefBot(id: component.initialContent.peerId, botId: peer.id)
                                                     |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                                                         guard let self else {
                                                             return
                                                         }
-                                                        if let connectedStarBotList = self.connectedStarBotList {
-                                                            var updatedItems = connectedStarBotList.items
-                                                            if !updatedItems.contains(where: { $0.peer.id == peer.id }) {
-                                                                updatedItems.insert(result, at: 0)
-                                                            }
-                                                            self.connectedStarBotList = TelegramConnectedStarRefBotList(
-                                                                items: updatedItems,
-                                                                totalCount: connectedStarBotList.totalCount + 1
-                                                            )
-                                                            self.state?.updated(transition: .immediate)
-                                                            
-                                                            self.openConnectedBot(bot: result)
-                                                        }
+                                                        self.openConnectedBot(bot: result)
                                                     })
                                                 }
                                             ))
@@ -1496,7 +1499,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
                             suggestedHeaderItems.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(BotSectionSortButtonComponent(
                                 theme: environment.theme,
                                 strings: environment.strings,
-                                sortMode: self.suggestedSortMode,
+                                sortMode: suggestedStarBots.sortMode,
                                 action: { [weak self] sourceView in
                                     guard let self else {
                                         return
@@ -1526,15 +1529,20 @@ final class AffiliateProgramSetupScreenComponent: Component {
                             }
                             transition.setFrame(view: suggestedProgramsSectionView, frame: suggestedProgramsSectionFrame)
                             
+                            suggestedProgramsSectionView.isHidden = connectedStarBotsState.nextOffset != nil
+                            
                             suggestedProgramsSectionView.contentViewImpl.alpha = self.isSuggestedSortModeUpdating ? 0.6 : 1.0
                             suggestedProgramsSectionView.contentViewImpl.isUserInteractionEnabled = !self.isSuggestedSortModeUpdating
                         }
-                        contentHeight += suggestedProgramsSectionSize.height
-                        contentHeight += sectionSpacing
+                        if connectedStarBotsState.nextOffset == nil {
+                            contentHeight += suggestedProgramsSectionSize.height
+                            contentHeight += sectionSpacing
+                        }
                     }
                 }
             }
             
+            self.ignoreScrolling = true
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             if self.scrollView.frame != CGRect(origin: CGPoint(), size: availableSize) {
                 self.scrollView.frame = CGRect(origin: CGPoint(), size: availableSize)
@@ -1546,6 +1554,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
             }
+            self.ignoreScrolling = false
             
             self.updateScrolling(transition: transition)
             

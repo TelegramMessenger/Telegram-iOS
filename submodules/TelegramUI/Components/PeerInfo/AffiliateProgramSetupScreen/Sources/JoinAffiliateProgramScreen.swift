@@ -1863,13 +1863,13 @@ final class AffiliatePeerSubtitleComponent: Component {
 final class BotSectionSortButtonComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let sortMode: TelegramSuggestedStarRefBotList.SortMode
+    let sortMode: EngineSuggestedStarRefBotsContext.SortMode
     let action: (UIView) -> Void
 
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
-        sortMode: TelegramSuggestedStarRefBotList.SortMode,
+        sortMode: EngineSuggestedStarRefBotsContext.SortMode,
         action: @escaping (UIView) -> Void
     ) {
         self.theme = theme
@@ -1990,6 +1990,9 @@ final class BotSectionSortButtonComponent: Component {
 }
 
 final class PeerBadgeAvatarComponent: Component {
+    final class SynchronousLoadHint {
+    }
+    
     let context: AccountContext
     let peer: EnginePeer
     let theme: PresentationTheme
@@ -2042,6 +2045,11 @@ final class PeerBadgeAvatarComponent: Component {
             self.component = component
             self.state = state
             
+            var synchronousLoad = false
+            if transition.userData(SynchronousLoadHint.self) != nil {
+                synchronousLoad = true
+            }
+            
             let size = CGSize(width: 40.0, height: 40.0)
             let badgeSize: CGFloat = 18.0
 
@@ -2062,7 +2070,7 @@ final class PeerBadgeAvatarComponent: Component {
                 context: component.context,
                 theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                 peer: component.peer,
-                synchronousLoad: false,
+                synchronousLoad: synchronousLoad,
                 displayDimensions: size,
                 cutoutRect: component.hasBadge ? badgeFrame.insetBy(dx: -(1.0 + UIScreenPixel), dy: -(1.0 + UIScreenPixel)) : nil
             )
