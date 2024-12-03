@@ -2615,13 +2615,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 view.animateOutToEditor(transition: transition)
             }
             
-            Queue.mainQueue().after(2.0, {
-                if self.cameraState.isCollageEnabled {
-                    self.collage = nil
-                    if let collageView = self.collageView {
-                        collageView.removeFromSuperview()
-                        self.collageView = nil
-                    }
+            Queue.mainQueue().after(1.5, {
+                if let collageView = self.collageView {
+                    collageView.stopPlayback()
                 }
             })
         }
@@ -2678,6 +2674,10 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         func animateInFromEditor(toGallery: Bool) {
             if !toGallery {
                 self.resumeCameraCapture(fromGallery: false)
+                
+                if let collageView = self.collageView {
+                    collageView.resetPlayback()
+                }
                 
                 self.cameraIsActive = true
                 self.requestUpdateLayout(transition: .immediate)
