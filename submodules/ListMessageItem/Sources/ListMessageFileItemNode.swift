@@ -160,6 +160,14 @@ final class CachedChatListSearchResult {
     }
 }
 
+private func selectStoryMedia(item: Stories.Item, preferredHighQuality: Bool) -> Media? {
+    if !preferredHighQuality, let alternativeMediaValue = item.alternativeMediaList.first {
+        return alternativeMediaValue
+    } else {
+        return item.media
+    }
+}
+
 public final class ListMessageFileItemNode: ListMessageNode {
     public final class DescriptionNode: ASDisplayNode {
         let descriptionNode: TextNode
@@ -625,7 +633,17 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             var selectedMedia: Media?
             if let message = message {
+                var effectiveMessageMedia = message.media
                 for media in message.media {
+                    if let storyMedia = media as? TelegramMediaStory {
+                        if let story = message.associatedStories[storyMedia.storyId], !story.data.isEmpty, case let .item(storyItem) = story.get(Stories.StoredItem.self), let media = selectStoryMedia(item: storyItem, preferredHighQuality: item.interaction.preferredStoryHighQuality) {
+                            effectiveMessageMedia = [media]
+                            break
+                        }
+                    }
+                }
+                
+                for media in effectiveMessageMedia {
                     if let file = media as? TelegramMediaFile {
                         selectedMedia = file
                         
