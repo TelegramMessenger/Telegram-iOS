@@ -221,7 +221,10 @@ public final class MediaPlayerNode: ASDisplayNode {
                         videoLayer.enqueue(frame.sampleBuffer)
                         if #available(iOS 17.4, *) {
                         } else {
-                            strongSelf.hasSentFramesToDisplay?()
+                            if !strongSelf.didNotifyVideoLayerReadyForDisplay {
+                                strongSelf.didNotifyVideoLayerReadyForDisplay = true
+                                strongSelf.hasSentFramesToDisplay?()
+                            }
                         }
                     }
                 }
@@ -257,7 +260,10 @@ public final class MediaPlayerNode: ASDisplayNode {
                             return
                         }
                         videoLayer.enqueue(frame.sampleBuffer)
-                        //strongSelf.hasSentFramesToDisplay?()
+                        if !strongSelf.didNotifyVideoLayerReadyForDisplay {
+                            strongSelf.didNotifyVideoLayerReadyForDisplay = true
+                            strongSelf.hasSentFramesToDisplay?()
+                        }
                     }
                     
                     Queue.mainQueue().async {
