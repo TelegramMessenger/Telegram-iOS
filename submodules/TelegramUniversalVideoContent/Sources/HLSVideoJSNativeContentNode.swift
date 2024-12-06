@@ -296,11 +296,9 @@ final class HLSJSServerSource: SharedHLSServer.Source {
                             let fetchTime = CFAbsoluteTimeGetCurrent() - startTime
                             print("Fetching \(quality)p part took \(fetchTime * 1000.0) ms")
                             #endif
-                            if let preloadRange, Int(preloadRange.lowerBound) <= range.upperBound && Int(preloadRange.upperBound) >= range.lowerBound {
-                                if let data = try? Data(contentsOf: URL(fileURLWithPath: partialFile.path), options: .alwaysMapped) {
-                                    let subData = data.subdata(in: Int(result.offset) ..< Int(result.offset + result.size))
-                                    postbox.mediaBox.storeResourceData(file.media.resource.id, range: Int64(range.lowerBound) ..< Int64(range.upperBound), data: subData)
-                                }
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: partialFile.path), options: .alwaysMapped) {
+                                let subData = data.subdata(in: Int(result.offset) ..< Int(result.offset + result.size))
+                                postbox.mediaBox.storeResourceData(file.media.resource.id, range: Int64(range.lowerBound) ..< Int64(range.upperBound), data: subData)
                             }
                             subscriber.putNext((partialFile, Int(result.offset) ..< Int(result.offset + result.size), Int(size)))
                             subscriber.putCompletion()
