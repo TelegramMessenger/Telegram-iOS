@@ -94,6 +94,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
         private let coinIcon = ComponentView<Empty>()
         private let title = ComponentView<Empty>()
         private let titleTransformContainer: UIView
+        private var titleNeutralScale: CGFloat = 1.0
         private let subtitle = ComponentView<Empty>()
         
         private let introBackground = ComponentView<Empty>()
@@ -339,7 +340,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
             let titleYDistance: CGFloat = titleY - titleCenterY
             let titleTransformFraction: CGFloat = 1.0 - max(0.0, min(1.0, titleYDistance / titleTransformDistance))
             let titleMinScale: CGFloat = 17.0 / 30.0
-            let titleScale: CGFloat = 1.0 * (1.0 - titleTransformFraction) + titleMinScale * titleTransformFraction
+            let titleScale: CGFloat = self.titleNeutralScale * (1.0 - titleTransformFraction) + (titleMinScale / self.titleNeutralScale) * titleTransformFraction
             if let titleView = self.title.view {
                 transition.setScale(view: titleView, scale: titleScale)
             }
@@ -668,9 +669,11 @@ final class AffiliateProgramSetupScreenComponent: Component {
                     text: .plain(NSAttributedString(string: titleValue, font: Font.bold(30.0), textColor: environment.theme.list.itemPrimaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - textSideInset * 2.0, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width + 140.0, height: 1000.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: contentHeight), size: titleSize)
+            let titleNeutralScale: CGFloat = min(1.0, (availableSize.width - sideInset * 2.0) / titleSize.width)
+            self.titleNeutralScale = titleNeutralScale
             if let titleView = self.title.view {
                 if self.titleTransformContainer.superview == nil {
                     if let controller = environment.controller(), let navigationBar = controller.navigationBar {
@@ -685,7 +688,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 titleView.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                 transition.setPosition(view: self.titleTransformContainer, position: titleFrame.center)
             }
-            contentHeight += titleSize.height
+            contentHeight += floor(titleSize.height * titleNeutralScale)
             contentHeight += 10.0
             
             let subtitleSize = self.subtitle.update(
@@ -855,8 +858,8 @@ final class AffiliateProgramSetupScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(FilledRoundedRectangleComponent(
                     color: environment.theme.list.itemBlocksBackgroundColor,
-                    cornerRadius: .value(5.0),
-                    smoothCorners: true
+                    cornerRadius: .value(11.0),
+                    smoothCorners: false
                 )),
                 environment: {},
                 containerSize: introBackgroundFrame.size
@@ -1153,7 +1156,7 @@ final class AffiliateProgramSetupScreenComponent: Component {
                         ),
                         content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(Text(text: buttonText, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor))),
                         isEnabled: self.currentProgram?.endDate == nil,
-                        allowActionWhenDisabled: true,
+                        allowActionWhenDisabled: false,
                         displaysProgress: false,
                         action: { [weak self] in
                             guard let self else {

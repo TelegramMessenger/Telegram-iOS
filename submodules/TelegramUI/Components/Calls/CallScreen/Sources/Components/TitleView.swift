@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import ComponentFlow
+import MultilineTextComponent
 
 final class TextView: UIView {
     private struct Params: Equatable {
@@ -20,6 +21,8 @@ final class TextView: UIView {
     
     private var layoutState: LayoutState?
     private var animateContentsTransition: Bool = false
+    
+    private let content = ComponentView<Empty>()
     
     override init(frame: CGRect) {
         super.init(frame: CGRect())
@@ -56,17 +59,26 @@ final class TextView: UIView {
             font = UIFont.systemFont(ofSize: fontSize, weight: UIFont.Weight(fontWeight))
         }
         
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.alignment = alignment
-        paragraphStyle.lineSpacing = 0.6
         let attributedString = NSAttributedString(string: string, attributes: [
             .font: font,
             .foregroundColor: color,
-            .paragraphStyle: paragraphStyle
         ])
-        let stringBounds = attributedString.boundingRect(with: CGSize(width: constrainedWidth, height: 200.0), options: .usesLineFragmentOrigin, context: nil)
-        let stringSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
-        let size = CGSize(width: min(constrainedWidth, stringSize.width), height: stringSize.height)
+        
+        let contentSize = self.content.update(
+            transition: .immediate,
+            component: AnyComponent(MultilineTextComponent(
+                text: .plain(attributedString),
+                horizontalAlignment: alignment,
+                lineSpacing: 0.6
+            )),
+            environment: {},
+            containerSize: CGSize(width: constrainedWidth, height: 1000.0)
+        )
+        if let contentView = self.content.view {
+            contentView.frame = CGRect(origin: CGPoint(), size: contentSize)
+        }
+        
+        let size = CGSize(width: min(constrainedWidth, contentSize.width), height: contentSize.height)
         
         let layoutState = LayoutState(params: params, size: size, attributedString: attributedString)
         if self.layoutState != layoutState {
@@ -79,10 +91,12 @@ final class TextView: UIView {
     }
     
     override func draw(_ rect: CGRect) {
-        guard let layoutState = self.layoutState else {
+        guard let _ = self.layoutState else {
             return
         }
         
-        layoutState.attributedString.draw(with: rect, options: [.truncatesLastVisibleLine, .usesLineFragmentOrigin], context: nil)
+        if let contentView = self.content.view {
+            contentView.draw(contentView.bounds)
+        }
     }
 }
