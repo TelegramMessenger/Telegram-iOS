@@ -281,7 +281,7 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     }
     
     public var stringValue: String {
-        return totalValue.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", totalValue) : String(totalValue)
+        return totalValue.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", totalValue) :  String(format: "%.02f", totalValue)
     }
     
     public var totalValue: Double {
@@ -615,7 +615,8 @@ private extension StarsContext.State.Transaction {
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber, starrefCommissionPermille: starrefCommissionPermille, starrefPeerId: starrefPeer.flatMap(\.peerId), starrefAmount: starrefAmount.flatMap(StarsAmount.init(apiAmount:)))
+                        
+            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber, starrefCommissionPermille: starrefCommissionPermille, starrefPeerId: starrefPeer?.peerId, starrefAmount: starrefAmount.flatMap(StarsAmount.init(apiAmount:)))
         }
     }
 }
