@@ -17,6 +17,7 @@ public enum ServerProvidedSuggestion: String {
     case todayBirthdays = "BIRTHDAY_CONTACTS_TODAY"
     case gracePremium = "PREMIUM_GRACE"
     case starsSubscriptionLowBalance = "STARS_SUBSCRIPTION_LOW_BALANCE"
+    case setupPhoto = "USERPIC_SETUP"
 }
 
 private var dismissedSuggestionsPromise = ValuePromise<[AccountRecordId: Set<ServerProvidedSuggestion>]>([:])
@@ -40,7 +41,6 @@ func _internal_getServerProvidedSuggestions(account: Account) -> Signal<[ServerP
         guard let data = appConfiguration.data, let listItems = data["pending_suggestions"] as? [String] else {
             return []
         }
-        
         return listItems.compactMap { item -> ServerProvidedSuggestion? in
             return ServerProvidedSuggestion(rawValue: item)
         }.filter { !dismissedSuggestions.contains($0) }

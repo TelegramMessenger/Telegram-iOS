@@ -1202,6 +1202,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             )
         }
         
+        self.chatListDisplayNode.mainContainerNode.openPhotoSetup = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let rootController = self.navigationController as? TelegramRootControllerInterface {
+                rootController.openPhotoSetup()
+            }
+        }
+        
         self.chatListDisplayNode.mainContainerNode.openPremiumManagement = { [weak self] in
             guard let self else {
                 return

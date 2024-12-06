@@ -108,7 +108,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                     updatedTimestamp = date
                 case .messageEmpty:
                     break
-                case let .messageService(_, _, _, _, _, date, _, _):
+                case let .messageService(_, _, _, _, _, date, _, _, _):
                     updatedTimestamp = date
             }
         } else {

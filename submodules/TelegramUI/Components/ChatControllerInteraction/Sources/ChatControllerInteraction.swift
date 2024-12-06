@@ -267,6 +267,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openAgeRestrictedMessageMedia: (Message, @escaping () -> Void) -> Void
     public let playMessageEffect: (Message) -> Void
     public let editMessageFactCheck: (MessageId) -> Void
+    public let sendGift: (EnginePeer.Id) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -400,6 +401,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openAgeRestrictedMessageMedia: @escaping (Message, @escaping () -> Void) -> Void,
         playMessageEffect: @escaping (Message) -> Void,
         editMessageFactCheck: @escaping (MessageId) -> Void,
+        sendGift: @escaping (EnginePeer.Id) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -512,6 +514,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openAgeRestrictedMessageMedia = openAgeRestrictedMessageMedia
         self.playMessageEffect = playMessageEffect
         self.editMessageFactCheck = editMessageFactCheck
+        self.sendGift = sendGift
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

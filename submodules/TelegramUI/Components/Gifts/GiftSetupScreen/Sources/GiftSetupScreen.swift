@@ -406,7 +406,7 @@ final class GiftSetupScreenComponent: Component {
                         purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
                         completion: { [weak starsContext] stars in
                             starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
-                            Queue.mainQueue().after(0.1) {
+                            Queue.mainQueue().after(2.0) {
                                 proceed()
                             }
                         }

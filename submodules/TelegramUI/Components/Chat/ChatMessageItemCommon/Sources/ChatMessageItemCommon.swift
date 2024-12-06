@@ -285,7 +285,7 @@ public func canAddMessageReactions(message: Message) -> Bool {
     }
     for media in message.media {
         if let _ = media as? TelegramMediaAction {
-            return false
+            return message.flags.contains(.ReactionsArePossible)
         } else if let story = media as? TelegramMediaStory {
             if story.isMention {
                 return false

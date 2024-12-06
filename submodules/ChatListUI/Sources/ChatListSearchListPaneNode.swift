@@ -115,7 +115,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         presentationData: ChatListPresentationData,
         filter: ChatListNodePeersFilter,
         key: ChatListSearchPaneKey,
-        peerSelected: @escaping (EnginePeer, Int64?, Bool) -> Void,
+        peerSelected: @escaping (EnginePeer, Int64?, Bool, OpenPeerAction) -> Void,
         disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
         peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?,
         clearRecentlySearchedPeers: @escaping () -> Void,
@@ -130,7 +130,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         switch self {
             case let .topPeers(peers, theme, strings):
                 return ChatListRecentPeersListItem(theme: theme, strings: strings, context: context, peers: peers, peerSelected: { peer in
-                    peerSelected(peer, nil, false)
+                    peerSelected(peer, nil, false, .generic)
                 }, peerContextAction: { peer, node, gesture, location in
                     if let peerContextAction = peerContextAction {
                         peerContextAction(peer, .recentPeers, node, gesture, location)
@@ -287,13 +287,20 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 }
             
                 var buttonAction: ContactsPeerItemButtonAction?
-                if case .chats = key, case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
+                if [.chats, .apps].contains(key), case let .user(user) = primaryPeer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp) {
                     buttonAction = ContactsPeerItemButtonAction(
                         title: presentationData.strings.ChatList_Search_Open,
                         action: { peer, _, _ in
-                            peerSelected(primaryPeer, nil, true)
+                            peerSelected(primaryPeer, nil, false, .openApp)
                         }
                     )
+                }
+            
+                var peerMode: ContactsPeerItemPeerMode
+                if case .apps = key {
+                    peerMode = .app(isPopular: section == .popularApps)
+                } else {
+                    peerMode = .generalSearch(isSavedMessages: false)
                 }
             
                 return ContactsPeerItem(
@@ -301,7 +308,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     sortOrder: nameSortOrder,
                     displayOrder: nameDisplayOrder,
                     context: context,
-                    peerMode: .generalSearch(isSavedMessages: false),
+                    peerMode: peerMode,
                     peer: .peer(peer: primaryPeer, chatPeer: chatPeer),
                     status: status,
                     badge: badge,
@@ -315,7 +322,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                     alwaysShowLastSeparator: key == .apps,
                     action: { _ in
                         if let chatPeer = peer.peer.peers[peer.peer.peerId] {
-                            peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels || section == .popularApps)
+                            peerSelected(EnginePeer(chatPeer), nil, section == .recommendedChannels, section == .popularApps ? .info : .generic)
                         }
                     },
                     disabledAction: { _ in
@@ -1067,6 +1074,12 @@ public struct ChatListSearchContainerTransition {
     }
 }
 
+enum OpenPeerAction {
+    case generic
+    case info
+    case openApp
+}
+
 private func chatListSearchContainerPreparedRecentTransition(
     from fromEntries: [ChatListRecentEntry],
     to toEntries: [ChatListRecentEntry],
@@ -1075,7 +1088,7 @@ private func chatListSearchContainerPreparedRecentTransition(
     presentationData: ChatListPresentationData,
     filter: ChatListNodePeersFilter,
     key: ChatListSearchPaneKey,
-    peerSelected: @escaping (EnginePeer, Int64?, Bool) -> Void,
+    peerSelected: @escaping (EnginePeer, Int64?, Bool, OpenPeerAction) -> Void,
     disabledPeerSelected: @escaping (EnginePeer, Int64?, ChatListDisabledPeerReason) -> Void,
     peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?,
     clearRecentlySearchedPeers: @escaping () -> Void,
@@ -1468,6 +1481,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
         self.recentListNode = ListView()
+        self.recentListNode.preloadPages = false
         self.recentListNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.recentListNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
@@ -3014,6 +3028,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, dismissNotice: { _ in
         }, editPeer: { _ in
         }, openWebApp: { _ in
+        }, openPhotoSetup: {
         })
         chatListInteraction.isSearchMode = true
         
@@ -3824,7 +3839,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 
-                let transition = chatListSearchContainerPreparedRecentTransition(from: previousRecentItems?.entries ?? [], to: recentItems.entries, forceUpdateAll: forceUpdateAll, context: context, presentationData: presentationData, filter: peersFilter, key: key, peerSelected: { peer, threadId, isRecommended in
+                let transition = chatListSearchContainerPreparedRecentTransition(from: previousRecentItems?.entries ?? [], to: recentItems.entries, forceUpdateAll: forceUpdateAll, context: context, presentationData: presentationData, filter: peersFilter, key: key, peerSelected: { peer, threadId, isRecommended, action in
                     guard let self else {
                         return
                     }
@@ -3850,36 +3865,39 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     } else if case .apps = key {
                         if let navigationController = self.navigationController {
-                            if isRecommended {
-                                if let peerInfoScreen = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                                    navigationController.pushViewController(peerInfoScreen)
-                                }
-                            } else if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
-                                self.context.sharedContext.openWebApp(
-                                    context: self.context,
-                                    parentController: parentController,
-                                    updatedPresentationData: nil,
-                                    botPeer: peer,
-                                    chatPeer: nil,
-                                    threadId: nil,
-                                    buttonText: "",
-                                    url: "",
-                                    simple: true,
-                                    source: .generic,
-                                    skipTermsOfService: true,
-                                    payload: nil
-                                )
-                            } else {
+                            switch action {
+                            case .generic:
                                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
                                     navigationController: navigationController,
                                     context: self.context,
                                     chatLocation: .peer(peer),
                                     keepStack: .always
                                 ))
+                            case .info:
+                                if let peerInfoScreen = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                    navigationController.pushViewController(peerInfoScreen)
+                                }
+                            case .openApp:
+                                if let parentController = self.parentController {
+                                    self.context.sharedContext.openWebApp(
+                                        context: self.context,
+                                        parentController: parentController,
+                                        updatedPresentationData: nil,
+                                        botPeer: peer,
+                                        chatPeer: nil,
+                                        threadId: nil,
+                                        buttonText: "",
+                                        url: "",
+                                        simple: true,
+                                        source: .generic,
+                                        skipTermsOfService: true,
+                                        payload: nil
+                                    )
+                                }
                             }
                         }
                     } else {
-                        if isRecommended, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
+                        if case .openApp = action, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.hasWebApp), let parentController = self.parentController {
                             self.context.sharedContext.openWebApp(
                                 context: self.context,
                                 parentController: parentController,
@@ -4583,6 +4601,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.ready.set(.single(true))
                     }
                     strongSelf.didSetReady = true
+                    if !strongSelf.recentListNode.preloadPages {
+                        Queue.mainQueue().after(0.5) {
+                            strongSelf.recentListNode.preloadPages = true
+                        }
+                    }
                     
                     strongSelf.emptyRecentAnimationNode?.isHidden = !transition.isEmpty
                     strongSelf.emptyRecentTitleNode?.isHidden = !transition.isEmpty
@@ -4909,6 +4932,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, dismissNotice: { _ in
             }, editPeer: { _ in
             }, openWebApp: { _ in
+            }, openPhotoSetup: {
             })
             var isInlineMode = false
             if case .topics = key {

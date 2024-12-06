@@ -744,6 +744,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     public func openBirthdaySetup() {
         self.accountSettingsController?.openBirthdaySetup()
     }
+    
+    public func openPhotoSetup() {
+        self.accountSettingsController?.openAvatarSetup()
+    }
 }
 
 //Xcode 16

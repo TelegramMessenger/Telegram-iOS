@@ -155,6 +155,7 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
     public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
     public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
     public static let externalShare = ChatAvailableMessageActionOptions(rawValue: 1 << 10)
+    public static let sendGift = ChatAvailableMessageActionOptions(rawValue: 1 << 11)
 }
 
 public struct ChatAvailableMessageActions {
@@ -802,6 +803,7 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func openSettings()
     func openBirthdaySetup()
+    func openPhotoSetup()
 }
 
 public protocol QuickReplySetupScreenInitialData: AnyObject {

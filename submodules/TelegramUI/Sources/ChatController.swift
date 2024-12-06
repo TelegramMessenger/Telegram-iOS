@@ -2093,7 +2093,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendStickers) != nil {
-                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
                     strongSelf.interfaceInteraction?.openBoostToUnrestrict()
                     return false
                 }
@@ -2245,7 +2245,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
-                    if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                    if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
                         strongSelf.interfaceInteraction?.openBoostToUnrestrict()
                         return false
                     }
@@ -2296,7 +2296,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, peer.hasBannedPermission(.banSendGifs) != nil {
-                if let boostsToUnrestrict = strongSelf.presentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0, (strongSelf.presentationInterfaceState.appliedBoosts ?? 0) < boostsToUnrestrict {
+                if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
                     strongSelf.interfaceInteraction?.openBoostToUnrestrict()
                     return false
                 }
@@ -4554,6 +4554,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openEditMessageFactCheck(messageId: messageId)
+        }, sendGift: { [weak self] peerId in
+            guard let self else {
+                return
+            }
+            let _ = (self.context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+            |> filter { !$0.isEmpty }
+            |> deliverOnMainQueue).start(next: { [weak self] giftOptions in
+                guard let self else {
+                    return
+                }
+                let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false)
+                self.push(controller)
+            })
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

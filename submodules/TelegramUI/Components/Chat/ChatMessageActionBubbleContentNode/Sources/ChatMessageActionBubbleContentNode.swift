@@ -230,7 +230,8 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
                 if let _ = image {
-                    backgroundSize.height += imageSize.height + 10
+                    backgroundSize.width = imageSize.width + 2.0
+                    backgroundSize.height += imageSize.height + 10.0
                 }
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
@@ -239,7 +240,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: imageSize), cornerRadius: 15.5)
 
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 10 + 2), size: imageSize)
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: labelLayout.size.height + 12.0), size: imageSize)
                             if let image = image {
                                 let imageNode: TransformImageNode
                                 if let current = strongSelf.imageNode {
@@ -319,7 +320,7 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                 attemptSynchronous: synchronousLoads
                             ))
                             
-                            let labelFrame = CGRect(origin: CGPoint(x: 8.0, y: image != nil ? 2 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
+                            let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - labelLayout.size.width) / 2.0) - 1.0, y: image != nil ? 2.0 : floorToScreenPixels((backgroundSize.height - labelLayout.size.height) / 2.0) - 1.0), size: labelLayout.size)
                             
                             if story != nil {
                                 let leadingIconView: UIImageView

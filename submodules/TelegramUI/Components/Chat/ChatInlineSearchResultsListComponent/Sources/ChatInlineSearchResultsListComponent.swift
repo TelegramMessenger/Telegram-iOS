@@ -671,6 +671,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         editPeer: { _ in
                         },
                         openWebApp: { _ in
+                        },
+                        openPhotoSetup: {
                         }
                     )
                     self.chatListNodeInteraction = chatListNodeInteraction

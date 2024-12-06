@@ -3621,6 +3621,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
+        }, sendGift: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -9788,7 +9789,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         }))
     }
-        
+    
     fileprivate func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
         guard let peer = self.data?.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: self.data?.threadData) else {
             return
@@ -9825,7 +9826,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             legacyController.bind(controller: navigationController)
             
             strongSelf.view.endEditing(true)
-            (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.present(legacyController, in: .window(.root))
+            
+            let parentController = (strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController)?.topViewController as? ViewController
+            
+            parentController?.present(legacyController, in: .window(.root))
             
             var hasPhotos = false
             if !peer.profileImageRepresentations.isEmpty {
@@ -9876,7 +9880,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings || strongSelf.isMyProfile, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
             mixin.stickersContext = LegacyPaintStickersContext(context: strongSelf.context)
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
-            mixin.requestSearchController = { [weak self] assetsController in
+            mixin.requestSearchController = { [weak self, weak parentController] assetsController in
                 guard let strongSelf = self else {
                     return
                 }
@@ -9885,14 +9889,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     self?.updateProfilePhoto(result, mode: mode)
                 }))
                 controller.navigationPresentation = .modal
-                (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
+                parentController?.push(controller)
                 
                 if fromGallery {
                     completion(nil)
                 }
             }
             var isFromEditor = false
-            mixin.requestAvatarEditor = { [weak self] imageCompletion, videoCompletion in
+            mixin.requestAvatarEditor = { [weak self, weak parentController] imageCompletion, videoCompletion in
                 guard let strongSelf = self, let imageCompletion, let videoCompletion else {
                     return
                 }
@@ -9913,27 +9917,33 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 let controller = AvatarEditorScreen(context: strongSelf.context, inputData: keyboardInputData.get(), peerType: peerType, markup: emojiMarkup)
                 controller.imageCompletion = imageCompletion
                 controller.videoCompletion = videoCompletion
-                (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
+                parentController?.push(controller)
                 isFromEditor = true
+                
+                Queue.mainQueue().after(1.0) {
+                    if let rootController = strongSelf.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                        rootController.openSettings()
+                    }
+                }
             }
 
             if let confirmationTextPhoto, let confirmationAction {
-                mixin.willFinishWithImage = { [weak self] image, commit in
+                mixin.willFinishWithImage = { [weak self, weak parentController] image, commit in
                     if let strongSelf = self, let image {
                         let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextPhoto, doneTitle: confirmationAction, commit: {
                             commit?()
                         })
-                        (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.presentInGlobalOverlay(controller)
+                        parentController?.presentInGlobalOverlay(controller)
                     }
                 }
             }
             if let confirmationTextVideo, let confirmationAction {
-                mixin.willFinishWithVideo = { [weak self] image, commit in
+                mixin.willFinishWithVideo = { [weak self, weak parentController] image, commit in
                     if let strongSelf = self, let image {
                         let controller = photoUpdateConfirmationController(context: strongSelf.context, peer: peer, image: image, text: confirmationTextVideo, doneTitle: confirmationAction, isDark: !isFromEditor, commit: {
                             commit?()
                         })
-                        (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.presentInGlobalOverlay(controller)
+                        parentController?.presentInGlobalOverlay(controller)
                     }
                 }
             }
@@ -13005,6 +13015,20 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         if let emojiStatusSelectionController = self.controllerNode.emojiStatusSelectionController {
             self.controllerNode.emojiStatusSelectionController = nil
             emojiStatusSelectionController.dismiss()
+        }
+    }
+    
+    public func openAvatarSetup() {
+        let proceed = { [weak self] in
+            self?.controllerNode.openAvatarForEditing()
+        }
+        if !self.isNodeLoaded {
+            self.loadDisplayNode()
+            Queue.mainQueue().after(0.1) {
+                proceed()
+            }
+        } else {
+            proceed()
         }
     }
     
