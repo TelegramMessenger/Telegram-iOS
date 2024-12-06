@@ -561,6 +561,22 @@ private func sendUploadedMultiMessageContent(
     attributes: [MessageAttribute],
     threadId: Int64?
 ) -> Signal<Never, StandaloneSendMessagesError> {
+    if content.count == 1, case let .text(text) = content[0].content {
+        return sendUploadedMessageContent(
+            auxiliaryMethods: auxiliaryMethods,
+            postbox: postbox,
+            network: network,
+            stateManager: stateManager,
+            accountPeerId: stateManager.accountPeerId,
+            peerId: peerId,
+            content: content[0],
+            text: text,
+            attributes: attributes,
+            media: [],
+            threadId: threadId
+        )
+    }
+    
     return postbox.transaction { transaction -> Signal<Never, StandaloneSendMessagesError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
