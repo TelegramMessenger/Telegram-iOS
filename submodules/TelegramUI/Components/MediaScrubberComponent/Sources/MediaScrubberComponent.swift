@@ -772,7 +772,7 @@ public final class MediaScrubberComponent: Component {
             transition.setAlpha(view: self.trimView, alpha: trimVisible ? 1.0 : 0.0)
             
             var ghostTrimVisible = false
-            if let lowestVideoId, !component.isCollage && self.selectedTrackId != lowestVideoId {
+            if let lowestVideoId, self.selectedTrackId != lowestVideoId {
                 ghostTrimVisible = true
             }
             
