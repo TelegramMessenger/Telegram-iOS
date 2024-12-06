@@ -337,7 +337,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.autosaveDisposable.dispose()
     }
     
-    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, limitedFileRange: Range<Int64>?, streamable: Bool, isSeekable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, storeAfterDownload: (() -> Void)?) {
+    func initializeState(postbox: Postbox, userLocation: MediaResourceUserLocation, resourceReference: MediaResourceReference, tempFilePath: String?, limitedFileRange: Range<Int64>?, streamable: Bool, isSeekable: Bool, video: Bool, preferSoftwareDecoding: Bool, fetchAutomatically: Bool, maximumFetchSize: Int?, storeAfterDownload: (() -> Void)?, isAudioVideoMessage: Bool) {
         if self.readingError || self.initializedState != nil {
             return
         }
@@ -408,7 +408,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
         
         var directFilePath: String?
-        if !streamable {
+        if !streamable && isAudioVideoMessage {
             let data = postbox.mediaBox.resourceData(resourceReference.resource, pathExtension: nil, option: .complete(waitUntilFetchStatus: false))
             let semaphore = DispatchSemaphore(value: 0)
             let _ = self.currentSemaphore.swap(semaphore)
