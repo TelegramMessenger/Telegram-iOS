@@ -20,6 +20,7 @@ public final class ListMessageItemInteraction {
     let getHiddenMedia: () -> [MessageId: [Media]]
     
     public var searchTextHighightState: String?
+    public var preferredStoryHighQuality: Bool = false
     
     public init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, openUrl: @escaping (String, Bool, Bool?, Message?) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, getHiddenMedia: @escaping () -> [MessageId: [Media]]) {
         self.openMessage = openMessage
@@ -95,6 +96,9 @@ public final class ListMessageItem: ListViewItem {
                         viewClassName = ListMessageFileItemNode.self
                         break
                     } else if let _ = media as? TelegramMediaImage {
+                        viewClassName = ListMessageFileItemNode.self
+                        break
+                    } else if let _ = media as? TelegramMediaStory {
                         viewClassName = ListMessageFileItemNode.self
                         break
                     }

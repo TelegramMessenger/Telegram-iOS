@@ -964,7 +964,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 }
                 let selection: ChatHistoryMessageSelection = selected.flatMap { .selectable(selected: $0) } ?? .none
                 var isMedia = false
-                if let tagMask = tagMask, tagMask != .photoOrVideo {
+                if let tagMask, tagMask != .photoOrVideo {
                     isMedia = true
                 } else if key == .downloads {
                     isMedia = true
@@ -3104,6 +3104,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, getHiddenMedia: {
             return [:]
         })
+        
+        listInteraction.preferredStoryHighQuality = context.sharedContext.currentAutomaticMediaDownloadSettings.highQualityStories
         
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
