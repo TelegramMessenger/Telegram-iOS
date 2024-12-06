@@ -230,6 +230,8 @@ final class QuickReplySetupScreenComponent: Component {
                         }
                     },
                     openWebApp: { _ in
+                    },
+                    openPhotoSetup: {
                     }
                 )
                 

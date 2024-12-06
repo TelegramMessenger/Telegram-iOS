@@ -13,6 +13,7 @@ import AccountContext
 import MergedAvatarsNode
 import TextNodeWithEntities
 import TextFormat
+import AvatarNode
 
 class ChatListNoticeItem: ListViewItem {
     enum Action {
@@ -94,6 +95,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
+    private var avatarNode: AvatarNode?
     private var avatarsNode: MergedAvatarsNode?
     
     private var closeButton: HighlightableButtonNode?
@@ -175,6 +177,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             
             let titleString: NSAttributedString
             let textString: NSAttributedString
+            var avatarPeer: EnginePeer?
             var avatarPeers: [EnginePeer] = []
             
             var okButtonLayout: (TextNodeLayout, () -> TextNode)?
@@ -285,12 +288,20 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 }
                 titleString = attributedTitle
                 textString = NSAttributedString(string: text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .setupPhoto(accountPeer):
+                //TODO:localize
+                titleString = NSAttributedString(string: "Add your photo! 📸", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: "Help your friends spot you easily.", font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                avatarPeer = accountPeer
             }
             
             var leftInset: CGFloat = sideInset
             if !avatarPeers.isEmpty {
                 let avatarsWidth = 30.0 + CGFloat(avatarPeers.count - 1) * 16.0
                 leftInset += avatarsWidth + 4.0
+            } else if let _ = avatarPeer {
+                let avatarsWidth: CGFloat = 40.0
+                leftInset += avatarsWidth + 6.0
             }
             
             let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - titleRightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
@@ -347,6 +358,25 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     } else if let avatarsNode = strongSelf.avatarsNode {
                         avatarsNode.removeFromSupernode()
                         strongSelf.avatarsNode = nil
+                    }
+                    
+                    if let avatarPeer {
+                        let avatarNode: AvatarNode
+                        if let current = strongSelf.avatarNode {
+                            avatarNode = current
+                        } else {
+                            avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
+                            avatarNode.isUserInteractionEnabled = false
+                            strongSelf.addSubnode(avatarNode)
+                            strongSelf.avatarNode = avatarNode
+                            
+                            avatarNode.setPeer(context: item.context, theme: item.theme, peer: avatarPeer, overrideImage: .cameraIcon)
+                        }
+                        let avatarSize = CGSize(width: 40.0, height: 40.0)
+                        avatarNode.frame = CGRect(origin: CGPoint(x: sideInset - 6.0, y: floor((layout.size.height - avatarSize.height) / 2.0)), size: avatarSize)
+                    } else if let avatarNode = strongSelf.avatarNode {
+                        avatarNode.removeFromSupernode()
+                        strongSelf.avatarNode = nil
                     }
                     
                     if let image = strongSelf.arrowNode.image {

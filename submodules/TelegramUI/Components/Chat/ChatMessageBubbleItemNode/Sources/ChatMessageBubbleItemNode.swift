@@ -208,6 +208,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 isAction = true
                 if case .phoneCall = action.action {
                     result.append((message, ChatMessageCallBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    needReactions = false
                 } else if case .giftPremium = action.action {
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else if case .giftStars = action.action {
@@ -225,10 +226,16 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else if case .joinedChannel = action.action {
                     result.append((message, ChatMessageJoinedChannelBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    needReactions = false
                 } else {
+                    switch action.action {
+                    case .photoUpdated:
+                        break
+                    default:
+                        needReactions = false
+                    }
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 }
-                needReactions = false
             } else if let _ = media as? TelegramMediaMap {
                 result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let _ = media as? TelegramMediaGame {
@@ -2700,6 +2707,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
         if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
+            var centerAligned = false
+            for media in item.message.media {
+                if media is TelegramMediaAction {
+                    centerAligned = true
+                }
+                break
+            }
+            
             var maximumNodeWidth = maximumNodeWidth
             if hasInstantVideo {
                 maximumNodeWidth = min(309, baseWidth - 84)
@@ -2715,7 +2730,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 associatedData: item.associatedData,
                 accountPeer: item.associatedData.accountPeer,
                 isIncoming: incoming,
-                constrainedWidth: maximumNodeWidth
+                constrainedWidth: maximumNodeWidth,
+                centerAligned: centerAligned
             ))
             maxContentWidth = max(maxContentWidth, minWidth)
             reactionButtonsFinalize = buttonsLayout

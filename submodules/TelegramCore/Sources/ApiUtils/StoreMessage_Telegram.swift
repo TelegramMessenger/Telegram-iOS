@@ -135,7 +135,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
             } else {
                 return nil
             }
-        case let .messageService(_, _, _, chatPeerId, _, _, _, _):
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _, _):
             return chatPeerId.peerId
     }
 }
@@ -216,7 +216,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             return result
         case .messageEmpty:
             return []
-        case let .messageService(_, _, fromId, chatPeerId, _, _, action, _):
+        case let .messageService(_, _, fromId, chatPeerId, _, _, action, _, _):
             let peerId: PeerId = chatPeerId.peerId
             var result = [peerId]
             
@@ -295,7 +295,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
             }
         case .messageEmpty:
             break
-        case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
+        case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
@@ -1015,7 +1015,7 @@ extension StoreMessage {
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
-            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action, ttlPeriod):
+            case let .messageService(flags, id, fromId, chatPeerId, replyTo, date, action, reactions, ttlPeriod):
                 let peerId: PeerId = chatPeerId.peerId
                 let authorId: PeerId? = fromId?.peerId ?? chatPeerId.peerId
                 
@@ -1074,6 +1074,10 @@ extension StoreMessage {
                 if (flags & (1 << 17)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
+            
+                if let reactions = reactions {
+                    attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
+                }
                 
                 var storeFlags = StoreMessageFlags()
                 if (flags & 2) == 0 {
@@ -1119,6 +1123,10 @@ extension StoreMessage {
             
                 if (flags & (1 << 27)) != 0 {
                     storeFlags.insert(.IsForumTopic)
+                }
+            
+                if (flags & (1 << 9)) != 0 {
+                    storeFlags.insert(.ReactionsArePossible)
                 }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, threadId: threadId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)

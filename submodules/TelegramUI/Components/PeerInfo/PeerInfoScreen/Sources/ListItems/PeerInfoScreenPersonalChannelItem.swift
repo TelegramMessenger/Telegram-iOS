@@ -186,6 +186,7 @@ public final class LoadingOverlayNode: ASDisplayNode {
             }, dismissNotice: { _ in
             }, editPeer: { _ in
             }, openWebApp: { _ in
+            }, openPhotoSetup: {
             })
             
             let items = (0 ..< 1).map { _ -> ChatListItem in
@@ -542,6 +543,8 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             editPeer: { _ in
             },
             openWebApp: { _ in
+            },
+            openPhotoSetup: {
             }
         )
         

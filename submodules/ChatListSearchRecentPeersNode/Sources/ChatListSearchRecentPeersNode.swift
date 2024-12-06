@@ -214,7 +214,8 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         theme: PresentationTheme,
         mode: HorizontalPeerItemMode,
         strings: PresentationStrings,
-        peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false) {
+        peerSelected: @escaping (EnginePeer) -> Void, peerContextAction: @escaping (EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, isPeerSelected: @escaping (EnginePeer.Id) -> Bool, share: Bool = false)
+    {
         self.theme = theme
         self.strings = strings
         self.themeAndStringsPromise = Promise((self.theme, self.strings))
@@ -225,6 +226,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         self.isPeerSelected = isPeerSelected
         
         self.listView = ListView()
+        self.listView.preloadPages = false
         self.listView.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         self.listView.accessibilityPageScrolledString = { row, count in
             return strings.VoiceOver_ScrollStatus(row, count).string
@@ -340,11 +342,6 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 )
 
                 strongSelf.enqueueTransition(transition)
-                
-                if !strongSelf.didSetReady {
-                    strongSelf.ready.set(.single(true))
-                    strongSelf.didSetReady = true
-                }
             }
         }))
         if case .actionSheet = mode {
@@ -371,7 +368,20 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             } else if transition.animated {
                 options.insert(.AnimateInsertion)
             }
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { _ in })
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if !self.didSetReady {
+                    self.ready.set(.single(true))
+                    self.didSetReady = true
+                }
+                if !self.listView.preloadPages {
+                    Queue.mainQueue().after(0.5) {
+                        self.listView.preloadPages = true
+                    }
+                }
+            })
         }
     }
     

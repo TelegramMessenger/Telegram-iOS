@@ -30,6 +30,7 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
     public enum DisplayAlignment {
         case left
         case right
+        case center
     }
     
     private var bubbleBackgroundNode: WallpaperBubbleBackgroundNode?
@@ -224,27 +225,29 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
             constrainedWidth: constrainedWidth
         )
         
+        let itemSpacing: CGFloat = 6.0
+        
         var reactionButtonsSize = CGSize()
         var currentRowWidth: CGFloat = 0.0
         for item in reactionButtonsResult.items {
             if currentRowWidth + item.size.width > constrainedWidth {
                 reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
                 if !reactionButtonsSize.height.isZero {
-                    reactionButtonsSize.height += 6.0
+                    reactionButtonsSize.height += itemSpacing
                 }
                 reactionButtonsSize.height += item.size.height
                 currentRowWidth = 0.0
             }
             
             if !currentRowWidth.isZero {
-                currentRowWidth += 6.0
+                currentRowWidth += itemSpacing
             }
             currentRowWidth += item.size.width
         }
         if !currentRowWidth.isZero && !reactionButtonsResult.items.isEmpty {
             reactionButtonsSize.width = max(reactionButtonsSize.width, currentRowWidth)
             if !reactionButtonsSize.height.isZero {
-                reactionButtonsSize.height += 6.0
+                reactionButtonsSize.height += itemSpacing
             }
             reactionButtonsSize.height += reactionButtonsResult.items[0].size.height
         }
@@ -296,11 +299,14 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 }
                 
                 var reactionButtonPosition: CGPoint
+                
                 switch alignment {
                 case .left:
                     reactionButtonPosition = CGPoint(x: -1.0, y: topInset)
                 case .right:
                     reactionButtonPosition = CGPoint(x: size.width + 1.0, y: topInset)
+                case .center:
+                    reactionButtonPosition = CGPoint(x: 0.0, y: topInset)
                 }
                 
                 let reactionButtons = reactionButtonsResult.apply(
@@ -312,32 +318,8 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                 )
                 
                 var validIds = Set<MessageReaction.Reaction>()
-                for item in reactionButtons.items {
-                    validIds.insert(item.value)
-                    
-                    switch alignment {
-                    case .left:
-                        if reactionButtonPosition.x + item.size.width > boundingWidth {
-                            reactionButtonPosition.x = -1.0
-                            reactionButtonPosition.y += item.size.height + 6.0
-                        }
-                    case .right:
-                        if reactionButtonPosition.x - item.size.width < -1.0 {
-                            reactionButtonPosition.x = size.width + 1.0
-                            reactionButtonPosition.y += item.size.height + 6.0
-                        }
-                    }
-                    
-                    let itemFrame: CGRect
-                    switch alignment {
-                    case .left:
-                        itemFrame = CGRect(origin: reactionButtonPosition, size: item.size)
-                        reactionButtonPosition.x += item.size.width + 6.0
-                    case .right:
-                        itemFrame = CGRect(origin: CGPoint(x: reactionButtonPosition.x - item.size.width, y: reactionButtonPosition.y), size: item.size)
-                        reactionButtonPosition.x -= item.size.width + 6.0
-                    }
-                    
+                
+                let layoutItem: (ReactionButtonsAsyncLayoutContainer.ApplyResult.Item, CGRect) -> Void = { item, itemFrame in
                     let itemMaskFrame = itemFrame.offsetBy(dx: backgroundInsets, dy: backgroundInsets)
                     
                     let itemMaskView: UIView
@@ -394,6 +376,77 @@ public final class MessageReactionButtonsNode: ASDisplayNode {
                         } else {
                             animation.animator.updateFrame(layer: itemMaskView.layer, frame: itemMaskFrame, completion: nil)
                         }
+                    }
+                }
+
+                if alignment == .center {
+                    var lines: [[ReactionButtonsAsyncLayoutContainer.ApplyResult.Item]] = []
+                    var currentLine: [ReactionButtonsAsyncLayoutContainer.ApplyResult.Item] = []
+                    var currentLineWidth: CGFloat = 0.0
+
+                    for item in reactionButtons.items {
+                        validIds.insert(item.value)
+                        let itemWidth = item.size.width
+
+                        if currentLineWidth + itemWidth + (currentLine.isEmpty ? 0 : itemSpacing) > boundingWidth + itemSpacing {
+                            lines.append(currentLine)
+                            currentLine = [item]
+                            currentLineWidth = itemWidth
+                        } else {
+                            currentLine.append(item)
+                            currentLineWidth += (currentLine.isEmpty ? 0 : itemSpacing) + itemWidth
+                        }
+                    }
+                    if !currentLine.isEmpty {
+                        lines.append(currentLine)
+                    }
+
+                    var yPosition = topInset
+
+                    for line in lines {
+                        let totalItemWidth = line.reduce(0.0) { $0 + $1.size.width } + CGFloat(line.count - 1) * itemSpacing
+                        let startX = (boundingWidth - totalItemWidth) / 2.0
+                        var xPosition = startX
+
+                        for item in line {
+                            let itemFrame = CGRect(origin: CGPoint(x: xPosition, y: yPosition), size: item.size)
+                            xPosition += item.size.width + itemSpacing
+                            
+                            layoutItem(item, itemFrame)
+                        }
+                        yPosition += line.first!.size.height + itemSpacing
+                    }
+                } else {
+                    for item in reactionButtons.items {
+                        validIds.insert(item.value)
+                        
+                        switch alignment {
+                        case .left:
+                            if reactionButtonPosition.x + item.size.width > boundingWidth {
+                                reactionButtonPosition.x = -1.0
+                                reactionButtonPosition.y += item.size.height + itemSpacing
+                            }
+                        case .right:
+                            if reactionButtonPosition.x - item.size.width < -1.0 {
+                                reactionButtonPosition.x = size.width + 1.0
+                                reactionButtonPosition.y += item.size.height + itemSpacing
+                            }
+                        default:
+                            break
+                        }
+                        
+                        let itemFrame: CGRect
+                        switch alignment {
+                        case .left, .center:
+                            itemFrame = CGRect(origin: reactionButtonPosition, size: item.size)
+                            reactionButtonPosition.x += item.size.width + itemSpacing
+                        case .right:
+                            itemFrame = CGRect(origin: CGPoint(x: reactionButtonPosition.x - item.size.width, y: reactionButtonPosition.y), size: item.size)
+                            reactionButtonPosition.x -= item.size.width + itemSpacing
+                        }
+                        
+                        
+                        layoutItem(item, itemFrame)
                     }
                 }
                 
@@ -629,6 +682,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         public let accountPeer: EnginePeer?
         public let isIncoming: Bool
         public let constrainedWidth: CGFloat
+        public let centerAligned: Bool
         
         public init(
             context: AccountContext,
@@ -641,7 +695,8 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             associatedData: ChatMessageItemAssociatedData,
             accountPeer: EnginePeer?,
             isIncoming: Bool,
-            constrainedWidth: CGFloat
+            constrainedWidth: CGFloat,
+            centerAligned: Bool
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -654,6 +709,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
             self.accountPeer = accountPeer
             self.isIncoming = isIncoming
             self.constrainedWidth = constrainedWidth
+            self.centerAligned = centerAligned
         }
     }
     
@@ -682,6 +738,13 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
         return { arguments in
             let node = maybeNode ?? ChatMessageReactionButtonsNode()
             
+            let alignment: MessageReactionButtonsNode.DisplayAlignment
+            if arguments.centerAligned {
+                alignment = .center
+            } else {
+                alignment = arguments.isIncoming ? .left : .right
+            }
+            
             let buttonsUpdate = node.buttonsNode.prepareUpdate(
                 context: arguments.context,
                 presentationData: arguments.presentationData,
@@ -692,7 +755,7 @@ public final class ChatMessageReactionButtonsNode: ASDisplayNode {
                 accountPeer: arguments.accountPeer,
                 message: arguments.message,
                 associatedData: arguments.associatedData,
-                alignment: arguments.isIncoming ? .left : .right,
+                alignment: alignment,
                 constrainedWidth: arguments.constrainedWidth,
                 type: .freeform
             )

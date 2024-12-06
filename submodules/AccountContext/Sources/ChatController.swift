@@ -959,6 +959,7 @@ public protocol PeerInfoScreen: ViewController {
     func toggleStorySelection(ids: [Int32], isSelected: Bool)
     func togglePaneIsReordering(isReordering: Bool)
     func cancelItemSelection()
+    func openAvatarSetup()
 }
 
 public extension Peer {

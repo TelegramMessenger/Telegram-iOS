@@ -113,6 +113,7 @@ public final class ChatListNodeInteraction {
     let dismissNotice: (ChatListNotice) -> Void
     let editPeer: (ChatListItem) -> Void
     let openWebApp: (TelegramUser) -> Void
+    let openPhotoSetup: () -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -169,7 +170,8 @@ public final class ChatListNodeInteraction {
         openStarsTopup: @escaping (Int64?) -> Void,
         dismissNotice: @escaping (ChatListNotice) -> Void,
         editPeer: @escaping (ChatListItem) -> Void,
-        openWebApp: @escaping (TelegramUser) -> Void
+        openWebApp: @escaping (TelegramUser) -> Void,
+        openPhotoSetup: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -214,6 +216,7 @@ public final class ChatListNodeInteraction {
         self.dismissNotice = dismissNotice
         self.editPeer = editPeer
         self.openWebApp = openWebApp
+        self.openPhotoSetup = openPhotoSetup
     }
 }
 
@@ -519,10 +522,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         default:
                                             break
                                         }
-                                    }
-                                    
-                                    if canManage {
                                     } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
+                                        canManage = true
+                                    } else if case let .channel(peer) = peer, case .broadcast = peer.info, peer.hasPermission(.addAdmins) {
+                                        canManage = true
+                                    }
+
+                                    if canManage {
                                     } else {
                                         enabled = false
                                     }
@@ -759,6 +765,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
                             nodeInteraction?.openStarsTopup(amount.value)
+                        case .setupPhoto:
+                            nodeInteraction?.openPhotoSetup()
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1103,6 +1111,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             break
                         case let .starsSubscriptionLowBalance(amount, _):
                             nodeInteraction?.openStarsTopup(amount.value)
+                        case .setupPhoto:
+                            nodeInteraction?.openPhotoSetup()
                         }
                     case .hide:
                         nodeInteraction?.dismissNotice(notice)
@@ -1224,6 +1234,7 @@ public final class ChatListNode: ListView {
     public var openPremiumManagement: (() -> Void)?
     public var openStarsTopup: ((Int64?) -> Void)?
     public var openWebApp: ((TelegramUser) -> Void)?
+    public var openPhotoSetup: (() -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1876,6 +1887,11 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openWebApp?(user)
+        }, openPhotoSetup: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openPhotoSetup?()
         })
         nodeInteraction.isInlineMode = isInlineMode
         
@@ -1970,11 +1986,16 @@ public final class ChatListNode: ListView {
                 context.engine.notices.getServerDismissedSuggestions(),
                 twoStepData,
                 newSessionReviews(postbox: context.account.postbox),
-                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId)),
+                context.engine.data.subscribe(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                    TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId)
+                ),
                 context.account.stateManager.contactBirthdays,
                 starsSubscriptionsContextPromise.get()
             )
-            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, birthday, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in
+            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, data, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in
+                let (accountPeer, birthday) = data
+                
                 if let newSessionReview = newSessionReviews.first {
                     return .single(.reviewLogin(newSessionReview: newSessionReview, totalCount: newSessionReviews.count))
                 }
@@ -2025,6 +2046,8 @@ public final class ChatListNode: ListView {
                         starsSubscriptionsContextPromise.set(.single(context.engine.payments.peerStarsSubscriptionsContext(starsContext: nil, missingBalance: true)))
                         return .single(nil)
                     }
+                } else if suggestions.contains(.setupPhoto), let accountPeer, accountPeer.smallProfileImage == nil {
+                    return .single(.setupPhoto(accountPeer))
                 } else if suggestions.contains(.gracePremium) {
                     return .single(.premiumGrace)
                 } else if suggestions.contains(.setupBirthday) && birthday == nil {
@@ -2413,10 +2436,13 @@ public final class ChatListNode: ListView {
                                     default:
                                         break
                                     }
+                                } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
+                                    canManage = true
+                                } else if case let .channel(peer) = peer, case .broadcast = peer.info, peer.hasPermission(.addAdmins) {
+                                    canManage = true
                                 }
                                 
                                 if canManage {
-                                } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
                                 } else {
                                     return false
                                 }

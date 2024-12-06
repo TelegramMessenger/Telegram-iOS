@@ -108,7 +108,7 @@ extension Api.Message {
                 return id
             case let .messageEmpty(_, id, _):
                 return id
-            case let .messageService(_, id, _, _, _, _, _, _):
+            case let .messageService(_, id, _, _, _, _, _, _, _):
                 return id
         }
     }
@@ -128,7 +128,7 @@ extension Api.Message {
                 } else {
                     return nil
                 }
-            case let .messageService(_, id, _, chatPeerId, _, _, _, _):
+            case let .messageService(_, id, _, chatPeerId, _, _, _, _, _):
                 let peerId: PeerId = chatPeerId.peerId
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
@@ -141,7 +141,7 @@ extension Api.Message {
             return peerId
         case let .messageEmpty(_, _, peerId):
             return peerId?.peerId
-        case let .messageService(_, _, _, chatPeerId, _, _, _, _):
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _, _):
             let peerId: PeerId = chatPeerId.peerId
             return peerId
         }
@@ -151,7 +151,7 @@ extension Api.Message {
         switch self {
             case let .message(_, _, _, _, _, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return date
-            case let .messageService(_, _, _, _, _, date, _, _):
+            case let .messageService(_, _, _, _, _, date, _, _, _):
                 return date
             case .messageEmpty:
                 return nil

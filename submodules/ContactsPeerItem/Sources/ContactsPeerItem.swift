@@ -68,6 +68,7 @@ public enum ContactsPeerItemPeerMode: Equatable {
     case generalSearch(isSavedMessages: Bool)
     case peer
     case memberList
+    case app(isPopular: Bool)
 }
 
 public enum ContactsPeerItemBadgeType {
@@ -722,7 +723,15 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let titleBoldFont = Font.medium(item.presentationData.fontSize.itemListBaseFontSize)
-            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            
+            let statusFontSize: CGFloat
+            if case .app = item.peerMode {
+                statusFontSize = 15.0
+            } else {
+                statusFontSize = 13.0
+            }
+            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * statusFontSize / 17.0))
+            
             let badgeFont = Font.regular(14.0)
             let avatarDiameter = min(40.0, floor(item.presentationData.fontSize.itemListBaseFontSize * 40.0 / 17.0))
             
@@ -1039,8 +1048,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            let titleVerticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
-            let verticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
+            var verticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
+            if case .app = item.peerMode {
+                verticalInset += 2.0
+            }
             
             let statusHeightComponent: CGFloat
             if statusAttributedString == nil {
@@ -1058,7 +1069,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let titleFrame: CGRect
             if statusAttributedString != nil {
-                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: titleVerticalInset), size: titleLayout.size)
+                titleFrame = CGRect(origin: CGPoint(x: leftInset, y: verticalInset), size: titleLayout.size)
             } else {
                 titleFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((nodeLayout.contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
             }
@@ -1136,14 +1147,19 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }
+                                        
+                                        var displayDimensions = CGSize(width: 60.0, height: 60.0)
                                         let clipStyle: AvatarNodeClipStyle
-                                        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                                        if case .app(true) = item.peerMode {
+                                            clipStyle = .roundedRect
+                                            displayDimensions = CGSize(width: displayDimensions.width, height: displayDimensions.width * 1.2)
+                                        } else if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                                             clipStyle = .roundedRect
                                         } else {
                                             clipStyle = .round
                                         }
                                         
-                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoads)
+                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoads, displayDimensions: displayDimensions)
                                     }
                                 case let .deviceContact(_, contact):
                                     let letters: [String]
@@ -1230,7 +1246,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
-                            let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
+                            var avatarSize: CGSize
+                            if case .app(true) = item.peerMode {
+                                avatarSize = CGSize(width: avatarDiameter, height: avatarDiameter * 1.2)
+                            } else {
+                                avatarSize = CGSize(width: avatarDiameter, height: avatarDiameter)
+                            }
+                            
+                            let avatarFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarSize.height) / 2.0)), size: avatarSize)
                             
                             strongSelf.avatarNode.frame = CGRect(origin: CGPoint(), size: avatarFrame.size)
                             

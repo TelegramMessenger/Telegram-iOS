@@ -339,7 +339,8 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     case .peer:
         if let channel = peer as? TelegramChannel {
             if case .member = channel.participationStatus {
-                canReply = channel.hasPermission(.sendSomething)
+                let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: chatPresentationInterfaceState)
+                canReply = channel.hasPermission(.sendSomething, ignoreDefault: canBypassRestrictions)
             }
             if case .broadcast = channel.info {
                 canReply = true
@@ -1118,6 +1119,23 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 })))
                 actions.append(.separator)
             }
+        }
+        
+        if data.messageActions.options.contains(.sendGift) {
+            //TODO:localize
+            let sendGiftTitle: String
+            if message.effectivelyIncoming(context.account.peerId) {
+                let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+                sendGiftTitle = "Send Gift to \(peerName)"
+            } else {
+                sendGiftTitle = "Send Another Gift"
+            }
+            actions.append(.action(ContextMenuActionItem(text: sendGiftTitle, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                let _ = controllerInteraction.sendGift(message.id.peerId)
+                f(.dismissWithoutContent)
+            })))
         }
         
         var isReplyThreadHead = false
@@ -2220,8 +2238,15 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                             }
                             break
                         }
-                    } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
-                        optionsMap[id]!.insert(.rateCall)
+                    } else if let action = media as? TelegramMediaAction {
+                        switch action.action {
+                        case .phoneCall:
+                            optionsMap[id]!.insert(.rateCall)
+                        case .starGift:
+                            optionsMap[id]!.insert(.sendGift)
+                        default:
+                            break
+                        }
                     } else if let story = media as? TelegramMediaStory {
                         if let story = message.associatedStories[story.storyId], story.data.isEmpty {
                             isShareProtected = true

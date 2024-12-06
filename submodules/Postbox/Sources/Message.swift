@@ -477,6 +477,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.IsForumTopic.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.ReactionsArePossible) {
+            rawValue |= MessageFlags.ReactionsArePossible.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -490,6 +494,7 @@ public struct MessageFlags: OptionSet {
     public static let CountedAsIncoming = MessageFlags(rawValue: 256)
     public static let CopyProtected = MessageFlags(rawValue: 512)
     public static let IsForumTopic = MessageFlags(rawValue: 1024)
+    public static let ReactionsArePossible = MessageFlags(rawValue: 2048)
     
     public static let IsIncomingMask = MessageFlags([.Incoming, .CountedAsIncoming])
 }
@@ -843,6 +848,10 @@ public struct StoreMessageFlags: OptionSet {
             rawValue |= StoreMessageFlags.IsForumTopic.rawValue
         }
         
+        if flags.contains(.ReactionsArePossible) {
+            rawValue |= StoreMessageFlags.ReactionsArePossible.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -856,6 +865,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let CountedAsIncoming = StoreMessageFlags(rawValue: 256)
     public static let CopyProtected = StoreMessageFlags(rawValue: 512)
     public static let IsForumTopic = StoreMessageFlags(rawValue: 1024)
+    public static let ReactionsArePossible = StoreMessageFlags(rawValue: 2048)
     
     public static let IsIncomingMask = StoreMessageFlags([.Incoming, .CountedAsIncoming])
 }
