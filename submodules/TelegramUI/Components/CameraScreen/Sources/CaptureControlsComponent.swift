@@ -999,14 +999,22 @@ final class CaptureControlsComponent: Component {
         func animateInFromEditor(transition: ComponentTransition) {
             self.animatedOut = false
 
+            guard let component = self.component else {
+                return
+            }
+            
             if let view = self.galleryButtonView.view {
                 transition.setScale(view: view, scale: 1.0)
-                transition.setAlpha(view: view, alpha: 1.0)
+                if !component.hideControls {
+                    transition.setAlpha(view: view, alpha: 1.0)
+                }
             }
             
             if let view = self.flipButtonView.view {
                 transition.setScale(view: view, scale: 1.0)
-                transition.setAlpha(view: view, alpha: 1.0)
+                if !component.hideControls {
+                    transition.setAlpha(view: view, alpha: 1.0)
+                }
             }
             
             if let view = self.shutterButtonView.view {

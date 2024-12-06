@@ -13304,6 +13304,8 @@ Sorry for the inconvenience.";
 
 "Chat.VideoProcessingInfo" = "The video will be published once converted and optimized.";
 
+"Camera.CollageRetake" = "Retake";
+"Camera.CollageDelete" = "Delete";
 "Camera.CollageManagementTooltip" = "Tap a tile to delete or reorder it.";
 "Camera.CollageReorderingInfo" = "Hold and drag tiles to reorder them.";
 

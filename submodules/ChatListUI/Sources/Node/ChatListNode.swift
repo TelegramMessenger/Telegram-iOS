@@ -519,10 +519,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                         default:
                                             break
                                         }
+                                    } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
+                                        canManage = true
+                                    } else if case let .channel(peer) = peer, case .broadcast = peer.info, peer.hasPermission(.addAdmins) {
+                                        canManage = true
                                     }
                                     
                                     if canManage {
-                                    } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
                                     } else {
                                         enabled = false
                                     }
@@ -2413,10 +2416,13 @@ public final class ChatListNode: ListView {
                                     default:
                                         break
                                     }
+                                } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
+                                    canManage = true
+                                } else if case let .channel(peer) = peer, case .broadcast = peer.info, peer.hasPermission(.addAdmins) {
+                                    canManage = true
                                 }
                                 
                                 if canManage {
-                                } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
                                 } else {
                                     return false
                                 }

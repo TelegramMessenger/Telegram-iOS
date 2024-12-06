@@ -605,6 +605,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
     
     var result: [ChatListNodeEntry] = []
     
+    var hasContacts = false
     if !view.hasEarlier {
         var existingPeerIds = Set<EnginePeer.Id>()
         for item in view.items {
@@ -620,8 +621,9 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 peer: contact.peer,
                 presence: contact.presence
             )))
+            hasContacts = true
         }
-        if !contacts.isEmpty {
+        if hasContacts {
             result.append(.SectionHeader(presentationData: state.presentationData, displayHide: !view.items.isEmpty))
         }
     }
