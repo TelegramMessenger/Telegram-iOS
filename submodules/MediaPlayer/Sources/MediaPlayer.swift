@@ -342,7 +342,7 @@ private final class MediaPlayerContext {
             let _ = self.playerStatusValue.swap(status)
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, limitedFileRange: self.limitedFileRange, streamable: self.streamable.enabled, isSeekable: self.streamable.isSeekable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, userLocation: self.userLocation, userContentType: self.userContentType, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, limitedFileRange: self.limitedFileRange, streamable: self.streamable.enabled, isSeekable: self.streamable.isSeekable, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2, storeAfterDownload: self.storeAfterDownload, isAudioVideoMessage: self.isAudioVideoMessage)
         let disposable = MetaDisposable()
         let updatedSeekState: MediaPlayerSeekState?
         if let loadedDuration = loadedDuration {
