@@ -885,48 +885,57 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.groupCallDisposable = (callManager.currentGroupCallSignal
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
-                    if call !== strongSelf.groupCallController?.call {
-                        strongSelf.groupCallController?.dismiss(closing: true, manual: false)
-                        strongSelf.groupCallController = nil
-                        strongSelf.hasOngoingCall.set(false)
-                        
-                        if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
-                            mainWindow.hostView.containerView.endEditing(true)
+                    if strongSelf.immediateExperimentalUISettings.conferenceCalls {
+                        let mappedCall = call.flatMap(CallController.Call.groupCall)
+                        if mappedCall != strongSelf.callController?.call {
+                            strongSelf.callController?.dismiss()
+                            strongSelf.callController = nil
+                            strongSelf.hasOngoingCall.set(false)
                             
-                            if call.isStream {
+                            if let call {
+                                mainWindow.hostView.containerView.endEditing(true)
+                                
                                 strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                let groupCallController = MediaStreamComponentController(call: call)
-                                groupCallController.onViewDidAppear = { [weak self] in
-                                    if let strongSelf = self {
+                                
+                                let callController = CallController(sharedContext: strongSelf, account: call.accountContext.account, call: .groupCall(call), easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+                                    
+                                callController.onViewDidAppear = { [weak strongSelf] in
+                                    if let strongSelf {
                                         strongSelf.hasGroupCallOnScreenPromise.set(true)
                                     }
                                 }
-                                groupCallController.onViewDidDisappear = { [weak self] in
-                                    if let strongSelf = self {
+                                callController.onViewDidDisappear = { [weak strongSelf] in
+                                    if let strongSelf {
                                         strongSelf.hasGroupCallOnScreenPromise.set(false)
                                     }
                                 }
-                                groupCallController.navigationPresentation = .flatModal
-                                groupCallController.parentNavigationController = navigationController
-                                strongSelf.groupCallController = groupCallController
-                                navigationController.pushViewController(groupCallController)
-                            } else {
-                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                strongSelf.callController = callController
+                                strongSelf.mainWindow?.present(callController, on: .calls)
                                 
-                                let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
-                                    guard let strongSelf, let navigationController else {
-                                        return
-                                    }
-                                    
-                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData)
-                                    groupCallController.onViewDidAppear = { [weak strongSelf] in
-                                        if let strongSelf {
+                                strongSelf.hasOngoingCall.set(true)
+                            } else {
+                                strongSelf.hasOngoingCall.set(false)
+                            }
+                        }
+                    } else {
+                        if call !== strongSelf.groupCallController?.call {
+                            strongSelf.groupCallController?.dismiss(closing: true, manual: false)
+                            strongSelf.groupCallController = nil
+                            strongSelf.hasOngoingCall.set(false)
+                            
+                            if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
+                                mainWindow.hostView.containerView.endEditing(true)
+                                
+                                if call.isStream {
+                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    let groupCallController = MediaStreamComponentController(call: call)
+                                    groupCallController.onViewDidAppear = { [weak self] in
+                                        if let strongSelf = self {
                                             strongSelf.hasGroupCallOnScreenPromise.set(true)
                                         }
                                     }
-                                    groupCallController.onViewDidDisappear = { [weak strongSelf] in
-                                        if let strongSelf {
+                                    groupCallController.onViewDidDisappear = { [weak self] in
+                                        if let strongSelf = self {
                                             strongSelf.hasGroupCallOnScreenPromise.set(false)
                                         }
                                     }
@@ -934,12 +943,37 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                     groupCallController.parentNavigationController = navigationController
                                     strongSelf.groupCallController = groupCallController
                                     navigationController.pushViewController(groupCallController)
-                                })
-                            }
+                                } else {
+                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    
+                                    let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                                    |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
+                                        guard let strongSelf, let navigationController else {
+                                            return
+                                        }
+                                        
+                                        let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData)
+                                        groupCallController.onViewDidAppear = { [weak strongSelf] in
+                                            if let strongSelf {
+                                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                            }
+                                        }
+                                        groupCallController.onViewDidDisappear = { [weak strongSelf] in
+                                            if let strongSelf {
+                                                strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                            }
+                                        }
+                                        groupCallController.navigationPresentation = .flatModal
+                                        groupCallController.parentNavigationController = navigationController
+                                        strongSelf.groupCallController = groupCallController
+                                        navigationController.pushViewController(groupCallController)
+                                    })
+                                }
                                 
-                            strongSelf.hasOngoingCall.set(true)
-                        } else {
-                            strongSelf.hasOngoingCall.set(false)
+                                strongSelf.hasOngoingCall.set(true)
+                            } else {
+                                strongSelf.hasOngoingCall.set(false)
+                            }
                         }
                     }
                 }
@@ -1178,7 +1212,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         if let currentCallController = self.callController {
-            if currentCallController.call === call {
+            if currentCallController.call == .call(call) {
                 self.navigateToCurrentCall()
                 return
             } else {
@@ -1188,7 +1222,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         self.mainWindow?.hostView.containerView.endEditing(true)
-        let callController = CallController(sharedContext: self, account: call.context.account, call: call, easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+        let callController = CallController(sharedContext: self, account: call.context.account, call: .call(call), easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
         self.callController = callController
         callController.restoreUIForPictureInPicture = { [weak self, weak callController] completion in
             guard let self, let callController else {

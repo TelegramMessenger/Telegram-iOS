@@ -32,7 +32,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let account: Account
     private let presentationData: PresentationData
     private let statusBar: StatusBar
-    private let call: PresentationCall
+    private let call: CallController.Call
     
     private let containerView: UIView
     private let callScreen: PrivateCallScreen
@@ -90,7 +90,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         statusBar: StatusBar,
         debugInfo: Signal<(String, String), NoError>,
         easyDebugAccess: Bool,
-        call: PresentationCall
+        call: CallController.Call
     ) {
         self.sharedContext = sharedContext
         self.account = account
@@ -172,9 +172,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             isRemoteBatteryLow: false,
             isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency
         )
-        if let peer = call.peer {
-            self.updatePeer(peer: peer)
-        }
         
         self.isMicrophoneMutedDisposable = (call.isMuted
         |> deliverOnMainQueue).startStrict(next: { [weak self] isMuted in
@@ -308,9 +305,9 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         switch callState.state {
         case .active:
             switch callState.videoState {
-            case .active(let isScreencast), .paused(let isScreencast):
+            case .active(let isScreencast, _), .paused(let isScreencast, _):
                 if isScreencast {
-                    (self.call as? PresentationCallImpl)?.disableScreencast()
+                    self.call.disableScreencast()
                 } else {
                     self.call.disableVideo()
                 }
@@ -489,12 +486,23 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.remoteVideo = nil
         default:
             switch callState.videoState {
-            case .active(let isScreencast), .paused(let isScreencast):
+            case .active(let isScreencast, let endpointId), .paused(let isScreencast, let endpointId):
                 if isScreencast {
                     self.localVideo = nil
                 } else {
-                    if self.localVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
-                        self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                    if self.localVideo == nil {
+                        switch self.call {
+                        case let .call(call):
+                            if let call = call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
+                                self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                            }
+                        case let .groupCall(groupCall):
+                            if let groupCall = groupCall as? PresentationGroupCallImpl {
+                                if let videoStreamSignal = groupCall.video(endpointId: endpointId) {
+                                    self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                                }
+                            }
+                        }
                     }
                 }
             case .inactive, .notAvailable:
@@ -502,9 +510,20 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             
             switch callState.remoteVideoState {
-            case .active, .paused:
-                if self.remoteVideo == nil, let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
-                    self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+            case .active(let endpointId), .paused(let endpointId):
+                if self.remoteVideo == nil {
+                    switch self.call {
+                    case let .call(call):
+                        if let call = call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
+                            self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                        }
+                    case let .groupCall(groupCall):
+                        if let groupCall = groupCall as? PresentationGroupCallImpl {
+                            if let videoStreamSignal = groupCall.video(endpointId: endpointId) {
+                                self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
+                            }
+                        }
+                    }
                 }
             case .inactive:
                 self.remoteVideo = nil

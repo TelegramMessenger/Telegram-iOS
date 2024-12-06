@@ -1115,7 +1115,7 @@ func multipartFetch(
     continueInBackground: Bool = false,
     useMainConnection: Bool = false
 ) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    if network.useExperimentalFeatures, let _ = resource as? TelegramCloudMediaResource, !(resource is SecretFileMediaResource) {
+    if network.useExperimentalFeatures, let _ = resource as? TelegramCloudMediaResource {
         return multipartFetchV2(
             accountPeerId: accountPeerId,
             postbox: postbox,

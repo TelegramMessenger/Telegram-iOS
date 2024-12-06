@@ -57,14 +57,14 @@ public struct PresentationCallState: Equatable {
     public enum VideoState: Equatable {
         case notAvailable
         case inactive
-        case active(isScreencast: Bool)
-        case paused(isScreencast: Bool)
+        case active(isScreencast: Bool, endpointId: String)
+        case paused(isScreencast: Bool, endpointId: String)
     }
     
     public enum RemoteVideoState: Equatable {
         case inactive
-        case active
-        case paused
+        case active(endpointId: String)
+        case paused(endpointId: String)
     }
     
     public enum RemoteAudioState: Equatable {

@@ -105,7 +105,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case disableReloginTokens(Bool)
     case disableCallV2(Bool)
     case experimentalCallMute(Bool)
-    case autoBenchmarkReflectors(Bool)
+    case conferenceCalls(Bool)
     case benchmarkReflectors
     case enableLocalTranslation(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
@@ -132,7 +132,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .autoBenchmarkReflectors, .benchmarkReflectors, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .conferenceCalls, .benchmarkReflectors, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -249,7 +249,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 51
         case .experimentalCallMute:
             return 52
-        case .autoBenchmarkReflectors:
+        case .conferenceCalls:
             return 53
         case .benchmarkReflectors:
             return 54
@@ -1345,12 +1345,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .autoBenchmarkReflectors(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Auto-Benchmark Reflectors [Restart]", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .conferenceCalls(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Conference [WIP]", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.autoBenchmarkReflectors = value
+                        settings.conferenceCalls = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1577,11 +1577,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.disableCallV2(experimentalSettings.disableCallV2))
         entries.append(.experimentalCallMute(experimentalSettings.experimentalCallMute))
         
-        var defaultAutoBenchmarkReflectors = false
-        if case .internal = sharedContext.applicationBindings.appBuildType {
-            defaultAutoBenchmarkReflectors = true
-        }
-        entries.append(.autoBenchmarkReflectors(experimentalSettings.autoBenchmarkReflectors ?? defaultAutoBenchmarkReflectors))
+        entries.append(.conferenceCalls(experimentalSettings.conferenceCalls))
         
         entries.append(.benchmarkReflectors)
         entries.append(.enableLocalTranslation(experimentalSettings.enableLocalTranslation))

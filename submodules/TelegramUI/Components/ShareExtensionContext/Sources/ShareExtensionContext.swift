@@ -317,6 +317,10 @@ public class ShareRootControllerImpl {
             presentationDataPromise.set(.single(presentationData))
             
             var immediatePeerId: PeerId?
+            #if DEBUG
+            // Xcode crashes
+            immediatePeerId = nil
+            #else
             if #available(iOS 13.2, *), let sendMessageIntent = self.getExtensionContext()?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
@@ -325,6 +329,7 @@ public class ShareRootControllerImpl {
                     }
                 }
             }
+            #endif
             
             /*let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
                 return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)

@@ -183,7 +183,7 @@ public final class PresentationCallImpl: PresentationCall {
         self.isVideo = startWithVideo
         if self.isVideo {
             self.videoCapturer = OngoingCallVideoCapturer()
-            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active(isScreencast: self.isScreencastActive), remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
+            self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: .active(isScreencast: self.isScreencastActive, endpointId: ""), remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
         } else {
             self.statePromise.set(PresentationCallState(state: isOutgoing ? .waiting : .ringing, videoState: self.isVideoPossible ? .inactive : .notAvailable, remoteVideoState: .inactive, remoteAudioState: .active, remoteBatteryLevel: .normal))
         }
@@ -418,19 +418,19 @@ public final class PresentationCallImpl: PresentationCall {
             case .notAvailable:
                 mappedVideoState = .notAvailable
             case .active:
-                mappedVideoState = .active(isScreencast: self.isScreencastActive)
+                mappedVideoState = .active(isScreencast: self.isScreencastActive, endpointId: "")
             case .inactive:
                 mappedVideoState = .inactive
             case .paused:
-                mappedVideoState = .paused(isScreencast: self.isScreencastActive)
+                mappedVideoState = .paused(isScreencast: self.isScreencastActive, endpointId: "")
             }
             switch callContextState.remoteVideoState {
             case .inactive:
                 mappedRemoteVideoState = .inactive
             case .active:
-                mappedRemoteVideoState = .active
+                mappedRemoteVideoState = .active(endpointId: "")
             case .paused:
-                mappedRemoteVideoState = .paused
+                mappedRemoteVideoState = .paused(endpointId: "")
             }
             switch callContextState.remoteAudioState {
             case .active:
@@ -453,7 +453,7 @@ public final class PresentationCallImpl: PresentationCall {
                 mappedVideoState = previousVideoState
             } else {
                 if self.isVideo {
-                    mappedVideoState = .active(isScreencast: self.isScreencastActive)
+                    mappedVideoState = .active(isScreencast: self.isScreencastActive, endpointId: "")
                 } else if self.isVideoPossible && sessionState.isVideoPossible {
                     mappedVideoState = .inactive
                 } else {
