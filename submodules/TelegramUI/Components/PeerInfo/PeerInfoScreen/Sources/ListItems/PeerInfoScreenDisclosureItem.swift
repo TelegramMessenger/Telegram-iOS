@@ -286,15 +286,23 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             if self.labelBadgeNode.supernode == nil {
                 self.insertSubnode(self.labelBadgeNode, belowSubnode: self.labelNode)
             }
-        } else if item.additionalBadgeLabel != nil {
-            if previousItem?.additionalBadgeLabel == nil {
-                self.labelBadgeNode.image = generateFilledRoundedRectImage(size: CGSize(width: 16.0, height: 16.0), cornerRadius: 5.0, color: presentationData.theme.list.itemCheckColors.fillColor)?.stretchableImage(withLeftCapWidth: 6, topCapHeight: 6)
-            }
-            if self.labelBadgeNode.supernode == nil {
-                self.insertSubnode(self.labelBadgeNode, belowSubnode: self.labelNode)
-            }
         } else {
             self.labelBadgeNode.removeFromSupernode()
+        }
+        
+        if item.additionalBadgeLabel != nil {
+            if previousItem?.additionalBadgeLabel == nil {
+                let additionalLabelBadgeNode: ASImageNode
+                if let current = self.additionalLabelBadgeNode {
+                    additionalLabelBadgeNode = current
+                } else {
+                    additionalLabelBadgeNode = ASImageNode()
+                    additionalLabelBadgeNode.isUserInteractionEnabled = false
+                    self.additionalLabelBadgeNode = additionalLabelBadgeNode
+                    self.insertSubnode(additionalLabelBadgeNode, belowSubnode: self.labelNode)
+                }
+                additionalLabelBadgeNode.image = generateFilledRoundedRectImage(size: CGSize(width: 16.0, height: 16.0), cornerRadius: 5.0, color: presentationData.theme.list.itemCheckColors.fillColor)?.stretchableImage(withLeftCapWidth: 6, topCapHeight: 6)
+            }
         }
         
         if let additionalBadgeIcon = item.additionalBadgeIcon {
@@ -308,7 +316,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
                 self.insertSubnode(additionalLabelBadgeNode, belowSubnode: self.labelNode)
             }
             additionalLabelBadgeNode.image = additionalBadgeIcon
-        } else {
+        } else if item.additionalBadgeLabel == nil {
             if let additionalLabelBadgeNode = self.additionalLabelBadgeNode {
                 self.additionalLabelBadgeNode = nil
                 additionalLabelBadgeNode.removeFromSupernode()
@@ -352,8 +360,12 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         }
         
         if let additionalLabelBadgeNode = self.additionalLabelBadgeNode, let image = additionalLabelBadgeNode.image {
-            let additionalLabelSize = image.size
-            additionalLabelBadgeNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floor((height - additionalLabelSize.height) / 2.0) + 1.0), size: additionalLabelSize)
+            if item.additionalBadgeLabel != nil, let additionalLabelNode = self.additionalLabelNode {
+                additionalLabelBadgeNode.frame = additionalLabelNode.frame.insetBy(dx: -4.0, dy: -2.0 + UIScreenPixel)
+            } else {
+                let additionalLabelSize = image.size
+                additionalLabelBadgeNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floor((height - additionalLabelSize.height) / 2.0) + 1.0), size: additionalLabelSize)
+            }
         }
         
         let labelBadgeNodeFrame: CGRect
