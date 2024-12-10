@@ -3609,7 +3609,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     if case let .Video(_, _, _, _, _, videoCodec) = attribute, let videoCodec {
                                         qualityDebugText += " \(videoCodec)"
                                         if videoCodec == "av1" || videoCodec == "av01" {
-                                            qualityDebugText += isHardwareAv1Supported ? " (HW)" : " (SW)"
+                                            qualityDebugText += internal_isHardwareAv1Supported ? " (HW)" : " (SW)"
                                         }
                                     }
                                 }

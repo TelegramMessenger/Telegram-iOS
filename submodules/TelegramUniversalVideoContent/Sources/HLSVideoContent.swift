@@ -16,9 +16,11 @@ import ManagedFile
 import AppBundle
 
 public struct HLSCodecConfiguration {
+    public var isHardwareAv1Supported: Bool
     public var isSoftwareAv1Supported: Bool
     
-    public init(isSoftwareAv1Supported: Bool) {
+    public init(isHardwareAv1Supported: Bool, isSoftwareAv1Supported: Bool) {
+        self.isHardwareAv1Supported = isHardwareAv1Supported
         self.isSoftwareAv1Supported = isSoftwareAv1Supported
     }
 }
@@ -26,6 +28,7 @@ public struct HLSCodecConfiguration {
 public extension HLSCodecConfiguration {
     init(context: AccountContext) {
         var isSoftwareAv1Supported = false
+        var isHardwareAv1Supported = false
         
         var length: Int = 4
         var cpuCount: UInt32 = 0
@@ -34,11 +37,14 @@ public extension HLSCodecConfiguration {
             isSoftwareAv1Supported = true
         }
         
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_hardware_av1"] as? Double {
+            isHardwareAv1Supported = value != 0.0
+        }
         if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_software_av1"] as? Double {
             isSoftwareAv1Supported = value != 0.0
         }
         
-        self.init(isSoftwareAv1Supported: isSoftwareAv1Supported)
+        self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)
     }
 }
 
@@ -52,7 +58,7 @@ public final class HLSQualitySet {
             if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
                 for attribute in alternativeFile.attributes {
                     if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
+                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHardwareAv1Supported: codecConfiguration.isHardwareAv1Supported, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
                             let key = Int(min(size.width, size.height))
                             if let currentFile = qualityFiles[key] {
                                 var currentCodec: String?
