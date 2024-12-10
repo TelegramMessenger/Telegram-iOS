@@ -1716,7 +1716,7 @@ public final class MediaEditor {
             let item = MediaEditorValues.VideoCollageItem(
                 content: content,
                 frame: item.frame,
-                videoTrimRange: nil,
+                videoTrimRange: 0 ..< item.duration,
                 videoOffset: nil,
                 videoVolume: passedFirstVideo ? 0.0 : nil
             )
