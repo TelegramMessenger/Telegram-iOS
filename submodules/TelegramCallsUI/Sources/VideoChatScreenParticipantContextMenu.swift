@@ -268,8 +268,11 @@ extension VideoChatScreenComponent.View {
                             guard let self, let component = self.component else {
                                 return
                             }
+                            guard let peerId = component.call.peerId else {
+                                return
+                            }
 
-                            let _ = (component.call.accountContext.account.postbox.loadedPeerWithId(component.call.peerId)
+                            let _ = (component.call.accountContext.account.postbox.loadedPeerWithId(peerId)
                             |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
                                 guard let self, let component = self.component, let environment = self.environment else {
                                     return
@@ -288,8 +291,11 @@ extension VideoChatScreenComponent.View {
                                     guard let self, let component = self.component, let environment = self.environment else {
                                         return
                                     }
+                                    guard let callPeerId = component.call.peerId else {
+                                        return
+                                    }
                                     
-                                    let _ = component.call.accountContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: component.call.accountContext.engine, peerId: component.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
+                                    let _ = component.call.accountContext.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: component.call.accountContext.engine, peerId: callPeerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
                                     component.call.removedPeer(peer.id)
                                     
                                     self.presentUndoOverlay(content: .banned(text: environment.strings.VoiceChat_RemovedPeerText(EnginePeer(peer).displayTitle(strings: environment.strings, displayOrder: nameDisplayOrder)).string), action: { _ in return false })

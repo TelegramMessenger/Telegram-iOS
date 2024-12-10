@@ -115,7 +115,7 @@ enum AccountStateMutationOperation {
     case UpdateChatListFilter(id: Int32, filter: Api.DialogFilter?)
     case UpdateReadThread(threadMessageId: MessageId, readMaxId: Int32, isIncoming: Bool, mainChannelMessage: MessageId?)
     case UpdateGroupCallParticipants(id: Int64, accessHash: Int64, participants: [Api.GroupCallParticipant], version: Int32)
-    case UpdateGroupCall(peerId: PeerId, call: Api.GroupCall)
+    case UpdateGroupCall(peerId: PeerId?, call: Api.GroupCall)
     case UpdateAutoremoveTimeout(peer: Api.Peer, value: CachedPeerAutoremoveTimeout.Value?)
     case UpdateAttachMenuBots
     case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
@@ -398,7 +398,7 @@ struct AccountMutableState {
         self.addOperation(.UpdateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version))
     }
     
-    mutating func updateGroupCall(peerId: PeerId, call: Api.GroupCall) {
+    mutating func updateGroupCall(peerId: PeerId?, call: Api.GroupCall) {
         self.addOperation(.UpdateGroupCall(peerId: peerId, call: call))
     }
     

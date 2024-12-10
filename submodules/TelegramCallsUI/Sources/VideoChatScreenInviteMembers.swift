@@ -38,12 +38,15 @@ extension VideoChatScreenComponent.View {
         guard let inviteType else {
             return
         }
+        guard let peerId = component.call.peerId else {
+            return
+        }
         
         switch inviteType {
         case .invite:
-            let groupPeer = component.call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.call.peerId))
+            let groupPeer = component.call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             let _ = (groupPeer
-                     |> deliverOnMainQueue).start(next: { [weak self] groupPeer in
+            |> deliverOnMainQueue).start(next: { [weak self] groupPeer in
                 guard let self, let component = self.component, let environment = self.environment, let groupPeer else {
                     return
                 }
@@ -299,13 +302,15 @@ extension VideoChatScreenComponent.View {
                     guard let self, let component = self.component else {
                         return
                     }
-                    let callPeerId = component.call.peerId
+                    guard let callPeerId = component.call.peerId else {
+                        return
+                    }
                     
                     let _ = (component.call.accountContext.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId),
                         TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: callPeerId)
                     )
-                             |> map { peer, exportedInvitation -> String? in
+                    |> map { peer, exportedInvitation -> String? in
                         if let link = inviteLinks?.listenerLink {
                             return link
                         } else if let peer = peer, let addressName = peer.addressName, !addressName.isEmpty {

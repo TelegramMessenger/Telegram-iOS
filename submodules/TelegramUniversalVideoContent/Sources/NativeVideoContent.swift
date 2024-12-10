@@ -59,7 +59,7 @@ public final class NativeVideoContent: UniversalVideoContent {
     let displayImage: Bool
     let hasSentFramesToDisplay: (() -> Void)?
     
-    public static func isVideoCodecSupported(videoCodec: String, isSoftwareAv1Supported: Bool) -> Bool {
+    public static func isVideoCodecSupported(videoCodec: String, isHardwareAv1Supported: Bool, isSoftwareAv1Supported: Bool) -> Bool {
         if videoCodec == "h264" || videoCodec == "h265" || videoCodec == "avc" || videoCodec == "hevc" {
             return true
         }

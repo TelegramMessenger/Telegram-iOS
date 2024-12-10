@@ -1695,7 +1695,8 @@ private:
     preferX264:(bool)preferX264
     logPath:(NSString * _Nonnull)logPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
-audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
+audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
+encryptionKey:(NSData * _Nullable)encryptionKey {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -1760,6 +1761,14 @@ audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
         tgcalls::GroupConfig config;
         config.need_log = true;
         config.logPath.data = std::string(logPath.length == 0 ? "" : logPath.UTF8String);
+        
+        std::optional<tgcalls::EncryptionKey> mappedEncryptionKey;
+        if (encryptionKey) {
+            auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
+            memcpy(encryptionKeyValue->data(), encryptionKey.bytes, encryptionKey.length);
+            
+            mappedEncryptionKey = tgcalls::EncryptionKey(encryptionKeyValue, true);
+        }
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
@@ -1958,7 +1967,8 @@ audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
                         strongSelf->_onMutedSpeechActivityDetected(value);
                     }
                 }];
-            }
+            },
+            .encryptionKey = mappedEncryptionKey
         }));
     }
     return self;

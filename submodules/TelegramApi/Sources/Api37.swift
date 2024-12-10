@@ -9587,6 +9587,21 @@ public extension Api.functions.phone {
                 }
 }
 public extension Api.functions.phone {
+                static func createConferenceCall(peer: Api.InputPhoneCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.PhoneCall>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1828162221)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.createConferenceCall", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.PhoneCall? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.PhoneCall?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.PhoneCall
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.phone {
                 static func createGroupCall(flags: Int32, peer: Api.InputPeer, randomId: Int32, title: String?, scheduleDate: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1221445336)

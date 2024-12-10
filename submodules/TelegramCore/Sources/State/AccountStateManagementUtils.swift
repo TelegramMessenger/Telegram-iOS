@@ -1616,9 +1616,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 case let .inputGroupCall(id, accessHash):
                     updatedState.updateGroupCallParticipants(id: id, accessHash: accessHash, participants: participants, version: version)
                 }
-            case let .updateGroupCall(channelId, call):
-                updatedState.updateGroupCall(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), call: call)
-                updatedState.updateGroupCall(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(channelId)), call: call)
+            case let .updateGroupCall(_, channelId, call):
+                updatedState.updateGroupCall(peerId: channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, call: call)
+                updatedState.updateGroupCall(peerId: channelId.flatMap { PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value($0)) }, call: call)
             case let .updatePeerHistoryTTL(_, peer, ttl):
                 updatedState.updateAutoremoveTimeout(peer: peer, value: CachedPeerAutoremoveTimeout.Value(ttl))
             case let .updateLangPackTooLong(langCode):
@@ -4451,18 +4451,20 @@ func replayFinalState(
                 switch call {
                 case .groupCall:
                     if let info = GroupCallInfo(call) {
-                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                            if let current = current as? CachedChannelData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
-                            } else if let current = current as? CachedGroupData {
-                                return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
-                            } else {
-                                return current
-                            }
-                        })
+                        if let peerId {
+                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                                if let current = current as? CachedChannelData {
+                                    return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
+                                } else if let current = current as? CachedGroupData {
+                                    return current.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
+                                } else {
+                                    return current
+                                }
+                            })
+                        }
                         
                         switch call {
-                        case let .groupCall(flags, _, _, participantsCount, title, _, recordStartDate, scheduleDate, _, _, _):
+                        case let .groupCall(flags, _, _, participantsCount, title, _, recordStartDate, scheduleDate, _, _, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let isVideoEnabled = (flags & (1 << 9)) != 0
@@ -4481,23 +4483,25 @@ func replayFinalState(
                         .call(isTerminated: true, defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: false, canChange: false), title: nil, recordingStartTimestamp: nil, scheduleTimestamp: nil, isVideoEnabled: false, participantCount: nil)
                     ))
                     
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        if let current = current as? CachedChannelData {
-                            if let activeCall = current.activeCall, activeCall.id == callId {
-                                return current.withUpdatedActiveCall(nil)
+                    if let peerId {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                if let activeCall = current.activeCall, activeCall.id == callId {
+                                    return current.withUpdatedActiveCall(nil)
+                                } else {
+                                    return current
+                                }
+                            } else if let current = current as? CachedGroupData {
+                                if let activeCall = current.activeCall, activeCall.id == callId {
+                                    return current.withUpdatedActiveCall(nil)
+                                } else {
+                                    return current
+                                }
                             } else {
                                 return current
                             }
-                        } else if let current = current as? CachedGroupData {
-                            if let activeCall = current.activeCall, activeCall.id == callId {
-                                return current.withUpdatedActiveCall(nil)
-                            } else {
-                                return current
-                            }
-                        } else {
-                            return current
-                        }
-                    })
+                        })
+                    }
                 }
             case let .UpdateAutoremoveTimeout(peer, autoremoveValue):
                 let peerId = peer.peerId

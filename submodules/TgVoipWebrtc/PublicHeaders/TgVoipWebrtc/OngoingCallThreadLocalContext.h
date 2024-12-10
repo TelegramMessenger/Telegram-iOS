@@ -416,7 +416,8 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     preferX264:(bool)preferX264
     logPath:(NSString * _Nonnull)logPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
-audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice;
+audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
+encryptionKey:(NSData * _Nullable)encryptionKey;
 
 - (void)stop;
 

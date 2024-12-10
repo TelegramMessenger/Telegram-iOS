@@ -71,7 +71,7 @@ public final class CallController: ViewController {
             }
         }
         
-        public var peerId: EnginePeer.Id {
+        public var peerId: EnginePeer.Id? {
             switch self {
             case let .call(call):
                 return call.peerId
@@ -597,16 +597,27 @@ public final class CallController: ViewController {
             self.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
+        let callPeerView: Signal<PeerView?, NoError>
+        if let peerId = self.call.peerId {
+            callPeerView = self.account.postbox.peerView(id: peerId) |> map(Optional.init)
+        } else {
+            callPeerView = .single(nil)
+        }
+        
         self.peerDisposable = (combineLatest(queue: .mainQueue(),
             self.account.postbox.peerView(id: self.account.peerId) |> take(1),
-            self.account.postbox.peerView(id: self.call.peerId),
+            callPeerView,
             self.sharedContext.activeAccountsWithInfo |> take(1)
         )
         |> deliverOnMainQueue).start(next: { [weak self] accountView, view, activeAccountsWithInfo in
             if let strongSelf = self {
-                if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
-                    strongSelf.peer = peer
-                    strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
+                if let view {
+                    if let accountPeer = accountView.peers[accountView.peerId], let peer = view.peers[view.peerId] {
+                        strongSelf.peer = peer
+                        strongSelf.controllerNode.updatePeer(accountPeer: accountPeer, peer: peer, hasOther: activeAccountsWithInfo.accounts.count > 1)
+                        strongSelf.isDataReady.set(.single(true))
+                    }
+                } else {
                     strongSelf.isDataReady.set(.single(true))
                 }
             }

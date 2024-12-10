@@ -463,7 +463,24 @@ public final class OngoingGroupCallContext {
         
         private let audioSessionActiveDisposable = MetaDisposable()
         
-        init(queue: Queue, inputDeviceId: String, outputDeviceId: String, audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void) {
+        init(
+            queue: Queue,
+            inputDeviceId: String,
+            outputDeviceId: String,
+            audioSessionActive: Signal<Bool, NoError>,
+            video: OngoingCallVideoCapturer?,
+            requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable,
+            rejoinNeeded: @escaping () -> Void,
+            outgoingAudioBitrateKbit: Int32?,
+            videoContentType: VideoContentType,
+            enableNoiseSuppression: Bool,
+            disableAudioInput: Bool,
+            enableSystemMute: Bool,
+            preferX264: Bool,
+            logPath: String,
+            onMutedSpeechActivityDetected: @escaping (Bool) -> Void,
+            encryptionKey: Data?
+        ) {
             self.queue = queue
             
 #if os(iOS)
@@ -580,7 +597,8 @@ public final class OngoingGroupCallContext {
                 onMutedSpeechActivityDetected: { value in
                     onMutedSpeechActivityDetected(value)
                 },
-                audioDevice: audioDevice
+                audioDevice: audioDevice,
+                encryptionKey: encryptionKey
             )
 #else
             self.context = GroupCallThreadLocalContext(
@@ -673,10 +691,10 @@ public final class OngoingGroupCallContext {
                 enableNoiseSuppression: enableNoiseSuppression,
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
-                logPath: logPath
+                logPath: logPath,
+                encryptionKey: encryptionKey
             )
 #endif
-            
             
             let queue = self.queue
             
@@ -880,125 +898,6 @@ public final class OngoingGroupCallContext {
         func switchAudioOutput(_ deviceId: String) {
             self.context.switchAudioOutput(deviceId)
         }
-        
-        func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
-            self.context.makeIncomingVideoView(withEndpointId: endpointId, requestClone: requestClone, completion: { mainView, cloneView in
-                if let mainView = mainView {
-                    #if os(iOS)
-                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
-                        view: mainView,
-                        setOnFirstFrameReceived: { [weak mainView] f in
-                            mainView?.setOnFirstFrameReceived(f)
-                        },
-                        getOrientation: { [weak mainView] in
-                            if let mainView = mainView {
-                                return OngoingCallVideoOrientation(mainView.orientation)
-                            } else {
-                                return .rotation0
-                            }
-                        },
-                        getAspect: { [weak mainView] in
-                            if let mainView = mainView {
-                                return mainView.aspect
-                            } else {
-                                return 0.0
-                            }
-                        },
-                        setOnOrientationUpdated: { [weak mainView] f in
-                            mainView?.setOnOrientationUpdated { value, aspect in
-                                f?(OngoingCallVideoOrientation(value), aspect)
-                            }
-                        },
-                        setOnIsMirroredUpdated: { [weak mainView] f in
-                            mainView?.setOnIsMirroredUpdated { value in
-                                f?(value)
-                            }
-                        },
-                        updateIsEnabled: { [weak mainView] value in
-                            mainView?.updateIsEnabled(value)
-                        }
-                    )
-                    var cloneVideoView: OngoingCallContextPresentationCallVideoView?
-                    if let cloneView = cloneView {
-                        cloneVideoView = OngoingCallContextPresentationCallVideoView(
-                            view: cloneView,
-                            setOnFirstFrameReceived: { [weak cloneView] f in
-                                cloneView?.setOnFirstFrameReceived(f)
-                            },
-                            getOrientation: { [weak cloneView] in
-                                if let cloneView = cloneView {
-                                    return OngoingCallVideoOrientation(cloneView.orientation)
-                                } else {
-                                    return .rotation0
-                                }
-                            },
-                            getAspect: { [weak cloneView] in
-                                if let cloneView = cloneView {
-                                    return cloneView.aspect
-                                } else {
-                                    return 0.0
-                                }
-                            },
-                            setOnOrientationUpdated: { [weak cloneView] f in
-                                cloneView?.setOnOrientationUpdated { value, aspect in
-                                    f?(OngoingCallVideoOrientation(value), aspect)
-                                }
-                            },
-                            setOnIsMirroredUpdated: { [weak cloneView] f in
-                                cloneView?.setOnIsMirroredUpdated { value in
-                                    f?(value)
-                                }
-                            },
-                            updateIsEnabled: { [weak cloneView] value in
-                                cloneView?.updateIsEnabled(value)
-                            }
-                        )
-                    }
-                    completion(mainVideoView, cloneVideoView)
-                    #else
-                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
-                        view: mainView,
-                        setOnFirstFrameReceived: { [weak mainView] f in
-                            mainView?.setOnFirstFrameReceived(f)
-                        },
-                        getOrientation: { [weak mainView] in
-                            if let mainView = mainView {
-                                return OngoingCallVideoOrientation(mainView.orientation)
-                            } else {
-                                return .rotation0
-                            }
-                        },
-                        getAspect: { [weak mainView] in
-                            if let mainView = mainView {
-                                return mainView.aspect
-                            } else {
-                                return 0.0
-                            }
-                        },
-                        setOnOrientationUpdated: { [weak mainView] f in
-                            mainView?.setOnOrientationUpdated { value, aspect in
-                                f?(OngoingCallVideoOrientation(value), aspect)
-                            }
-                        }, setVideoContentMode: { [weak mainView] mode in
-                            mainView?.setVideoContentMode(mode)
-                        },
-                        setOnIsMirroredUpdated: { [weak mainView] f in
-                            mainView?.setOnIsMirroredUpdated { value in
-                                f?(value)
-                            }
-                        }, setIsPaused: { [weak mainView] paused in
-                            mainView?.setIsPaused(paused)
-                        }, renderToSize: { [weak mainView] size, animated in
-                            mainView?.render(to: size, animated: animated)
-                        }
-                    )
-                    completion(mainVideoView, nil)
-                    #endif
-                } else {
-                    completion(nil, nil)
-                }
-            })
-        }
 
         func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
             let queue = self.queue
@@ -1113,10 +1012,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey)
         })
     }
     
@@ -1207,12 +1106,6 @@ public final class OngoingGroupCallContext {
     public func stop() {
         self.impl.with { impl in
             impl.stop()
-        }
-    }
-    
-    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
-        self.impl.with { impl in
-            impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
         }
     }
 

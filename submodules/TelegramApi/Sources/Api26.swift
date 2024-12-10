@@ -789,7 +789,7 @@ public extension Api {
         case updateFavedStickers
         case updateFolderPeers(folderPeers: [Api.FolderPeer], pts: Int32, ptsCount: Int32)
         case updateGeoLiveViewed(peer: Api.Peer, msgId: Int32)
-        case updateGroupCall(chatId: Int64, call: Api.GroupCall)
+        case updateGroupCall(flags: Int32, chatId: Int64?, call: Api.GroupCall)
         case updateGroupCallConnection(flags: Int32, params: Api.DataJSON)
         case updateGroupCallParticipants(call: Api.InputGroupCall, participants: [Api.GroupCallParticipant], version: Int32)
         case updateInlineBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, msgId: Api.InputBotInlineMessageID, chatInstance: Int64, data: Buffer?, gameShortName: String?)
@@ -1471,11 +1471,12 @@ public extension Api {
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     break
-                case .updateGroupCall(let chatId, let call):
+                case .updateGroupCall(let flags, let chatId, let call):
                     if boxed {
-                        buffer.appendInt32(347227392)
+                        buffer.appendInt32(-1747565759)
                     }
-                    serializeInt64(chatId, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(chatId!, buffer: buffer, boxed: false)}
                     call.serialize(buffer, true)
                     break
                 case .updateGroupCallConnection(let flags, let params):
@@ -2231,8 +2232,8 @@ public extension Api {
                 return ("updateFolderPeers", [("folderPeers", folderPeers as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateGeoLiveViewed(let peer, let msgId):
                 return ("updateGeoLiveViewed", [("peer", peer as Any), ("msgId", msgId as Any)])
-                case .updateGroupCall(let chatId, let call):
-                return ("updateGroupCall", [("chatId", chatId as Any), ("call", call as Any)])
+                case .updateGroupCall(let flags, let chatId, let call):
+                return ("updateGroupCall", [("flags", flags as Any), ("chatId", chatId as Any), ("call", call as Any)])
                 case .updateGroupCallConnection(let flags, let params):
                 return ("updateGroupCallConnection", [("flags", flags as Any), ("params", params as Any)])
                 case .updateGroupCallParticipants(let call, let participants, let version):
@@ -3653,16 +3654,19 @@ public extension Api {
             }
         }
         public static func parse_updateGroupCall(_ reader: BufferReader) -> Update? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Api.GroupCall?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
+            var _3: Api.GroupCall?
             if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.GroupCall
+                _3 = Api.parse(reader, signature: signature) as? Api.GroupCall
             }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateGroupCall(chatId: _1!, call: _2!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateGroupCall(flags: _1!, chatId: _2, call: _3!)
             }
             else {
                 return nil

@@ -1295,54 +1295,6 @@ public final class OngoingCallContext {
             return disposable
         }
     }
-    
-    public func makeIncomingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-        self.withContext { context in
-            if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.makeIncomingVideoView { view in
-                    if let view = view {
-                        completion(OngoingCallContextPresentationCallVideoView(
-                            view: view,
-                            setOnFirstFrameReceived: { [weak view] f in
-                                view?.setOnFirstFrameReceived(f)
-                            },
-                            getOrientation: { [weak view] in
-                                if let view = view {
-                                    return OngoingCallVideoOrientation(view.orientation)
-                                } else {
-                                    return .rotation0
-                                }
-                            },
-                            getAspect: { [weak view] in
-                                if let view = view {
-                                    return view.aspect
-                                } else {
-                                    return 0.0
-                                }
-                            },
-                            setOnOrientationUpdated: { [weak view] f in
-                                view?.setOnOrientationUpdated { value, aspect in
-                                    f?(OngoingCallVideoOrientation(value), aspect)
-                                }
-                            },
-                            setOnIsMirroredUpdated: { [weak view] f in
-                                view?.setOnIsMirroredUpdated { value in
-                                    f?(value)
-                                }
-                            },
-                            updateIsEnabled: { [weak view] value in
-                                view?.updateIsEnabled(value)
-                            }
-                        ))
-                    } else {
-                        completion(nil)
-                    }
-                }
-            } else {
-                completion(nil)
-            }
-        }
-    }
 
     public func addExternalAudioData(data: Data) {
         self.withContext { context in

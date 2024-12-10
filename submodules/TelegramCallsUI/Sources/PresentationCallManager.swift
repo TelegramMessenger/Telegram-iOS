@@ -702,7 +702,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                                 isChannel: isChannel,
                                 invite: nil,
                                 joinAsPeerId: nil,
-                                isStream: false
+                                isStream: false,
+                                encryptionKey: nil
                             )
                             call.schedule(timestamp: timestamp)
                             
@@ -741,15 +742,16 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     isChannel: isChannel,
                     invite: nil,
                     joinAsPeerId: nil,
-                    isStream: false
+                    isStream: false,
+                    encryptionKey: nil
                 )
                 strongSelf.updateCurrentGroupCall(call)
                 strongSelf.currentGroupCallPromise.set(.single(call))
                 strongSelf.hasActiveGroupCallsPromise.set(true)
                 strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
-                                                                 |> filter { $0 }
-                                                                 |> take(1)
-                                                                 |> deliverOnMainQueue).start(next: { [weak call] value in
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak call] value in
                     guard let strongSelf = self, let call = call else {
                         return
                     }
@@ -921,7 +923,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 isChannel: isChannel,
                 invite: invite,
                 joinAsPeerId: joinAsPeerId,
-                isStream: initialCall.isStream ?? false
+                isStream: initialCall.isStream ?? false,
+                encryptionKey: nil
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

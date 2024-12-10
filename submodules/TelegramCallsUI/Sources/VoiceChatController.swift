@@ -1164,15 +1164,17 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                 strongSelf.isNoiseSuppressionEnabled = value
             })
             
-            let displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
-            |> then(
-                combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: call.peerId))
-                |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
-                    var result = currentAccountPeer
-                    result.append(contentsOf: availablePeers)
-                    return result
-                }
-            )
+            var displayAsPeers: Signal<[FoundPeer], NoError> = currentAccountPeer
+            if let callPeerId = call.peerId {
+                displayAsPeers = displayAsPeers |> then(
+                    combineLatest(currentAccountPeer, context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: callPeerId))
+                    |> map { currentAccountPeer, availablePeers -> [FoundPeer] in
+                        var result = currentAccountPeer
+                        result.append(contentsOf: availablePeers)
+                        return result
+                    }
+                )
+            }
             self.displayAsPeersPromise.set(displayAsPeers)
 
             self.inviteLinksPromise.set(.single(nil)
@@ -1197,8 +1199,11 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                 guard let strongSelf = self else {
                     return
                 }
+                guard let callPeerId = strongSelf.call.peerId else {
+                    return
+                }
                 
-                let groupPeer = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.call.peerId))
+                let groupPeer = strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId))
                 let _ = combineLatest(queue: Queue.mainQueue(), groupPeer, strongSelf.inviteLinksPromise.get() |> take(1)).start(next: { groupPeer, inviteLinks in
                     guard let strongSelf = self else {
                         return
@@ -1446,7 +1451,9 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                         guard let strongSelf = self else {
                             return
                         }
-                        let callPeerId = strongSelf.call.peerId
+                        guard let callPeerId = strongSelf.call.peerId else {
+                            return
+                        }
                         
                         let _ = (strongSelf.context.engine.data.get(
                             TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId),
@@ -1711,8 +1718,11 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                     guard let strongSelf = self else {
                                         return
                                     }
+                                    guard let callPeerId = strongSelf.call.peerId else {
+                                        return
+                                    }
 
-                                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.call.peerId)
+                                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(callPeerId)
                                     |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
                                         guard let strongSelf = self else {
                                             return
@@ -1730,7 +1740,7 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                                                 return
                                             }
                                             
-                                            let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: strongSelf.context.engine, peerId: strongSelf.call.peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
+                                            let _ = strongSelf.context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(engine: strongSelf.context.engine, peerId: callPeerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max)).start()
                                             strongSelf.call.removedPeer(peer.id)
                                             
                                             strongSelf.presentUndoOverlay(content: .banned(text: strongSelf.presentationData.strings.VoiceChat_RemovedPeerText(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return false })
@@ -1990,17 +2000,24 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                 }
             })
             
+            let callPeerView: Signal<PeerView?, NoError>
+            if let peerId = self.call.peerId {
+                callPeerView = self.context.account.viewTracker.peerView(peerId) |> map(Optional.init)
+            } else {
+                callPeerView = .single(nil)
+            }
+            
             let titleAndRecording: Signal<(String?, Bool), NoError> = self.call.state
             |> map { state -> (String?, Bool) in
                 return (state.title, state.recordingStartTimestamp != nil)
             }
-            self.peerViewDisposable = combineLatest(queue: Queue.mainQueue(), self.context.account.viewTracker.peerView(self.call.peerId), titleAndRecording).start(next: { [weak self] view, titleAndRecording in
+            self.peerViewDisposable = combineLatest(queue: Queue.mainQueue(), callPeerView, titleAndRecording).start(next: { [weak self] view, titleAndRecording in
                 guard let strongSelf = self else {
                     return
                 }
                 
                 let (title, isRecording) = titleAndRecording
-                if let peer = peerViewMainPeer(view) {
+                if let view, let peer = peerViewMainPeer(view) {
                     let isLivestream: Bool
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         isLivestream = true
@@ -2509,10 +2526,13 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
             guard let myPeerId = self.callState?.myPeerId else {
                 return .single([])
             }
+            guard let callPeerId = self.call.peerId else {
+                return .single([])
+            }
 
             let canManageCall = self.callState?.canManageCall == true
             let avatarSize = CGSize(width: 28.0, height: 28.0)
-            return combineLatest(self.displayAsPeersPromise.get(), self.context.account.postbox.loadedPeerWithId(self.call.peerId), self.inviteLinksPromise.get())
+            return combineLatest(self.displayAsPeersPromise.get(), self.context.account.postbox.loadedPeerWithId(callPeerId), self.inviteLinksPromise.get())
             |> take(1)
             |> deliverOnMainQueue
             |> map { [weak self] peers, chatPeer, inviteLinks -> [ContextMenuItem] in
@@ -3398,7 +3418,11 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                 return string
             }
             
-            let _ = (self.context.account.postbox.loadedPeerWithId(self.call.peerId)
+            guard let callPeerId = self.call.peerId else {
+                return
+            }
+            
+            let _ = (self.context.account.postbox.loadedPeerWithId(callPeerId)
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
                     var inviteLinks = inviteLinks
@@ -3630,10 +3654,13 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
                     guard let strongSelf = self else {
                         return
                     }
+                    guard let callPeerId = strongSelf.call.peerId else {
+                        return
+                    }
                     
                     let _ = (strongSelf.context.engine.data.get(
-                        TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.call.peerId),
-                        TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: strongSelf.call.peerId)
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId),
+                        TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: callPeerId)
                     )
                     |> map { peer, exportedInvitation -> GroupCallInviteLinks? in
                         if let inviteLinks = inviteLinks {
@@ -6072,7 +6099,10 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
         }
         
         private func openTitleEditing() {
-            let _ = (self.context.account.postbox.loadedPeerWithId(self.call.peerId)
+            guard let callPeerId = self.call.peerId else {
+                return
+            }
+            let _ = (self.context.account.postbox.loadedPeerWithId(callPeerId)
             |> deliverOnMainQueue).start(next: { [weak self] chatPeer in
                 guard let strongSelf = self else {
                     return

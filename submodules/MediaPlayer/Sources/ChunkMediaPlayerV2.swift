@@ -6,7 +6,7 @@ import SwiftSignalKit
 import Postbox
 import VideoToolbox
 
-public let isHardwareAv1Supported: Bool = {
+public let internal_isHardwareAv1Supported: Bool = {
     let value = VTIsHardwareDecodeSupported(kCMVideoCodecType_AV1)
     return value
 }()
@@ -39,7 +39,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             
             func load() {
                 let reader: MediaDataReader
-                if self.mediaType == .video && (self.codecName == "av1" || self.codecName == "av01") && isHardwareAv1Supported {
+                if self.mediaType == .video && (self.codecName == "av1" || self.codecName == "av01") && internal_isHardwareAv1Supported {
                     reader = AVAssetVideoDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video)
                 } else {
                     reader = FFMpegMediaDataReader(filePath: self.tempFile.path, isVideo: self.mediaType == .video, codecName: self.codecName)
