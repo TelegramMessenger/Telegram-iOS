@@ -29,6 +29,7 @@ public extension HLSCodecConfiguration {
     init(context: AccountContext) {
         var isHardwareAv1Supported = internal_isHardwareAv1Supported
         var isSoftwareAv1Supported = false
+        var isHardwareAv1Supported = false
         
         var length: Int = 4
         var cpuCount: UInt32 = 0

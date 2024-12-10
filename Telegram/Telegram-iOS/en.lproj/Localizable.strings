@@ -13442,3 +13442,5 @@ Sorry for the inconvenience.";
 "StarsTransaction.StarRefReason.Miniapp" = "Mini App";
 "StarsTransaction.StarRefReason.Affiliate" = "Affiliate";
 "StarsTransaction.StarRefReason.Referred" = "Referred User";
+
+"Gallery.SaveToGallery.cached" = "cached";
