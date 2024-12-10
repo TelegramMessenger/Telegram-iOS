@@ -68,8 +68,7 @@ final class TextView: UIView {
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
                 text: .plain(attributedString),
-                horizontalAlignment: alignment,
-                lineSpacing: 0.6
+                horizontalAlignment: alignment
             )),
             environment: {},
             containerSize: CGSize(width: constrainedWidth, height: 1000.0)
