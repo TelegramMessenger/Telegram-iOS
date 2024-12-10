@@ -70,6 +70,7 @@ swift_library(
         "//submodules/AppBundle",
         "//submodules/UIKitRuntimeUtils",
         "//submodules/TelegramPresentationData",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

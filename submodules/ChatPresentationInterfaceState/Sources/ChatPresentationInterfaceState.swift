@@ -1277,9 +1277,20 @@ public final class ChatPresentationInterfaceState: Equatable {
     }
 }
 
+public func canBypassRestrictions(chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
+    guard let boostsToUnrestrict = chatPresentationInterfaceState.boostsToUnrestrict, boostsToUnrestrict > 0 else {
+        return false
+    }
+    if let appliedBoosts = chatPresentationInterfaceState.appliedBoosts, appliedBoosts >= boostsToUnrestrict {
+        return true
+    }
+    return false
+}
+
 public func canSendMessagesToChat(_ state: ChatPresentationInterfaceState) -> Bool {
     if let peer = state.renderedPeer?.peer {
-        if canSendMessagesToPeer(peer) {
+        let canBypassRestrictions = canBypassRestrictions(chatPresentationInterfaceState: state)
+        if canSendMessagesToPeer(peer, ignoreDefault: canBypassRestrictions) {
             return true
         } else {
             return false

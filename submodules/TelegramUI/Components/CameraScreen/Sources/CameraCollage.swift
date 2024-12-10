@@ -504,6 +504,10 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
             self.contextAction?(item.uniqueId, self.extractedContainerView, nil)
         }
         
+        func stopPlayback() {
+            self.videoPlayer?.pause()
+        }
+        
         func resetPlayback() {
             self.videoPlayer?.seek(to: .zero)
             self.videoPlayer?.play()
@@ -677,13 +681,13 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
                 var delayAppearance = false
                 if let snapshotView = self.snapshotView {
                     if snapshotView is UIImageView {
-                        
+      
                     } else {
                         delayAppearance = true
-                        Queue.mainQueue().after(0.2, {
-                            snapshotView.removeFromSuperview()
-                        })
                     }
+                    Queue.mainQueue().after(0.2, {
+                        snapshotView.removeFromSuperview()
+                    })
                     self.snapshotView = nil
                 }
                 if let previewLayer = self.previewLayer {
@@ -991,6 +995,12 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         }
     }
     
+    func stopPlayback() {
+        for (_, itemView) in self.itemViews {
+            itemView.stopPlayback()
+        }
+    }
+    
     func resetPlayback() {
         for (_, itemView) in self.itemViews {
             itemView.resetPlayback()
@@ -1054,7 +1064,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         
         var itemList: [ContextMenuItem] = []
         if self.collage.cameraIndex == nil {
-            itemList.append(.action(ContextMenuActionItem(text: "Retake", icon: { theme in
+            itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.Camera_CollageRetake, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Camera"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
@@ -1066,7 +1076,7 @@ final class CameraCollageView: UIView, UIGestureRecognizerDelegate {
         if self.itemViews.count > 2 {
             itemList.append(.separator)
             
-            itemList.append(.action(ContextMenuActionItem(text: "Delete", textColor: .destructive, icon: { theme in
+            itemList.append(.action(ContextMenuActionItem(text: presentationData.strings.Camera_CollageDelete, textColor: .destructive, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
             }, action: { [weak self] _, f in
                 f(.dismissWithoutContent)

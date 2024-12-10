@@ -904,18 +904,18 @@ public extension Api {
 }
 public extension Api {
     enum StarsRevenueStatus: TypeConstructorDescription {
-        case starsRevenueStatus(flags: Int32, currentBalance: Int64, availableBalance: Int64, overallRevenue: Int64, nextWithdrawalAt: Int32?)
+        case starsRevenueStatus(flags: Int32, currentBalance: Api.StarsAmount, availableBalance: Api.StarsAmount, overallRevenue: Api.StarsAmount, nextWithdrawalAt: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .starsRevenueStatus(let flags, let currentBalance, let availableBalance, let overallRevenue, let nextWithdrawalAt):
                     if boxed {
-                        buffer.appendInt32(2033461574)
+                        buffer.appendInt32(-21080943)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(currentBalance, buffer: buffer, boxed: false)
-                    serializeInt64(availableBalance, buffer: buffer, boxed: false)
-                    serializeInt64(overallRevenue, buffer: buffer, boxed: false)
+                    currentBalance.serialize(buffer, true)
+                    availableBalance.serialize(buffer, true)
+                    overallRevenue.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(nextWithdrawalAt!, buffer: buffer, boxed: false)}
                     break
     }
@@ -931,12 +931,18 @@ public extension Api {
         public static func parse_starsRevenueStatus(_ reader: BufferReader) -> StarsRevenueStatus? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: Int64?
-            _4 = reader.readInt64()
+            var _2: Api.StarsAmount?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StarsAmount
+            }
+            var _3: Api.StarsAmount?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.StarsAmount
+            }
+            var _4: Api.StarsAmount?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StarsAmount
+            }
             var _5: Int32?
             if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
