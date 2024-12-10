@@ -3696,7 +3696,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                     
                                     if let statusValue = fileStatuses.first(where: { $0.fileId ==  qualityFile.media.fileId }), statusValue.isCached {
-                                        fileSizeString.append(" • cached")
+                                        fileSizeString.append(" • \(self.presentationData.strings.Gallery_SaveToGallery_cached)")
                                     } else {
                                         fileSizeString.insert(contentsOf: "↓ ", at: fileSizeString.startIndex)
                                     }
