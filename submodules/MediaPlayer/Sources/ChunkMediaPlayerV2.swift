@@ -91,10 +91,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private let renderSynchronizer: AVSampleBufferRenderSynchronizer
     private var videoRenderer: AVSampleBufferDisplayLayer
     private var audioRenderer: AVSampleBufferAudioRenderer?
+    private weak var videoNode: MediaPlayerNode?
     
     private var partsState = ChunkMediaPlayerPartsState(duration: nil, parts: [])
     private var loadedParts: [LoadedPart] = []
     private var loadedPartsMediaData: QueueLocalObject<LoadedPartsMediaData>
+    private var reportedDidEnqueueVideo: Bool = false
     private var hasSound: Bool = false
     
     private var statusValue: MediaPlayerStatus? {
@@ -173,6 +175,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             assertionFailure()
         }
         self.videoRenderer = playerNode.videoLayer ?? AVSampleBufferDisplayLayer()
+        self.videoNode = playerNode
         
         self.updateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true, block: { [weak self] _ in
             guard let self else {
@@ -677,8 +680,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
             videoTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
-                    let bufferIsReadyForMoreData = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
-                    if bufferIsReadyForMoreData {
+                    let fillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
+                    if fillResult.isReadyForMoreData {
                         videoTarget.stopRequestingMediaData()
                         Queue.mainQueue().async {
                             guard let self else {
@@ -695,11 +698,12 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         if !self.audioIsRequestingMediaData, let audioRenderer = self.audioRenderer {
             self.audioIsRequestingMediaData = true
             let loadedPartsMediaData = self.loadedPartsMediaData
+            let reportedDidEnqueueVideo = self.reportedDidEnqueueVideo
             let audioTarget = audioRenderer
             audioTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
-                    let bufferIsReadyForMoreData = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: audioTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: false)
-                    if bufferIsReadyForMoreData {
+                    let fillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: audioTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: false)
+                    if fillResult.isReadyForMoreData {
                         audioTarget.stopRequestingMediaData()
                         Queue.mainQueue().async {
                             guard let self else {
@@ -709,13 +713,28 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             self.updateInternalState()
                         }
                     }
+                    if fillResult.didEnqueue && !reportedDidEnqueueVideo {
+                        Queue.mainQueue().async {
+                            guard let self else {
+                                return
+                            }
+                            self.reportedDidEnqueueVideo = true
+                            if #available(iOS 17.4, *) {
+                            } else {
+                                if let videoNode = self.videoNode {
+                                    videoNode.notifyHasSentFramesToDisplay()
+                                }
+                            }
+                        }
+                    }
                 }
             })
         }
     }
     
-    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> Bool {
+    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (isReadyForMoreData: Bool, didEnqueue: Bool) {
         var bufferIsReadyForMoreData = true
+        var didEnqeue = false
         outer: while true {
             if !bufferTarget.isReadyForMoreMediaData {
                 bufferIsReadyForMoreData = false
@@ -755,9 +774,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             continue outer
                         }
                     }
-                    /*if isVideo {
-                        print("Enqueue \(isVideo ? "video" : "audio") at \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds) \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value)/\(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).timescale) next \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value + CMSampleBufferGetDuration(sampleBuffer).value)")
-                    }*/
+                    didEnqeue = true
                     bufferTarget.enqueue(sampleBuffer)
                     hasData = true
                     continue outer
@@ -770,7 +787,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         }
         
-        return bufferIsReadyForMoreData
+        return (bufferIsReadyForMoreData, didEnqeue)
     }
 }
 
