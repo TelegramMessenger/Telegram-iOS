@@ -444,4 +444,11 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
         self.updateVideoInHierarchy?(self.videoInHierarchy || self.canPlaybackWithoutHierarchy)
     }
+    
+    func notifyHasSentFramesToDisplay() {
+        if !self.didNotifyVideoLayerReadyForDisplay {
+            self.didNotifyVideoLayerReadyForDisplay = true
+            self.hasSentFramesToDisplay?()
+        }
+    }
 }

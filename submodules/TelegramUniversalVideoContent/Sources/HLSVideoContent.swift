@@ -28,7 +28,6 @@ public struct HLSCodecConfiguration {
 public extension HLSCodecConfiguration {
     init(context: AccountContext) {
         var isSoftwareAv1Supported = false
-        var isHardwareAv1Supported = false
         
         var length: Int = 4
         var cpuCount: UInt32 = 0
@@ -42,6 +41,10 @@ public extension HLSCodecConfiguration {
         }
         if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_software_av1"] as? Double {
             isSoftwareAv1Supported = value != 0.0
+        }
+        
+        if "".isEmpty {
+            isSoftwareAv1Supported = false
         }
         
         self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)
