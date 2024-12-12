@@ -24,6 +24,7 @@ import SolidRoundedButtonNode
 import ContextUI
 import TextFormat
 import ForwardAccessoryPanelNode
+import CounterControllerTitleView
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -108,7 +109,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     
-    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, controller: PeerSelectionControllerImpl, presentationData: PresentationData, filter: ChatListNodePeersFilter, forumPeerId: EnginePeer.Id?, hasFilters: Bool, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, hasCreation: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.controller = controller
         self.present = present
@@ -215,6 +216,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         } else {
             self.mainContainerNode = nil
             self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true, isMainTab: false)
+            if let multipleSelectionLimit = controller.multipleSelectionLimit {
+                self.chatListNode?.selectionLimit = multipleSelectionLimit
+            }
         }
     
         super.init()
@@ -926,7 +930,17 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             } else if let chatListNode = self.chatListNode {
                 chatListNode.selectionCountChanged = { [weak self] count in
                     if let self {
+                        if let _ = self.controller?.multipleSelectionLimit {
+                            self.countPanelNode?.buttonTitle = self.presentationData.strings.Premium_Gift_ContactSelection_Proceed
+                        } else {
+                            self.countPanelNode?.buttonTitle = self.presentationData.strings.ShareMenu_Send
+                        }
                         self.countPanelNode?.count = count
+                        
+                        if let titleView = self.controller?.titleView, let maxCount = self.controller?.multipleSelectionLimit {
+                            titleView.title = CounterControllerTitle(title: titleView.title.title, counter: "\(count)/\(maxCount)")
+                        }
+                        
                         if let (layout, navigationBarHeight, actualNavigationBarHeight) = self.containerLayout {
                             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .animated(duration: 0.3, curve: .spring))
                         }
@@ -1789,10 +1803,11 @@ private final class PeersCountPanelNode: ASDisplayNode {
     
     private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
+    var buttonTitle: String = ""
     var count: Int = 0 {
         didSet {
             if self.count != oldValue && self.count > 0 {
-                self.button.title = self.strings.ShareMenu_Send
+                self.button.title = self.buttonTitle
                 self.button.badge = "\(self.count)"
                 
                 if let (width, sideInset, bottomInset) = self.validLayout {
