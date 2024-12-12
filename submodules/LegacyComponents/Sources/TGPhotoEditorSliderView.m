@@ -381,7 +381,11 @@ const CGFloat TGPhotoEditorSliderViewInternalMargin = 7.0f;
 
 - (void)setValue:(CGFloat)value animated:(BOOL)__unused animated
 {
-    _value = MIN(MAX(_lowerBoundValue, MAX(value, _minimumValue)), _maximumValue);
+    if (_lowerBoundValue > FLT_EPSILON) {
+        _value = MIN(MAX(_lowerBoundValue, MAX(value, _minimumValue)), _maximumValue);
+    } else {
+        _value = MIN(MAX(value, _minimumValue), _maximumValue);
+    }
     [self setNeedsLayout];
 }
 

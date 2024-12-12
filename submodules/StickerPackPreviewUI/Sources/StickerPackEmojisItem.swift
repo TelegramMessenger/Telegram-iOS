@@ -297,9 +297,24 @@ final class StickerPackEmojisItemNode: GridItemNode {
         
         self.setNeedsLayout()
     }
+    
+    private var visibleRect: CGRect?
+    override func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+        var y: CGFloat
+        if absoluteRect.minY > 0.0 {
+            y = 0.0
+        } else {
+            y = absoluteRect.minY * -1.0
+        }
+        var rect = CGRect(origin: CGPoint(x: 0.0, y: y), size: CGSize(width: containerSize.width, height: containerSize.height))
+        rect.size.height += 96.0
+        self.visibleRect = rect
+        
+        self.updateVisibleItems(attemptSynchronousLoads: false, transition: .immediate)
+    }
 
     func updateVisibleItems(attemptSynchronousLoads: Bool, transition: ContainedViewLayoutTransition) {
-        guard let item = self.item, !self.size.width.isZero else {
+        guard let item = self.item, !self.size.width.isZero, let visibleRect = self.visibleRect else {
             return
         }
                 
@@ -321,16 +336,25 @@ final class StickerPackEmojisItemNode: GridItemNode {
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: item.title != nil ? 61.0 : 0.0), size: CGSize(width: itemLayout.width, height: itemLayout.height))
         
         for index in 0 ..< items.count {
+            var itemFrame = itemLayout.frame(itemIndex: index)
+            if !visibleRect.intersects(itemFrame) {
+                continue
+            }
             let item = items[index]
             let itemId = EmojiKeyboardItemLayer.Key(
                 groupId: 0,
                 itemId: .animation(.file(item.file.fileId))
             )
-            validIds.insert(itemId)
             
             let itemDimensions = item.file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
             let itemNativeFitSize = itemDimensions.fitted(CGSize(width: nativeItemSize, height: nativeItemSize))
             let itemVisibleFitSize = itemDimensions.fitted(CGSize(width: itemLayout.visibleItemSize, height: itemLayout.visibleItemSize))
+            
+            validIds.insert(itemId)
+            
+            itemFrame.origin.x += floor((itemFrame.width - itemVisibleFitSize.width) / 2.0)
+            itemFrame.origin.y += floor((itemFrame.height - itemVisibleFitSize.height) / 2.0)
+            itemFrame.size = itemVisibleFitSize
             
             var updateItemLayerPlaceholder = false
             var itemTransition = transition
@@ -425,12 +449,6 @@ final class StickerPackEmojisItemNode: GridItemNode {
             case let .custom(color):
                 itemLayer.layerTintColor = color.cgColor
             }
-            
-            var itemFrame = itemLayout.frame(itemIndex: index)
-            
-            itemFrame.origin.x += floor((itemFrame.width - itemVisibleFitSize.width) / 2.0)
-            itemFrame.origin.y += floor((itemFrame.height - itemVisibleFitSize.height) / 2.0)
-            itemFrame.size = itemVisibleFitSize
             
             let itemPosition = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
             let itemBounds = CGRect(origin: CGPoint(), size: itemFrame.size)

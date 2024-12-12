@@ -878,14 +878,10 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             if file.isInstantVideo {
                 isRound = true
             }
-            if file.isSticker || file.isAnimatedSticker {
-                self.playIcon.isHidden = true
+            if file.isVideo && !file.isAnimated {
+                self.playIcon.isHidden = false
             } else {
-                if file.isAnimated {
-                    self.playIcon.isHidden = true
-                } else {
-                    self.playIcon.isHidden = false
-                }
+                self.playIcon.isHidden = true
             }
             if let mediaDimensions = file.dimensions {
                 dimensions = mediaDimensions.cgSize
@@ -2644,6 +2640,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
                                         } else if contentImageIsDisplayedAsAvatar && (file.isSticker || file.isVideoSticker) {
+                                            let fitSize = contentImageSize
+                                            contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
+                                        } else if !file.previewRepresentations.isEmpty, let _ = file.dimensions {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
                                         }

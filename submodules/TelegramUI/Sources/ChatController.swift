@@ -4060,10 +4060,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.present(controller, in: .window(.root))
             }
             
-            if case .user = peerType, maxQuantity > 1 {
+            if case let .user(requestUser) = peerType, maxQuantity > 1, requestUser.isBot == nil && requestUser.isPremium == nil {
                 let presentationData = self.presentationData
                 var reachedLimitImpl: ((Int32) -> Void)?
-                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .requestedUsersSelection, isPeerEnabled: { peer in
+                let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .requestedUsersSelection(isBot: requestUser.isBot, isPremium: requestUser.isPremium), isPeerEnabled: { peer in
                     if case let .user(user) = peer, user.botInfo == nil {
                         return true
                     } else {
@@ -4105,7 +4105,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var createNewGroupImpl: (() -> Void)?
                 let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: [peerType], hasContactSelector: false, createNewGroup: {
                     createNewGroupImpl?()
-                }, hasCreation: true))
+                }, multipleSelection: maxQuantity > 1, multipleSelectionLimit: maxQuantity > 1 ? maxQuantity : nil, hasCreation: true, immediatelyActivateMultipleSelection: maxQuantity > 1))
                    
                 controller.peerSelected = { [weak self, weak controller] peer, _ in
                     guard let strongSelf = self else {
@@ -4125,6 +4125,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             controller?.dismiss()
                         })
                     }
+                }
+                controller.multiplePeersSelected = { [weak controller] peers, _, _, _, _, _ in
+                    let peerIds = peers.map { $0.id }
+                    let _ = context.engine.peers.sendBotRequestedPeer(messageId: messageId, buttonId: buttonId, requestedPeerIds: peerIds).startStandalone()
+                    controller?.dismiss()
                 }
                 createNewGroupImpl = { [weak controller] in
                     switch peerType {
