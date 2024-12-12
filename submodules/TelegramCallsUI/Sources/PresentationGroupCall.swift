@@ -1679,6 +1679,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if encryptionKey == nil {
                         encryptionKey = Data(count: 256)
                     }
+                    if "".isEmpty {
+                        encryptionKey = nil
+                    }
                     #endif
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in

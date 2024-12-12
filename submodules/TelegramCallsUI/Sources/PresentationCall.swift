@@ -564,7 +564,7 @@ public final class PresentationCallImpl: PresentationCall {
                         self.audioSessionShouldBeActive.set(true)
                     }
                 }
-            case let .active(id, key, _, connections, maxLayer, version, customParameters, allowsP2P, conferenceCall):
+            case let .active(id, key, keyVisualHash, connections, maxLayer, version, customParameters, allowsP2P, conferenceCall):
                 if let conferenceCall, self.conferenceCallDisposable == nil {
                     presentationState = PresentationCallState(state: .connecting(nil), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
                     
@@ -640,7 +640,7 @@ public final class PresentationCallImpl: PresentationCall {
                             case .connected:
                                 let timestamp = startTimestamp ?? CFAbsoluteTimeGetCurrent()
                                 startTimestamp = timestamp
-                                mappedState = .active(timestamp, nil, Data())
+                                mappedState = .active(timestamp, nil, keyVisualHash)
                             }
                             
                             var mappedLocalVideoState: PresentationCallState.VideoState = .inactive
