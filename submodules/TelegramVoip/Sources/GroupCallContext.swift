@@ -447,7 +447,7 @@ public final class OngoingGroupCallContext {
         let queue: Queue
         let context: GroupCallThreadLocalContext
 #if os(iOS)
-        let audioDevice: SharedCallAudioDevice?
+        let audioDevice: OngoingCallContext.AudioDevice?
 #endif
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
@@ -456,12 +456,17 @@ public final class OngoingGroupCallContext {
         let isMuted = ValuePromise<Bool>(true, ignoreRepeated: true)
         let isNoiseSuppressionEnabled = ValuePromise<Bool>(true, ignoreRepeated: true)
         let audioLevels = ValuePipe<[(AudioLevelKey, Float, Bool)]>()
+        let ssrcActivities = ValuePipe<[UInt32]>()
+        let signalBars = ValuePromise<Int32>(0)
 
         private var currentRequestedVideoChannels: [VideoChannel] = []
         
         private let broadcastPartsSource = Atomic<BroadcastPartSource?>(value: nil)
         
         private let audioSessionActiveDisposable = MetaDisposable()
+        
+        private let logPath: String
+        private let tempStatsLogFile: EngineTempBox.File
         
         init(
             queue: Queue,
@@ -479,16 +484,28 @@ public final class OngoingGroupCallContext {
             preferX264: Bool,
             logPath: String,
             onMutedSpeechActivityDetected: @escaping (Bool) -> Void,
-            encryptionKey: Data?
+            encryptionKey: Data?,
+            isConference: Bool,
+            sharedAudioDevice: OngoingCallContext.AudioDevice?
         ) {
             self.queue = queue
             
+            self.logPath = logPath
+            
+            self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
+            let tempStatsLogPath = self.tempStatsLogFile.path
+            
 #if os(iOS)
-            self.audioDevice = nil
+            if sharedAudioDevice == nil {
+                self.audioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
+            } else {
+                self.audioDevice = sharedAudioDevice
+            }
             let audioDevice = self.audioDevice
 #endif
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
+            var activityUpdatedImpl: (([UInt32]) -> Void)?
             
             let _videoContentType: OngoingGroupCallVideoContentType
             switch videoContentType {
@@ -509,6 +526,9 @@ public final class OngoingGroupCallContext {
                 },
                 audioLevelsUpdated: { levels in
                     audioLevelsUpdatedImpl?(levels)
+                },
+                activityUpdated: { ssrcs in
+                    activityUpdatedImpl?(ssrcs.map { $0.uint32Value })
                 },
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId,
@@ -594,11 +614,13 @@ public final class OngoingGroupCallContext {
                 enableSystemMute: enableSystemMute,
                 preferX264: preferX264,
                 logPath: logPath,
+                statsLogPath: tempStatsLogPath,
                 onMutedSpeechActivityDetected: { value in
                     onMutedSpeechActivityDetected(value)
                 },
-                audioDevice: audioDevice,
-                encryptionKey: encryptionKey
+                audioDevice: audioDevice?.impl,
+                encryptionKey: encryptionKey,
+                isConference: isConference
             )
 #else
             self.context = GroupCallThreadLocalContext(
@@ -608,6 +630,9 @@ public final class OngoingGroupCallContext {
                 },
                 audioLevelsUpdated: { levels in
                     audioLevelsUpdatedImpl?(levels)
+                },
+                activityUpdated: { ssrcs in
+                    activityUpdatedImpl?(ssrcs.map { $0.uint32Value })
                 },
                 inputDeviceId: inputDeviceId,
                 outputDeviceId: outputDeviceId,
@@ -692,7 +717,9 @@ public final class OngoingGroupCallContext {
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
                 logPath: logPath,
-                encryptionKey: encryptionKey
+                statsLogPath: tempStatsLogPath,
+                encryptionKey: encryptionKey,
+                isConference: isConference
             )
 #endif
             
@@ -732,6 +759,20 @@ public final class OngoingGroupCallContext {
                 }
             }
             
+            let ssrcActivities = self.ssrcActivities
+            activityUpdatedImpl = { ssrcs in
+                queue.async {
+                    ssrcActivities.putNext(ssrcs)
+                }
+            }
+            
+            let signalBars = self.signalBars
+            self.context.signalBarsChanged = { value in
+                queue.async {
+                    signalBars.set(value)
+                }
+            }
+            
             self.context.emitJoinPayload({ [weak self] payload, ssrc in
                 queue.async {
                     guard let strongSelf = self else {
@@ -741,16 +782,18 @@ public final class OngoingGroupCallContext {
                 }
             })
             
-            self.audioSessionActiveDisposable.set((audioSessionActive
-            |> deliverOn(queue)).start(next: { [weak self] isActive in
-                guard let `self` = self else {
-                    return
-                }
-//                self.audioDevice?.setManualAudioSessionIsActive(isActive)
-                #if os(iOS)
-                self.context.setManualAudioSessionIsActive(isActive)
-                #endif
-            }))
+            if sharedAudioDevice == nil {
+                self.audioSessionActiveDisposable.set((audioSessionActive
+                |> deliverOn(queue)).start(next: { [weak self] isActive in
+                    guard let `self` = self else {
+                        return
+                    }
+                    //                self.audioDevice?.setManualAudioSessionIsActive(isActive)
+                    #if os(iOS)
+                    self.context.setManualAudioSessionIsActive(isActive)
+                    #endif
+                }))
+            }
         }
         
         deinit {
@@ -826,8 +869,40 @@ public final class OngoingGroupCallContext {
             }
         }
         
-        func stop() {
+        func stop(account: Account, reportCallId: CallId?) {
             self.context.stop()
+            
+            let logPath = self.logPath
+            var statsLogPath = ""
+            if !logPath.isEmpty {
+                statsLogPath = logPath + ".json"
+            }
+            let tempStatsLogPath = self.tempStatsLogFile.path
+            
+            let queue = self.queue
+            self.context.stop({
+                queue.async {
+                    if !statsLogPath.isEmpty {
+                        let logsPath = callLogsPath(account: account)
+                        let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
+                        let _ = try? FileManager.default.moveItem(atPath: tempStatsLogPath, toPath: statsLogPath)
+                    }
+                    
+                    if let callId = reportCallId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
+                        let engine = TelegramEngine(account: account)
+                        let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
+                            switch result {
+                            case .sendFullLog:
+                                if !logPath.isEmpty {
+                                    let _ = engine.calls.saveCompleteCallDebugLog(callId: callId, logPath: logPath).start()
+                                }
+                            case .done:
+                                break
+                            }
+                        })
+                    }
+                }
+            })
         }
         
         func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool, isUnifiedBroadcast: Bool) {
@@ -988,6 +1063,30 @@ public final class OngoingGroupCallContext {
         }
     }
     
+    public var ssrcActivities: Signal<[UInt32], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.ssrcActivities.signal().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public var signalBars: Signal<Int32, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.signalBars.get().start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
+        }
+    }
+    
     public var isMuted: Signal<Bool, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -1012,10 +1111,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?, isConference: Bool, sharedAudioDevice: OngoingCallContext.AudioDevice?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey, isConference: isConference, sharedAudioDevice: sharedAudioDevice)
         })
     }
     
@@ -1103,9 +1202,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func stop() {
+    public func stop(account: Account, reportCallId: CallId?) {
         self.impl.with { impl in
-            impl.stop()
+            impl.stop(account: account, reportCallId: reportCallId)
         }
     }
 

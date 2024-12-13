@@ -321,10 +321,10 @@ private extension CurrentImpl {
         }
     }
     
-    func stop() {
+    func stop(account: Account, reportCallId: CallId?) {
         switch self {
         case let .call(callContext):
-            callContext.stop()
+            callContext.stop(account: account, reportCallId: reportCallId)
         case .mediaStream, .externalMediaStream:
             break
         }
@@ -712,6 +712,30 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     private var myAudioLevelDisposable = MetaDisposable()
     
+    private var hasActiveIncomingDataValue: Bool = false {
+        didSet {
+            if self.hasActiveIncomingDataValue != oldValue {
+                self.hasActiveIncomingDataPromise.set(self.hasActiveIncomingDataValue)
+            }
+        }
+    }
+    private let hasActiveIncomingDataPromise = ValuePromise<Bool>(false)
+    var hasActiveIncomingData: Signal<Bool, NoError> {
+        return self.hasActiveIncomingDataPromise.get()
+    }
+    private var hasActiveIncomingDataDisposable: Disposable?
+    private var hasActiveIncomingDataTimer: Foundation.Timer?
+    
+    private let isFailedPromise = ValuePromise<Bool>(false)
+    var isFailed: Signal<Bool, NoError> {
+        return self.isFailedPromise.get()
+    }
+    
+    private let signalBarsPromise = Promise<Int32>(0)
+    var signalBars: Signal<Int32, NoError> {
+        return self.signalBarsPromise.get()
+    }
+    
     private var audioSessionControl: ManagedAudioSessionControl?
     private var audioSessionDisposable: Disposable?
     private let audioSessionShouldBeActive = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -842,6 +866,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     public let isStream: Bool
     private let encryptionKey: Data?
+    private let sharedAudioDevice: OngoingCallContext.AudioDevice?
+    
+    private let conferenceFromCallId: CallId?
+    private let isConference: Bool
     
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
     
@@ -857,7 +885,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         invite: String?,
         joinAsPeerId: EnginePeer.Id?,
         isStream: Bool,
-        encryptionKey: Data?
+        encryptionKey: Data?,
+        conferenceFromCallId: CallId?,
+        isConference: Bool,
+        sharedAudioDevice: OngoingCallContext.AudioDevice?
     ) {
         self.account = accountContext.account
         self.accountContext = accountContext
@@ -883,105 +914,110 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.hasVideo = false
         self.hasScreencast = false
         self.isStream = isStream
+        self.conferenceFromCallId = conferenceFromCallId
+        self.isConference = isConference
         self.encryptionKey = encryptionKey
+        self.sharedAudioDevice = sharedAudioDevice
         
-        var didReceiveAudioOutputs = false
-        
-        if !audioSession.getIsHeadsetPluggedIn() {
-            self.currentSelectedAudioOutputValue = .speaker
-            self.audioOutputStatePromise.set(.single(([], .speaker)))
-        }
-        
-        self.audioSessionDisposable = audioSession.push(audioSessionType: self.isStream ? .play(mixWithOthers: false) : .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
-            Queue.mainQueue().async {
-                if let strongSelf = self {
-                    strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
-                }
+        if self.sharedAudioDevice == nil {
+            var didReceiveAudioOutputs = false
+            
+            if !audioSession.getIsHeadsetPluggedIn() {
+                self.currentSelectedAudioOutputValue = .speaker
+                self.audioOutputStatePromise.set(.single(([], .speaker)))
             }
-        }, deactivate: { [weak self] _ in
-            return Signal { subscriber in
+            
+            self.audioSessionDisposable = audioSession.push(audioSessionType: self.isStream ? .play(mixWithOthers: false) : .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
-                        strongSelf.updateIsAudioSessionActive(false)
-                        strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: nil)
-                        
-                        if strongSelf.isStream {
-                            let _ = strongSelf.leave(terminateIfPossible: false)
+                        strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
+                    }
+                }
+            }, deactivate: { [weak self] _ in
+                return Signal { subscriber in
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.updateIsAudioSessionActive(false)
+                            strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: nil)
+                            
+                            if strongSelf.isStream {
+                                let _ = strongSelf.leave(terminateIfPossible: false)
+                            }
+                        }
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
+            }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
+                Queue.mainQueue().async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                    
+                    var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
+                    if !didReceiveAudioOutputs {
+                        didReceiveAudioOutputs = true
+                        if currentOutput == .speaker {
+                            signal = .single((availableOutputs, .speaker))
+                            |> then(
+                                signal
+                                |> delay(1.0, queue: Queue.mainQueue())
+                            )
                         }
                     }
-                    subscriber.putCompletion()
+                    strongSelf.audioOutputStatePromise.set(signal)
                 }
-                return EmptyDisposable
-            }
-        }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
-            Queue.mainQueue().async {
+            })
+            
+            self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
-                
-                var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
-                if !didReceiveAudioOutputs {
-                    didReceiveAudioOutputs = true
-                    if currentOutput == .speaker {
-                        signal = .single((availableOutputs, .speaker))
-                        |> then(
-                            signal
-                            |> delay(1.0, queue: Queue.mainQueue())
-                        )
-                    }
-                }
-                strongSelf.audioOutputStatePromise.set(signal)
-            }
-        })
-        
-        self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            guard let strongSelf = self else {
-                return
-            }
-            if value {
-                if let audioSessionControl = strongSelf.audioSessionControl {
-                    if !strongSelf.isStream, let callKitIntegration = strongSelf.callKitIntegration {
-                        _ = callKitIntegration.audioSessionActive
-                        |> filter { $0 }
-                        |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
-                            subscriber.putNext(true)
-                            subscriber.putCompletion()
-                            return EmptyDisposable
-                        })
-                    } else {
-                        audioSessionControl.activate({ _ in
-                            Queue.mainQueue().async {
-                                guard let strongSelf = self else {
-                                    return
+                if value {
+                    if let audioSessionControl = strongSelf.audioSessionControl {
+                        if !strongSelf.isStream, let callKitIntegration = strongSelf.callKitIntegration {
+                            _ = callKitIntegration.audioSessionActive
+                            |> filter { $0 }
+                            |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
+                                subscriber.putNext(true)
+                                subscriber.putCompletion()
+                                return EmptyDisposable
+                            })
+                        } else {
+                            audioSessionControl.activate({ _ in
+                                Queue.mainQueue().async {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.audioSessionActive.set(.single(true))
                                 }
-                                strongSelf.audioSessionActive.set(.single(true))
-                            }
-                        })
+                            })
+                        }
+                    } else {
+                        strongSelf.audioSessionActive.set(.single(false))
                     }
                 } else {
                     strongSelf.audioSessionActive.set(.single(false))
                 }
-            } else {
-                strongSelf.audioSessionActive.set(.single(false))
-            }
-        })
-        
-        self.audioSessionActiveDisposable = (self.audioSessionActive.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.updateIsAudioSessionActive(value)
-            }
-        })
-        
-        self.audioOutputStateDisposable = (self.audioOutputStatePromise.get()
-        |> deliverOnMainQueue).start(next: { [weak self] availableOutputs, currentOutput in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.updateAudioOutputs(availableOutputs: availableOutputs, currentOutput: currentOutput)
-        })
+            })
+            
+            self.audioSessionActiveDisposable = (self.audioSessionActive.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                if let strongSelf = self {
+                    strongSelf.updateIsAudioSessionActive(value)
+                }
+            })
+            
+            self.audioOutputStateDisposable = (self.audioOutputStatePromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] availableOutputs, currentOutput in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.updateAudioOutputs(availableOutputs: availableOutputs, currentOutput: currentOutput)
+            })
+        }
         
         self.groupCallParticipantUpdatesDisposable = (self.account.stateManager.groupCallParticipantUpdates
         |> deliverOnMainQueue).start(next: { [weak self] updates in
@@ -1173,6 +1209,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.participantsContextStateDisposable.dispose()
         self.myAudioLevelDisposable.dispose()
         self.memberEventsPipeDisposable.dispose()
+        self.hasActiveIncomingDataDisposable?.dispose()
+        self.hasActiveIncomingDataTimer?.invalidate()
         
         self.myAudioLevelTimer?.invalidate()
         self.typingDisposable.dispose()
@@ -1709,14 +1747,52 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                             strongSelf.onMutedSpeechActivityDetected?(value)
                         }
-                    }, encryptionKey: encryptionKey))
+                    }, encryptionKey: encryptionKey, isConference: self.isConference, sharedAudioDevice: self.sharedAudioDevice))
                 }
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
                 
+                let isEffectivelyMuted: Bool
+                switch self.isMutedValue {
+                case let .muted(isPushToTalkActive):
+                    isEffectivelyMuted = !isPushToTalkActive
+                case .unmuted:
+                    isEffectivelyMuted = false
+                }
+                genericCallContext.setIsMuted(isEffectivelyMuted)
+                
                 genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
                 self.connectPendingVideoSubscribers()
+                
+                if case let .call(callContext) = genericCallContext {
+                    var lastTimestamp: Double?
+                    self.hasActiveIncomingDataDisposable?.dispose()
+                    self.hasActiveIncomingDataDisposable = (callContext.ssrcActivities
+                    |> filter { !$0.isEmpty }
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        lastTimestamp = CFAbsoluteTimeGetCurrent()
+                        self.hasActiveIncomingDataValue = true
+                    })
+                    
+                    self.hasActiveIncomingDataTimer?.invalidate()
+                    self.hasActiveIncomingDataTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        let timestamp = CFAbsoluteTimeGetCurrent()
+                        if let lastTimestamp {
+                            if lastTimestamp + 1.0 < timestamp {
+                                self.hasActiveIncomingDataValue = false
+                            }
+                        }
+                    })
+                    
+                    self.signalBarsPromise.set(callContext.signalBars)
+                }
             }
             
             self.joinDisposable.set((genericCallContext.joinPayload
@@ -2570,10 +2646,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         self.markedAsCanBeRemoved = true
 
-        self.genericCallContext?.stop()
+        self.genericCallContext?.stop(account: self.account, reportCallId: self.conferenceFromCallId)
 
         //self.screencastIpcContext = nil
-        self.screencastCallContext?.stop()
+        self.screencastCallContext?.stop(account: self.account, reportCallId: nil)
 
         self._canBeRemoved.set(.single(true))
         
@@ -3024,7 +3100,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.hasScreencast = true
 
-        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in }, encryptionKey: nil)
+        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in }, encryptionKey: nil, isConference: self.isConference, sharedAudioDevice: nil)
         self.screencastCallContext = screencastCallContext
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload
@@ -3059,7 +3135,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.hasScreencast = false
         if let screencastCallContext = self.screencastCallContext {
             self.screencastCallContext = nil
-            screencastCallContext.stop()
+            screencastCallContext.stop(account: self.account, reportCallId: nil)
 
             let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
 
@@ -3133,6 +3209,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        if self.sharedAudioDevice != nil {
+            return
+        }
         guard self.currentSelectedAudioOutputValue != output else {
             return
         }

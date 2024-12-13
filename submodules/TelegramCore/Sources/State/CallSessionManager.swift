@@ -789,12 +789,18 @@ private final class CallSessionManagerContext {
                 return
             }
             
+            var idAndAccessHash: (id: Int64, accessHash: Int64)?
             switch context.state {
             case let .active(id, accessHash, _, _, _, _, _, _, _, _, _, conferenceCall):
                 if conferenceCall != nil {
                     return
                 }
-                
+                idAndAccessHash = (id, accessHash)
+            default:
+                break
+            }
+            
+            if let (id, accessHash) = idAndAccessHash {
                 context.createConferenceCallDisposable = (createConferenceCall(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, callId: CallId(id: id, accessHash: accessHash))
                 |> deliverOn(self.queue)).startStrict(next: { [weak self] result in
                     guard let self else {
@@ -813,8 +819,6 @@ private final class CallSessionManagerContext {
                         }
                     }
                 })
-            default:
-                break
             }
         }
     }

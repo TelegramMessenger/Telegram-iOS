@@ -794,6 +794,11 @@ public final class OngoingCallContext {
         return self.audioLevelPromise.get()
     }
     
+    private let signalingDataPipe = ValuePipe<[Data]>()
+    public var signalingData: Signal<[Data], NoError> {
+        return self.signalingDataPipe.signal()
+    }
+    
     private let audioSessionDisposable = MetaDisposable()
     private let audioSessionActiveDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
@@ -1122,7 +1127,13 @@ public final class OngoingCallContext {
 
                 strongSelf.signalingDataDisposable = callSessionManager.beginReceivingCallSignalingData(internalId: internalId, { [weak self] dataList in
                     queue.async {
-                        self?.withContext { context in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.signalingDataPipe.putNext(dataList)
+                        
+                        self.withContext { context in
                             if let context = context as? OngoingCallThreadLocalContextWebrtc {
                                 for data in dataList {
                                     context.addSignaling(data)
@@ -1299,6 +1310,21 @@ public final class OngoingCallContext {
     public func addExternalAudioData(data: Data) {
         self.withContext { context in
             context.addExternalAudioData(data: data)
+        }
+    }
+    
+    public func sendSignalingData(data: Data) {
+        self.queue.async { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let signalingConnectionManager = strongSelf.signalingConnectionManager {
+                signalingConnectionManager.with { impl in
+                    impl.send(payloadData: data)
+                }
+            }
+            
+            strongSelf.callSessionManager.sendSignalingData(internalId: strongSelf.internalId, data: data)
         }
     }
 }
