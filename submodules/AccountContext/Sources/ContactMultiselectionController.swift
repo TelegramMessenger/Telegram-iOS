@@ -79,7 +79,7 @@ public enum ContactMultiselectionControllerMode {
     case channelCreation
     case chatSelection(ChatSelection)
     case premiumGifting(birthdays: [EnginePeer.Id: TelegramBirthday]?, selectToday: Bool, hasActions: Bool)
-    case requestedUsersSelection
+    case requestedUsersSelection(isBot: Bool?, isPremium: Bool?)
 }
 
 public enum ContactListFilter {

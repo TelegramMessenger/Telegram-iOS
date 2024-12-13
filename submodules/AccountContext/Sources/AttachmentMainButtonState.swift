@@ -33,6 +33,7 @@ public struct AttachmentMainButtonState {
     }
     
     public let text: String?
+    public let badge: String?
     public let font: Font
     public let background: Background
     public let textColor: UIColor
@@ -44,6 +45,7 @@ public struct AttachmentMainButtonState {
     
     public init(
         text: String?,
+        badge: String? = nil,
         font: Font,
         background: Background,
         textColor: UIColor,
@@ -54,6 +56,7 @@ public struct AttachmentMainButtonState {
         position: Position? = nil
     ) {
         self.text = text
+        self.badge = badge
         self.font = font
         self.background = background
         self.textColor = textColor
