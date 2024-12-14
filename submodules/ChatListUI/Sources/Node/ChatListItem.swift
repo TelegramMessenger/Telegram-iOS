@@ -2642,7 +2642,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         } else if contentImageIsDisplayedAsAvatar && (file.isSticker || file.isVideoSticker) {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
-                                        } else if !file.previewRepresentations.isEmpty, let _ = file.dimensions {
+                                        } else if !file.previewRepresentations.isEmpty, let _ = file.dimensions, !file.isSticker && !file.isAnimatedSticker && !file.isVideoSticker {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append(ContentImageSpec(message: message,  media: .file(file), size: fitSize))
                                         }
