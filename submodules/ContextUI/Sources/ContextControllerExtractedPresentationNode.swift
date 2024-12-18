@@ -8,6 +8,7 @@ import TelegramCore
 import SwiftSignalKit
 import ReactionSelectionNode
 import UndoUI
+import AccountContext
 
 private extension ContextControllerTakeViewInfo.ContainingItem {
     var contentRect: CGRect {
@@ -227,6 +228,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         return self._ready.get()
     }
     
+    private let context: AccountContext?
     private let getController: () -> ContextControllerProtocol?
     private let requestUpdate: (ContainedViewLayoutTransition) -> Void
     private let requestUpdateOverlayWantsToBeBelowKeyboard: (ContainedViewLayoutTransition) -> Void
@@ -268,6 +270,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private weak var currentUndoController: ViewController?
     
     init(
+        context: AccountContext?,
         getController: @escaping () -> ContextControllerProtocol?,
         requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
         requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -275,6 +278,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         requestAnimateOut: @escaping (ContextMenuActionResult, @escaping () -> Void) -> Void,
         source: ContentSource
     ) {
+        self.context = context
         self.getController = getController
         self.requestUpdate = requestUpdate
         self.requestUpdateOverlayWantsToBeBelowKeyboard = requestUpdateOverlayWantsToBeBelowKeyboard
@@ -308,6 +312,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         self.actionsContainerNode = ASDisplayNode()
         self.actionsStackNode = ContextControllerActionsStackNode(
+            context: self.context,
             getController: getController,
             requestDismiss: { result in
                 requestDismiss(result)
@@ -316,6 +321,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         )
         
         self.additionalActionsStackNode = ContextControllerActionsStackNode(
+            context: self.context,
             getController: getController,
             requestDismiss: { result in
                 requestDismiss(result)

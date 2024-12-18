@@ -16,9 +16,9 @@ import SwiftSignalKit
 
 public final class ListComposePollOptionComponent: Component {
     public final class ResetText: Equatable {
-        public let value: String
+        public let value: NSAttributedString
         
-        public init(value: String) {
+        public init(value: NSAttributedString) {
             self.value = value
         }
         
@@ -72,9 +72,11 @@ public final class ListComposePollOptionComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let placeholder: NSAttributedString?
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
+    public let enableInlineAnimations: Bool
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
@@ -88,9 +90,11 @@ public final class ListComposePollOptionComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        placeholder: NSAttributedString? = nil,
         resetText: ResetText? = nil,
         assumeIsEditing: Bool = false,
         characterLimit: Int,
+        enableInlineAnimations: Bool = true,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
@@ -103,9 +107,11 @@ public final class ListComposePollOptionComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.placeholder = placeholder
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
+        self.enableInlineAnimations = enableInlineAnimations
         self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
@@ -128,6 +134,9 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
         if lhs.resetText != rhs.resetText {
             return false
         }
@@ -135,6 +144,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
+            return false
+        }
+        if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
@@ -244,6 +256,14 @@ public final class ListComposePollOptionComponent: Component {
             }
         }
         
+        public var currentAttributedText: NSAttributedString {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.inputState.inputText
+            } else {
+                return NSAttributedString(string: "")
+            }
+        }
+        
         public var textFieldView: TextFieldComponent.View? {
             return self.textField.view as? TextFieldComponent.View
         }
@@ -327,11 +347,18 @@ public final class ListComposePollOptionComponent: Component {
                     insets: UIEdgeInsets(top: verticalInset, left: 8.0, bottom: verticalInset, right: 8.0),
                     hideKeyboard: component.inputMode == .emoji,
                     customInputView: nil,
+                    placeholder: component.placeholder,
                     resetText: component.resetText.flatMap { resetText in
-                        return NSAttributedString(string: resetText.value, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)
+                        let result = NSMutableAttributedString(attributedString: resetText.value)
+                        result.addAttributes([
+                            .font: Font.regular(17.0),
+                            .foregroundColor: component.theme.list.itemPrimaryTextColor
+                        ], range: NSRange(location: 0, length: result.length))
+                        return result
                     },
                     isOneLineWhenUnfocused: false,
                     characterLimit: component.characterLimit,
+                    enableInlineAnimations: component.enableInlineAnimations,
                     emptyLineHandling: component.emptyLineHandling,
                     formatMenuAvailability: .none,
                     returnKeyType: .next,

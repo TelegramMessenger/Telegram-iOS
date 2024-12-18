@@ -246,7 +246,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         self.tabsNode = SparseNode()
-        self.tabContainerNode = ChatListFilterTabContainerNode()
+        self.tabContainerNode = ChatListFilterTabContainerNode(context: context)
         self.tabsNode.addSubnode(self.tabContainerNode)
                 
         super.init(context: context, navigationBarPresentationData: nil, mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: groupCallPanelSource)
@@ -1809,10 +1809,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                             return
                                                         }
                                                         
+                                                        //TODO:release
                                                         let iconColor: UIColor = .white
                                                         let overlayController: UndoOverlayController
                                                         if !filterPeersAreMuted.areMuted {
-                                                            let text =  strongSelf.presentationData.strings.ChatList_ToastFolderMuted(title).string
+                                                            let text =  strongSelf.presentationData.strings.ChatList_ToastFolderMuted(title.text).string
                                                             overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
@@ -1821,7 +1822,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                                 "Line.Group 1.Stroke 1": iconColor
                                                             ], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         } else {
-                                                            let text = strongSelf.presentationData.strings.ChatList_ToastFolderUnmuted(title).string
+                                                            //TODO:release
+                                                            let text = strongSelf.presentationData.strings.ChatList_ToastFolderUnmuted(title.text).string
                                                             overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
@@ -3920,7 +3922,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    private func shareFolder(filterId: Int32, data: ChatListFilterData, title: String) {
+    private func shareFolder(filterId: Int32, data: ChatListFilterData, title: ChatFolderTitle) {
         let presentationData = self.presentationData
         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
@@ -3962,7 +3964,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     context: self.context,
                     subject: .linkList(folderId: filterId, initialLinks: links ?? []),
                     contents: ChatFolderLinkContents(
-                        localFilterId: filterId, title: title,
+                        localFilterId: filterId,
+                        title: title,
                         peers: [],
                         alreadyMemberPeerIds: Set(),
                         memberCounts: [:]
@@ -5928,7 +5931,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             badge = ContextMenuActionBadge(value: "\(item.1)", color: item.2 ? .accent : .inactive)
                         }
                     }
-                    items.append(.action(ContextMenuActionItem(text: title, badge: badge, icon: { theme in
+                    //TODO:release
+                    items.append(.action(ContextMenuActionItem(text: title.text, entities: title.entities, enableEntityAnimations: title.enableAnimations, badge: badge, icon: { theme in
                         let imageName: String
                         if isDisabled {
                             imageName = "Chat/Context Menu/Lock"
@@ -5981,7 +5985,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }
             
-            let controller = ContextController(presentationData: strongSelf.presentationData, source: .extracted(ChatListTabBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+            let controller = ContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: .extracted(ChatListTabBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
             strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
         })
     }

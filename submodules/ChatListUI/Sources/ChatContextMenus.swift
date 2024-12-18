@@ -221,9 +221,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                         }
                                         return filters
                                     }
-                                             |> deliverOnMainQueue).startStandalone(completed: {
+                                    |> deliverOnMainQueue).startStandalone(completed: {
                                         c?.dismiss(completion: {
-                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                            //TODO:release
+                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title.text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                                 return false
                                             }), in: .current)
                                         })
@@ -273,7 +274,8 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                             }
                                             
                                             let filterType = chatListFilterType(data)
-                                            updatedItems.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                                            //TODO:release
+                                            updatedItems.append(.action(ContextMenuActionItem(text: title.text, icon: { theme in
                                                 let imageName: String
                                                 switch filterType {
                                                 case .generic:
@@ -337,8 +339,8 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                                         }
                                                         return filters
                                                     }).startStandalone()
-                                                    
-                                                    chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                                    //TODO:release
+                                                    chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title.text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                                         return false
                                                     }), in: .current)
                                                 })

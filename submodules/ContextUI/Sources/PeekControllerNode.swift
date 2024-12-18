@@ -80,6 +80,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         var requestLayoutImpl: ((ContainedViewLayoutTransition) -> Void)?
 
         self.actionsStackNode = ContextControllerActionsStackNode(
+            context: nil,
             getController: { [weak controller] in
                 return controller
             },

@@ -105,6 +105,10 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/TelegramUI/Components/Stories/StoryStealthModeSheetScreen",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
+        "//submodules/TelegramUI/Components/TextFieldComponent",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/ComposePollUI",
+        "//submodules/ChatPresentationInterfaceState",
     ],
     visibility = [
         "//visibility:public",

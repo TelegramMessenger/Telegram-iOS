@@ -100,7 +100,7 @@ public extension TelegramEngine {
         case same
         case archived
         case unarchived
-        case folder(id: Int32, title: String)
+        case folder(id: Int32, title: ChatFolderTitle)
     }
 
     final class Peers {

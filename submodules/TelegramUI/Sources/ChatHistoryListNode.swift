@@ -2334,8 +2334,9 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     swipeText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeProgress, [])
                     releaseText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeAction, [])
                 case let .folder(_, title):
-                    swipeText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeProgress(title)._tuple
-                    releaseText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeAction(title)._tuple
+                    //TODO:release
+                    swipeText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeProgress(title.text)._tuple
+                    releaseText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeAction(title.text)._tuple
                 }
 
                 if expandProgress < 0.1 {

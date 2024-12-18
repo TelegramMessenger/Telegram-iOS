@@ -289,7 +289,8 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
             }
             if case let .filter(_, title, _, _) = filter {
                 folderCount += 1
-                entries.append(.preset(index: PresetIndex(value: entries.count), title: title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing, isAllChats: false, isDisabled: !isPremium && folderCount > limits.maxFoldersCount, displayTags: effectiveDisplayTags == true))
+                //TODO:release
+                entries.append(.preset(index: PresetIndex(value: entries.count), title: title.text, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing, isAllChats: false, isDisabled: !isPremium && folderCount > limits.maxFoldersCount, displayTags: effectiveDisplayTags == true))
             }
         }
         
@@ -299,7 +300,8 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
     if !filteredSuggestedFilters.isEmpty && actualFilters.count < limits.maxFoldersCount {
         entries.append(.suggestedListHeader(presentationData.strings.ChatListFolderSettings_RecommendedFoldersSection))
         for filter in filteredSuggestedFilters {
-            entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title, label: filter.description, preset: filter.data))
+            //TODO:release
+            entries.append(.suggestedPreset(index: PresetIndex(value: entries.count), title: filter.title.text, label: filter.description, preset: filter.data))
         }
         if filters.isEmpty {
             entries.append(.suggestedAddCustom(presentationData.strings.ChatListFolderSettings_RecommendedNewFolder))
@@ -387,7 +389,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                 var filters = filters
                 let id = context.engine.peers.generateNewChatListFilterId(filters: filters)
-                filters.append(.filter(id: id, title: title, emoticon: nil, data: data))
+                //TODO:release
+                filters.append(.filter(id: id, title: ChatFolderTitle(text: title, entities: [], enableAnimations: true), emoticon: nil, data: data))
                 return filters
             }
             |> deliverOnMainQueue).start(next: { _ in

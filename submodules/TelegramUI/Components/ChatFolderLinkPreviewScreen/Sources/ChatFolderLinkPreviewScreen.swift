@@ -439,7 +439,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                 component: AnyComponent(ChatFolderLinkHeaderComponent(
                     theme: environment.theme,
                     strings: environment.strings,
-                    title: component.linkContents?.title ?? "Folder",
+                    title: component.linkContents?.title ?? ChatFolderTitle(text: "Folder", entities: [], enableAnimations: true),
                     badge: topBadge
                 )),
                 environment: {},
@@ -469,7 +469,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     text = environment.strings.FolderLinkPreview_TextAddFolder
                 } else {
                     let chatCountString: String = environment.strings.FolderLinkPreview_TextAddChatsCount(Int32(canAddChatCount))
-                    text = environment.strings.FolderLinkPreview_TextAddChats(chatCountString, linkContents.title ?? "").string
+                    //TODO:release
+                    text = environment.strings.FolderLinkPreview_TextAddChats(chatCountString, linkContents.title?.text ?? "").string
                 }
             } else {
                 text = " "
@@ -981,7 +982,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             disposable.add(component.context.account.postbox.addHiddenChatIds(peerIds: Array(self.selectedItems)))
                             disposable.add(component.context.account.viewTracker.addHiddenChatListFilterIds([folderId]))
                             
-                            let folderTitle = linkContents.title ?? ""
+                            //TODO:release
+                            let folderTitle = linkContents.title?.text ?? ""
                             
                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 })
                             
@@ -1110,7 +1112,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                 }
                                                 
                                                 if isUpdates {
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: presentationData.strings.FolderLinkPreview_ToastChatsAddedTitle(result.title).string, text: presentationData.strings.FolderLinkPreview_ToastChatsAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    //TODO:release
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_add_to_folder", scale: 0.1, colors: ["__allcolors__": UIColor.white], title: presentationData.strings.FolderLinkPreview_ToastChatsAddedTitle(result.title.text).string, text: presentationData.strings.FolderLinkPreview_ToastChatsAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else if result.newChatCount != 0 {
                                                     let animationBackgroundColor: UIColor
                                                     if presentationData.theme.overallDarkAppearance {
@@ -1118,7 +1121,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                     } else {
                                                         animationBackgroundColor = UIColor(rgb: 0x474747)
                                                     }
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title).string, text: presentationData.strings.FolderLinkPreview_ToastFolderAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    //TODO:release
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title.text).string, text: presentationData.strings.FolderLinkPreview_ToastFolderAddedText(Int32(result.newChatCount)), customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 } else {
                                                     let animationBackgroundColor: UIColor
                                                     if presentationData.theme.overallDarkAppearance {
@@ -1126,7 +1130,8 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                                     } else {
                                                         animationBackgroundColor = UIColor(rgb: 0x474747)
                                                     }
-                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title).string, text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
+                                                    //TODO:release
+                                                    chatListController.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: presentationData.strings.FolderLinkPreview_ToastFolderAddedTitle(result.title.text).string, text: "", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { _ in true }), in: .current)
                                                 }
                                             })
                                         }
@@ -1305,6 +1310,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                     })
                     
                     let navigationController = controller.navigationController
+                    //TODO:release
                     controller.push(folderInviteLinkListController(context: component.context, filterId: folderId, title: title, allPeerIds: peers.map(\.id), currentInvitation: link, linkUpdated: { _ in }, presentController: { [weak navigationController] c in
                         (navigationController?.topViewController as? ViewController)?.present(c, in: .window(.root))
                     }))

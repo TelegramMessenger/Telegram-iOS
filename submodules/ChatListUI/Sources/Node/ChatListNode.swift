@@ -4295,7 +4295,8 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
                 if !result.isEmpty {
                     result.append(", ")
                 }
-                result.append(title)
+                //TODO:release
+                result.append(title.text)
             }
         }
         
@@ -4422,9 +4423,10 @@ func chatListItemTags(location: ChatListControllerLocation, accountPeerId: Engin
         if data.color != nil {
             let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
             if predicate.pinnedPeerIds.contains(peer.id) || predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
+                //TODO:release
                 result.append(ChatListItemContent.Tag(
                     id: id,
-                    title: title,
+                    title: title.text,
                     colorId: data.color?.rawValue ?? PeerNameColor.blue.rawValue
                 ))
             }
