@@ -60,6 +60,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
     var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
+    var conferenceAddParticipant: (() -> Void)?
     
     private var emojiKey: (data: Data, resolvedKey: [String])?
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
@@ -129,6 +130,14 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             guard let self else {
                 return
             }
+            
+            #if DEBUG
+            if self.sharedContext.immediateExperimentalUISettings.conferenceCalls {
+                self.conferenceAddParticipant?()
+                return
+            }
+            #endif
+            
             self.call.toggleIsMuted()
         }
         self.callScreen.endCallAction = { [weak self] in
@@ -156,6 +165,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 return
             }
             self.restoreUIForPictureInPicture?(completion)
+        }
+        self.callScreen.conferenceAddParticipant = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.conferenceAddParticipant?()
         }
         
         self.callScreenState = PrivateCallScreen.State(

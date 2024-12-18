@@ -536,7 +536,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             |> mapToSignal { areVideoCallsAvailable -> Signal<CallSessionInternalId, NoError> in
                 let isVideoPossible: Bool = areVideoCallsAvailable
                 
-                return context.account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, internalId: internalId)
+                return context.account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, conferenceCall: nil, internalId: internalId)
             }
             
             return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), context.account.postbox.peerView(id: peerId) |> map { peerView -> Bool in

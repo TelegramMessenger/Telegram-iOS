@@ -435,7 +435,7 @@ public struct JoinGroupCallResult {
     public var jsonParams: String
 }
 
-func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, keyFingerprint: Int64?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         if let joinAs = joinAs {
             return transaction.getPeer(joinAs).flatMap(apiInputPeer)
@@ -457,8 +457,11 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?,
         if let _ = inviteHash {
             flags |= (1 << 1)
         }
-
-        let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
+        if keyFingerprint != nil {
+            flags |= (1 << 3)
+        }
+        
+        let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, keyFingerprint: keyFingerprint, params: .dataJSON(data: joinPayload)))
             |> `catch` { error -> Signal<Api.Updates, JoinGroupCallError> in
             if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
                 return .fail(.anonymousNotAllowed)

@@ -522,6 +522,13 @@ public final class CallController: ViewController {
             let _ = self?.dismiss()
         }
         
+        displayNode.conferenceAddParticipant = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.conferenceAddParticipant()
+        }
+        
         self.controllerNode.presentCallRating = { [weak self] callId, isVideo in
             if let strongSelf = self, !strongSelf.presentedCallRating {
                 strongSelf.presentedCallRating = true
@@ -665,6 +672,35 @@ public final class CallController: ViewController {
             
             completion?()
         })
+    }
+    
+    private func conferenceAddParticipant() {
+        let controller = self.call.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(
+            context: self.call.context,
+            filter: [.onlyWriteable],
+            hasChatListSelector: true,
+            hasContactSelector: true,
+            hasGlobalSearch: true,
+            title: "Add Participant",
+            pretendPresentedInModal: false
+        ))
+        controller.peerSelected = { [weak self, weak controller] peer, _ in
+            controller?.dismiss()
+            
+            guard let self else {
+                return
+            }
+            guard case let .call(call) = self.call else {
+                return
+            }
+            guard let call = call as? PresentationCallImpl else {
+                return
+            }
+            let _ = call.requestAddToConference(peerId: peer.id)
+        }
+        self.dismiss()
+        
+        (self.call.context.sharedContext.mainWindow?.viewController as? NavigationController)?.pushViewController(controller)
     }
     
     @objc private func backPressed() {

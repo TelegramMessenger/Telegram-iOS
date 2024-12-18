@@ -200,6 +200,8 @@ extension PhoneCallDiscardReason {
                 self = .hangup
             case .phoneCallDiscardReasonMissed:
                 self = .missed
+            case .phoneCallDiscardReasonAllowGroupCall:
+                self = .hangup
         }
     }
 }

@@ -57,8 +57,8 @@ public extension TelegramEngine {
             return _internal_getGroupCallParticipants(account: self.account, callId: callId, accessHash: accessHash, offset: offset, ssrcs: ssrcs, limit: limit, sortAscending: sortAscending)
         }
 
-        public func joinGroupCall(peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
-            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, accessHash: accessHash, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash)
+        public func joinGroupCall(peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, keyFingerprint: Int64?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, accessHash: accessHash, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash, keyFingerprint: keyFingerprint)
         }
 
         public func joinGroupCallAsScreencast(callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {

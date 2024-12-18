@@ -283,6 +283,9 @@
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
 "LOCAL_CHAT_MESSAGE_FWDS" = "%1$@ forwarded %2$d messages";
 
+"PUSH_STORY_HIDDEN_AUTHOR" = "New story was posted";
+"PUSH_MESSAGE_STARGIFT" = "%1$@|sent you a Gift worth of %2$@ stars";
+
 // Common
 "Common.OK" = "OK";
 "Common.Cancel" = "Cancel";

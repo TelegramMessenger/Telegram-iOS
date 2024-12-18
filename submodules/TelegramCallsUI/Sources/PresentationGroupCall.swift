@@ -865,7 +865,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastStateDisposable: Disposable?
     
     public let isStream: Bool
-    private let encryptionKey: Data?
+    private let encryptionKey: (key: Data, fingerprint: Int64)?
     private let sharedAudioDevice: OngoingCallContext.AudioDevice?
     
     private let conferenceFromCallId: CallId?
@@ -885,7 +885,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         invite: String?,
         joinAsPeerId: EnginePeer.Id?,
         isStream: Bool,
-        encryptionKey: Data?,
+        encryptionKey: (key: Data, fingerprint: Int64)?,
         conferenceFromCallId: CallId?,
         isConference: Bool,
         sharedAudioDevice: OngoingCallContext.AudioDevice?
@@ -1711,16 +1711,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                     
                     var encryptionKey: Data?
-                    encryptionKey = self.encryptionKey
-                    
-                    #if DEBUG
-                    if encryptionKey == nil {
-                        encryptionKey = Data(count: 256)
-                    }
+                    encryptionKey = self.encryptionKey?.key
                     if "".isEmpty {
                         encryptionKey = nil
                     }
-                    #endif
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
@@ -1860,7 +1854,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     preferMuted: true,
                     joinPayload: joinPayload,
                     peerAdminIds: peerAdminIds,
-                    inviteHash: strongSelf.invite
+                    inviteHash: strongSelf.invite,
+                    keyFingerprint: strongSelf.encryptionKey?.fingerprint
                 )
                 |> deliverOnMainQueue).start(next: { joinCallResult in
                     guard let strongSelf = self else {
