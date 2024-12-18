@@ -470,6 +470,10 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     break
                 case .channels:
                     flags |= (1 << 1)
+                case .groups:
+                    flags |= (1 << 2)
+                case .privateChats:
+                    flags |= (1 << 3)
                 }
             }
         

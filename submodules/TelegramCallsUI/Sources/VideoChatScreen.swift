@@ -790,7 +790,8 @@ final class VideoChatScreenComponent: Component {
                                         backgroundEmojiId: user.backgroundEmojiId,
                                         profileColor: user.profileColor,
                                         profileBackgroundEmojiId: user.profileBackgroundEmojiId,
-                                        subscriberCount: user.subscriberCount
+                                        subscriberCount: user.subscriberCount,
+                                        verification: user.verification
                                     )
                                     participants.append(GroupCallParticipantsContext.Participant(
                                         peer: mappedUser,

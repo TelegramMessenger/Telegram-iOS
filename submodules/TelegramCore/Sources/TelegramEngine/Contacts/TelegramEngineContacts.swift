@@ -67,7 +67,25 @@ public extension TelegramEngine {
                         } else {
                             return false
                         }
-                    } .map(EngineRenderedPeer.init)
+                    }.map(EngineRenderedPeer.init)
+                case .groups:
+                    return peers.filter { item in
+                        if let channel = item.peer as? TelegramChannel, case .group = channel.info {
+                            return true
+                        } else if item.peer is TelegramGroup {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }.map(EngineRenderedPeer.init)
+                case .privateChats:
+                    return peers.filter { item in
+                        if item.peer is TelegramUser {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }.map(EngineRenderedPeer.init)
                 }
             }
         }
