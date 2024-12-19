@@ -128,8 +128,6 @@ public func standaloneSendEnqueueMessages(
     struct MessageResult {
         var result: PendingMessageUploadedContentResult
         var media: [Media]
-        var attributes: [MessageAttribute]
-        var groupingKey: Int64?
     }
     
     let signals: [Signal<MessageResult, PendingMessageUploadError>] = messages.map { message in
@@ -182,7 +180,7 @@ public func standaloneSendEnqueueMessages(
         
         let content = messageContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: { _, _, _, _ in
             return .single(nil)
-        }, messageMediaPreuploadManager: MessageMediaPreuploadManager(), revalidationContext: MediaReferenceRevalidationContext(), forceReupload: false, isGrouped: message.groupingKey != nil, passFetchProgress: true, forceNoBigParts: false, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: media)
+        }, messageMediaPreuploadManager: MessageMediaPreuploadManager(), revalidationContext: MediaReferenceRevalidationContext(), forceReupload: false, isGrouped: false, passFetchProgress: true, forceNoBigParts: false, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: media)
         let contentResult: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
         switch content {
         case let .signal(value, _):
@@ -192,7 +190,7 @@ public func standaloneSendEnqueueMessages(
         }
         return contentResult
         |> map { contentResult in
-            return MessageResult(result: contentResult, media: media, attributes: attributes, groupingKey: 12345)
+            return MessageResult(result: contentResult, media: media)
         }
     }
     
@@ -202,7 +200,7 @@ public func standaloneSendEnqueueMessages(
     }
     |> mapToSignal { contentResults -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> in
         var progressSum: Float = 0.0
-        var allResults: [(result: PendingMessageUploadedContentAndReuploadInfo, media: [Media], attributes: [MessageAttribute], groupingKey: Int64?)] = []
+        var allResults: [(result: PendingMessageUploadedContentAndReuploadInfo, media: [Media])] = []
         var allDone = true
         for result in contentResults {
             switch result.result {
@@ -210,60 +208,36 @@ public func standaloneSendEnqueueMessages(
                 allDone = false
                 progressSum += value.progress
             case let .content(content):
-                allResults.append((content, result.media, result.attributes, result.groupingKey))
+                allResults.append((content, result.media))
             }
         }
         if allDone {
             var sendSignals: [Signal<Never, StandaloneSendMessagesError>] = []
             
-            var existingGroupingKeys = Set<Int64>()
-            for (content, media, attributes, groupingKey) in allResults {
-                if let currentGroupingKey = groupingKey {
-                    if !existingGroupingKeys.contains(currentGroupingKey) {
-                        existingGroupingKeys.insert(currentGroupingKey)
-                        var contents: [PendingMessageUploadedContentAndReuploadInfo] = []
-                        for (content, _, _, _) in allResults {
-                            contents.append(content)
-                        }
-                        
-                        sendSignals.append(sendUploadedMultiMessageContent(
-                            auxiliaryMethods: auxiliaryMethods,
-                            postbox: postbox,
-                            network: network,
-                            stateManager: stateManager,
-                            accountPeerId: stateManager.accountPeerId,
-                            peerId: peerId,
-                            content: contents,
-                            attributes: attributes,
-                            threadId: threadId
-                        ))
-                    }
-                } else {
-                    var text: String = ""
-                    switch content.content {
-                    case let .text(textValue):
-                        text = textValue
-                    case let .media(_, textValue):
-                        text = textValue
-                    default:
-                        break
-                    }
-                    
-                    sendSignals.append(sendUploadedMessageContent(
-                        auxiliaryMethods: auxiliaryMethods,
-                        postbox: postbox,
-                        network: network,
-                        stateManager: stateManager,
-                        accountPeerId: stateManager.accountPeerId,
-                        peerId: peerId,
-                        content: content,
-                        text: text,
-                        attributes: attributes,
-                        media: media,
-                        threadId: threadId
-                    ))
+            for (content, media) in allResults {
+                var text: String = ""
+                switch content.content {
+                case let .text(textValue):
+                    text = textValue
+                case let .media(_, textValue):
+                    text = textValue
+                default:
+                    break
                 }
                 
+                sendSignals.append(sendUploadedMessageContent(
+                    auxiliaryMethods: auxiliaryMethods,
+                    postbox: postbox,
+                    network: network,
+                    stateManager: stateManager,
+                    accountPeerId: stateManager.accountPeerId,
+                    peerId: peerId,
+                    content: content,
+                    text: text,
+                    attributes: [],
+                    media: media,
+                    threadId: threadId
+                ))
             }
             
             return combineLatest(sendSignals)
@@ -415,265 +389,112 @@ private func sendUploadedMessageContent(
             
             let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
             switch content.content {
-            case .text:
-                if bubbleUpEmojiOrStickersets {
-                    flags |= Int32(1 << 15)
-                }
-            
-                var replyTo: Api.InputReplyTo?
-                if let replyMessageId = replyMessageId {
-                    flags |= 1 << 0
-                    
-                    var replyFlags: Int32 = 0
-                    if threadId != nil {
-                        replyFlags |= 1 << 0
+                case .text:
+                    if bubbleUpEmojiOrStickersets {
+                        flags |= Int32(1 << 15)
                     }
-                    replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-                } else if let replyToStoryId = replyToStoryId {
-                    if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
-                        flags |= 1 << 0
-                        replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
-                    }
-                }
-            
-                sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), info: .acknowledgement, tag: dependencyTag)
-            case let .media(inputMedia, text):
-                if bubbleUpEmojiOrStickersets {
-                    flags |= Int32(1 << 15)
-                }
-            
-                var replyTo: Api.InputReplyTo?
-                if let replyMessageId = replyMessageId {
-                    flags |= 1 << 0
-                    
-                    var replyFlags: Int32 = 0
-                    if threadId != nil {
-                        replyFlags |= 1 << 0
-                    }
-                    replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-                } else if let replyToStoryId = replyToStoryId {
-                    if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
-                        flags |= 1 << 0
-                        replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
-                    }
-                }
                 
-                sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), tag: dependencyTag)
-                |> map(NetworkRequestResult.result)
-            case let .forward(sourceInfo):
-                var topMsgId: Int32?
-                if let threadId = threadId {
-                    flags |= Int32(1 << 9)
-                    topMsgId = Int32(clamping: threadId)
-                }
-            
-                if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                    sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil), tag: dependencyTag)
-                    |> map(NetworkRequestResult.result)
-                } else {
-                    sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
-                }
-            case let .chatContextResult(chatContextResult):
-                if chatContextResult.hideVia {
-                    flags |= Int32(1 << 11)
-                }
-            
-                var replyTo: Api.InputReplyTo?
-                if let replyMessageId = replyMessageId {
-                    flags |= 1 << 0
+                    var replyTo: Api.InputReplyTo?
+                    if let replyMessageId = replyMessageId {
+                        flags |= 1 << 0
+                        
+                        var replyFlags: Int32 = 0
+                        if threadId != nil {
+                            replyFlags |= 1 << 0
+                        }
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                        }
+                    }
+                
+                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), info: .acknowledgement, tag: dependencyTag)
+                case let .media(inputMedia, text):
+                    if bubbleUpEmojiOrStickersets {
+                        flags |= Int32(1 << 15)
+                    }
+                
+                    var replyTo: Api.InputReplyTo?
+                    if let replyMessageId = replyMessageId {
+                        flags |= 1 << 0
+                        
+                        var replyFlags: Int32 = 0
+                        if threadId != nil {
+                            replyFlags |= 1 << 0
+                        }
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                        }
+                    }
                     
-                    var replyFlags: Int32 = 0
-                    if threadId != nil {
-                        replyFlags |= 1 << 0
+                sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), tag: dependencyTag)
+                    |> map(NetworkRequestResult.result)
+                case let .forward(sourceInfo):
+                    var topMsgId: Int32?
+                    if let threadId = threadId {
+                        flags |= Int32(1 << 9)
+                        topMsgId = Int32(clamping: threadId)
                     }
-                    replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-                } else if let replyToStoryId = replyToStoryId {
-                    if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
-                        flags |= 1 << 0
-                        replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                
+                    if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil), tag: dependencyTag)
+                        |> map(NetworkRequestResult.result)
+                    } else {
+                        sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
                     }
-                }
-            
-                sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil))
-                |> map(NetworkRequestResult.result)
-            case .messageScreenshot:
-                let replyTo: Api.InputReplyTo
-            
-                if let replyMessageId = replyMessageId {
-                    let replyFlags: Int32 = 0
-                    replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-                } else if let replyToStoryId = replyToStoryId {
-                    if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
+                case let .chatContextResult(chatContextResult):
+                    if chatContextResult.hideVia {
+                        flags |= Int32(1 << 11)
+                    }
+                
+                    var replyTo: Api.InputReplyTo?
+                    if let replyMessageId = replyMessageId {
                         flags |= 1 << 0
-                        replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                        
+                        var replyFlags: Int32 = 0
+                        if threadId != nil {
+                            replyFlags |= 1 << 0
+                        }
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                        }
+                    }
+                
+                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil))
+                    |> map(NetworkRequestResult.result)
+                case .messageScreenshot:
+                    let replyTo: Api.InputReplyTo
+                
+                    if let replyMessageId = replyMessageId {
+                        let replyFlags: Int32 = 0
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                    } else if let replyToStoryId = replyToStoryId {
+                        if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
+                            flags |= 1 << 0
+                            replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
+                        } else {
+                            let replyFlags: Int32 = 0
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
+                        }
                     } else {
                         let replyFlags: Int32 = 0
                         replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                     }
-                } else {
-                    let replyFlags: Int32 = 0
-                    replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-                }
-            
-                sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
-                |> map(NetworkRequestResult.result)
-            case .secretMedia:
-                assertionFailure()
-                sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
-            }
-            
-            return sendMessageRequest
-            |> mapToSignal { result -> Signal<Never, MTRpcError> in
-                switch result {
-                case .progress:
-                    return .complete()
-                case .acknowledged:
-                    return .complete()
-                case let .result(result):
-                    stateManager.addUpdates(result)
-                    return .complete()
-                }
-            }
-            |> mapError { error -> StandaloneSendMessagesError in
-                if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                    return StandaloneSendMessagesError(peerId: peerId, reason: nil)
-                } else if let failureReason = sendMessageReasonForError(error.errorDescription) {
-                    return StandaloneSendMessagesError(peerId: peerId, reason: failureReason)
-                }
-                return StandaloneSendMessagesError(peerId: peerId, reason: nil)
-            }
-        } else {
-            return .complete()
-        }
-    }
-    |> castError(StandaloneSendMessagesError.self)
-    |> switchToLatest
-}
-
-private func sendUploadedMultiMessageContent(
-    auxiliaryMethods: AccountAuxiliaryMethods,
-    postbox: Postbox,
-    network: Network,
-    stateManager: AccountStateManager,
-    accountPeerId: PeerId,
-    peerId: PeerId,
-    content: [PendingMessageUploadedContentAndReuploadInfo],
-    attributes: [MessageAttribute],
-    threadId: Int64?
-) -> Signal<Never, StandaloneSendMessagesError> {
-    if content.count == 1, case let .text(text) = content[0].content {
-        return sendUploadedMessageContent(
-            auxiliaryMethods: auxiliaryMethods,
-            postbox: postbox,
-            network: network,
-            stateManager: stateManager,
-            accountPeerId: stateManager.accountPeerId,
-            peerId: peerId,
-            content: content[0],
-            text: text,
-            attributes: attributes,
-            media: [],
-            threadId: threadId
-        )
-    }
-    
-    return postbox.transaction { transaction -> Signal<Never, StandaloneSendMessagesError> in
-        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-            //var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
-            var messageEntities: [Api.MessageEntity]?
-            var replyMessageId: Int32? = threadId.flatMap { threadId in
-                return Int32(clamping: threadId)
-            }
-            var replyToStoryId: StoryId?
-            var scheduleTime: Int32?
-            var sendAsPeerId: PeerId?
-            var bubbleUpEmojiOrStickersets = false
-            
-            var flags: Int32 = 0
-
-            for attribute in attributes {
-                if let replyAttribute = attribute as? ReplyMessageAttribute {
-                    replyMessageId = replyAttribute.messageId.id
-                } else if let attribute = attribute as? ReplyStoryAttribute {
-                    replyToStoryId = attribute.storyId
-                } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
-                    bubbleUpEmojiOrStickersets = !outgoingInfo.bubbleUpEmojiOrStickersets.isEmpty
-                } else if let _ = attribute as? ForwardSourceInfoAttribute {
-                    //forwardSourceInfoAttribute = attribute
-                } else if let attribute = attribute as? TextEntitiesMessageAttribute {
-                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
-                    for attributePeerId in attribute.associatedPeerIds {
-                        if let peer = transaction.getPeer(attributePeerId) {
-                            associatedPeers[peer.id] = peer
-                        }
-                    }
-                    messageEntities = apiTextAttributeEntities(attribute, associatedPeers: associatedPeers)
-                } else if let attribute = attribute as? OutgoingContentInfoMessageAttribute {
-                    if attribute.flags.contains(.disableLinkPreviews) {
-                        flags |= Int32(1 << 1)
-                    }
-                } else if let attribute = attribute as? NotificationInfoMessageAttribute {
-                    if attribute.flags.contains(.muted) {
-                        flags |= Int32(1 << 5)
-                    }
-                } else if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
-                    flags |= Int32(1 << 10)
-                    scheduleTime = attribute.scheduleTime
-                } else if let attribute = attribute as? SendAsMessageAttribute {
-                    sendAsPeerId = attribute.peerId
-                }
-            }
-            
-            var replyTo: Api.InputReplyTo?
-            if let replyMessageId = replyMessageId {
-                flags |= 1 << 0
                 
-                var replyFlags: Int32 = 0
-                if threadId != nil {
-                    replyFlags |= 1 << 0
-                }
-                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
-            } else if let replyToStoryId = replyToStoryId {
-                if let inputPeer = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputPeer) {
-                    flags |= 1 << 0
-                    replyTo = .inputReplyToStory(peer: inputPeer, storyId: replyToStoryId.id)
-                }
+                    sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))
+                    |> map(NetworkRequestResult.result)
+                case .secretMedia:
+                    assertionFailure()
+                    sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
             }
-            
-  
-            flags |= (1 << 7)
-            
-            if let _ = replyMessageId {
-                flags |= Int32(1 << 0)
-            }
-            if let _ = messageEntities {
-                flags |= Int32(1 << 3)
-            }
-            
-            if bubbleUpEmojiOrStickersets {
-                flags |= Int32(1 << 15)
-            }
-            
-            var sendAsInputPeer: Api.InputPeer?
-            if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
-                sendAsInputPeer = inputPeer
-                flags |= (1 << 13)
-            }
-            
-            let dependencyTag: PendingMessageRequestDependencyTag? = nil//(messageId: messageId)
-            
-            let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
-            
-            var multiMedia: [Api.InputSingleMedia] = []
-            for singleContent in content {
-                if case let .media(inputMedia, text) = singleContent.content {
-                    let uniqueId = Int64.random(in: Int64.min ... Int64.max)
-                    multiMedia.append(.inputSingleMedia(flags: 0, media: inputMedia, randomId: uniqueId, message: text, entities: nil))
-                }
-            }
-            
-            sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: multiMedia, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), tag: dependencyTag)
-            |> map(NetworkRequestResult.result)
             
             return sendMessageRequest
             |> mapToSignal { result -> Signal<Never, MTRpcError> in

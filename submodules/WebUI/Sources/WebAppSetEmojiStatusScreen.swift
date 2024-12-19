@@ -75,7 +75,6 @@ private final class SheetContent: CombinedComponent {
         let peerShortcut = Child(PremiumPeerShortcutComponent.self)
         let button = Child(ButtonComponent.self)
         
-        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             let component = context.component
