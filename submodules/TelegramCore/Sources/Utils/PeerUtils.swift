@@ -269,6 +269,17 @@ public extension Peer {
         }
     }
     
+    var verification: PeerVerification? {
+        switch self {
+        case let user as TelegramUser:
+            return user.verification
+        case let channel as TelegramChannel:
+            return channel.verification
+        default:
+            return nil
+        }
+    }
+    
     var profileColor: PeerNameColor? {
         switch self {
         case let user as TelegramUser:

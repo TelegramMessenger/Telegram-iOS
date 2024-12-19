@@ -536,6 +536,10 @@ public extension EnginePeer {
         return self._asPeer().nameColor
     }
     
+    var verification: PeerVerification? {
+        return self._asPeer().verification
+    }
+    
     var profileColor: PeerNameColor? {
         return self._asPeer().profileColor
     }
