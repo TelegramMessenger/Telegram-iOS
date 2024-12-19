@@ -2607,6 +2607,24 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func setCustomVerification(flags: Int32, bot: Api.InputUser?, peer: Api.InputPeer, customDescription: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1953898563)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {bot!.serialize(buffer, true)}
+                    peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(customDescription!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "bots.setCustomVerification", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("peer", String(describing: peer)), ("customDescription", String(describing: customDescription))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func toggleUserEmojiStatusPermission(bot: Api.InputUser, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(115237778)

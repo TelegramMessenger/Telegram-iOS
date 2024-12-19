@@ -31,7 +31,7 @@ extension BotAppSettings {
 extension BotInfo {
     convenience init(apiBotInfo: Api.BotInfo) {
         switch apiBotInfo {
-            case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton, privacyPolicyUrl, appSettings):
+            case let .botInfo(_, _, description, descriptionPhoto, descriptionDocument, apiCommands, apiMenuButton, privacyPolicyUrl, appSettings, _):
                 let photo: TelegramMediaImage? = descriptionPhoto.flatMap(telegramMediaImageFromApiPhoto)
                 let video: TelegramMediaFile? = descriptionDocument.flatMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }
                 var commands: [BotCommand] = []
