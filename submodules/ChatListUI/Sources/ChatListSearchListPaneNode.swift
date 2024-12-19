@@ -1215,9 +1215,9 @@ private struct DownloadItem: Equatable {
 
 private func filteredPeerSearchQueryResults(value: ([FoundPeer], [FoundPeer]), scope: TelegramSearchPeersScope) -> ([FoundPeer], [FoundPeer]) {
     switch scope {
-    case .everywhere:
+    case .everywhere, .privateChats:
         return value
-    case .channels:
+    case .channels, .groups:
         return (
             value.0.filter { peer in
                 if let channel = peer.peer as? TelegramChannel, case .broadcast = channel.info {
