@@ -1,8 +1,6 @@
 import Foundation
-import UIKit
 import SwiftSignalKit
 import TelegramCore
-import TelegramUIPreferences
 import Network
 
 import TgVoip

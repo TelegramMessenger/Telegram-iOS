@@ -3,6 +3,18 @@ import SwiftSignalKit
 import TgVoipWebrtc
 import TelegramCore
 
+#if os(macOS)
+public class OngoingCallContext {
+    public class AudioDevice {
+        
+    }
+}
+public func callLogsPath(account: Account) -> String {
+    return account.basePath + "/calls"
+}
+#endif
+
+
 final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
     
@@ -718,6 +730,7 @@ public final class OngoingGroupCallContext {
                 preferX264: preferX264,
                 logPath: logPath,
                 statsLogPath: tempStatsLogPath,
+                audioDevice: nil,
                 encryptionKey: encryptionKey,
                 isConference: isConference
             )
