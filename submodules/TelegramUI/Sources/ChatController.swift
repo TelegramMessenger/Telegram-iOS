@@ -1228,8 +1228,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                         controller.videoCompletion = { [weak self] image, url, adjustments, commit in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
                                                     commit()
                                                 }
                                             }
@@ -1263,8 +1263,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }, videoCompletion: { [weak self] image, url, adjustments in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
                                                 }
                                             }
                                         })
@@ -5579,6 +5579,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     adMessage = .single(nil)
                 }
+                
+                let displayedPeerVerification: Signal<Bool, NoError>
+                if let peerId = self.chatLocation.peerId {
+                    displayedPeerVerification = ApplicationSpecificNotice.displayedPeerVerification(accountManager: context.sharedContext.accountManager, peerId: peerId)
+                    |> take(1)
+                } else {
+                    displayedPeerVerification = .single(false)
+                }
 
                 self.peerDisposable.set(combineLatest(
                     queue: Queue.mainQueue(),
@@ -5593,8 +5601,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasSavedChats,
                     isPremiumRequiredForMessaging,
                     managingBot,
-                    adMessage
-                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage in
+                    adMessage,
+                    displayedPeerVerification
+                ).startStrict(next: { [weak self] peerView, globalNotificationSettings, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, adMessage, displayedPeerVerification in
                     if let strongSelf = self {
                         if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo && strongSelf.presentationInterfaceState.hasSearchTags == hasSearchTags && strongSelf.presentationInterfaceState.hasSavedChats == hasSavedChats && strongSelf.presentationInterfaceState.isPremiumRequiredForMessaging == isPremiumRequiredForMessaging && managingBot == strongSelf.presentationInterfaceState.contactStatus?.managingBot && adMessage?.id == strongSelf.presentationInterfaceState.adMessage?.id {
                             return
@@ -5745,7 +5754,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var autoremoveTimeout: Int32?
                         var copyProtectionEnabled: Bool = false
                         var hasBirthdayToday = false
+                        var displayVerificationDescription = false
                         if let peer = peerView.peers[peerView.peerId] {
+                            if let _ = peer.verification, !displayedPeerVerification {
+                                displayVerificationDescription = true
+                            }
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
                                 if !cachedGroupData.botInfos.isEmpty {
@@ -5916,6 +5929,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedHasBirthdayToday(hasBirthdayToday)
                              .updatedBusinessIntro(businessIntro)
                              .updatedAdMessage(adMessage)
+                             .updatedDisplayVerificationDescription(displayVerificationDescription)
                              .updatedInterfaceState { interfaceState in
                                  var interfaceState = interfaceState
                                  

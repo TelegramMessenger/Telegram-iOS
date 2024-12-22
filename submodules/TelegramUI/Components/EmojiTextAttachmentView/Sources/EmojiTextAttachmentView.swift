@@ -473,6 +473,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 self.updateTon()
             case let .animation(name):
                 self.updateLocalAnimation(name: name, attemptSynchronousLoad: attemptSynchronousLoad)
+            case .verification:
+                self.updateVerification()
+                self.updateTintColor()
             }
         } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
@@ -558,8 +561,13 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if file.isCustomTemplateEmoji {
                     customColor = self.dynamicColor
                 }
-            } else if let emoji = self.arguments?.emoji, let custom = emoji.custom, case .stars = custom {
-                customColor = self.dynamicColor
+            } else if let emoji = self.arguments?.emoji, let custom = emoji.custom {
+                switch custom {
+                case .stars(true), .verification:
+                    customColor = self.dynamicColor
+                default:
+                    break
+                }
             }
             
             if customColor != nil {
@@ -660,6 +668,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     
     private func updateTon() {
         self.contents = tonImage?.cgImage
+    }
+    
+    private func updateVerification() {
+        self.contents = verificationImage?.cgImage
     }
     
     private func updateLocalAnimation(name: String, attemptSynchronousLoad: Bool) {
@@ -992,7 +1004,6 @@ private let tintedStarImage: UIImage? = {
     })?.withRenderingMode(.alwaysTemplate)
 }()
 
-
 private let starImage: UIImage? = {
     generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: .zero, size: size))
@@ -1011,4 +1022,29 @@ private let tonImage: UIImage? = {
             context.draw(cgImage, in: CGRect(origin: .zero, size: size).insetBy(dx: 4.0, dy: 4.0), byTiling: false)
         }
     })?.withRenderingMode(.alwaysTemplate)
+}()
+
+private let verificationImage: UIImage? = {
+    if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Share/QrPlaneIcon") {
+        return generateImage(backgroundImage.size, contextGenerator: { size, context in
+            let fittedRect = CGRect(origin: .zero, size: size).insetBy(dx: 2.0 + UIScreenPixel, dy: 2.0 + UIScreenPixel)
+            if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
+                context.clear(CGRect(origin: CGPoint(), size: size))
+             
+                context.saveGState()
+                context.clip(to: fittedRect, mask: backgroundCgImage)
+
+                context.setFillColor(UIColor.white.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                context.restoreGState()
+                
+                context.clip(to: fittedRect, mask: foregroundCgImage)
+                context.setBlendMode(.clear)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+            }
+        }, opaque: false)?.withRenderingMode(.alwaysTemplate)
+    } else {
+        return nil
+    }
 }()

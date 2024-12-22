@@ -219,8 +219,8 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
                 
                 let textInsets = UIEdgeInsets()//(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
-                let (countLayout, countApply) = makeCountLayout(textConstrainedSize, rawSegments)
-                let (alternativeCountLayout, alternativeCountApply) = makeAlternativeCountLayout(textConstrainedSize, rawAlternativeSegments)
+                let (countLayout, countApply) = makeCountLayout(textConstrainedSize, .zero, rawSegments)
+                let (alternativeCountLayout, alternativeCountApply) = makeAlternativeCountLayout(textConstrainedSize, .zero, rawAlternativeSegments)
                 
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left + textLeftInset - 2.0, y: -textInsets.top + 5.0 + topOffset), size: countLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))

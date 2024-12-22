@@ -17,6 +17,7 @@ public enum ContactListActionItemHighlight {
 public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let presentationData: ItemListPresentationData
     let title: String
+    let subtitle: String?
     let icon: ContactListActionItemIcon
     let highlight: ContactListActionItemHighlight
     let clearHighlightAutomatically: Bool
@@ -24,9 +25,10 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let action: () -> Void
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, title: String, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.title = title
+        self.subtitle = subtitle
         self.icon = icon
         self.highlight = highlight
         self.header = header
@@ -204,7 +206,11 @@ class ContactListActionItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.backgroundColor = item.presentationData.theme.list.plainBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
+                        if item.subtitle != nil {
+                            strongSelf.iconNode.image = item.icon.image
+                        } else {
+                            strongSelf.iconNode.image = generateTintedImage(image: item.icon.image, color: item.presentationData.theme.list.itemAccentColor)
+                        }
                     }
                     
                     if item.accessible && strongSelf.activateArea.supernode == nil {

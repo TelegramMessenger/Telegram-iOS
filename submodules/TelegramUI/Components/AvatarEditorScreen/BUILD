@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/MediaEditor",
+        "//submodules/TelegramUI/Components/AvatarBackground",
     ],
     visibility = [
         "//visibility:public",

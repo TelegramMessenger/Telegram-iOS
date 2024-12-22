@@ -50,17 +50,25 @@ private func roundedCornersMaskImage(size: CGSize) -> CIImage {
     return CIImage(cgImage: image!)
 }
 
+private func rectangleMaskImage(size: CGSize) -> CIImage {
+    let image = generateImage(size, opaque: true, scale: 1.0) { size, context in
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(CGRect(origin: .zero, size: size))
+    }?.cgImage
+    return CIImage(cgImage: image!)
+}
+
 final class MediaEditorComposer {
     enum Input {
-        case texture(MTLTexture, CMTime, Bool, CGRect?)
-        case videoBuffer(VideoPixelBuffer, CGRect?)
+        case texture(MTLTexture, CMTime, Bool, CGRect?, CGFloat, CGPoint)
+        case videoBuffer(VideoPixelBuffer, CGRect?, CGFloat, CGPoint)
         case ciImage(CIImage, CMTime)
         
         var timestamp: CMTime {
             switch self {
-            case let .texture(_, timestamp, _, _):
+            case let .texture(_, timestamp, _, _, _, _):
                 return timestamp
-            case let .videoBuffer(videoBuffer, _):
+            case let .videoBuffer(videoBuffer, _, _, _):
                 return videoBuffer.timestamp
             case let .ciImage(_, timestamp):
                 return timestamp
@@ -69,10 +77,10 @@ final class MediaEditorComposer {
         
         var rendererInput: MediaEditorRenderer.Input {
             switch self {
-            case let .texture(texture, timestamp, hasTransparency, rect):
-                return .texture(texture, timestamp, hasTransparency, rect)
-            case let .videoBuffer(videoBuffer, rect):
-                return .videoBuffer(videoBuffer, rect)
+            case let .texture(texture, timestamp, hasTransparency, rect, scale, offset):
+                return .texture(texture, timestamp, hasTransparency, rect, scale, offset)
+            case let .videoBuffer(videoBuffer, rect, scale, offset):
+                return .videoBuffer(videoBuffer, rect, scale, offset)
             case let .ciImage(image, timestamp):
                 return .ciImage(image, timestamp)
             }
@@ -216,6 +224,8 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
     var maskImage: CIImage?
     if values.isSticker {
         maskImage = roundedCornersMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
+    } else if let _ = outputDimensions {
+        maskImage = rectangleMaskImage(size: CGSize(width: 1080.0, height: 1080.0))
     }
     
     if let drawing = values.drawing, let image = CIImage(image: drawing, options: [.colorSpace: colorSpace]) {
@@ -285,7 +295,7 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
             }
             
             resultImage = resultImage.transformed(by: CGAffineTransform(translationX: dimensions.width / 2.0, y: dimensions.height / 2.0))
-            if values.isSticker {
+            if values.isSticker || values.isAvatar {
                 let minSize = min(dimensions.width, dimensions.height)
                 let scaledSize = CGSize(width: floor(minSize * 0.97), height: floor(minSize * 0.97))
                 resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))

@@ -77,7 +77,7 @@ public final class ListSectionHeaderNode: ASDisplayNode {
         }
     }
     
-    public var activateAction: (() -> Void)?
+    public var activateAction: ((ASDisplayNode) -> Void)?
     
     public init(theme: PresentationTheme) {
         self.theme = theme
@@ -120,6 +120,10 @@ public final class ListSectionHeaderNode: ASDisplayNode {
                 actionColor = self.theme.list.itemDestructiveColor
         }
         let attributedText = NSMutableAttributedString(string: action, font: actionFont, textColor: actionColor)
+        if let range = attributedText.string.range(of: "<"), let arrowImage = UIImage(bundleImageName: "Item List/HeaderContextDisclosureArrow") {
+            attributedText.addAttribute(.attachment, value: arrowImage, range: NSRange(range, in: attributedText.string))
+            attributedText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: attributedText.string))
+        }
         if let range = attributedText.string.range(of: ">"), let arrowImage = UIImage(bundleImageName: "Item List/InlineTextRightArrow") {
             attributedText.addAttribute(.attachment, value: arrowImage, range: NSRange(range, in: attributedText.string))
             attributedText.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedText.string))
@@ -158,6 +162,8 @@ public final class ListSectionHeaderNode: ASDisplayNode {
     }
     
     @objc private func actionButtonPressed() {
-        self.activateAction?()
+        if let actionButton = self.actionButton {
+            self.activateAction?(actionButton)
+        }
     }
 }

@@ -64,6 +64,20 @@ public struct CameraCode: Equatable {
         return CGRect.null
     }
     
+    public var rotation: CGFloat {
+        guard self.corners.count == 4 else {
+            return 0.0
+        }
+        
+        let topLeft = self.corners[1]
+        let topRight = self.corners[2]
+        
+        let dx = topRight.x - topLeft.x
+        let dy = topRight.y - topLeft.y
+        
+        return atan2(dy, dx) - .pi / 2.0
+    }
+
     public static func == (lhs: CameraCode, rhs: CameraCode) -> Bool {
         if lhs.type != rhs.type {
             return false

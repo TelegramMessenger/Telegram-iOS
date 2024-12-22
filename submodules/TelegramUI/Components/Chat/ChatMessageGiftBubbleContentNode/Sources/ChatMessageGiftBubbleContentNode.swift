@@ -442,7 +442,11 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
                                         }
                                     } else {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0))).string
+                                        let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0)))
+                                        text = formattedString.string
+                                        if let starsRange = formattedString.ranges.last {
+                                            entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
+                                        }
                                     }
                                 }
                             }

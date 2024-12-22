@@ -13447,3 +13447,77 @@ Sorry for the inconvenience.";
 "StarsTransaction.StarRefReason.Referred" = "Referred User";
 
 "Gallery.SaveToGallery.cached" = "cached";
+
+"ChatList.Search.Messages.AllChats" = "From All Chats";
+"ChatList.Search.Messages.PrivateChats" = "From Private Chats";
+"ChatList.Search.Messages.GroupChats" = "From Group Chats";
+"ChatList.Search.Messages.Channels" = "From Channels";
+
+"ChatList.Search.Messages.Menu.AllChats" = "All Chats";
+"ChatList.Search.Messages.Menu.PrivateChats" = "Private Chats";
+"ChatList.Search.Messages.Menu.GroupChats" = "Group Chats";
+"ChatList.Search.Messages.Menu.Channels" = "Channels";
+
+"MediaEditor.Timeline" = "Timeline";
+
+"Conversation.ContextMenuSendGiftTo" = "Send Gift to %@";
+"Conversation.ContextMenuSendAnotherGift" = "Send Another Gift";
+
+"Gift.View.Status" = "Status";
+"Gift.View.Status.NonUnique" = "Non-Unique";
+"Gift.View.Status.Upgrade" = "upgrade";
+"Gift.View.DisplayedInfoHide" = "The gift is visible on your Page. [Hide >]()";
+
+"Gift.Upgrade.Title" = "Upgrade Gift";
+"Gift.Upgrade.Description" = "Turn your gift into a unique collectible that you can transfer or auction.";
+"Gift.Upgrade.Unique.Title" = "Unique";
+"Gift.Upgrade.Unique.Description" = "Get a unique number, model backdrop and and symbol for your gift.";
+"Gift.Upgrade.Transferable.Title" = "Transferable";
+"Gift.Upgrade.Transferable.Description" = "Send your upgraded gift to any of your friends on Telegram.";
+"Gift.Upgrade.Tradable.Title" = "Tradable";
+"Gift.Upgrade.Tradable.Description" = "Sell or auction your gift on third-party NFT marketplaces.";
+"Gift.Upgrade.Soon" = "SOON";
+"Gift.Upgrade.AddName" = "Add sender's name";
+"Gift.Upgrade.AddNameAndComment" = "Add sender's name and comment";
+"Gift.Upgrade.Upgrade" = "Upgrade";
+
+"Gift.Upgrade.Succeed.Title" = "The gift is now collectible";
+"Gift.Upgrade.Succeed.Text" = "You have received a unique number, model, backdrop and symbol for your gift.";
+
+"Gift.Unique.Collectible" = "Collectible";
+"Gift.Unique.Owner" = "Owner";
+"Gift.Unique.Transfer" = "transfer";
+"Gift.Unique.Model" = "Model";
+"Gift.Unique.Backdrop" = "Backdrop";
+"Gift.Unique.Symbol" = "Symbol";
+"Gift.Unique.Availability" = "Availability";
+"Gift.Unique.Issued" = "%@ issued";
+
+"Gift.Unique.AttributeDescription" = "Only %@ of such collectibles have this attribute.";
+
+"Gift.Transfer.Title" = "Transfer";
+"Gift.Transfer.SendViaBlockchain" = "Send via Blockchain";
+"Gift.Transfer.SendUnlocks" = "unlocks in %@";
+"Gift.Transfer.SendUnlocks.Days_1" = "%@ day";
+"Gift.Transfer.SendUnlocks.Days_any" = "%@ days";
+
+"Gift.Transfer.UnlockPending.Title" = "Unlocking In Progress";
+"Gift.Transfer.UnlockPending.Text" = "In %@, you'll be able to send this collectible to any TON blockchain address outside Telegram for sale or auction.";
+"Gift.Transfer.UnlockPending.Text.Days_1" = "%@ day";
+"Gift.Transfer.UnlockPending.Text.Days_any" = "%@ days";
+
+"Gift.Transfer.UpdateRequired.Title" = "Update Required";
+"Gift.Transfer.UpdateRequired.Text" = "Please update your Telegram application to the latest version.";
+
+"Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
+
+
+"PeerInfo.VerificationInfo.Custom.User" = "This user is verified by %@.";
+"PeerInfo.VerificationInfo.Custom.Bot" = "This bot is verified by %@.";
+"PeerInfo.VerificationInfo.Custom.Channel" = "This channel is verified by %@.";
+"PeerInfo.VerificationInfo.Custom.Group" = "This group is verified by %@.";
+
+"PeerInfo.VerificationInfo.Bot" = "This bot is verified as official by the representatives of Telegram.";
+"PeerInfo.VerificationInfo.Channel" = "This channel is verified as official by the representatives of Telegram.";
+"PeerInfo.VerificationInfo.Group" = "This group is verified as official by the representatives of Telegram.";
+"PeerInfo.VerificationInfo.URL" = "https://telegram.org/verify";

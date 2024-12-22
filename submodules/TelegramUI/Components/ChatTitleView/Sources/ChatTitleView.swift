@@ -277,9 +277,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         }
                                         titleCredibilityIcon = .emojiStatus(emojiStatus)
                                     } else if peer.isVerified {
-                                        titleCredibilityIcon = .verified
+                                        titleVerifiedIcon = .verified
                                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
+                                    } else if let verification = peer.verification {
+                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil))
                                     }
                                 }
                             }
@@ -399,7 +401,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                     }
                     updated = true
                 }
-                
+                                
                 if titleCredibilityIcon != self.titleCredibilityIcon {
                     self.titleCredibilityIcon = titleCredibilityIcon
                     updated = true
@@ -906,9 +908,15 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
-            var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - verifiedIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), animated: titleTransition.isAnimated)
+            var titleInsets: UIEdgeInsets = .zero
+            if verifiedIconWidth > 0.0 {
+                titleInsets.left = verifiedIconWidth + 2.0
+            }
+            
+            var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - verifiedIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), insets: titleInsets, animated: titleTransition.isAnimated)
             titleSize.width += credibilityIconWidth
             titleSize.width += verifiedIconWidth
+            
             let activitySize = self.activityNode.updateLayout(CGSize(width: clearBounds.size.width - titleSideInset * 2.0, height: clearBounds.size.height), alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
             
@@ -943,11 +951,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             
             var nextIconX: CGFloat = titleFrame.width
             
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: titleFrame.width - titleVerifiedSize.width, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
-            nextIconX -= titleVerifiedSize.width
-            if !titleVerifiedSize.width.isZero {
-                nextIconX -= 2.0
-            }
+            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width
@@ -975,11 +979,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             
             var nextIconX: CGFloat = titleFrame.maxX
             
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleVerifiedSize.width, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
-            nextIconX -= titleVerifiedSize.width
-            if !titleVerifiedSize.width.isZero {
-                nextIconX -= 2.0
-            }
+            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width

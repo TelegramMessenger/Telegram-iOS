@@ -91,6 +91,9 @@ public final class MediaScrubberComponent: Component {
     let isCollageSelected: Bool
     let collageSamples: (samples: Data, peak: Int32)?
     
+    let cover: (position: Double, image: UIImage)?
+    let getCoverSourceView: () -> UIView?
+    
     let portalView: PortalView?
     
     let positionUpdated: (Double, Bool) -> Void
@@ -114,6 +117,8 @@ public final class MediaScrubberComponent: Component {
         isCollage: Bool,
         isCollageSelected: Bool = false,
         collageSamples: (samples: Data, peak: Int32)? = nil,
+        cover: (position: Double, image: UIImage)? = nil,
+        getCoverSourceView: @escaping () -> UIView? = { return nil },
         portalView: PortalView? = nil,
         positionUpdated: @escaping (Double, Bool) -> Void,
         coverPositionUpdated: @escaping (Double, Bool, @escaping () -> Void) -> Void = { _, _, _ in },
@@ -135,6 +140,8 @@ public final class MediaScrubberComponent: Component {
         self.isCollage = isCollage
         self.isCollageSelected = isCollageSelected
         self.collageSamples = collageSamples
+        self.cover = cover
+        self.getCoverSourceView = getCoverSourceView
         self.portalView = portalView
         self.positionUpdated = positionUpdated
         self.coverPositionUpdated = coverPositionUpdated
@@ -179,6 +186,9 @@ public final class MediaScrubberComponent: Component {
         if lhs.collageSamples?.samples != rhs.collageSamples?.samples || lhs.collageSamples?.peak != rhs.collageSamples?.peak {
             return false
         }
+        if lhs.cover?.position != rhs.cover?.position {
+            return false
+        }
         return true
     }
     
@@ -191,6 +201,10 @@ public final class MediaScrubberComponent: Component {
         private let cursorContentView: UIView
         private let cursorView: HandleView
         private let cursorImageView: UIImageView
+        
+        private let coverDotWrapper: UIView
+        private let coverDotView: UIImageView
+        private let coverImageView: UIImageView
         
         private var cursorDisplayLink: SharedDisplayLinkDriver.Link?
         private var cursorPositionAnimation: (start: Double, from: Double, to: Double, ended: Bool)?
@@ -212,6 +226,16 @@ public final class MediaScrubberComponent: Component {
             self.cursorContentView = UIView()
             self.cursorView = HandleView()
             self.cursorImageView = UIImageView()
+            
+            self.coverDotWrapper = UIView()
+            self.coverDotWrapper.isUserInteractionEnabled = false
+            self.coverDotWrapper.isHidden = true
+            
+            self.coverDotView = UIImageView(image: generateFilledCircleImage(diameter: 7.0, color: UIColor(rgb: 0x007aff)))
+            
+            self.coverImageView = UIImageView()
+            self.coverImageView.clipsToBounds = true
+            self.coverImageView.contentMode = .scaleAspectFill
             
             super.init(frame: frame)
                                                  
@@ -245,6 +269,10 @@ public final class MediaScrubberComponent: Component {
             self.addSubview(self.cursorContentView)
             self.addSubview(self.cursorView)
             self.cursorView.addSubview(self.cursorImageView)
+            
+            self.addSubview(self.coverDotWrapper)
+            self.coverDotWrapper.addSubview(self.coverDotView)
+            self.coverDotWrapper.addSubview(self.coverImageView)
             
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleCursorPan(_:))))
             
@@ -632,12 +660,13 @@ public final class MediaScrubberComponent: Component {
                     self.collageTrackView = trackView
                 }
                 
+                let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
                 let trackSize = trackView.update(
                     context: component.context,
                     style: component.style,
                     track: MediaScrubberComponent.Track(
                         id: 1024,
-                        content: .audio(artist: nil, title: "Timeline", samples: component.collageSamples?.samples, peak: component.collageSamples?.peak ?? 0, isTimeline: true),
+                        content: .audio(artist: nil, title: strings.MediaEditor_Timeline, samples: component.collageSamples?.samples, peak: component.collageSamples?.peak ?? 0, isTimeline: true),
                         duration: component.maxDuration,
                         trimRange: nil,
                         offset: nil,
@@ -808,7 +837,7 @@ public final class MediaScrubberComponent: Component {
                     if let offset = self.mainAudioTrackOffset {
                         cursorPosition -= offset
                     }
-                    let cursorFrame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: trimDuration)
+                    let cursorFrame = cursorFrame(size: scrubberSize, height: self.effectiveCursorHeight, position: cursorPosition, duration: self.trimDuration)
                     transition.setFrame(view: self.cursorView, frame: cursorFrame)
                     transition.setFrame(view: self.cursorContentView, frame: cursorFrame.insetBy(dx: 6.0, dy: 2.0).offsetBy(dx: -1.0  - UIScreenPixel, dy: 0.0))
                 }
@@ -825,6 +854,42 @@ public final class MediaScrubberComponent: Component {
             }
             
             transition.setFrame(view: self.cursorImageView, frame: CGRect(origin: .zero, size: self.cursorView.frame.size))
+            
+            
+            if let (coverPosition, coverImage) = component.cover {
+                let imageSize = CGSize(width: 36.0, height: 36.0)
+                var animateFrame = false
+                if previousComponent?.cover?.position != coverPosition {
+                    self.coverDotWrapper.isHidden = false
+                    if let _ = previousComponent?.cover {
+                        if let snapshotView = self.coverDotWrapper.layer.snapshotContentTreeAsView() {
+                            snapshotView.frame = self.coverDotWrapper.frame
+                            self.addSubview(snapshotView)
+                            snapshotView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                snapshotView.removeFromSuperview()
+                            })
+                        }
+                    }
+                    self.coverDotView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                    self.coverImageView.image = coverImage
+                    self.coverImageView.layer.cornerRadius = imageSize.width / 2.0
+                    
+                    animateFrame = true
+                }
+                
+                let dotSize = self.coverDotView.bounds.size
+                let dotFrame = cursorFrame(size: scrubberSize, height: dotSize.height, position: coverPosition, duration: self.trimDuration)
+                self.coverDotWrapper.frame = CGRect(origin: CGPoint(x: floor(dotFrame.center.x - dotSize.width / 2.0), y: -18.0), size: dotSize)
+                self.coverDotView.frame = CGRect(origin: .zero, size: dotSize)
+                self.coverImageView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((dotSize.width - imageSize.width) / 2.0), y: -42.0), size: imageSize)
+                
+                if animateFrame, let sourceView = component.getCoverSourceView() {
+                    let sourceFrame = sourceView.convert(sourceView.bounds, to: self.coverDotWrapper)
+                    self.coverImageView.layer.animate(from: sourceFrame.width as NSNumber, to: self.coverImageView.layer.cornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    self.coverImageView.layer.animateFrame(from: sourceFrame, to: self.coverImageView.frame, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                }
+            }
             
             if component.isCollage {
                 transition.setAlpha(view: self.trackContainerView, alpha: component.isCollageSelected ? 1.0 : 0.0)
@@ -1114,7 +1179,10 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         var deselectedClipWidth: CGFloat = 0.0
         var deselectedClipOrigin: CGFloat = 0.0
         
-        if !track.isMain, duration > 0.0 {
+        if track.isTimeline {
+            deselectedClipWidth = clipWidth
+            deselectedClipOrigin = clipOrigin
+        } else if !track.isMain, duration > 0.0 {
             let trackDuration: Double
             if let trimRange = track.trimRange {
                 trackDuration = trimRange.upperBound - trimRange.lowerBound
@@ -1184,12 +1252,7 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
         
         let containerFrame = CGRect(origin: .zero, size: CGSize(width: containerTotalWidth, height: scrubberSize.height))
         transition.setFrame(view: self.containerView, frame: containerFrame)
-        
-        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: containerFrame.size))
-        self.backgroundView.update(size: containerFrame.size, transition: transition.containedViewLayoutTransition)
-        transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: containerFrame.size))
-        transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: containerFrame.size))
-                    
+                            
         let contentContainerFrame = CGRect(origin: .zero, size: CGSize(width: clipWidth, height: containerFrame.height))
         let contentContainerOrigin = deselectedClipOrigin + self.scrollView.contentOffset.x
         transition.setFrame(view: self.audioContentContainerView, frame: contentContainerFrame.offsetBy(dx: contentContainerOrigin, dy: 0.0))
@@ -1402,6 +1465,11 @@ private class TrackView: UIView, UIScrollViewDelegate, UIGestureRecognizerDelega
                 transition.setFrame(layer: self.waveformCloneLayer, frame: audioWaveformFrame)
             }
         }
+                
+        transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: containerFrame.size))
+        self.backgroundView.update(size: containerFrame.size, transition: transition.containedViewLayoutTransition)
+        transition.setFrame(view: self.vibrancyView, frame: CGRect(origin: .zero, size: containerFrame.size))
+        transition.setFrame(view: self.vibrancyContainer, frame: CGRect(origin: .zero, size: containerFrame.size))
         
         return scrubberSize
     }

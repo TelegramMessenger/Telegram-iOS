@@ -1747,7 +1747,7 @@ public final class ChatListNode: ListView {
                     self.push?(controller)
                 })
             } else {
-                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), transfer: false, completion: nil)
                 controller.navigationPresentation = .modal
                 self.push?(controller)
             }
@@ -3629,6 +3629,8 @@ public final class ChatListNode: ListView {
                     for item in transition.insertItems {
                         if let item = item.item as? ChatListItem {
                             switch item.content {
+                            case .loading:
+                                break
                             case let .peer(peerData):
                                 insertedPeerIds.append(peerData.peer.peerId)
                             case .groupReference:

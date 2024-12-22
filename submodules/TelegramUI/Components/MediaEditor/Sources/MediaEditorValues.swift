@@ -418,6 +418,8 @@ public final class MediaEditorValues: Codable, Equatable {
             case contentValue
             case isVideo
             case frame
+            case contentScale
+            case contentOffset
             case videoTrimRange
             case videoOffset
             case videoVolume
@@ -441,6 +443,8 @@ public final class MediaEditorValues: Codable, Equatable {
         
         public let content: Content
         public let frame: CGRect
+        public let contentScale: CGFloat
+        public let contentOffset: CGPoint
         
         public let videoTrimRange: Range<Double>?
         public let videoOffset: Double?
@@ -449,12 +453,16 @@ public final class MediaEditorValues: Codable, Equatable {
         public init(
             content: Content,
             frame: CGRect,
+            contentScale: CGFloat,
+            contentOffset: CGPoint,
             videoTrimRange: Range<Double>?,
             videoOffset: Double?,
             videoVolume: CGFloat?
         ) {
             self.content = content
             self.frame = frame
+            self.contentScale = contentScale
+            self.contentOffset = contentOffset
             self.videoTrimRange = videoTrimRange
             self.videoOffset = videoOffset
             self.videoVolume = videoVolume
@@ -475,6 +483,10 @@ public final class MediaEditorValues: Codable, Equatable {
                 throw DecodingError.generic
             }
             self.frame = try container.decode(CGRect.self, forKey: .frame)
+            
+            self.contentScale = try container.decodeIfPresent(CGFloat.self, forKey: .contentScale) ?? 1.0
+            self.contentOffset = try container.decodeIfPresent(CGPoint.self, forKey: .contentOffset) ?? .zero
+            
             self.videoTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .videoTrimRange)
             self.videoOffset = try container.decodeIfPresent(Double.self, forKey: .videoOffset)
             self.videoVolume = try container.decodeIfPresent(CGFloat.self, forKey: .videoVolume)
@@ -497,6 +509,8 @@ public final class MediaEditorValues: Codable, Equatable {
                 try container.encode(isVideo, forKey: .isVideo)
             }
             try container.encode(self.frame, forKey: .frame)
+            try container.encode(self.contentScale, forKey: .contentScale)
+            try container.encode(self.contentOffset, forKey: .contentOffset)
             try container.encodeIfPresent(self.videoTrimRange, forKey: .videoTrimRange)
             try container.encodeIfPresent(self.videoOffset, forKey: .videoOffset)
             try container.encodeIfPresent(self.videoVolume, forKey: .videoVolume)
@@ -506,6 +520,8 @@ public final class MediaEditorValues: Codable, Equatable {
             return VideoCollageItem(
                 content: self.content,
                 frame: self.frame,
+                contentScale: self.contentScale,
+                contentOffset: self.contentOffset,
                 videoTrimRange: videoTrimRange,
                 videoOffset: self.videoOffset,
                 videoVolume: self.videoVolume
@@ -516,6 +532,8 @@ public final class MediaEditorValues: Codable, Equatable {
             return VideoCollageItem(
                 content: self.content,
                 frame: self.frame,
+                contentScale: self.contentScale,
+                contentOffset: self.contentOffset,
                 videoTrimRange: self.videoTrimRange,
                 videoOffset: videoOffset,
                 videoVolume: self.videoVolume
@@ -526,6 +544,8 @@ public final class MediaEditorValues: Codable, Equatable {
             return VideoCollageItem(
                 content: self.content,
                 frame: self.frame,
+                contentScale: self.contentScale,
+                contentOffset: self.contentOffset,
                 videoTrimRange: self.videoTrimRange,
                 videoOffset: self.videoOffset,
                 videoVolume: videoVolume
@@ -588,6 +608,10 @@ public final class MediaEditorValues: Codable, Equatable {
     
     var isSticker: Bool {
         return self.qualityPreset == .sticker
+    }
+    
+    var isAvatar: Bool {
+        return [.profile].contains(self.qualityPreset)
     }
     
     public var cropValues: (offset: CGPoint, rotation: CGFloat, scale: CGFloat) {

@@ -531,16 +531,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if peer.isScam {
                 credibilityIcon = .scam
             } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                if peer is TelegramChannel, peer.isVerified {
-                    verifiedIcon = .verified
-                }
                 credibilityIcon = .emojiStatus(emojiStatus)
-            } else if peer.isVerified {
-                credibilityIcon = .verified
             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
                 credibilityIcon = .premium
             } else {
                 credibilityIcon = .none
+            }
+            if peer.isVerified {
+                verifiedIcon = .verified
+            } else if let verification = peer.verification {
+                verifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil))
             }
         } else {
             credibilityIcon = .none
@@ -780,8 +780,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .premium(color: navigationContentsAccentColor)
                 emojiExpandedStatusContent = .premium(color: navigationContentsAccentColor)
             case .verified:
-                emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
-                emojiExpandedStatusContent = .verified(fillColor: navigationContentsAccentColor, foregroundColor: .clear, sizeType: .large)
+                emojiRegularStatusContent = .none
+                emojiExpandedStatusContent = .none
             case .fake:
                 emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
                 emojiExpandedStatusContent = emojiRegularStatusContent
@@ -793,7 +793,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
                 emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: navigationContentsAccentColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
             }
-            
+                        
             let iconSize = self.titleCredibilityIconView.update(
                 transition: ComponentTransition(navigationTransition),
                 component: AnyComponent(EmojiStatusComponent(
@@ -848,7 +848,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 26.0, height: 26.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
                 transition: ComponentTransition(navigationTransition),
@@ -867,7 +867,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 26.0, height: 26.0)
             )
             
             self.credibilityIconSize = iconSize
@@ -877,29 +877,18 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         do {
             self.currentVerifiedIcon = verifiedIcon
             
-            var currentEmojiStatus: PeerEmojiStatus?
             let emojiRegularStatusContent: EmojiStatusComponent.Content
             let emojiExpandedStatusContent: EmojiStatusComponent.Content
             switch verifiedIcon {
-            case .none:
-                emojiRegularStatusContent = .none
-                emojiExpandedStatusContent = .none
-            case .premium:
-                emojiRegularStatusContent = .premium(color: navigationContentsAccentColor)
-                emojiExpandedStatusContent = .premium(color: navigationContentsAccentColor)
             case .verified:
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
                 emojiExpandedStatusContent = .verified(fillColor: navigationContentsAccentColor, foregroundColor: .clear, sizeType: .large)
-            case .fake:
-                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
-                emojiExpandedStatusContent = emojiRegularStatusContent
-            case .scam:
-                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
-                emojiExpandedStatusContent = emojiRegularStatusContent
             case let .emojiStatus(emojiStatus):
-                currentEmojiStatus = emojiStatus
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
                 emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: navigationContentsAccentColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
+            default:
+                emojiRegularStatusContent = .none
+                emojiExpandedStatusContent = .none
             }
             
             let iconSize = self.titleVerifiedIconView.update(
@@ -915,7 +904,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     emojiFileUpdated: nil
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 26.0, height: 26.0)
             )
             let expandedIconSize = self.titleExpandedVerifiedIconView.update(
                 transition: ComponentTransition(navigationTransition),
@@ -926,15 +915,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     content: emojiExpandedStatusContent,
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
-                    action: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.displayPremiumIntro?(strongSelf.titleExpandedVerifiedIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
-                    }
+                    action: {}
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 26.0, height: 26.0)
             )
             
             self.verifiedIconSize = iconSize
@@ -1318,35 +1302,44 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         var titleHorizontalOffset: CGFloat = 0.0
+        var titleExpandedHorizontalOffset: CGFloat = 0.0
         var nextIconX: CGFloat = titleSize.width
         var nextExpandedIconX: CGFloat = titleExpandedSize.width
         
         if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
-            titleHorizontalOffset += -(credibilityIconSize.width + 4.0) / 2.0
+            let offset = (credibilityIconSize.width + 4.0) / 2.0
+           
+            let leftOffset: CGFloat = nextIconX + 4.0
+            let leftExpandedOffset: CGFloat = nextExpandedIconX + 4.0
+            titleHorizontalOffset -= offset
             
             var collapsedTransitionOffset: CGFloat = 0.0
             if let navigationTransition = self.navigationTransition {
                 collapsedTransitionOffset = -10.0 * navigationTransition.fraction
             }
             
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: nextIconX + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
+            
             nextIconX += 4.0 + credibilityIconSize.width
-            transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: nextExpandedIconX + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
             nextExpandedIconX += 4.0 + titleExpandedCredibilityIconSize.width
         }
         
         if let verifiedIconSize = self.verifiedIconSize, let titleExpandedVerifiedIconSize = self.titleExpandedVerifiedIconSize {
-            titleHorizontalOffset += -(verifiedIconSize.width + 4.0) / 2.0
+            let offset = (verifiedIconSize.width + 4.0) / 2.0
+            titleHorizontalOffset += offset
+            titleExpandedHorizontalOffset += offset
             
+            let leftOffset: CGFloat = -verifiedIconSize.width - 4.0
+            let leftExpandedOffset: CGFloat = -titleExpandedVerifiedIconSize.width - 4.0
+           
             var collapsedTransitionOffset: CGFloat = 0.0
             if let navigationTransition = self.navigationTransition {
                 collapsedTransitionOffset = -10.0 * navigationTransition.fraction
             }
             
-            transition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: nextIconX + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - verifiedIconSize.height) / 2.0)), size: verifiedIconSize))
-            nextIconX += 4.0 + verifiedIconSize.width
-            transition.updateFrame(view: self.titleExpandedVerifiedIconView, frame: CGRect(origin: CGPoint(x: nextExpandedIconX + 4.0, y: floor((titleExpandedSize.height - titleExpandedVerifiedIconSize.height) / 2.0) + 1.0), size: titleExpandedVerifiedIconSize))
-            nextExpandedIconX += 4.0 + titleExpandedVerifiedIconSize.width
+            transition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - verifiedIconSize.height) / 2.0)), size: verifiedIconSize))
+            transition.updateFrame(view: self.titleExpandedVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedVerifiedIconSize.height) / 2.0) + 1.0), size: titleExpandedVerifiedIconSize))
         }
         
         var titleFrame: CGRect
@@ -1766,7 +1759,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 var titleFrame = titleFrame
                 if !self.isAvatarExpanded {
-                    titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
+                    titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? titleExpandedHorizontalOffset : titleHorizontalOffset * titleScale, dy: 0.0)
                 }
                 
                 let titleCenter = CGPoint(x: transitionFraction * transitionSourceTitleFrame.midX + (1.0 - transitionFraction) * titleFrame.midX, y: transitionFraction * transitionSourceTitleFrame.midY + (1.0 - transitionFraction) * titleFrame.midY)
@@ -1807,7 +1800,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitleBadgeFraction = (1.0 - titleCollapseFraction)
                 }
                 
-                let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? 0.0 : titleHorizontalOffset * titleScale, dy: 0.0)
+                let rawTitleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? titleExpandedHorizontalOffset : titleHorizontalOffset * titleScale, dy: 0.0)
                 self.titleNodeRawContainer.frame = rawTitleFrame
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(), size: CGSize()))
                 let rawSubtitleFrame = subtitleFrame
@@ -2119,7 +2112,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition: ComponentTransition(transition),
             component: AnyComponent(PeerInfoCoverComponent(
                 context: self.context,
-                peer: peer.flatMap(EnginePeer.init),
+                subject: peer.flatMap { .peer(EnginePeer($0)) },
                 files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center,

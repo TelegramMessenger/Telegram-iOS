@@ -171,6 +171,8 @@ final class MediaEditorScreenComponent: Component {
             case text
             case sticker
             case tools
+            case rotate
+            case flip
             case done
             case cutout
             case undo
@@ -193,6 +195,10 @@ final class MediaEditorScreenComponent: Component {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/AddSticker"), color: .white)!
                 case .tools:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Tools"), color: .white)!
+                case .rotate:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Rotate"), color: .white)!
+                case .flip:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Mirror"), color: .white)!
                 case .cutout:
                     image = UIImage(bundleImageName: "Media Editor/Cutout")!.withRenderingMode(.alwaysTemplate)
                 case .undo:
@@ -289,11 +295,14 @@ final class MediaEditorScreenComponent: Component {
     
     public final class View: UIView {
         private let cancelButton = ComponentView<Empty>()
+        private let doneButton = ComponentView<Empty>()
         private let drawButton = ComponentView<Empty>()
         private let textButton = ComponentView<Empty>()
         private let stickerButton = ComponentView<Empty>()
         private let toolsButton = ComponentView<Empty>()
-        private let doneButton = ComponentView<Empty>()
+        
+        private let rotateButton = ComponentView<Empty>()
+        private let flipButton = ComponentView<Empty>()
         
         private let cutoutButton = ComponentView<Empty>()
         private let undoButton = ComponentView<Empty>()
@@ -308,6 +317,7 @@ final class MediaEditorScreenComponent: Component {
         private let inputPanelBackground = ComponentView<Empty>()
         
         private var scrubber: ComponentView<Empty>?
+        private var scrubberLabel: ComponentView<Empty>?
         
         private let playbackButton = ComponentView<Empty>()
         private let muteButton = ComponentView<Empty>()
@@ -332,6 +342,9 @@ final class MediaEditorScreenComponent: Component {
         private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
         private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
         private var inputMediaNode: ChatEntityKeyboardInputNode?
+        
+        private var cover: (position: Double, image: UIImage)?
+        private var coverApplyTimer: SwiftSignalKit.Timer?
                 
         private var videoRecorder: EntityVideoRecorder?
                 
@@ -367,6 +380,7 @@ final class MediaEditorScreenComponent: Component {
         
         deinit {
             self.inputMediaNodeDataDisposable?.dispose()
+            self.coverApplyTimer?.invalidate()
         }
         
         private func setupIfNeeded() {
@@ -724,6 +738,22 @@ final class MediaEditorScreenComponent: Component {
             return inputText
         }
         
+        private func updateCoverPosition() {
+            guard let controller = self.environment?.controller() as? MediaEditorScreenImpl, let mediaEditor = controller.node.mediaEditor else {
+                return
+            }
+
+            if let image = mediaEditor.resultImage {
+                self.cover = (mediaEditor.currentPosition.seconds, image)
+            }
+            controller.node.requestLayout(forceUpdate: true, transition: .immediate)
+            
+            self.coverApplyTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak mediaEditor] in
+                mediaEditor?.play()
+            }, queue: Queue.mainQueue())
+            self.coverApplyTimer?.start()
+        }
+        
         func update(component: MediaEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
@@ -757,6 +787,8 @@ final class MediaEditorScreenComponent: Component {
             
             self.setupIfNeeded()
                         
+            let mediaEditor = controller.node.mediaEditor
+            
             let isTablet = environment.metrics.isTablet
             
             let openDrawing = component.openDrawing
@@ -833,7 +865,7 @@ final class MediaEditorScreenComponent: Component {
             case .storyEditor:
                 doneButtonTitle = isEditingStory ? environment.strings.Story_Editor_Done.uppercased() : environment.strings.Story_Editor_Next.uppercased()
                 doneButtonIcon = UIImage(bundleImageName: "Media Editor/Next")!
-            case .stickerEditor:
+            case .stickerEditor, .avatarEditor:
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
             case .botPreview:
@@ -964,13 +996,103 @@ final class MediaEditorScreenComponent: Component {
                 size: stickerButtonSize
             )
             
-            if let subject = controller.node.subject, case .empty = subject {
+            let rotateButtonSize = self.rotateButton.update(
+                transition: transition,
+                component: AnyComponent(ContextReferenceButtonComponent(
+                    content: AnyComponent(Image(
+                        image: state.image(.rotate),
+                        size: CGSize(width: 30.0, height: 30.0)
+                    )),
+                    tag: textButtonTag,
+                    minSize: CGSize(width: 30.0, height: 30.0),
+                    action: { [weak controller, weak mediaEditor] _, _ in
+                        guard let controller, let mediaEditor else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
+                        mediaEditor.setCrop(
+                            offset: mediaEditor.values.cropOffset,
+                            scale: mediaEditor.values.cropScale,
+                            rotation: mediaEditor.values.cropRotation - .pi / 2.0,
+                            mirroring: mediaEditor.values.cropMirroring
+                        )
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 40.0, height: 40.0)
+            )
+            let rotateButtonFrame = CGRect(
+                origin: CGPoint(x: drawButtonFrame.origin.x, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                size: rotateButtonSize
+            )
+            
+            let flipButtonSize = self.flipButton.update(
+                transition: transition,
+                component: AnyComponent(ContextReferenceButtonComponent(
+                    content: AnyComponent(Image(
+                        image: state.image(.flip),
+                        size: CGSize(width: 30.0, height: 30.0)
+                    )),
+                    tag: textButtonTag,
+                    minSize: CGSize(width: 30.0, height: 30.0),
+                    action: { [weak controller, weak mediaEditor] _, _ in
+                        guard let controller, let mediaEditor else {
+                            return
+                        }
+                        guard !controller.node.recording.isActive else {
+                            return
+                        }
+                        mediaEditor.setCrop(
+                            offset: mediaEditor.values.cropOffset,
+                            scale: mediaEditor.values.cropScale,
+                            rotation: mediaEditor.values.cropRotation,
+                            mirroring: !mediaEditor.values.cropMirroring
+                        )
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: 40.0, height: 40.0)
+            )
+            let flipButtonFrame = CGRect(
+                origin: CGPoint(x: textButtonFrame.origin.x, y: availableSize.height - environment.safeInsets.bottom + buttonBottomInset + controlsBottomInset + 2.0),
+                size: flipButtonSize
+            )
+            
+            var isAvatarEditor = false
+            if case .avatarEditor = controller.mode {
+                isAvatarEditor = true
+                
+                drawButtonFrame.origin.x = stickerButtonFrame.origin.x
+                                
+                if let rotateButtonView = self.rotateButton.view {
+                    if rotateButtonView.superview == nil {
+                        self.addSubview(rotateButtonView)
+                    }
+                    transition.setPosition(view: rotateButtonView, position: rotateButtonFrame.center)
+                    transition.setBounds(view: rotateButtonView, bounds: CGRect(origin: .zero, size: rotateButtonFrame.size))
+                    if !self.animatingButtons {
+                        transition.setAlpha(view: rotateButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+                    }
+                }
+                
+                if let flipButtonView = self.flipButton.view {
+                    if flipButtonView.superview == nil {
+                        self.addSubview(flipButtonView)
+                    }
+                    transition.setPosition(view: flipButtonView, position: flipButtonFrame.center)
+                    transition.setBounds(view: flipButtonView, bounds: CGRect(origin: .zero, size: flipButtonFrame.size))
+                    if !self.animatingButtons {
+                        transition.setAlpha(view: flipButtonView, alpha: buttonsAreHidden ? 0.0 : bottomButtonsAlpha)
+                    }
+                }
+            } else if let subject = controller.node.subject, case .empty = subject {
                 let distance = floor((stickerButtonFrame.minX - textButtonFrame.minX) * 1.2)
                 textButtonFrame.origin.x = availableSize.width / 2.0 - textButtonFrame.width / 2.0
                 drawButtonFrame.origin.x = textButtonFrame.origin.x - distance
                 stickerButtonFrame.origin.x = textButtonFrame.origin.x + distance
             }
-            
             
             if let drawButtonView = self.drawButton.view {
                 if drawButtonView.superview == nil {
@@ -983,7 +1105,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if let textButtonView = self.textButton.view {
+            if !isAvatarEditor, let textButtonView = self.textButton.view {
                 if textButtonView.superview == nil {
                     self.addSubview(textButtonView)
                 }
@@ -994,7 +1116,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if let stickerButtonView = self.stickerButton.view {
+            if !isAvatarEditor, let stickerButtonView = self.stickerButton.view {
                 if stickerButtonView.superview == nil {
                     self.addSubview(stickerButtonView)
                 }
@@ -1180,7 +1302,6 @@ final class MediaEditorScreenComponent: Component {
                 )
             }
             
-            let mediaEditor = controller.node.mediaEditor
             var isOutlineActive = false
             if let value = mediaEditor?.values.toolValues[.stickerOutline] as? Float, value > 0.0 {
                 isOutlineActive = true
@@ -1869,7 +1990,11 @@ final class MediaEditorScreenComponent: Component {
                         maxDuration = 15.0
                     } else {
                         minDuration = 1.0
-                        maxDuration = storyMaxVideoDuration
+                        if case .avatarEditor = controller.mode {
+                            maxDuration = 10.0
+                        } else {
+                            maxDuration = storyMaxVideoDuration
+                        }
                     }
                     
                     let previousTrackCount = self.currentVisibleTracks?.count
@@ -1895,6 +2020,36 @@ final class MediaEditorScreenComponent: Component {
                         isCollage = videoCount > 1
                     }
                     
+                    var scrubberBottomOffset: CGFloat = 0.0
+                    if case .avatarEditor = controller.mode {
+                        let scrubberLabel: ComponentView<Empty>
+                        if let current = self.scrubberLabel {
+                            scrubberLabel = current
+                        } else {
+                            scrubberLabel = ComponentView<Empty>()
+                            self.scrubberLabel = scrubberLabel
+                        }
+                        
+                        let scrubberLabelSize = scrubberLabel.update(
+                            transition: scrubberTransition,
+                            component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: environment.strings.PhotoEditor_SelectCoverFrame, font: Font.regular(14.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7)))
+                            )),
+                            environment: {},
+                            containerSize: availableSize
+                        )
+                        if let view = scrubberLabel.view {
+                            if view.superview == nil {
+                                self.addSubview(view)
+                            }
+                            
+                            let scrubberLabelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberLabelSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberLabelSize.height + controlsBottomInset - inputPanelSize.height + 2.0), size: scrubberLabelSize)
+                            view.frame = scrubberLabelFrame
+                            
+                            scrubberBottomOffset += scrubberLabelSize.height + 12.0
+                        }
+                    }
+                  
                     let scrubber: ComponentView<Empty>
                     if let current = self.scrubber {
                         scrubber = current
@@ -1918,8 +2073,21 @@ final class MediaEditorScreenComponent: Component {
                             isCollage: isCollage,
                             isCollageSelected: component.isCollageTimelineOpen,
                             collageSamples: playerState.collageSamples,
-                            positionUpdated: { [weak mediaEditor] position, apply in
-                                if let mediaEditor {
+                            cover: self.cover,
+                            getCoverSourceView: { [weak controller] in
+                                return controller?.node.stickerBackgroundView
+                            },
+                            positionUpdated: { [weak self, weak controller, weak mediaEditor] position, apply in
+                                if let self, let mediaEditor {
+                                    var apply = apply
+                                    if !apply, self.coverApplyTimer != nil {
+                                        self.coverApplyTimer?.invalidate()
+                                        self.coverApplyTimer = nil
+                                    }
+                                    if apply, let controller, case .avatarEditor = controller.mode {
+                                        apply = false
+                                        self.updateCoverPosition()
+                                    }
                                     mediaEditor.seek(position, andPlay: apply)
                                 }
                             },
@@ -2038,7 +2206,7 @@ final class MediaEditorScreenComponent: Component {
                         component.externalState.timelineHeight = 0.0
                     }
                     
-                    let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0), size: scrubberSize)
+                    let scrubberFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - scrubberSize.width) / 2.0), y: availableSize.height - environment.safeInsets.bottom - scrubberSize.height + controlsBottomInset - inputPanelSize.height + 3.0 - scrubberBottomOffset), size: scrubberSize)
                     if let scrubberView = scrubber.view {
                         var animateIn = false
                         if scrubberView.superview == nil {
@@ -2055,11 +2223,20 @@ final class MediaEditorScreenComponent: Component {
                             scrubberTransition.setFrame(view: scrubberView, frame: scrubberFrame)
                         }
                         if !self.animatingButtons && !(!hasMainVideoTrack && animateIn) {
-                            transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities || isEditingCaption || isRecordingAdditionalVideo || isEditingTextEntity ? 0.0 : 1.0)
+                            let scrubberAlpha = component.isDisplayingTool != nil || component.isDismissing || component.isInteractingWithEntities || isEditingCaption || isRecordingAdditionalVideo || isEditingTextEntity ? 0.0 : 1.0
+                            transition.setAlpha(view: scrubberView, alpha: scrubberAlpha)
+                            if let scrubberLabelView = self.scrubberLabel?.view {
+                                transition.setAlpha(view: scrubberLabelView, alpha: scrubberAlpha)
+                            }
                         } else if animateIn {
                             scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             scrubberView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             scrubberView.layer.animateScale(from: 0.6, to: 1.0, duration: 0.2)
+                            
+                            if let scrubberLabelView = self.scrubberLabel?.view {
+                                scrubberLabelView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                scrubberLabelView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
                         }
                     }
                 } else {
@@ -2501,6 +2678,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         case storyEditor
         case stickerEditor(mode: StickerEditorMode)
         case botPreview
+        case avatarEditor
     }
     
     public enum TransitionIn {
@@ -2589,7 +2767,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         private let gradientView: UIImageView
         private var gradientColorsDisposable: Disposable?
         
-        private var stickerBackgroundView: UIImageView?
+        fileprivate var stickerBackgroundView: UIImageView?
         private var stickerOverlayLayer: SimpleShapeLayer?
         private var stickerFrameLayer: SimpleShapeLayer?
         
@@ -2642,7 +2820,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         
         private var previousDrawingData: Data?
         private var previousDrawingEntities: [DrawingEntity]?
-        
+            
         private var weatherPromise: Promise<StickerPickerScreen.Weather>?
         
         private var playbackPositionDisposable: Disposable?
@@ -2694,12 +2872,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.gradientView = UIImageView()
        
             var isStickerEditor = false
+            var isAvatarEditor = false
             if case .stickerEditor = controller.mode {
                 isStickerEditor = true
+            } else if case .avatarEditor = controller.mode {
+                isAvatarEditor = true
             }
             
             self.entitiesContainerView = UIView(frame: CGRect(origin: .zero, size: storyDimensions))
-            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions, hasBin: !isStickerEditor, isStickerEditor: isStickerEditor)
+            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions, hasBin: !isStickerEditor && !isAvatarEditor, isStickerEditor: isStickerEditor)
             self.entitiesView.getEntityCenterPosition = {
                 return CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             }
@@ -2739,7 +2920,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             
             self.containerView.addSubview(self.previewContainerView)
             
-            if case .stickerEditor = controller.mode {
+            switch controller.mode {
+            case .stickerEditor:
                 let rowsCount = 40
                 let stickerBackgroundView = UIImageView()
                 stickerBackgroundView.clipsToBounds = true
@@ -2762,7 +2944,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 stickerBackgroundView.layer.rasterizationScale = UIScreenScale
                 self.stickerBackgroundView = stickerBackgroundView
                 self.previewContainerView.addSubview(stickerBackgroundView)
-            } else {
+            case .avatarEditor:
+                let stickerBackgroundView = UIImageView()
+                self.stickerBackgroundView = stickerBackgroundView
+                self.previewContainerView.addSubview(stickerBackgroundView)
+            default:
                 self.previewContainerView.addSubview(self.gradientView)
             }
             
@@ -2774,7 +2960,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.entitiesContainerView.addSubview(self.entitiesView)
             self.entitiesView.addSubview(self.drawingView)
             
-            if case .stickerEditor = controller.mode {
+            switch controller.mode {
+            case .stickerEditor, .avatarEditor:
                 let stickerOverlayLayer = SimpleShapeLayer()
                 stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
                 stickerOverlayLayer.fillRule = .evenOdd
@@ -2789,6 +2976,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 
                 self.stickerFrameLayer = stickerFrameLayer
                 self.previewContainerView.layer.addSublayer(stickerFrameLayer)
+            default:
+                break
             }
             
             self.previewContainerView.addSubview(self.selectionContainerView)
@@ -2974,7 +3163,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 } else {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 }
-            case .stickerEditor:
+            case .stickerEditor, .avatarEditor:
                 if fittedSize.height > fittedSize.width {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 } else {
@@ -3011,9 +3200,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 initialValues = nil
             }
             
-            var isStickerEditor = false
+            var mediaEditorMode: MediaEditor.Mode = .default
             if case .stickerEditor = controller.mode {
-                isStickerEditor = true
+                mediaEditorMode = .sticker
+            } else if case .avatarEditor = controller.mode {
+                mediaEditorMode = .avatar
             }
                
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
@@ -3038,7 +3229,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             }
                         
-            let mediaEditor = MediaEditor(context: self.context, mode: isStickerEditor ? .sticker : .default, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
+            let mediaEditor = MediaEditor(context: self.context, mode: mediaEditorMode, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
             if let initialVideoPosition = controller.initialVideoPosition {
                 if controller.isEditingStoryCover {
                     mediaEditor.setCoverImageTimestamp(initialVideoPosition)
@@ -3583,6 +3774,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if case .stickerEditor = controller.mode {
                 hasSwipeToDismiss = false
                 hasSwipeToEnhance = false
+            } else if case .avatarEditor = controller.mode {
+                hasSwipeToDismiss = false
+                hasSwipeToEnhance = false
             } else if self.isCollageTimelineOpen {
                 hasSwipeToEnhance = false
             }
@@ -3772,7 +3966,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 } else {
                     initialScale = self.previewContainerView.bounds.width / image.size.width
                 }
-            case .stickerEditor:
+            case .stickerEditor, .avatarEditor:
                 if image.size.height > image.size.width {
                     initialScale = self.previewContainerView.bounds.width / image.size.width
                 } else {
@@ -4845,6 +5039,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 controller.requestStickerCompletion(animated: true)
             case .botPreview:
                 controller.requestStoryCompletion(animated: true)
+            case .avatarEditor:
+                controller.requestStoryCompletion(animated: true)
             }
         }
         
@@ -5110,7 +5306,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     var hasInteractiveStickers = true
                                     if let controller = self.controller {
                                         switch controller.mode {
-                                        case .stickerEditor, .botPreview:
+                                        case .stickerEditor, .botPreview, .avatarEditor:
                                             hasInteractiveStickers = false
                                         default:
                                             break
@@ -5597,7 +5793,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let stickerFrameRect = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
                  
                 let overlayOuterRect = UIBezierPath(rect: CGRect(origin: .zero, size: previewSize))
-                let overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
+                let overlayInnerRect: UIBezierPath
+                
+                switch controller.mode {
+                case .avatarEditor:
+                    overlayInnerRect = UIBezierPath(cgPath: CGPath(ellipseIn: stickerFrameRect, transform: nil))
+                    stickerFrameLayer.isHidden = true
+                default:
+                    overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
+                }
+                
                 let overlayLineWidth: CGFloat = 2.0 - UIScreenPixel
                 overlayOuterRect.append(overlayInnerRect)
                 overlayOuterRect.usesEvenOddFillRule = true
@@ -5687,14 +5892,28 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             public let content: Content
             public let frame: CGRect
+            public let contentScale: CGFloat
+            public let contentOffset: CGPoint
             
             var editorItem: MediaEditor.Subject.VideoCollageItem {
-                return MediaEditor.Subject.VideoCollageItem(content: self.content.editorContent, frame: self.frame)
+                return MediaEditor.Subject.VideoCollageItem(
+                    content: self.content.editorContent,
+                    frame: self.frame,
+                    contentScale: self.contentScale,
+                    contentOffset: self.contentOffset
+                )
             }
             
-            public init(content: Content, frame: CGRect) {
+            public init(
+                content: Content,
+                frame: CGRect,
+                contentScale: CGFloat,
+                contentOffset: CGPoint
+            ) {
                 self.content = content
                 self.frame = frame
+                self.contentScale = contentScale
+                self.contentOffset = contentOffset
             }
         }
         
@@ -6559,7 +6778,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 save = presentationData.strings.Story_Editor_DraftKeepMedia
             }
             text = presentationData.strings.Story_Editor_DraftDiscaedText
-        case .stickerEditor, .botPreview:
+        case .stickerEditor, .botPreview, .avatarEditor:
             title = presentationData.strings.Story_Editor_DraftDiscardMedia
             text = presentationData.strings.Story_Editor_DiscardText
         }
@@ -7063,7 +7282,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let image = mediaEditor.resultImage {
                 self.saveDraft(id: randomId)
                 
-                makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, values: mediaEditor.values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
+                var values = mediaEditor.values
+                var outputDimensions: CGSize?
+                if case .avatarEditor = self.mode {
+                    outputDimensions = CGSize(width: 640.0, height: 640.0)
+                    values = values.withUpdatedQualityPreset(.profile)
+                }
+                makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: outputDimensions, values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
                         Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
                         self.completion(MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
@@ -7649,7 +7874,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             case .addToStickerPack, .createStickerPack:
                                 if let (packReference, packTitle) = packReferenceAndTitle, let navigationController = self.navigationController as? NavigationController {
                                     Queue.mainQueue().after(0.2) {
-                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
+                                        let controller = self.context.sharedContext.makeStickerPackScreen(context: self.context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], actionTitle: nil, isEditing: false, expandIfNeeded: true, parentNavigationController: navigationController, sendSticker: self.sendSticker, actionPerformed: nil)
                                         (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root))
                                         
                                         Queue.mainQueue().after(0.1) {
@@ -7865,7 +8090,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let videoExport = MediaEditorVideoExport(postbox: self.context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: outputPath, textScale: 2.0)
                 self.videoExport = videoExport
                                 
-                self.exportDisposable.set((videoExport.status
+                let status: Signal<MediaEditorVideoExport.ExportStatus, NoError> = .single(.progress(0.0))
+                |> then(videoExport.status)
+            
+                self.exportDisposable.set((status
                 |> deliverOnMainQueue).start(next: { [weak self] status in
                     if let self {
                         switch status {

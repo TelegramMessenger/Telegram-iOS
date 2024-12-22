@@ -1122,13 +1122,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         if data.messageActions.options.contains(.sendGift) {
-            //TODO:localize
             let sendGiftTitle: String
             if message.effectivelyIncoming(context.account.peerId) {
                 let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
-                sendGiftTitle = "Send Gift to \(peerName)"
+                sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendGiftTo(peerName).string
             } else {
-                sendGiftTitle = "Send Another Gift"
+                sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendAnotherGift
             }
             actions.append(.action(ContextMenuActionItem(text: sendGiftTitle, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.actionSheet.primaryTextColor)

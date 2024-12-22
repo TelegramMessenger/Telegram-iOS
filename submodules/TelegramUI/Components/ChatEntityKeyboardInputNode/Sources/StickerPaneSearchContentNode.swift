@@ -10,7 +10,6 @@ import PresentationDataUtils
 import LegacyComponents
 import MergeLists
 import AccountContext
-import StickerPackPreviewUI
 import StickerPeekUI
 import Emoji
 import AppBundle
@@ -19,6 +18,7 @@ import UndoUI
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import ChatPresentationInterfaceState
+import StickerResources
 
 private enum StickerSearchEntryId: Equatable, Hashable {
     case sticker(String?, Int64)
@@ -224,13 +224,25 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
                 
-                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: (presentationData, .single(presentationData)), mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: stickerActionTitle, parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
-                    if let strongSelf = self {
-                        return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
-                    } else {
-                        return false
-                    }
-                })
+                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(
+                    context: strongSelf.context,
+                    updatedPresentationData: (presentationData, .single(presentationData)),
+                    mainStickerPack: packReference,
+                    stickerPacks: [packReference],
+                    loadedStickerPacks: [],
+                    actionTitle: stickerActionTitle,
+                    isEditing: false,
+                    expandIfNeeded: false,
+                    parentNavigationController: strongSelf.interaction.getNavigationController(),
+                    sendSticker: { [weak self] fileReference, sourceView, sourceRect in
+                        if let strongSelf = self {
+                            return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceView, sourceRect, nil, [])
+                        } else {
+                            return false
+                        }
+                    },
+                    actionPerformed: nil
+                )
                 strongSelf.interaction.presentController(controller, nil)
             }
         }, install: { [weak self] info, items, install in

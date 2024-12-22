@@ -11,21 +11,29 @@ import EmojiTextAttachmentView
 import TextFormat
 
 public final class PremiumPeerShortcutComponent: Component {
+    public enum IconPosition {
+        case left
+        case right
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let peer: EnginePeer
     let icon: TelegramMediaFile?
+    let iconPosition: IconPosition
 
     public init(
         context: AccountContext,
         theme: PresentationTheme,
         peer: EnginePeer,
-        icon: TelegramMediaFile? = nil
+        icon: TelegramMediaFile? = nil,
+        iconPosition: IconPosition = .right
     ) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.icon = icon
+        self.iconPosition = iconPosition
     }
 
     public static func ==(lhs: PremiumPeerShortcutComponent, rhs: PremiumPeerShortcutComponent) -> Bool {
@@ -36,6 +44,9 @@ public final class PremiumPeerShortcutComponent: Component {
             return false
         }
         if lhs.peer != rhs.peer {
+            return false
+        }
+        if lhs.iconPosition != rhs.iconPosition {
             return false
         }
         return true
@@ -91,18 +102,18 @@ public final class PremiumPeerShortcutComponent: Component {
                 containerSize: CGSize(width: availableSize.width - 50.0, height: availableSize.height)
             )
             
+            let iconSize = CGSize(width: 20.0, height: 20.0)
+            let iconSpacing: CGFloat = 2.0
             var size = CGSize(width: 30.0 + textSize.width + 20.0, height: 32.0)
             if let view = self.text.view {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                let textFrame = CGRect(origin: CGPoint(x: 38.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+                let textFrame = CGRect(origin: CGPoint(x: component.iconPosition == .left ? 38.0 + iconSize.width + iconSpacing : 38.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
                 view.frame = textFrame
             }
             
             if let icon = component.icon {
-                let iconSize = CGSize(width: 20.0, height: 20.0)
-                let iconSpacing: CGFloat = 2.0
                 let animationLayer: InlineStickerItemLayer
                 if let current = self.animationLayer {
                     animationLayer = current
@@ -132,7 +143,7 @@ public final class PremiumPeerShortcutComponent: Component {
                     self.layer.addSublayer(animationLayer)
                     self.animationLayer = animationLayer
                 }
-                animationLayer.frame = CGRect(origin: CGPoint(x: size.width - 7.0, y: floorToScreenPixels((size.height - iconSize.height) / 2.0)), size: iconSize)
+                animationLayer.frame = CGRect(origin: CGPoint(x: component.iconPosition == .left ? 38.0 : size.width - 7.0, y: floorToScreenPixels((size.height - iconSize.height) / 2.0)), size: iconSize)
                 size.width += iconSize.width + iconSpacing
             } else if let animationLayer = self.animationLayer  {
                 self.animationLayer = nil

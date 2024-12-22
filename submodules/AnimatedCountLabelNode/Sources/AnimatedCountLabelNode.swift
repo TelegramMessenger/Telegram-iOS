@@ -85,7 +85,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
         super.init()
     }
     
-    public func asyncLayout() -> (CGSize, [Segment]) -> (Layout, (Bool) -> Void) {
+    public func asyncLayout() -> (CGSize, UIEdgeInsets, [Segment]) -> (Layout, (Bool) -> Void) {
         var segmentLayouts: [ResolvedSegment.Key: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = [:]
         let wasEmpty = self.resolvedSegments.isEmpty
         for (segmentKey, segmentAndTextNode) in self.resolvedSegments {
@@ -94,7 +94,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
         let reverseAnimationDirection = self.reverseAnimationDirection
         let alwaysOneDirection = self.alwaysOneDirection
         
-        return { [weak self] size, initialSegments in
+        return { [weak self] size, insets, initialSegments in
             var segments: [ResolvedSegment] = []
             loop: for segment in initialSegments {
                 switch segment {
@@ -165,7 +165,7 @@ public class AnimatedCountLabelNode: ASDisplayNode {
                     transition = .immediate
                 }
                 
-                var currentOffset = CGPoint()
+                var currentOffset = CGPoint(x: insets.left, y: 0.0)
                 for segment in segments {
                     var animation: (CGFloat, Double)?
                     if let (currentSegment, currentTextNode) = strongSelf.resolvedSegments[segment.key] {
@@ -254,12 +254,14 @@ public final class ImmediateAnimatedCountLabelNode: AnimatedCountLabelNode {
     public var segments: [AnimatedCountLabelNode.Segment] = []
     
     private var constrainedSize: CGSize?
+    private var insets: UIEdgeInsets?
     
-    public func updateLayout(size: CGSize, animated: Bool) -> CGSize {
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets = .zero, animated: Bool) -> CGSize {
         self.constrainedSize = size
+        self.insets = insets
         
         let makeLayout = self.asyncLayout()
-        let (layout, apply) = makeLayout(size, self.segments)
+        let (layout, apply) = makeLayout(size, insets, self.segments)
         let _ = apply(animated)
         return layout.size
     }
@@ -282,8 +284,8 @@ public final class ImmediateAnimatedCountLabelNode: AnimatedCountLabelNode {
                 }
             }
         }
-        if let constrainedSize = self.constrainedSize {
-            let _ = node.updateLayout(size: constrainedSize, animated: false)
+        if let constrainedSize = self.constrainedSize, let insets = self.insets {
+            let _ = node.updateLayout(size: constrainedSize, insets: insets, animated: false)
         }
         return node
     }

@@ -184,8 +184,11 @@ public final class MediaEditorVideoExport {
     private var reader: AVAssetReader?
     private var videoOutput: AVAssetReaderOutput?
     private var textureRotation: TextureRotation = .rotate0Degrees
-    private var videoRect: CGRect?
     private var frameRate: Float?
+    
+    private var mainVideoRect: CGRect?
+    private var mainVideoScale: CGFloat = 1.0
+    private var mainVideoOffset: CGPoint = .zero
     
     class VideoOutput {
         enum Output {
@@ -194,6 +197,8 @@ public final class MediaEditorVideoExport {
         }
         let output: Output
         let rect: CGRect?
+        let scale: CGFloat
+        let offset: CGPoint
         let textureRotation: TextureRotation
         let duration: Double
         let frameRate: Float
@@ -202,6 +207,8 @@ public final class MediaEditorVideoExport {
         init(
             output: Output,
             rect: CGRect?,
+            scale: CGFloat,
+            offset: CGPoint,
             textureRotation: TextureRotation,
             duration: Double,
             frameRate: Float,
@@ -209,6 +216,8 @@ public final class MediaEditorVideoExport {
         ) {
             self.output = output
             self.rect = rect
+            self.scale = scale
+            self.offset = offset
             self.textureRotation = textureRotation
             self.duration = duration
             self.frameRate = frameRate
@@ -275,8 +284,8 @@ public final class MediaEditorVideoExport {
     }
     
     enum Input {
-        case image(image: UIImage, rect: CGRect?)
-        case video(asset: AVAsset, rect: CGRect?, rotation: TextureRotation, duration: Double, trimRange: Range<Double>?, offset: Double?, volume: CGFloat?)
+        case image(image: UIImage, rect: CGRect?, scale: CGFloat, offset: CGPoint)
+        case video(asset: AVAsset, rect: CGRect?, scale: CGFloat, offset: CGPoint, rotation: TextureRotation, duration: Double, trimRange: Range<Double>?, trimOffset: Double?, volume: CGFloat?)
         case sticker(TelegramMediaFile)
         
         var isVideo: Bool {
@@ -293,19 +302,23 @@ public final class MediaEditorVideoExport {
         var signals: [Signal<Input, NoError>] = []
         
         var mainRect: CGRect?
+        var mainScale: CGFloat = 1.0
+        var mainOffset: CGPoint = .zero
         var additionalAsset: AVAsset?
         if !self.configuration.values.collage.isEmpty {
             for item in self.configuration.values.collage {
                 switch item.content {
                 case .main:
                     mainRect = item.frame
+                    mainScale = item.contentScale
+                    mainOffset = item.contentOffset
                 case let .imageFile(path):
                     if let image = UIImage(contentsOfFile: path) {
-                        signals.append(.single(.image(image: image, rect: item.frame)))
+                        signals.append(.single(.image(image: image, rect: item.frame, scale: item.contentScale, offset: item.contentOffset)))
                     }
                 case let .videoFile(path):
                     let asset = AVURLAsset(url: URL(fileURLWithPath: path))
-                    signals.append(.single(.video(asset: asset, rect: item.frame, rotation: textureRotatonForAVAsset(asset, mirror: false), duration: asset.duration.seconds, trimRange: item.videoTrimRange, offset: item.videoOffset, volume: item.videoVolume)))
+                    signals.append(.single(.video(asset: asset, rect: item.frame, scale: item.contentScale, offset: item.contentOffset, rotation: textureRotatonForAVAsset(asset, mirror: false), duration: asset.duration.seconds, trimRange: item.videoTrimRange, trimOffset: item.videoOffset, volume: item.videoVolume)))
                 case let .asset(localIdentifier, _):
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
                     if fetchResult.count != 0 {
@@ -321,7 +334,7 @@ public final class MediaEditorVideoExport {
                                     subscriber.putCompletion()
                                     return
                                 }
-                                subscriber.putNext(.video(asset: avAsset, rect: item.frame, rotation: textureRotatonForAVAsset(avAsset, mirror: false), duration: avAsset.duration.seconds, trimRange: item.videoTrimRange, offset: item.videoOffset, volume: item.videoVolume))
+                                subscriber.putNext(.video(asset: avAsset, rect: item.frame, scale: item.contentScale, offset: item.contentOffset, rotation: textureRotatonForAVAsset(avAsset, mirror: false), duration: avAsset.duration.seconds, trimRange: item.videoTrimRange, trimOffset: item.videoOffset, volume: item.videoVolume))
                                 subscriber.putCompletion()
                             })
                             
@@ -335,7 +348,7 @@ public final class MediaEditorVideoExport {
         } else if let additionalPath = self.configuration.values.additionalVideoPath {
             let asset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
             additionalAsset = asset
-            signals = [.single(.video(asset: asset, rect: nil, rotation: textureRotatonForAVAsset(asset, mirror: true), duration: asset.duration.seconds, trimRange: nil, offset: nil, volume: nil))]
+            signals = [.single(.video(asset: asset, rect: nil, scale: 1.0, offset: .zero, rotation: textureRotatonForAVAsset(asset, mirror: true), duration: asset.duration.seconds, trimRange: nil, trimOffset: nil, volume: nil))]
         }
 
         var audioAsset: AVAsset?
@@ -349,10 +362,10 @@ public final class MediaEditorVideoExport {
         switch self.subject {
         case let .video(asset, isStoryValue):
             mainAsset = asset
-            mainInput = .video(asset: asset, rect: mainRect, rotation: textureRotatonForAVAsset(asset), duration: asset.duration.seconds, trimRange: nil, offset: nil, volume: nil)
+            mainInput = .video(asset: asset, rect: mainRect, scale: mainScale, offset: mainOffset, rotation: textureRotatonForAVAsset(asset), duration: asset.duration.seconds, trimRange: nil, trimOffset: nil, volume: nil)
             isStory = isStoryValue
         case let .image(image):
-            mainInput = .image(image: image, rect: nil)
+            mainInput = .image(image: image, rect: nil, scale: 1.0, offset: .zero)
         case let .sticker(file):
             mainInput = .sticker(file)
         }
@@ -436,8 +449,8 @@ public final class MediaEditorVideoExport {
         }
                 
         enum AdditionalTrack {
-            case image(image: UIImage, rect: CGRect?)
-            case video(track: AVMutableCompositionTrack, rect: CGRect?, rotation: TextureRotation, duration: Double, frameRate: Float, startTime: CMTime?)
+            case image(image: UIImage, rect: CGRect?, scale: CGFloat, offset: CGPoint)
+            case video(track: AVMutableCompositionTrack, rect: CGRect?, scale: CGFloat, offset: CGPoint, rotation: TextureRotation, duration: Double, frameRate: Float, startTime: CMTime?)
         }
         
         func frameRate(for track: AVCompositionTrack) -> Float {
@@ -471,8 +484,10 @@ public final class MediaEditorVideoExport {
             }
             
             var readerRange = wholeRange
-            if case let .video(asset, rect, rotation, _, _, _, _) = main {
-                self.videoRect = rect
+            if case let .video(asset, rect, scale, offset, rotation, _, _, _, _) = main {
+                self.mainVideoRect = rect
+                self.mainVideoScale = scale
+                self.mainVideoOffset = offset
                 self.textureRotation = rotation
                 if let videoAssetTrack = asset.tracks(withMediaType: .video).first {
                     if let compositionTrack = composition?.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
@@ -502,15 +517,15 @@ public final class MediaEditorVideoExport {
             if !self.configuration.values.collage.isEmpty {
                 for input in additional {
                     switch input {
-                    case let .image(image, rect):
-                        additionalTracks.append(.image(image: image, rect: rect))
-                    case let .video(asset, rect, rotation, duration, trimRange, offset, volume):
-                        let startTime = videoStartTime(trimRange: trimRange, offset: offset)
+                    case let .image(image, rect, scale, offset):
+                        additionalTracks.append(.image(image: image, rect: rect, scale: scale, offset: offset))
+                    case let .video(asset, rect, scale, offset, rotation, duration, trimRange, trimOffset, volume):
+                        let startTime = videoStartTime(trimRange: trimRange, offset: trimOffset)
                         let timeRange = clampedRange(trackDuration: asset.duration, trackTrimRange: videoTimeRange(trimRange: trimRange), trackStart: startTime, maxDuration: readerRange.end)
                         
                         if let videoAssetTrack = asset.tracks(withMediaType: .video).first {
                             if let compositionTrack = composition?.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
-                                additionalTracks.append(.video(track: compositionTrack, rect: rect, rotation: rotation, duration: duration, frameRate: frameRate(for: compositionTrack), startTime: startTime))
+                                additionalTracks.append(.video(track: compositionTrack, rect: rect, scale: scale, offset: offset, rotation: rotation, duration: duration, frameRate: frameRate(for: compositionTrack), startTime: startTime))
                                 
                                 compositionTrack.preferredTransform = videoAssetTrack.preferredTransform
                                 
@@ -533,7 +548,7 @@ public final class MediaEditorVideoExport {
                         break
                     }
                 }
-            } else if let additional = additional.first, case let .video(asset, _, rotation, duration, _, _, _) = additional {
+            } else if let additional = additional.first, case let .video(asset, _, _, _, rotation, duration, _, _, _) = additional {
                 let startTime: CMTime
                 let timeRange: CMTimeRange
                 if mainVideoTrack == nil {
@@ -546,7 +561,7 @@ public final class MediaEditorVideoExport {
                 
                 if let videoAssetTrack = asset.tracks(withMediaType: .video).first {
                     if let compositionTrack = composition?.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) {
-                        additionalTracks.append(.video(track: compositionTrack, rect: nil, rotation: rotation, duration: duration, frameRate: frameRate(for: compositionTrack), startTime: self.configuration.additionalVideoStartTime))
+                        additionalTracks.append(.video(track: compositionTrack, rect: nil, scale: 1.0, offset: .zero, rotation: rotation, duration: duration, frameRate: frameRate(for: compositionTrack), startTime: self.configuration.additionalVideoStartTime))
                         
                         compositionTrack.preferredTransform = videoAssetTrack.preferredTransform
                         
@@ -644,16 +659,18 @@ public final class MediaEditorVideoExport {
             var additionalIndex = 0
             for track in additionalTracks {
                 switch track {
-                case let .image(image, rect):
+                case let .image(image, rect, scale, offset):
                     self.additionalVideoOutput[additionalIndex] = VideoOutput(
                         output: .image(image),
                         rect: rect,
+                        scale: scale,
+                        offset: offset,
                         textureRotation: .rotate0Degrees,
                         duration: 0.0,
                         frameRate: 0.0,
                         startTime: .zero
                     )
-                case let .video(track, rect, rotation, duration, frameRate, startTime):
+                case let .video(track, rect, scale, offset, rotation, duration, frameRate, startTime):
                     let videoOutput = AVAssetReaderTrackOutput(track: track, outputSettings: outputSettings)
                     videoOutput.alwaysCopiesSampleData = true
                     if reader.canAdd(videoOutput) {
@@ -666,6 +683,8 @@ public final class MediaEditorVideoExport {
                     self.additionalVideoOutput[additionalIndex] = VideoOutput(
                         output: .videoOutput(videoOutput),
                         rect: rect,
+                        scale: scale,
+                        offset: offset,
                         textureRotation: rotation,
                         duration: duration,
                         frameRate: frameRate,
@@ -740,11 +759,16 @@ public final class MediaEditorVideoExport {
                     if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
                         let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
                         mainTimestamp = timestamp
-                        mainInput = .videoBuffer(VideoPixelBuffer(
-                            pixelBuffer: pixelBuffer,
-                            rotation: self.textureRotation,
-                            timestamp: timestamp
-                        ), self.videoRect)
+                        mainInput = .videoBuffer(
+                            VideoPixelBuffer(
+                                pixelBuffer: pixelBuffer,
+                                rotation: self.textureRotation,
+                                timestamp: timestamp
+                            ),
+                            self.mainVideoRect,
+                            self.mainVideoScale,
+                            self.mainVideoOffset
+                        )
                                                 
                         if let duration = self.durationValue {
                             let startTime = self.reader?.timeRange.start.seconds ?? 0.0
@@ -767,11 +791,18 @@ public final class MediaEditorVideoExport {
                             if case let .videoOutput(videoOutput) = additionalVideoOutput.output {
                                 if let _ = videoOutput.copyNextSampleBuffer(), let sampleBuffer = videoOutput.copyNextSampleBuffer() {
                                     if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
-                                        additionalInput.append(.videoBuffer(VideoPixelBuffer(
-                                            pixelBuffer: pixelBuffer,
-                                            rotation: additionalVideoOutput.textureRotation,
-                                            timestamp: .zero
-                                        ), additionalVideoOutput.rect))
+                                        additionalInput.append(
+                                            .videoBuffer(
+                                                VideoPixelBuffer(
+                                                    pixelBuffer: pixelBuffer,
+                                                    rotation: additionalVideoOutput.textureRotation,
+                                                    timestamp: .zero
+                                                ),
+                                                additionalVideoOutput.rect,
+                                                additionalVideoOutput.scale,
+                                                additionalVideoOutput.offset
+                                            )
+                                        )
                                     } else {
                                         additionalInput.append(nil)
                                     }
@@ -792,17 +823,33 @@ public final class MediaEditorVideoExport {
                             switch additionalVideoOutput.output {
                             case let .image(image):
                                 if let texture = self.composer?.textureForImage(index: i, image: image) {
-                                    additionalInput.append(.texture(texture, .zero, false, additionalVideoOutput.rect))
+                                    additionalInput.append(
+                                        .texture(
+                                            texture,
+                                            .zero,
+                                            false,
+                                            additionalVideoOutput.rect,
+                                            additionalVideoOutput.scale,
+                                            additionalVideoOutput.offset
+                                        )
+                                    )
                                 }
                             case let .videoOutput(videoOutput):
                                 if let sampleBuffer = videoOutput.copyNextSampleBuffer() {
                                    if let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) {
                                        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-                                       additionalInput.append(.videoBuffer(VideoPixelBuffer(
-                                           pixelBuffer: pixelBuffer,
-                                           rotation: additionalVideoOutput.textureRotation,
-                                           timestamp: timestamp
-                                       ), additionalVideoOutput.rect))
+                                       additionalInput.append(
+                                            .videoBuffer(
+                                                VideoPixelBuffer(
+                                                    pixelBuffer: pixelBuffer,
+                                                    rotation: additionalVideoOutput.textureRotation,
+                                                    timestamp: timestamp
+                                                ),
+                                                additionalVideoOutput.rect,
+                                                additionalVideoOutput.scale,
+                                                additionalVideoOutput.offset
+                                            )
+                                       )
                                        
                                        if !updatedProgress, let duration = self.durationValue {
                                            let startTime = self.reader?.timeRange.start.seconds ?? 0.0
@@ -830,7 +877,7 @@ public final class MediaEditorVideoExport {
             
             
             if case let .image(image) = self.subject, let texture = self.composer?.textureForImage(index: -1, image: image) {
-                mainInput = .texture(texture, self.imageArguments?.position ?? .zero, imageHasTransparency(image), nil)
+                mainInput = .texture(texture, self.imageArguments?.position ?? .zero, imageHasTransparency(image), nil, 1.0, .zero)
                 
                 if !updatedProgress, let imageArguments = self.imageArguments, let duration = self.durationValue {
                     let progress = imageArguments.position.seconds / duration.seconds

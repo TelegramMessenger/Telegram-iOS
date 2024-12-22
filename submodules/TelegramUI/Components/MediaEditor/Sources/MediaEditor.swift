@@ -119,6 +119,7 @@ public final class MediaEditor {
     public enum Mode {
         case `default`
         case sticker
+        case avatar
     }
     
     public enum Subject {
@@ -130,6 +131,8 @@ public final class MediaEditor {
             }
             public let content: Content
             public let frame: CGRect
+            public let contentScale: CGFloat
+            public let contentOffset: CGPoint
             
             var isVideo: Bool {
                 return self.duration > 0.0
@@ -146,9 +149,16 @@ public final class MediaEditor {
                 }
             }
             
-            public init(content: Content, frame: CGRect) {
+            public init(
+                content: Content,
+                frame: CGRect,
+                contentScale: CGFloat,
+                contentOffset: CGPoint
+            ) {
                 self.content = content
                 self.frame = frame
+                self.contentScale = contentScale
+                self.contentOffset = contentOffset
             }
         }
         
@@ -599,7 +609,7 @@ public final class MediaEditor {
             self.renderer.videoFinishPass.additionalTextureRotation = .rotate0DegreesMirrored
         }
         let hasTransparency = imageHasTransparency(image)
-        self.renderer.consume(main: .texture(texture, time, hasTransparency, nil), additionals: additionalTexture.flatMap { [.texture($0, time, false, nil)] } ?? [], render: true, displayEnabled: false)
+        self.renderer.consume(main: .texture(texture, time, hasTransparency, nil, 1.0, .zero), additionals: additionalTexture.flatMap { [.texture($0, time, false, nil, 1.0, .zero)] } ?? [], render: true, displayEnabled: false)
     }
     
     private func setupSource(andPlay: Bool) {
@@ -619,6 +629,8 @@ public final class MediaEditor {
             let stickerEntity: MediaEditorComposerStickerEntity?
             let playerIsReference: Bool
             let rect: CGRect?
+            let scale: CGFloat
+            let offset: CGPoint
             let gradientColors: GradientColors
             
             init(
@@ -628,6 +640,8 @@ public final class MediaEditor {
                 stickerEntity: MediaEditorComposerStickerEntity? = nil,
                 playerIsReference: Bool = false,
                 rect: CGRect? = nil,
+                scale: CGFloat = 1.0,
+                offset: CGPoint = .zero,
                 gradientColors: GradientColors
             ) {
                 self.image = image
@@ -636,11 +650,13 @@ public final class MediaEditor {
                 self.stickerEntity = stickerEntity
                 self.playerIsReference = playerIsReference
                 self.rect = rect
+                self.scale = scale
+                self.offset = offset
                 self.gradientColors = gradientColors
             }
         }
                 
-        func textureSourceResult(for asset: AVAsset, gradientColors: GradientColors? = nil, rect: CGRect? = nil) -> Signal<TextureSourceResult, NoError> {
+        func textureSourceResult(for asset: AVAsset, gradientColors: GradientColors? = nil, rect: CGRect? = nil, scale: CGFloat = 1.0, offset: CGPoint = .zero) -> Signal<TextureSourceResult, NoError> {
             return Signal { [weak self] subscriber in
                 guard let self else {
                     subscriber.putCompletion()
@@ -648,7 +664,13 @@ public final class MediaEditor {
                 }
                 let player = self.makePlayer(asset: asset)
                 if let gradientColors {
-                    subscriber.putNext(TextureSourceResult(player: player, rect: rect, gradientColors: gradientColors))
+                    subscriber.putNext(TextureSourceResult(
+                        player: player,
+                        rect: rect,
+                        scale: scale,
+                        offset: offset,
+                        gradientColors: gradientColors
+                    ))
                     subscriber.putCompletion()
                     return EmptyDisposable
                 } else {
@@ -657,7 +679,13 @@ public final class MediaEditor {
                     imageGenerator.maximumSize = CGSize(width: 72, height: 128)
                     imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
                         let gradientColors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
-                        subscriber.putNext(TextureSourceResult(player: player, rect: rect, gradientColors: gradientColors))
+                        subscriber.putNext(TextureSourceResult(
+                            player: player,
+                            rect: rect,
+                            scale: scale,
+                            offset: offset,
+                            gradientColors: gradientColors
+                        ))
                         subscriber.putCompletion()
                     }
                     return ActionDisposable {
@@ -667,7 +695,7 @@ public final class MediaEditor {
             }
         }
         
-        func textureSourceResult(for asset: PHAsset, rect: CGRect? = nil) -> Signal<TextureSourceResult, NoError> {
+        func textureSourceResult(for asset: PHAsset, rect: CGRect? = nil, scale: CGFloat = 1.0, offset: CGPoint = .zero) -> Signal<TextureSourceResult, NoError> {
             return Signal { [weak self] subscriber in
                 let isVideo = asset.mediaType == .video
                                 
@@ -700,6 +728,8 @@ public final class MediaEditor {
                                             TextureSourceResult(
                                                 player: player,
                                                 rect: rect,
+                                                scale: scale,
+                                                offset: offset,
                                                 gradientColors: mediaEditorGetGradientColors(from: image)
                                             )
                                         )
@@ -712,6 +742,8 @@ public final class MediaEditor {
                                         TextureSourceResult(
                                             image: image,
                                             rect: rect,
+                                            scale: scale,
+                                            offset: offset,
                                             gradientColors: mediaEditorGetGradientColors(from: image)
                                         )
                                     )
@@ -764,9 +796,9 @@ public final class MediaEditor {
                 switch longestItem.content {
                 case let .video(path, _):
                     let asset = AVURLAsset(url: URL(fileURLWithPath: path))
-                    textureSource = textureSourceResult(for: asset, rect: longestItem.frame)
+                    textureSource = textureSourceResult(for: asset, rect: longestItem.frame, scale: longestItem.contentScale, offset: longestItem.contentOffset)
                 case let .asset(asset):
-                    textureSource = textureSourceResult(for: asset, rect: longestItem.frame)
+                    textureSource = textureSourceResult(for: asset, rect: longestItem.frame, scale: longestItem.contentScale, offset: longestItem.contentOffset)
                 default:
                     textureSource = .complete()
                 }
@@ -838,9 +870,9 @@ public final class MediaEditor {
                             
                 if let image = textureSourceResult.image {
                     if self.values.nightTheme, let nightImage = textureSourceResult.nightImage {
-                        textureSource.setMainInput(.image(nightImage, nil))
+                        textureSource.setMainInput(.image(nightImage, nil, 1.0, .zero))
                     } else {
-                        textureSource.setMainInput(.image(image, nil))
+                        textureSource.setMainInput(.image(image, nil, 1.0, .zero))
                     }
                     
                     if case .sticker = self.mode {
@@ -880,10 +912,10 @@ public final class MediaEditor {
                     }
                 }
                 if let player = self.player, let playerItem = player.currentItem, !textureSourceResult.playerIsReference {
-                    textureSource.setMainInput(.video(playerItem, textureSourceResult.rect))
+                    textureSource.setMainInput(.video(playerItem, textureSourceResult.rect, textureSourceResult.scale, textureSourceResult.offset))
                 }
                 if self.values.collage.isEmpty, let additionalPlayer = self.additionalPlayers.first, let playerItem = additionalPlayer.currentItem {
-                    textureSource.setAdditionalInputs([.video(playerItem, nil)])
+                    textureSource.setAdditionalInputs([.video(playerItem, nil, 1.0, .zero)])
                 }
                 if let entity = textureSourceResult.stickerEntity {
                     textureSource.setMainInput(.entity(entity))
@@ -898,7 +930,7 @@ public final class MediaEditor {
                 switch self.mode {
                 case .default:
                     self.setGradientColors(textureSourceResult.gradientColors)
-                case .sticker:
+                case .sticker, .avatar:
                     self.setGradientColors(GradientColors(top: .clear, bottom: .clear))
                 }
                 
@@ -1202,9 +1234,9 @@ public final class MediaEditor {
         
         if let textureSource = self.renderer.textureSource as? UniversalTextureSource {
             if nightTheme {
-                textureSource.setMainInput(.image(nightImage, nil))
+                textureSource.setMainInput(.image(nightImage, nil, 1.0, .zero))
             } else {
-                textureSource.setMainInput(.image(dayImage, nil))
+                textureSource.setMainInput(.image(dayImage, nil, 1.0, .zero))
             }
         }
     }
@@ -1220,6 +1252,10 @@ public final class MediaEditor {
     }
     
     public var onPlaybackAction: (PlaybackAction) -> Void = { _ in }
+    
+    public var currentPosition: CMTime {
+        return self.player?.currentTime() ?? .zero
+    }
     
     private var initialSeekPosition: Double?
     private var targetTimePosition: (CMTime, Bool)?
@@ -1716,6 +1752,8 @@ public final class MediaEditor {
             let item = MediaEditorValues.VideoCollageItem(
                 content: content,
                 frame: item.frame,
+                contentScale: item.contentScale,
+                contentOffset: item.contentOffset,
                 videoTrimRange: 0 ..< item.duration,
                 videoOffset: nil,
                 videoVolume: passedFirstVideo ? 0.0 : nil
@@ -1736,7 +1774,9 @@ public final class MediaEditor {
         }
         
         if mainVideoIsMuted {
-            self.setVideoVolume(0.0)
+            Queue.mainQueue().after(0.3) {
+                self.setVideoVolume(0.0)
+            }
         }
                 
         self.setupAdditionalVideoPlayback()
@@ -1795,13 +1835,13 @@ public final class MediaEditor {
                     break
                 case let .imageFile(path):
                     if let image = UIImage(contentsOfFile: path) {
-                        signals.append(.single((.image(image, item.frame), nil, nil)))
+                        signals.append(.single((.image(image, item.frame, item.contentScale, item.contentOffset), nil, nil)))
                     }
                 case let .videoFile(path):
                     let asset = AVURLAsset(url: URL(fileURLWithPath: path))
                     let player = self.makePlayer(asset: asset)
                     if let playerItem = player.currentItem {
-                        signals.append(.single((.video(playerItem, item.frame), player, item.videoVolume)))
+                        signals.append(.single((.video(playerItem, item.frame, item.contentScale, item.contentOffset), player, item.videoVolume)))
                     }
                 case let .asset(localIdentifier, _):
                     let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
@@ -1819,7 +1859,7 @@ public final class MediaEditor {
                                 }
                                 let player = self.makePlayer(asset: avAsset)
                                 if let playerItem = player.currentItem {
-                                    subscriber.putNext((.video(playerItem, item.frame), player, item.videoVolume))
+                                    subscriber.putNext((.video(playerItem, item.frame, item.contentScale, item.contentOffset), player, item.videoVolume))
                                 }
                                 subscriber.putCompletion()
                             })
@@ -1890,7 +1930,7 @@ public final class MediaEditor {
             self.additionalPlayersPromise.set(.single([player]))
             self.additionalPlayerAudioMixes = [audioMix]
             
-            (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInputs([.video(playerItem, nil)])
+            (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInputs([.video(playerItem, nil, 1.0, .zero)])
         }
     }
     

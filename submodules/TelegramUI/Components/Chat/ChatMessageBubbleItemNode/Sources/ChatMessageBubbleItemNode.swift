@@ -228,10 +228,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageJoinedChannelBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                     needReactions = false
                 } else {
-                    switch action.action {
-                    case .photoUpdated:
-                        break
-                    default:
+                    if !canAddMessageReactions(message: message) {
                         needReactions = false
                     }
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
@@ -2717,7 +2714,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             var maximumNodeWidth = maximumNodeWidth
             if hasInstantVideo {
-                maximumNodeWidth = min(309, baseWidth - 84)
+                maximumNodeWidth = min(309.0, baseWidth - 84.0)
             }
             let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                 context: item.context,
@@ -3055,7 +3052,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let reactionButtonsFinalize = reactionButtonsFinalize {
             var maxContentWidth = maxContentWidth
             if hasInstantVideo {
-                maxContentWidth = min(310, baseWidth - 84.0)
+                maxContentWidth = min(310.0, baseWidth - 84.0)
             }
             reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
@@ -3185,7 +3182,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 shareButtonOffset: shareButtonOffset,
                 avatarOffset: avatarOffset,
                 hidesHeaders: hidesHeaders,
-                disablesComments: disablesComments
+                disablesComments: disablesComments,
+                alignment: alignment
             )
         })
     }
@@ -3244,7 +3242,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         shareButtonOffset: CGPoint?,
         avatarOffset: CGFloat?,
         hidesHeaders: Bool,
-        disablesComments: Bool
+        disablesComments: Bool,
+        alignment: ChatMessageBubbleContentAlignment
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -4367,7 +4366,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-            var reactionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? (layoutConstants.bubble.contentInsets.left + 2.0) : (layoutConstants.bubble.contentInsets.right - 2.0)), y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
+            
+            var reactionButtonsOriginX: CGFloat
+            if case .center = alignment {
+                reactionButtonsOriginX = backgroundFrame.minX + 3.0
+            } else {
+                reactionButtonsOriginX = backgroundFrame.minX + (incoming ? (layoutConstants.bubble.contentInsets.left + 2.0) : (layoutConstants.bubble.contentInsets.right - 2.0))
+            }
+            var reactionButtonsFrame = CGRect(origin: CGPoint(x: reactionButtonsOriginX, y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
             if !disablesComments && !incoming {
                 reactionButtonsFrame.origin.x = backgroundFrame.maxX - reactionButtonsSizeAndApply.0.width - layoutConstants.bubble.contentInsets.left
             }

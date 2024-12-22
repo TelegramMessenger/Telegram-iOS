@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import TelegramCore
 import Network
+import TelegramUIPreferences
 
 import TgVoip
 import TgVoipWebrtc

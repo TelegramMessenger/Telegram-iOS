@@ -1208,7 +1208,18 @@ public class AttachmentController: ViewController, MinimizableController {
     
     public var shouldMinimizeOnSwipe: ((AttachmentButtonType?) -> Bool)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, isFullSize: Bool = false, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+        chatLocation: ChatLocation?,
+        isScheduledMessages: Bool = false,
+        buttons: [AttachmentButtonType],
+        initialButton: AttachmentButtonType = .gallery,
+        fromMenu: Bool = false,
+        hasTextInput: Bool = true,
+        isFullSize: Bool = false,
+        makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil })
+    {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
