@@ -280,6 +280,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var date: Int32?
             var soldOut = false
             var nameHidden = false
+            var canUpgrade = false
             if case let .soldOutGift(gift) = component.subject {
                 animationFile = gift.file
                 stars = gift.price
@@ -303,6 +304,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 date = arguments.date
                 titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
                 nameHidden = arguments.nameHidden
+                canUpgrade = arguments.canUpgrade
             } else {
                 animationFile = nil
                 stars = 0
@@ -320,7 +322,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             #endif
                         
             var originY: CGFloat = 0.0
-            if let animationFile, !state.mockFiles.isEmpty {
+            if let animationFile {
                 let animationHeight: CGFloat
                 let animationSubject: GiftCompositionComponent.Subject
                 if state.isUpgradedMock {
@@ -993,7 +995,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         ))
                     }
                     
-                    if !soldOut {
+                    if !soldOut && canUpgrade {
                         //TODO:localize
                         var items: [AnyComponentWithIdentity<Empty>] = []
                         items.append(
@@ -1369,14 +1371,14 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         case soldOutGift(StarGift.Gift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, canUpgrade: Bool)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, _, _) = action.action {
-                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, canUpgrade: false)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, gift.canUpgrade)
             case .soldOutGift:
                 return nil
             }
