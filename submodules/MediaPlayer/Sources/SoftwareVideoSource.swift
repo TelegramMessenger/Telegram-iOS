@@ -9,7 +9,7 @@ import CoreMedia
 import SwiftSignalKit
 import FFMpegBinding
 
-private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+private func SoftwareVideoSource_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<SoftwareVideoSource>.fromOpaque(userData!).takeUnretainedValue()
     if let fd = context.fd {
         let result = read(fd, buffer, Int(bufferSize))
@@ -21,7 +21,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     return FFMPEG_CONSTANT_AVERROR_EOF
 }
 
-private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+private func SoftwareVideoSource_seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
     let context = Unmanaged<SoftwareVideoSource>.fromOpaque(userData!).takeUnretainedValue()
     if let fd = context.fd {
         if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
@@ -102,7 +102,7 @@ public final class SoftwareVideoSource {
         }
         let ioBufferSize = 64 * 1024
         
-        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: SoftwareVideoSource_readPacketCallback, writePacket: nil, seek: SoftwareVideoSource_seekCallback, isSeekable: true)
         self.avIoContext = avIoContext
         
         avFormatContext.setIO(self.avIoContext!)
@@ -356,7 +356,33 @@ private final class SoftwareAudioStream {
     }
 }
 
+private func SoftwareAudioSource_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+    let context = Unmanaged<SoftwareAudioSource>.fromOpaque(userData!).takeUnretainedValue()
+    if let fd = context.fd {
+        let result = read(fd, buffer, Int(bufferSize))
+        if result == 0 {
+            return FFMPEG_CONSTANT_AVERROR_EOF
+        }
+        return Int32(result)
+    }
+    return FFMPEG_CONSTANT_AVERROR_EOF
+}
+
+private func SoftwareAudioSource_seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+    let context = Unmanaged<SoftwareAudioSource>.fromOpaque(userData!).takeUnretainedValue()
+    if let fd = context.fd {
+        if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
+            return Int64(context.size)
+        } else {
+            lseek(fd, off_t(offset), SEEK_SET)
+            return offset
+        }
+    }
+    return 0
+}
+
 public final class SoftwareAudioSource {
+    private let focusedPart: MediaStreamFocusedPart?
     private var readingError = false
     private var audioStream: SoftwareAudioStream?
     private var avIoContext: FFMpegAVIOContext?
@@ -371,8 +397,10 @@ public final class SoftwareAudioSource {
         return self.audioStream != nil
     }
     
-    public init(path: String) {
+    public init(path: String, focusedPart: MediaStreamFocusedPart?) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+        
+        self.focusedPart = focusedPart
         
         var s = stat()
         stat(path, &s)
@@ -391,7 +419,7 @@ public final class SoftwareAudioSource {
         
         let ioBufferSize = 64 * 1024
         
-        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: SoftwareAudioSource_readPacketCallback, writePacket: nil, seek: SoftwareAudioSource_seekCallback, isSeekable: true)
         self.avIoContext = avIoContext
         
         avFormatContext.setIO(self.avIoContext!)
@@ -438,8 +466,12 @@ public final class SoftwareAudioSource {
         
         self.audioStream = audioStream
         
-        if let audioStream = self.audioStream {
-            avFormatContext.seekFrame(forStreamIndex: Int32(audioStream.index), pts: 0, positionOnKeyframe: false)
+        if let focusedPart = self.focusedPart {
+            avFormatContext.seekFrame(forStreamIndex: Int32(focusedPart.seekStreamIndex), pts: focusedPart.startPts.value, positionOnKeyframe: true)
+        } else {
+            if let audioStream = self.audioStream {
+                avFormatContext.seekFrame(forStreamIndex: Int32(audioStream.index), pts: 0, positionOnKeyframe: false)
+            }
         }
     }
     
@@ -462,14 +494,17 @@ public final class SoftwareAudioSource {
         }
     }
     
-    func readDecodableFrame() -> (MediaTrackDecodableFrame?, Bool) {
+    func readDecodableFrame() -> MediaTrackDecodableFrame? {
         var frames: [MediaTrackDecodableFrame] = []
-        var endOfStream = false
         
-        while !self.readingError && frames.isEmpty {
+        while !self.readingError && !self.hasReadToEnd && frames.isEmpty {
             if let packet = self.readPacketInternal() {
-                if let audioStream = audioStream, Int(packet.streamIndex) == audioStream.index {
+                if let audioStream = self.audioStream, Int(packet.streamIndex) == audioStream.index {
                     let packetPts = packet.pts
+                    
+                    if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
+                        self.hasReadToEnd = true
+                    }
                     
                     let pts = CMTimeMake(value: packetPts, timescale: audioStream.timebase.timescale)
                     let dts = CMTimeMake(value: packet.dts, timescale: audioStream.timebase.timescale)
@@ -487,21 +522,11 @@ public final class SoftwareAudioSource {
                     frames.append(frame)
                 }
             } else {
-                if endOfStream {
-                    break
-                } else {
-                    if let _ = self.avFormatContext, let _ = self.audioStream {
-                        endOfStream = true
-                        break
-                    } else {
-                        endOfStream = true
-                        break
-                    }
-                }
+                break
             }
         }
         
-        return (frames.first, endOfStream)
+        return frames.first
     }
     
     public func readFrame() -> Data? {
@@ -509,8 +534,7 @@ public final class SoftwareAudioSource {
             return nil
         }
         
-        let (decodableFrame, _) = self.readDecodableFrame()
-        if let decodableFrame = decodableFrame {
+        if let decodableFrame = self.readDecodableFrame() {
             return audioStream.decoder.decodeRaw(frame: decodableFrame)
         } else {
             return nil
@@ -523,8 +547,7 @@ public final class SoftwareAudioSource {
         }
         
         while true {
-            let (decodableFrame, _) = self.readDecodableFrame()
-            if let decodableFrame = decodableFrame {
+            if let decodableFrame = self.readDecodableFrame() {
                 if audioStream.decoder.send(frame: decodableFrame) {
                     if let result = audioStream.decoder.decode() {
                         return result.sampleBuffer
@@ -541,8 +564,7 @@ public final class SoftwareAudioSource {
             return nil
         }
         
-        let (decodableFrame, _) = self.readDecodableFrame()
-        if let decodableFrame = decodableFrame {
+        if let decodableFrame = self.readDecodableFrame() {
             return (decodableFrame.copyPacketData(), Int(decodableFrame.packet.duration))
         } else {
             return nil
@@ -557,7 +579,45 @@ public final class SoftwareAudioSource {
     }
 }
 
+public struct MediaStreamFocusedPart {
+    public let seekStreamIndex: Int
+    public let startPts: CMTime
+    public let endPts: CMTime
+    
+    public init(seekStreamIndex: Int, startPts: CMTime, endPts: CMTime) {
+        self.seekStreamIndex = seekStreamIndex
+        self.startPts = startPts
+        self.endPts = endPts
+    }
+}
+
+private func SoftwareVideoReader_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+    let context = Unmanaged<SoftwareVideoReader>.fromOpaque(userData!).takeUnretainedValue()
+    if let fd = context.fd {
+        let result = read(fd, buffer, Int(bufferSize))
+        if result == 0 {
+            return FFMPEG_CONSTANT_AVERROR_EOF
+        }
+        return Int32(result)
+    }
+    return FFMPEG_CONSTANT_AVERROR_EOF
+}
+
+private func SoftwareVideoReader_seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+    let context = Unmanaged<SoftwareVideoReader>.fromOpaque(userData!).takeUnretainedValue()
+    if let fd = context.fd {
+        if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
+            return Int64(context.size)
+        } else {
+            lseek(fd, off_t(offset), SEEK_SET)
+            return offset
+        }
+    }
+    return 0
+}
+
 final class SoftwareVideoReader {
+    private let focusedPart: MediaStreamFocusedPart?
     private var readingError = false
     private var videoStream: SoftwareVideoStream?
     private var avIoContext: FFMpegAVIOContext?
@@ -576,8 +636,10 @@ final class SoftwareVideoReader {
         return self.videoStream != nil
     }
     
-    public init(path: String, hintVP9: Bool, passthroughDecoder: Bool = false) {
+    public init(path: String, hintVP9: Bool, passthroughDecoder: Bool = false, focusedPart: MediaStreamFocusedPart?) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+        
+        self.focusedPart = focusedPart
         
         var s = stat()
         stat(path, &s)
@@ -598,7 +660,7 @@ final class SoftwareVideoReader {
         }
         let ioBufferSize = 64 * 1024
         
-        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback, isSeekable: true)
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: SoftwareVideoReader_readPacketCallback, writePacket: nil, seek: SoftwareVideoReader_seekCallback, isSeekable: true)
         self.avIoContext = avIoContext
         
         avFormatContext.setIO(self.avIoContext!)
@@ -675,8 +737,12 @@ final class SoftwareVideoReader {
         
         self.videoStream = videoStream
         
-        if let videoStream = self.videoStream {
-            avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
+        if let focusedPart = self.focusedPart {
+            avFormatContext.seekFrame(forStreamIndex: Int32(focusedPart.seekStreamIndex), pts: focusedPart.startPts.value, positionOnKeyframe: true)
+        } else {
+            if let videoStream = self.videoStream {
+                avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
+            }
         }
     }
     
@@ -708,6 +774,10 @@ final class SoftwareVideoReader {
             if let packet = self.readPacketInternal() {
                 if let videoStream = self.videoStream, Int(packet.streamIndex) == videoStream.index {
                     let packetPts = packet.pts
+                    
+                    if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
+                        self.hasReadToEnd = true
+                    }
                     
                     let pts = CMTimeMake(value: packetPts, timescale: videoStream.timebase.timescale)
                     let dts = CMTimeMake(value: packet.dts, timescale: videoStream.timebase.timescale)
@@ -784,8 +854,11 @@ final class SoftwareVideoReader {
 
 public final class FFMpegMediaInfo {
     public struct Info {
+        public let index: Int
+        public let timescale: CMTimeScale
         public let startTime: CMTime
         public let duration: CMTime
+        public let fps: CMTime
         public let codecName: String?
     }
     
@@ -863,7 +936,7 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
     
     var streamInfos: [(isVideo: Bool, info: FFMpegMediaInfo.Info)] = []
     
-    for typeIndex in 0 ..< 1 {
+    for typeIndex in 0 ..< 2 {
         let isVideo = typeIndex == 0
         
         for streamIndexNumber in avFormatContext.streamIndices(for: isVideo ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio) {
@@ -873,7 +946,7 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
             }
             
             let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
-            let (_, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
+            let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
             
             let startTime: CMTime
             let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
@@ -895,9 +968,20 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
                 codecName = "hevc"
             } else if codecId == FFMpegCodecIdAV1 {
                 codecName = "av1"
+            } else if codecId == FFMpegCodecIdVP9 {
+                codecName = "vp9"
+            } else if codecId == FFMpegCodecIdVP8 {
+                codecName = "vp8"
             }
             
-            streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo.Info(startTime: startTime, duration: duration, codecName: codecName)))
+            streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo.Info(
+                index: Int(streamIndex),
+                timescale: timebase.timescale,
+                startTime: startTime,
+                duration: duration,
+                fps: fps,
+                codecName: codecName
+            )))
         }
     }
     

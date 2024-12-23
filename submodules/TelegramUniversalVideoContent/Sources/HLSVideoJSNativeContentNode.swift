@@ -1076,7 +1076,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         var onSeeked: (() -> Void)?
         self.player = ChunkMediaPlayerV2(
             audioSessionManager: audioSessionManager,
-            partsState: self.chunkPlayerPartsState.get(),
+            source: .externalParts(self.chunkPlayerPartsState.get()),
             video: true,
             enableSound: self.enableSound,
             baseRate: baseRate,
@@ -1085,18 +1085,6 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             },
             playerNode: self.playerNode
         )
-        /*self.player = ChunkMediaPlayerImpl(
-            postbox: postbox,
-            audioSessionManager: audioSessionManager,
-            partsState: self.chunkPlayerPartsState.get(),
-            video: true,
-            enableSound: self.enableSound,
-            baseRate: baseRate,
-            onSeeked: {
-                onSeeked?()
-            },
-            playerNode: self.playerNode
-        )*/
         
         super.init()
         
@@ -1843,7 +1831,7 @@ private final class SourceBuffer {
                         let item = ChunkMediaPlayerPart(
                             startTime: fragmentInfo.startTime.seconds,
                             endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
-                            file: tempFile,
+                            content: .tempFile(ChunkMediaPlayerPart.Content.TempFile(file: tempFile)),
                             codecName: videoCodecName
                         )
                         self.items.append(item)

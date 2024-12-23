@@ -11,6 +11,7 @@ int FFMpegCodecIdH264 = AV_CODEC_ID_H264;
 int FFMpegCodecIdHEVC = AV_CODEC_ID_HEVC;
 int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
 int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
+int FFMpegCodecIdVP8 = AV_CODEC_ID_VP8;
 int FFMpegCodecIdAV1 = AV_CODEC_ID_AV1;
 
 @interface FFMpegAVFormatContext () {
@@ -70,6 +71,11 @@ int FFMpegCodecIdAV1 = AV_CODEC_ID_AV1;
     av_seek_frame(_impl, streamIndex, pts, options);
 }
 
+- (void)seekFrameForStreamIndex:(int32_t)streamIndex byteOffset:(int64_t)byteOffset {
+    int options = AVSEEK_FLAG_BYTE;
+    av_seek_frame(_impl, streamIndex, byteOffset, options);
+}
+
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet {
     int result = av_read_frame(_impl, (AVPacket *)[packet impl]);
     return result >= 0;
@@ -115,6 +121,28 @@ int FFMpegCodecIdAV1 = AV_CODEC_ID_AV1;
 
 - (int64_t)durationAtStreamIndex:(int32_t)streamIndex {
     return _impl->streams[streamIndex]->duration;
+}
+
+- (int)numberOfIndexEntriesAtStreamIndex:(int32_t)streamIndex {
+    return avformat_index_get_entries_count(_impl->streams[streamIndex]);
+}
+
+- (bool)fillIndexEntryAtStreamIndex:(int32_t)streamIndex entryIndex:(int32_t)entryIndex outEntry:(FFMpegAVIndexEntry * _Nonnull)outEntry {
+    const AVIndexEntry *entry = avformat_index_get_entry(_impl->streams[streamIndex], entryIndex);
+    if (!entry) {
+        outEntry->pos = -1;
+        outEntry->timestamp = 0;
+        outEntry->isKeyframe = false;
+        outEntry->size = 0;
+        return false;
+    }
+    
+    outEntry->pos = entry->pos;
+    outEntry->timestamp = entry->timestamp;
+    outEntry->isKeyframe = (entry->flags & AVINDEX_KEYFRAME) != 0;
+    outEntry->size = entry->size;
+    
+    return true;
 }
 
 - (bool)codecParamsAtStreamIndex:(int32_t)streamIndex toContext:(FFMpegAVCodecContext *)context {

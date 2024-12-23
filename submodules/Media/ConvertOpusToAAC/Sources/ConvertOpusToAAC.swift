@@ -10,7 +10,7 @@ public func convertOpusToAAC(sourcePath: String, allocateTempFile: @escaping () 
         
         queue.async {
             do {
-                let audioSource = SoftwareAudioSource(path: sourcePath)
+                let audioSource = SoftwareAudioSource(path: sourcePath, focusedPart: nil)
                 
                 let outputPath = allocateTempFile()
                 
