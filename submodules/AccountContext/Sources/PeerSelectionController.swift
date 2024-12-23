@@ -59,7 +59,6 @@ public final class PeerSelectionControllerParams {
     public let createNewGroup: (() -> Void)?
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
-    public let multipleSelectionLimit: Int32?
     public let forwardedMessageIds: [EngineMessage.Id]
     public let hasTypeHeaders: Bool
     public let selectForumThreads: Bool
@@ -81,7 +80,6 @@ public final class PeerSelectionControllerParams {
         createNewGroup: (() -> Void)? = nil,
         pretendPresentedInModal: Bool = false,
         multipleSelection: Bool = false,
-        multipleSelectionLimit: Int32? = nil,
         forwardedMessageIds: [EngineMessage.Id] = [],
         hasTypeHeaders: Bool = false,
         selectForumThreads: Bool = false,
@@ -102,7 +100,6 @@ public final class PeerSelectionControllerParams {
         self.createNewGroup = createNewGroup
         self.pretendPresentedInModal = pretendPresentedInModal
         self.multipleSelection = multipleSelection
-        self.multipleSelectionLimit = multipleSelectionLimit
         self.forwardedMessageIds = forwardedMessageIds
         self.hasTypeHeaders = hasTypeHeaders
         self.selectForumThreads = selectForumThreads
