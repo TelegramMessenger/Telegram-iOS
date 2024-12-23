@@ -172,7 +172,7 @@ final class GroupHeaderLayer: UIView {
                 clearSize = image.size
                 clearIconLayer.contents = image.cgImage
             }
-            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: .white) {
+            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: .black) {
                 tintClearIconLayer.contents = image.cgImage
             }
                         
@@ -215,7 +215,7 @@ final class GroupHeaderLayer: UIView {
                 stringValue = title
             }
             let string = NSAttributedString(string: stringValue, font: font, textColor: color)
-            let whiteString = NSAttributedString(string: stringValue, font: font, textColor: .white)
+            let whiteString = NSAttributedString(string: stringValue, font: font, textColor: .black)
             let stringBounds = string.boundingRect(with: CGSize(width: textConstrainedWidth, height: 18.0), options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
             textSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
             self.textLayer.contents = generateImage(textSize, opaque: false, scale: 0.0, rotatedContext: { size, context in
@@ -231,7 +231,6 @@ final class GroupHeaderLayer: UIView {
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 UIGraphicsPushContext(context)
                 
-                //whiteString.draw(in: stringBounds)
                 whiteString.draw(with: stringBounds, options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine], context: nil)
                 
                 UIGraphicsPopContext()
@@ -287,7 +286,7 @@ final class GroupHeaderLayer: UIView {
                 self.tintBadgeLayer = tintBadgeLayer
                 self.tintContentLayer.addSublayer(tintBadgeLayer)
                 
-                if let image = generateBadgeImage(color: .white) {
+                if let image = generateBadgeImage(color: .black) {
                     tintBadgeLayer.contents = image.cgImage
                 }
             }
@@ -342,7 +341,7 @@ final class GroupHeaderLayer: UIView {
                 self.tintLockIconLayer = tintLockIconLayer
                 self.tintContentLayer.addSublayer(tintLockIconLayer)
             }
-            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: .white) {
+            if let image = PresentationResourcesChat.chatEntityKeyboardLock(theme, color: .black) {
                 tintLockIconLayer.contents = image.cgImage
                 tintLockIconLayer.frame = lockIconLayer.frame
                 tintLockIconLayer.isHidden = !needsVibrancy
@@ -368,7 +367,7 @@ final class GroupHeaderLayer: UIView {
                 subtitleSize = currentSubtitleLayout.size
             } else {
                 let string = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: subtitleColor)
-                let whiteString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: .white)
+                let whiteString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: .black)
                 let stringBounds = string.boundingRect(with: CGSize(width: textConstrainedWidth, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                 subtitleSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
                 updateSubtitleContents = generateImage(subtitleSize, opaque: false, scale: 0.0, rotatedContext: { size, context in
@@ -493,7 +492,7 @@ final class GroupHeaderLayer: UIView {
                 self.tintSeparatorLayer = tintSeparatorLayer
                 self.tintContentLayer.addSublayer(tintSeparatorLayer)
             }
-            tintSeparatorLayer.backgroundColor = UIColor.white.cgColor
+            tintSeparatorLayer.backgroundColor = UIColor.black.cgColor
             tintSeparatorLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel))
             
             tintSeparatorLayer.isHidden = !needsVibrancy

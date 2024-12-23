@@ -40,7 +40,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     private let smallCircleSize: CGFloat
     
     private let backgroundView: BlurredBackgroundView
-    private(set) var vibrancyEffectView: UIVisualEffectView?
+    private let backgroundTintView: UIView
+    let backgroundTintMaskContainer: UIView
     let vibrantExpandedContentContainer: UIView
     
     private let maskLayer: SimpleLayer
@@ -58,7 +59,10 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.largeCircleSize = largeCircleSize
         self.smallCircleSize = smallCircleSize
         
-        self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+        self.backgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
+        
+        self.backgroundTintView = UIView()
+        self.backgroundTintMaskContainer = UIView()
         
         self.maskLayer = SimpleLayer()
         self.backgroundClippingLayer = SimpleLayer()
@@ -86,6 +90,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         }
         
         self.vibrantExpandedContentContainer = UIView()
+        self.backgroundTintMaskContainer.addSubview(self.vibrantExpandedContentContainer)
         
         super.init()
         
@@ -96,6 +101,10 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.backgroundShadowLayer.opacity = 0.0
         self.largeCircleShadowLayer.opacity = 0.0
         self.smallCircleShadowLayer.opacity = 0.0
+        
+        self.backgroundView.addSubview(self.backgroundTintView)
+        
+        self.backgroundTintMaskContainer.backgroundColor = .white
         
         self.view.addSubview(self.backgroundView)
         
@@ -132,30 +141,23 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         if self.theme !== theme {
             self.theme = theme
             
-            if theme.overallDarkAppearance && !forceDark {
-                if let vibrancyEffectView = self.vibrancyEffectView {
-                    self.vibrancyEffectView = nil
-                    vibrancyEffectView.removeFromSuperview()
+            if theme.overallDarkAppearance {
+                if let invertFilter = CALayer.colorInvert(), let filter = CALayer.luminanceToAlpha() {
+                    self.backgroundTintMaskContainer.layer.filters = [invertFilter, filter]
                 }
+                self.backgroundTintView.mask = self.backgroundTintMaskContainer
+                
+                self.backgroundView.updateColor(color: theme.contextMenu.backgroundColor, forceKeepBlur: true, transition: .immediate)
+                self.backgroundTintView.backgroundColor = UIColor(white: 1.0, alpha: 0.5)
             } else {
-                if self.vibrancyEffectView == nil {
-                    let style: UIBlurEffect.Style
-                    if forceDark {
-                        style = .dark
-                    } else {
-                        style = .extraLight
-                    }
-                    let blurEffect = UIBlurEffect(style: style)
-                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
-                    self.vibrancyEffectView = vibrancyEffectView
-                    vibrancyEffectView.contentView.addSubview(self.vibrantExpandedContentContainer)
-                    self.backgroundView.addSubview(vibrancyEffectView)
+                if let filter = CALayer.luminanceToAlpha() {
+                    self.backgroundTintMaskContainer.layer.filters = [filter]
                 }
+                self.backgroundTintView.mask = self.backgroundTintMaskContainer
+                
+                self.backgroundView.updateColor(color: .clear, forceKeepBlur: true, transition: .immediate)
+                self.backgroundTintView.backgroundColor = theme.contextMenu.backgroundColor
             }
-            
-            self.backgroundView.updateColor(color: theme.contextMenu.backgroundColor, transition: .immediate)
-            //self.backgroundView.updateColor(color: UIColor(white: 1.0, alpha: 0.0), forceKeepBlur: true, transition: .immediate)
             
             let shadowColor = UIColor(white: 0.0, alpha: 0.4)
             
@@ -213,9 +215,8 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         transition.updateFrame(view: self.backgroundView, frame: contentBounds, beginWithCurrentState: true)
         self.backgroundView.update(size: contentBounds.size, transition: transition)
         
-        if let vibrancyEffectView = self.vibrancyEffectView {
-            transition.updateFrame(view: vibrancyEffectView, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: contentBounds.size), beginWithCurrentState: true)
-        }
+        transition.updateFrame(view: self.backgroundTintView, frame: CGRect(origin: CGPoint(x: -contentBounds.minX, y: -contentBounds.minY), size: contentBounds.size))
+        transition.updateFrame(view: self.backgroundTintMaskContainer, frame: CGRect(origin: CGPoint(), size: contentBounds.size))
     }
     
     func animateIn() {

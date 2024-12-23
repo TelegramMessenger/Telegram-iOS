@@ -1342,9 +1342,10 @@ public final class EmojiPagerContentComponent: Component {
         private var isSearchActivated: Bool = false
         
         private let backgroundView: BlurredBackgroundView
+        private let backgroundTintView: UIView
         private var fadingMaskLayer: FadingMaskLayer?
         private var vibrancyClippingView: UIView
-        private var vibrancyEffectView: UIVisualEffectView?
+        private var vibrancyEffectView: UIView?
         public private(set) var mirrorContentClippingView: UIView?
         private let mirrorContentScrollView: UIView
         private var warpView: WarpView?
@@ -1398,6 +1399,7 @@ public final class EmojiPagerContentComponent: Component {
         
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
+            self.backgroundTintView = UIView()
             
             if ProcessInfo.processInfo.processorCount > 4 {
                 self.shimmerHostView = PortalSourceView()
@@ -1423,6 +1425,7 @@ public final class EmojiPagerContentComponent: Component {
             
             super.init(frame: frame)
             
+            self.backgroundView.addSubview(self.backgroundTintView)
             self.addSubview(self.backgroundView)
             
             if let shimmerHostView = self.shimmerHostView {
@@ -1618,7 +1621,7 @@ public final class EmojiPagerContentComponent: Component {
                     if let mirrorContentClippingView = self.mirrorContentClippingView {
                         mirrorContentClippingView.addSubview(self.mirrorContentScrollView)
                     } else if let vibrancyEffectView = self.vibrancyEffectView {
-                        vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+                        vibrancyEffectView.addSubview(self.mirrorContentScrollView)
                     }
                     
                     mirrorContentWarpView.removeFromSuperview()
@@ -3172,7 +3175,7 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         groupBorderLayer.strokeColor = borderColor.cgColor
-                        groupBorderLayer.tintContainerLayer.strokeColor = UIColor.white.cgColor
+                        groupBorderLayer.tintContainerLayer.strokeColor = UIColor.black.cgColor
                         groupBorderLayer.lineWidth = 1.6
                         groupBorderLayer.lineCap = .round
                         groupBorderLayer.fillColor = nil
@@ -3584,7 +3587,7 @@ public final class EmojiPagerContentComponent: Component {
                                     itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
                                 } else {
                                     itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-                                    itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+                                    itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.2).cgColor
                                 }
                             }
                             
@@ -4009,15 +4012,15 @@ public final class EmojiPagerContentComponent: Component {
                 }
             } else {
                 if self.vibrancyEffectView == nil {
-                    let style: UIBlurEffect.Style
-                    style = .extraLight
-                    let blurEffect = UIBlurEffect(style: style)
-                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+                    let vibrancyEffectView = UIView()
+                    vibrancyEffectView.backgroundColor = .white
+                    if let filter = CALayer.luminanceToAlpha() {
+                        vibrancyEffectView.layer.filters = [filter]
+                    }
                     self.vibrancyEffectView = vibrancyEffectView
-                    self.backgroundView.addSubview(vibrancyEffectView)
+                    self.backgroundTintView.mask = vibrancyEffectView
                     self.vibrancyClippingView.addSubview(self.mirrorContentScrollView)
-                    vibrancyEffectView.contentView.addSubview(self.vibrancyClippingView)
+                    vibrancyEffectView.addSubview(self.vibrancyClippingView)
                 }
             }
             
@@ -4046,7 +4049,11 @@ public final class EmojiPagerContentComponent: Component {
             if hideBackground {
                 backgroundColor = backgroundColor.withAlphaComponent(0.01)
             }
-            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            
+            self.backgroundTintView.backgroundColor = backgroundColor
+            transition.setFrame(view: self.backgroundTintView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            self.backgroundView.updateColor(color: .clear, enableBlur: true, forceKeepBlur: true, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
@@ -4652,7 +4659,7 @@ public final class EmojiPagerContentComponent: Component {
                     if let mirrorContentClippingView = self.mirrorContentClippingView {
                         mirrorContentClippingView.addSubview(visibleEmptySearchResultsView.tintContainerView)
                     } else if let vibrancyEffectView = self.vibrancyEffectView {
-                        vibrancyEffectView.contentView.addSubview(visibleEmptySearchResultsView.tintContainerView)
+                        vibrancyEffectView.addSubview(visibleEmptySearchResultsView.tintContainerView)
                     }
                 }
                 let emptySearchResultsSize = CGSize(width: availableSize.width, height: availableSize.height - itemLayout.searchInsets.top - itemLayout.searchHeight)

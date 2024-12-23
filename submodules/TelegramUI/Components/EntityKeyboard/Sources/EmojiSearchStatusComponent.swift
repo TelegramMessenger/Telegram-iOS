@@ -443,7 +443,7 @@ final class EmojiSearchStatusComponent: Component {
                 overlayColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
             }
             
-            let baseColor: UIColor = .white
+            let baseColor: UIColor = .black
             
             if self.contentView.tintColor != overlayColor {
                 self.contentView.tintColor = overlayColor
