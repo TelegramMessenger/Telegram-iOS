@@ -15,8 +15,9 @@ import AvatarNode
 
 public final class GiftItemComponent: Component {
     public enum Subject: Equatable {
-        case premium(Int32)
-        case starGift(Int64, TelegramMediaFile)
+        case premium(months: Int32, price: String)
+        case starGift(gift: StarGift.Gift, price: String)
+        case uniqueGift(gift: StarGift.UniqueGift)
     }
     
     public struct Ribbon: Equatable {
@@ -73,7 +74,6 @@ public final class GiftItemComponent: Component {
     let subject: GiftItemComponent.Subject
     let title: String?
     let subtitle: String?
-    let price: String
     let ribbon: Ribbon?
     let isLoading: Bool
     let isHidden: Bool
@@ -86,7 +86,6 @@ public final class GiftItemComponent: Component {
         subject: GiftItemComponent.Subject,
         title: String? = nil,
         subtitle: String? = nil,
-        price: String,
         ribbon: Ribbon? = nil,
         isLoading: Bool = false,
         isHidden: Bool = false,
@@ -98,7 +97,6 @@ public final class GiftItemComponent: Component {
         self.subject = subject
         self.title = title
         self.subtitle = subtitle
-        self.price = price
         self.ribbon = ribbon
         self.isLoading = isLoading
         self.isHidden = isHidden
@@ -122,9 +120,6 @@ public final class GiftItemComponent: Component {
             return false
         }
         if lhs.subtitle != rhs.subtitle {
-            return false
-        }
-        if lhs.price != rhs.price {
             return false
         }
         if lhs.ribbon != rhs.ribbon {
@@ -224,21 +219,25 @@ public final class GiftItemComponent: Component {
             var file: TelegramMediaFile?
             var animationOffset: CGFloat = 0.0
             switch component.subject {
-            case let .premium(months):
+            case let .premium(months, _):
                 emoji = ChatTextInputTextCustomEmojiAttribute(
                     interactivelySelectedFromPackId: nil,
                     fileId: 0,
                     file: nil,
                     custom: .animation(name: "Gift\(months)")
                 )
-            case let .starGift(_, fileValue):
-                file = fileValue
+            case let .starGift(gift, _):
+                file = gift.file
                 emoji = ChatTextInputTextCustomEmojiAttribute(
                     interactivelySelectedFromPackId: nil,
-                    fileId: fileValue.fileId.id,
-                    file: fileValue
+                    fileId: gift.file.fileId.id,
+                    file: gift.file
                 )
                 animationOffset = 16.0
+            case let .uniqueGift(gift):
+                let _ = gift
+                file = nil
+                emoji = nil
             }
             
             let iconSize = CGSize(width: 88.0, height: 88.0)
@@ -310,11 +309,19 @@ public final class GiftItemComponent: Component {
             
             let buttonColor: UIColor
             var isStars = false
-            if component.price.containsEmoji {
-                buttonColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
-                isStars = !component.isSoldOut
-            } else {
+            let price: String
+            switch component.subject {
+            case let .premium(_, priceValue), let .starGift(_, priceValue):
+                if priceValue.containsEmoji {
+                    buttonColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
+                    isStars = !component.isSoldOut
+                } else {
+                    buttonColor = component.theme.list.itemAccentColor
+                }
+                price = priceValue
+            default:
                 buttonColor = component.theme.list.itemAccentColor
+                price = ""
             }
             
             let buttonSize = self.button.update(
@@ -322,7 +329,7 @@ public final class GiftItemComponent: Component {
                 component: AnyComponent(
                     ButtonContentComponent(
                         context: component.context,
-                        text: component.price, 
+                        text: price,
                         color: buttonColor,
                         isStars: isStars
                     )

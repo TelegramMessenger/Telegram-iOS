@@ -368,7 +368,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         toPeer = peer
                     }
                     transactionPeer = transaction.peer
-                    giftAnimation = starGift.file
+                    if case let .generic(gift) = starGift {
+                        giftAnimation = gift.file
+                    }
                 } else if let giveawayMessageIdValue = transaction.giveawayMessageId {
                     titleText = strings.Stars_Transaction_Giveaway_Title
                     descriptionText = ""

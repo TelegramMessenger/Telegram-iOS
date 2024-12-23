@@ -16,7 +16,7 @@ import ListItemComponentAdaptor
 final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAdaptor.ItemGenerator {
     enum Subject: Equatable {
         case premium(months: Int32, amount: Int64, currency: String)
-        case starGift(gift: StarGift)
+        case starGift(gift: StarGift.Gift)
     }
     let context: AccountContext
     let theme: PresentationTheme
@@ -221,7 +221,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: gift, convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, transferred: false)
                         )
                     ]
                 }

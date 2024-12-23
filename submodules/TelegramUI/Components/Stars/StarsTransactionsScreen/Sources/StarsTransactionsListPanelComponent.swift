@@ -305,7 +305,9 @@ final class StarsTransactionsListPanelComponent: Component {
                         if let starGift = item.starGift {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = item.count > StarsAmount.zero ? environment.strings.Stars_Intro_Transaction_ConvertedGift : environment.strings.Stars_Intro_Transaction_Gift
-                            itemFile = starGift.file
+                            if case let .generic(gift) = starGift {
+                                itemFile = gift.file
+                            }
                         } else if let _ = item.giveawayMessageId {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_GiveawayPrize

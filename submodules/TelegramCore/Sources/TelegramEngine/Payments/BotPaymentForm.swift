@@ -414,6 +414,9 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
                 case let .paymentFormStarGift(_, invoice):
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     return TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: parsedInvoice.prices.reduce(0, { $0 + $1.amount }), startParam: "", extendedMedia: nil, subscriptionPeriod: parsedInvoice.subscriptionPeriod, flags: [], version: TelegramMediaInvoice.lastVersion)
+                case let .paymentFormStarGiftUpgrade(_, invoice, _):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    return TelegramMediaInvoice(title: "", description: "", photo: nil, receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: parsedInvoice.prices.reduce(0, { $0 + $1.amount }), startParam: "", extendedMedia: nil, subscriptionPeriod: parsedInvoice.subscriptionPeriod, flags: [], version: TelegramMediaInvoice.lastVersion)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -486,6 +489,11 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
                     return BotPaymentForm(id: id, canSaveCredentials: false, passwordMissing: false, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: [])
                     
                 case let .paymentFormStarGift(id, invoice):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    return BotPaymentForm(id: id, canSaveCredentials: false, passwordMissing: false, invoice: parsedInvoice, paymentBotId: nil, providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: [])
+                case let .paymentFormStarGiftUpgrade(id, invoice, sampleAttributes):
+                    let _ = sampleAttributes
+                    
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     return BotPaymentForm(id: id, canSaveCredentials: false, passwordMissing: false, invoice: parsedInvoice, paymentBotId: nil, providerId: nil, url: nil, nativeProvider: nil, savedInfo: nil, savedCredentials: [], additionalPaymentMethods: [])
                 }

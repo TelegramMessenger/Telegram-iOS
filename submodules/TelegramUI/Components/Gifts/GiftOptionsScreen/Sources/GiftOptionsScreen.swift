@@ -130,15 +130,15 @@ final class GiftOptionsScreenComponent: Component {
         private let tabSelector = ComponentView<Empty>()
         private var starsFilter: StarsFilter = .all
         
-        private var _effectiveStarGifts: ([StarGift], StarsFilter)?
-        private var effectiveStarGifts: [StarGift]? {
+        private var _effectiveStarGifts: ([StarGift.Gift], StarsFilter)?
+        private var effectiveStarGifts: [StarGift.Gift]? {
             get {
                 if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
                     return currentGifts
                 } else if let allGifts = self.state?.starGifts {
                     var sortedGifts = allGifts
                     if self.component?.hasBirthday == true {
-                        var updatedGifts: [StarGift] = []
+                        var updatedGifts: [StarGift.Gift] = []
                         for gift in allGifts {
                             if gift.flags.contains(.isBirthdayGift) {
                                 updatedGifts.append(gift)
@@ -151,7 +151,7 @@ final class GiftOptionsScreenComponent: Component {
                         }
                         sortedGifts = updatedGifts
                     }
-                    let filteredGifts: [StarGift] = sortedGifts.filter {
+                    let filteredGifts: [StarGift.Gift] = sortedGifts.filter {
                         switch self.starsFilter {
                         case .all:
                             return true
@@ -354,8 +354,7 @@ final class GiftOptionsScreenComponent: Component {
                                             context: component.context,
                                             theme: environment.theme,
                                             peer: nil,
-                                            subject: .starGift(gift.id, gift.file),
-                                            price: "⭐️ \(gift.price)",
+                                            subject: .starGift(gift: gift, price: "⭐️ \(gift.price)"),
                                             ribbon: ribbon,
                                             isSoldOut: gift.soldOut != nil
                                         )
@@ -730,10 +729,9 @@ final class GiftOptionsScreenComponent: Component {
                                         context: component.context,
                                         theme: theme,
                                         peer: nil,
-                                        subject: .premium(product.months),
+                                        subject: .premium(months: product.months, price: product.price),
                                         title: title,
                                         subtitle: strings.Gift_Options_Premium_Premium,
-                                        price: product.price,
                                         ribbon: product.discount.flatMap {
                                             GiftItemComponent.Ribbon(
                                                 text:  "-\($0)%",
@@ -993,7 +991,7 @@ final class GiftOptionsScreenComponent: Component {
         
         fileprivate var peer: EnginePeer?
         fileprivate var premiumProducts: [PremiumGiftProduct]?
-        fileprivate var starGifts: [StarGift]?
+        fileprivate var starGifts: [StarGift.Gift]?
         
         init(
             context: AccountContext,
@@ -1061,7 +1059,13 @@ final class GiftOptionsScreenComponent: Component {
                     self.premiumProducts = premiumProducts.sorted(by: { $0.months < $1.months })
                 }
                     
-                self.starGifts = starGifts
+                self.starGifts = starGifts?.compactMap { gift in
+                    if case let .generic(gift) = gift {
+                        return gift
+                    } else {
+                        return nil
+                    }
+                }
 
                 self.updated()
             })

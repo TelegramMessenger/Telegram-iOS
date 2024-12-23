@@ -868,13 +868,13 @@ public extension Api {
 }
 public extension Api {
     enum UserStarGift: TypeConstructorDescription {
-        case userStarGift(flags: Int32, fromId: Int64?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, convertStars: Int64?)
+        case userStarGift(flags: Int32, fromId: Int64?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, convertStars: Int64?, canExportAt: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let convertStars):
+                case .userStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let convertStars, let canExportAt):
                     if boxed {
-                        buffer.appendInt32(-291202450)
+                        buffer.appendInt32(731361026)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt64(fromId!, buffer: buffer, boxed: false)}
@@ -883,14 +883,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {message!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt64(convertStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 7) != 0 {serializeInt32(canExportAt!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let convertStars):
-                return ("userStarGift", [("flags", flags as Any), ("fromId", fromId as Any), ("date", date as Any), ("gift", gift as Any), ("message", message as Any), ("msgId", msgId as Any), ("convertStars", convertStars as Any)])
+                case .userStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let convertStars, let canExportAt):
+                return ("userStarGift", [("flags", flags as Any), ("fromId", fromId as Any), ("date", date as Any), ("gift", gift as Any), ("message", message as Any), ("msgId", msgId as Any), ("convertStars", convertStars as Any), ("canExportAt", canExportAt as Any)])
     }
     }
     
@@ -913,6 +914,8 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {_6 = reader.readInt32() }
             var _7: Int64?
             if Int(_1!) & Int(1 << 4) != 0 {_7 = reader.readInt64() }
+            var _8: Int32?
+            if Int(_1!) & Int(1 << 7) != 0 {_8 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
             let _c3 = _3 != nil
@@ -920,8 +923,9 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 4) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.UserStarGift.userStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, convertStars: _7)
+            let _c8 = (Int(_1!) & Int(1 << 7) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.UserStarGift.userStarGift(flags: _1!, fromId: _2, date: _3!, gift: _4!, message: _5, msgId: _6, convertStars: _7, canExportAt: _8)
             }
             else {
                 return nil
