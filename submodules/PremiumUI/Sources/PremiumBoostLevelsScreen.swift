@@ -2413,7 +2413,7 @@ public class PremiumBoostLevelsScreen: ViewController {
                                                 controller?.dismiss(animated: true, completion: nil)
                                                 
                                                 Queue.mainQueue().after(0.4) {
-                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, completion: nil)
+                                                    let giftController = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, transfer: false, completion: nil)
                                                     navigationController.pushViewController(giftController, animated: true)
                                                 }
                                             }

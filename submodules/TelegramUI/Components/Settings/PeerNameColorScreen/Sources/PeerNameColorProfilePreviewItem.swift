@@ -223,7 +223,7 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                     transition: .immediate,
                     component: AnyComponent(PeerInfoCoverComponent(
                         context: item.context,
-                        peer: item.peer,
+                        subject: item.peer.flatMap { .peer($0) },
                         files: item.files,
                         isDark: item.theme.overallDarkAppearance,
                         avatarCenter: avatarFrame.center,

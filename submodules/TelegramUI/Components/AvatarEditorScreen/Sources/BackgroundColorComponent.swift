@@ -6,6 +6,7 @@ import ComponentFlow
 import ViewControllerComponent
 import ComponentDisplayAdapters
 import TelegramPresentationData
+import AvatarBackground
 
 final class BackgroundColorComponent: Component {
     let theme: PresentationTheme

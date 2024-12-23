@@ -22,12 +22,14 @@ public final class LottieAnimationComponent: Component {
         public var name: String
         public var mode: Mode
         public var range: (CGFloat, CGFloat)?
+        public var speed: CGFloat
         public var waitForCompletion: Bool
         
-        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil, waitForCompletion: Bool = true) {
+        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil, speed: CGFloat = 1.0, waitForCompletion: Bool = true) {
             self.name = name
             self.mode = mode
             self.range = range
+            self.speed = speed
             self.waitForCompletion = waitForCompletion
         }
         
@@ -36,6 +38,9 @@ public final class LottieAnimationComponent: Component {
                 return false
             }
             if lhs.mode != rhs.mode {
+                return false
+            }
+            if lhs.speed != rhs.speed {
                 return false
             }
             if let lhsRange = lhs.range, let rhsRange = rhs.range, lhsRange != rhsRange {
@@ -203,7 +208,7 @@ public final class LottieAnimationComponent: Component {
                                 view.loopMode = .playOnce
                             }
                         }
-                        view.animationSpeed = 1.0
+                        view.animationSpeed = component.animation.speed
                         view.backgroundColor = .clear
                         view.isOpaque = false
                         

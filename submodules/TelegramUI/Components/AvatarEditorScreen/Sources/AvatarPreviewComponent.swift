@@ -15,6 +15,7 @@ import Postbox
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import StickerResources
+import AvatarBackground
 
 final class AvatarPreviewComponent: Component {
     typealias EnvironmentType = Empty

@@ -59,15 +59,15 @@ protocol RenderTarget: AnyObject {
 
 final class MediaEditorRenderer {
     enum Input {
-        case texture(MTLTexture, CMTime, Bool, CGRect?)
-        case videoBuffer(VideoPixelBuffer, CGRect?)
+        case texture(MTLTexture, CMTime, Bool, CGRect?, CGFloat, CGPoint)
+        case videoBuffer(VideoPixelBuffer, CGRect?, CGFloat, CGPoint)
         case ciImage(CIImage, CMTime)
         
         var timestamp: CMTime {
             switch self {
-            case let .texture(_, timestamp, _, _):
+            case let .texture(_, timestamp, _, _, _, _):
                 return timestamp
-            case let .videoBuffer(videoBuffer, _):
+            case let .videoBuffer(videoBuffer, _, _, _):
                 return videoBuffer.timestamp
             case let .ciImage(_, timestamp):
                 return timestamp
@@ -193,17 +193,17 @@ final class MediaEditorRenderer {
         
         func textureFromInput(_ input: MediaEditorRenderer.Input, videoInputPass: VideoInputPass) -> VideoFinishPass.Input? {
             switch input {
-            case let .texture(texture, _, hasTransparency, rect):
-                return VideoFinishPass.Input(texture: texture, hasTransparency: hasTransparency, rect: rect)
-            case let .videoBuffer(videoBuffer, rect):
+            case let .texture(texture, _, hasTransparency, rect, scale, offset):
+                return VideoFinishPass.Input(texture: texture, hasTransparency: hasTransparency, rect: rect, scale: scale, offset: offset)
+            case let .videoBuffer(videoBuffer, rect, scale, offset):
                 if let texture = videoInputPass.processPixelBuffer(videoBuffer, textureCache: textureCache, device: device, commandBuffer: commandBuffer) {
-                    return VideoFinishPass.Input(texture: texture, hasTransparency: false, rect: rect)
+                    return VideoFinishPass.Input(texture: texture, hasTransparency: false, rect: rect, scale: scale, offset: offset)
                 } else {
                     return nil
                 }
             case let .ciImage(image, _):
                 if let texture = self.ciInputPass.processCIImage(image, device: device, commandBuffer: commandBuffer) {
-                    return VideoFinishPass.Input(texture: texture, hasTransparency: true, rect: nil)
+                    return VideoFinishPass.Input(texture: texture, hasTransparency: true, rect: nil, scale: 1.0, offset: .zero)
                 } else {
                     return nil
                 }

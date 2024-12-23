@@ -102,17 +102,20 @@ public struct BotVerifierSettings: PostboxCoding, Equatable {
     public let iconFileId: Int64
     public let companyName: String
     public let customDescription: String?
+    public let canModifyDescription: Bool
     
-    public init(iconFileId: Int64, companyName: String, customDescription: String?) {
+    public init(iconFileId: Int64, companyName: String, customDescription: String?, canModifyDescription: Bool) {
         self.iconFileId = iconFileId
         self.companyName = companyName
         self.customDescription = customDescription
+        self.canModifyDescription = canModifyDescription
     }
     
     public init(decoder: PostboxDecoder) {
         self.iconFileId = decoder.decodeInt64ForKey("i", orElse: 0)
         self.companyName = decoder.decodeStringForKey("cn", orElse: "")
         self.customDescription = decoder.decodeOptionalStringForKey("d")
+        self.canModifyDescription = decoder.decodeBoolForKey("md", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -123,6 +126,7 @@ public struct BotVerifierSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "d")
         }
+        encoder.encodeBool(self.canModifyDescription, forKey: "md")
     }
 }
 

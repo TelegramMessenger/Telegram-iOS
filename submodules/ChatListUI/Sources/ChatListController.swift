@@ -1395,6 +1395,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             switch item.content {
+            case .loading:
+                break
             case let .groupReference(groupReference):
                 let chatListController = ChatListControllerImpl(context: strongSelf.context, location: .chatList(groupId: groupReference.groupId), controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                 chatListController.navigationPresentation = .master

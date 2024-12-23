@@ -235,6 +235,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let dismissedPremiumGiftNamespace: Int32 = 9
     private static let groupEmojiPackNamespace: Int32 = 9
     private static let dismissedBirthdayPremiumGiftTipNamespace: Int32 = 10
+    private static let displayedPeerVerificationNamespace: Int32 = 11
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -514,6 +515,10 @@ private struct ApplicationSpecificNoticeKeys {
         
     static func dismissedBirthdayPremiumGiftTip(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedBirthdayPremiumGiftTipNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func displayedPeerVerification(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: displayedPeerVerificationNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func monetizationIntroDismissed() -> NoticeEntryKey {
@@ -2136,6 +2141,26 @@ public struct ApplicationSpecificNotice {
         return accountManager.transaction { transaction -> Void in
             if let entry = CodableEntry(ApplicationSpecificTimestampNotice(value: timestamp)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedBirthdayPremiumGiftTip(peerId: peerId), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func displayedPeerVerification(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayedPeerVerification(peerId: peerId))
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    public static func setDisplayedPeerVerification(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayedPeerVerification(peerId: peerId), entry)
             }
         }
         |> ignoreValues

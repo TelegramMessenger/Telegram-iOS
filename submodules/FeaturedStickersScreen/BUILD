@@ -19,7 +19,6 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/MergeLists:MergeLists",
-        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
         "//submodules/StickerPeekUI:StickerPeekUI",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
@@ -33,6 +32,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TextFormat",
+        "//submodules/ListSectionHeaderNode",
     ],
     visibility = [
         "//visibility:public",

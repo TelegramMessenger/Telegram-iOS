@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 import Postbox
 import SwiftSignalKit
 import TelegramCore
@@ -48,6 +49,10 @@ public final class GalleryControllerActionInteraction {
         self.editMedia = editMedia
         self.updateCanReadHistory = updateCanReadHistory
     }
+}
+
+public protocol GalleryControllerProtocol: ViewController {
+    
 }
 
 public protocol StickerPackScreen {

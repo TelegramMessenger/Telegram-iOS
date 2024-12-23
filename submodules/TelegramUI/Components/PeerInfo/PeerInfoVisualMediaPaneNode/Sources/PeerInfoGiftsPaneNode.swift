@@ -381,7 +381,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), transfer: false, completion: nil)
             controller.navigationPresentation = .modal
             self.chatControllerInteraction.navigationController()?.pushViewController(controller)
         })

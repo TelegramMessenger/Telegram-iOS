@@ -40,7 +40,6 @@ swift_library(
         "//submodules/TelegramUI/Components/CameraButtonComponent",
         "//submodules/ContextUI",
         "//submodules/UndoUI",
-        "//submodules/GalleryUI",
         "//submodules/TelegramUI/Components/TextLoadingEffect",
     ],
     visibility = [

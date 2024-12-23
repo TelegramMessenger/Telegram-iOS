@@ -47,7 +47,7 @@ public final class PremiumStarsNode: ASDisplayNode {
         if self.frame.width > 0.0 {
             size = self.frame.size
         } else {
-            size = CGSize(width: 32.0, height: 32.0)
+            size = CGSize(width: 72.0, height: 32.0)
         }
         let starSize = CGSize(width: 6.0, height: 8.0)
         

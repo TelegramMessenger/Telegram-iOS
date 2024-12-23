@@ -1290,7 +1290,7 @@ final public class AnimationView: AnimationViewBase {
     layerAnimation.fillMode = CAMediaTimingFillMode.both
     layerAnimation.repeatCount = loopMode.caAnimationConfiguration.repeatCount
     layerAnimation.autoreverses = loopMode.caAnimationConfiguration.autoreverses
-
+      
     layerAnimation.isRemovedOnCompletion = false
     if timeOffset != 0 {
       let currentLayerTime = viewLayer?.convertTime(CACurrentMediaTime(), from: nil) ?? 0

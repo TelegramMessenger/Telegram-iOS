@@ -378,7 +378,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             case let .asset(asset):
                                 content = .asset(asset)
                             }
-                            return MediaEditorScreenImpl.Subject.VideoCollageItem(content: content, frame: item.frame)
+                            return MediaEditorScreenImpl.Subject.VideoCollageItem(
+                                content: content,
+                                frame: item.frame,
+                                contentScale: item.contentScale,
+                                contentOffset: item.contentOffset
+                            )
                         }
                         return .videoCollage(items: collage.items.map { editorCollageItem($0) })
                     case let .asset(asset):

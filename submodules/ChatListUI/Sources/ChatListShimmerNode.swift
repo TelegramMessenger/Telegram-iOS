@@ -8,7 +8,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import TelegramCore
 
-final class ShimmerEffectNode: ASDisplayNode {
+private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
     private let imageNodeContainer: ASDisplayNode

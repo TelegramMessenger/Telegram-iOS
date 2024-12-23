@@ -789,14 +789,15 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if let emojiStatus = peer.emojiStatus {
-                        if case .channel = peer, peer.isVerified {
-                            verifiedIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                        }
                         credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
-                    } else if peer.isVerified {
-                        credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
+                    }
+                    
+                    if peer.isVerified {
+                        verifiedIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                    } else if let verification = peer.verification {
+                        verifiedIcon = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
             case .deviceContact:
@@ -1349,7 +1350,48 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             let _ = titleApply()
-                            let titleFrame = titleFrame.offsetBy(dx: revealOffset, dy: 0.0)
+                            
+                            var titleLeftOffset: CGFloat = 0.0
+                            if let verifiedIcon {
+                                let animationCache = item.context.animationCache
+                                let animationRenderer = item.context.animationRenderer
+                                
+                                let verifiedIconView: ComponentHostView<Empty>
+                                if let current = strongSelf.verifiedIconView {
+                                    verifiedIconView = current
+                                } else {
+                                    verifiedIconView = ComponentHostView<Empty>()
+                                    strongSelf.offsetContainerNode.view.addSubview(verifiedIconView)
+                                    strongSelf.verifiedIconView = verifiedIconView
+                                }
+                                
+                                let verifiedIconComponent = EmojiStatusComponent(
+                                    context: item.context,
+                                    animationCache: animationCache,
+                                    animationRenderer: animationRenderer,
+                                    content: verifiedIcon,
+                                    isVisibleForAnimations: strongSelf.visibilityStatus,
+                                    action: nil,
+                                    emojiFileUpdated: nil
+                                )
+                                strongSelf.verifiedIconComponent = verifiedIconComponent
+                                
+                                let iconSize = verifiedIconView.update(
+                                    transition: .immediate,
+                                    component: AnyComponent(verifiedIconComponent),
+                                    environment: {},
+                                    containerSize: CGSize(width: 16.0, height: 16.0)
+                                )
+                                
+                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                                
+                                titleLeftOffset += iconSize.width + 4.0
+                            } else if let verifiedIconView = strongSelf.verifiedIconView {
+                                strongSelf.verifiedIconView = nil
+                                verifiedIconView.removeFromSuperview()
+                            }
+                            
+                            let titleFrame = titleFrame.offsetBy(dx: revealOffset + titleLeftOffset, dy: 0.0)
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
@@ -1421,46 +1463,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.credibilityIconView = nil
                                 credibilityIconView.removeFromSuperview()
                             }
-                            
-                            if let verifiedIcon {
-                                let animationCache = item.context.animationCache
-                                let animationRenderer = item.context.animationRenderer
-                                
-                                let verifiedIconView: ComponentHostView<Empty>
-                                if let current = strongSelf.verifiedIconView {
-                                    verifiedIconView = current
-                                } else {
-                                    verifiedIconView = ComponentHostView<Empty>()
-                                    strongSelf.offsetContainerNode.view.addSubview(verifiedIconView)
-                                    strongSelf.verifiedIconView = verifiedIconView
-                                }
-                                
-                                let verifiedIconComponent = EmojiStatusComponent(
-                                    context: item.context,
-                                    animationCache: animationCache,
-                                    animationRenderer: animationRenderer,
-                                    content: verifiedIcon,
-                                    isVisibleForAnimations: strongSelf.visibilityStatus,
-                                    action: nil,
-                                    emojiFileUpdated: nil
-                                )
-                                strongSelf.verifiedIconComponent = verifiedIconComponent
-                                
-                                let iconSize = verifiedIconView.update(
-                                    transition: .immediate,
-                                    component: AnyComponent(verifiedIconComponent),
-                                    environment: {},
-                                    containerSize: CGSize(width: 20.0, height: 20.0)
-                                )
-                                
-                                nextIconX += 4.0
-                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: nextIconX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
-                                nextIconX += iconSize.width
-                            } else if let verifiedIconView = strongSelf.verifiedIconView {
-                                strongSelf.verifiedIconView = nil
-                                verifiedIconView.removeFromSuperview()
-                            }
-                            
+                              
                             var additionalRightInset: CGFloat = 0.0
                             if let (titleLayout, titleApply) = actionButtonTitleLayoutAndApply {
                                 let actionButtonTitleNode = titleApply()

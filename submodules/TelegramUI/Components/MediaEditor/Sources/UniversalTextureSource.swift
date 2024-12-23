@@ -7,8 +7,8 @@ import SwiftSignalKit
 
 final class UniversalTextureSource: TextureSource {
     enum Input {
-        case image(UIImage, CGRect?)
-        case video(AVPlayerItem, CGRect?)
+        case image(UIImage, CGRect?, CGFloat, CGPoint)
+        case video(AVPlayerItem, CGRect?, CGFloat, CGPoint)
         case entity(MediaEditorComposerEntity)
         
         fileprivate func createContext(renderTarget: RenderTarget, queue: DispatchQueue, additional: Bool) -> InputContext {
@@ -48,7 +48,7 @@ final class UniversalTextureSource: TextureSource {
     }
     
     var mainImage: UIImage? {
-        if let mainInput = self.mainInputContext?.input, case let .image(image, _) = mainInput {
+        if let mainInput = self.mainInputContext?.input, case let .image(image, _, _, _) = mainInput {
             return image
         }
         return nil
@@ -208,13 +208,17 @@ private class ImageInputContext: InputContext {
     private var texture: MTLTexture?
     private var hasTransparency = false
     fileprivate var rect: CGRect?
+    fileprivate var scale: CGFloat
+    fileprivate var offset: CGPoint
     
     init(input: Input, renderTarget: RenderTarget, queue: DispatchQueue) {
-        guard case let .image(image, rect) = input else {
+        guard case let .image(image, rect, scale, offset) = input else {
             fatalError()
         }
         self.input = input
         self.rect = rect
+        self.scale = scale
+        self.offset = offset
         if let device = renderTarget.mtlDevice {
             self.texture = loadTexture(image: image, device: device)
         }
@@ -222,7 +226,7 @@ private class ImageInputContext: InputContext {
     }
     
     func output(time: Double) -> Output? {
-        return self.texture.flatMap { .texture($0, .zero, self.hasTransparency, self.rect) }
+        return self.texture.flatMap { .texture($0, .zero, self.hasTransparency, self.rect, self.scale, self.offset) }
     }
     
     func invalidate() {
@@ -239,20 +243,24 @@ private class VideoInputContext: NSObject, InputContext, AVPlayerItemOutputPullD
     private var videoOutput: AVPlayerItemVideoOutput?
     private var textureRotation: TextureRotation = .rotate0Degrees
     fileprivate var rect: CGRect?
+    fileprivate var scale: CGFloat
+    fileprivate var offset: CGPoint
     
     var playerItem: AVPlayerItem {
-        guard case let .video(playerItem, _) = self.input else {
+        guard case let .video(playerItem, _, _, _) = self.input else {
             fatalError()
         }
         return playerItem
     }
     
     init(input: Input, renderTarget: RenderTarget, queue: DispatchQueue, additional: Bool) {
-        guard case let .video(_, rect) = input else {
+        guard case let .video(_, rect, scale, offset) = input else {
             fatalError()
         }
         self.input = input
         self.rect = rect
+        self.scale = scale
+        self.offset = offset
         
         super.init()
         
@@ -291,7 +299,7 @@ private class VideoInputContext: NSObject, InputContext, AVPlayerItemOutputPullD
         if let pixelBuffer = videoOutput.copyPixelBuffer(forItemTime: requestTime, itemTimeForDisplay: &presentationTime) {
             videoPixelBuffer = VideoPixelBuffer(pixelBuffer: pixelBuffer, rotation: self.textureRotation, timestamp: presentationTime)
         }
-        return videoPixelBuffer.flatMap { .videoBuffer($0, self.rect) }
+        return videoPixelBuffer.flatMap { .videoBuffer($0, self.rect, self.scale, self.offset) }
     }
     
     func invalidate() {

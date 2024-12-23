@@ -28,6 +28,7 @@ import EmojiStatusComponent
 import AvatarVideoNode
 import AppBundle
 import MultilineTextComponent
+import ShimmerEffect
 
 public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
@@ -210,11 +211,14 @@ public enum ChatListItemContent {
         }
     }
 
+    case loading
     case peer(PeerData)
     case groupReference(GroupReferenceData)
     
     public var chatLocation: ChatLocation? {
         switch self {
+        case .loading:
+            return nil
         case let .peer(peerData):
             return .peer(id: peerData.peer.peerId)
         case .groupReference:
@@ -492,6 +496,8 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     
     public func selected(listView: ListView) {
         switch self.content {
+        case .loading:
+            break
         case let .peer(peerData):
             if let message = peerData.messages.last, let peer = peerData.peer.peer {
                 var threadId: Int64?
@@ -1234,6 +1240,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     var actionButtonBackgroundView: UIImageView?
     var actionButtonNode: HighlightableButtonNode?
     
+    private var placeholderNode: ShimmerEffectNode?
+    private var absoluteLocation: (CGRect, CGSize)?
+    
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     private var cachedDataDisposable = MetaDisposable()
     
@@ -1293,6 +1302,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
+                case .loading:
+                    return nil
                 case let .groupReference(groupReferenceData):
                     var result = item.presentationData.strings.ChatList_ArchivedChatsTitle
                 let allCount = groupReferenceData.unreadCount
@@ -1325,6 +1336,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return nil
             }
             switch item.content {
+                case .loading:
+                    return nil
                 case let .groupReference(groupReferenceData):
                     let peers = groupReferenceData.peers
                     let messageValue = groupReferenceData.message
@@ -1619,6 +1632,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
         var displayAsMessage = false
         var enablePreview = true
         switch item.content {
+        case .loading:
+            displayAsMessage = true
+            enablePreview = false
         case let .peer(peerData):
             displayAsMessage = peerData.displayAsMessage
             if displayAsMessage, case let .user(author) = peerData.messages.last?.author {
@@ -1934,6 +1950,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var groupHiddenByDefault = false
             
             switch item.content {
+                case .loading:
+                    messages = []
+                    contentPeer = .group([])
+                    combinedReadState = nil
+                    unreadCount = (0, false, false, nil, false)
+                    isRemovedFromTotalUnreadCount = false
+                    peerPresence = nil
+                    draftState = nil
+                    mediaDraftContentType = nil
+                    hasUnseenMentions = false
+                    hasUnseenReactions = false
+                    inputActivities = nil
+                    isPeerGroup = false
+                    promoInfo = nil
+                    displayAsMessage = true
+                    hasFailedMessages = false
                 case let .peer(peerData):
                     let messagesValue = peerData.messages
                     let peerValue = peerData.peer
@@ -2078,6 +2110,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentForwardedIcon: UIImage?
             var currentStoryIcon: UIImage?
             var currentGiftIcon: UIImage?
+            var currentLocationIcon: UIImage?
             
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -2252,6 +2285,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var displayForwardedIcon = false
             var displayStoryReplyIcon = false
             var displayGiftIcon = false
+            var displayLocationIcon = false
             var ignoreForwardedIcon = false
             
             switch contentData {
@@ -2562,7 +2596,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 displayStoryReplyIcon = true
                             } else {
                                 for media in message.media {
-                                    if let action = media as? TelegramMediaAction {
+                                    if let _ = media as? TelegramMediaMap {
+                                        displayLocationIcon = true
+                                    } else if let action = media as? TelegramMediaAction {
                                         switch action.action {
                                         case .giftPremium, .giftStars, .starGift:
                                             displayGiftIcon = true
@@ -2737,6 +2773,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentGiftIcon = PresentationResourcesChatList.giftIcon(item.presentationData.theme)
             }
             
+            if displayLocationIcon {
+                currentLocationIcon = PresentationResourcesChatList.locationIcon(item.presentationData.theme)
+            }
+            
             if let currentForwardedIcon {
                 textLeftCutout += currentForwardedIcon.size.width
                 if !contentImageSpecs.isEmpty {
@@ -2757,6 +2797,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             if let currentGiftIcon {
                 textLeftCutout += currentGiftIcon.size.width
+                if !contentImageSpecs.isEmpty {
+                    textLeftCutout += forwardedIconSpacing
+                } else {
+                    textLeftCutout += contentImageTrailingSpace
+                }
+            }
+            
+            if let currentLocationIcon {
+                textLeftCutout += currentLocationIcon.size.width
                 if !contentImageSpecs.isEmpty {
                     textLeftCutout += forwardedIconSpacing
                 } else {
@@ -2824,6 +2873,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             let dateText: String
             var topIndex: MessageIndex?
             switch item.content {
+            case .loading:
+                break
             case let .groupReference(groupReferenceData):
                 topIndex = groupReferenceData.message?.index
             case let .peer(peerData):
@@ -2996,6 +3047,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             if case let .chatList(index) = item.index, index.messageIndex.id.peerId == item.context.account.peerId {
                 isAccountPeer = true
             }
+            
             if !isPeerGroup && !isAccountPeer && threadInfo == nil {
                 if displayAsMessage {
                     switch item.content {
@@ -3010,15 +3062,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             } else if peer.isFake {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                             } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                                if case .channel = peer, peer.isVerified {
-                                    currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                                }
-                                
                                 currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
-                            } else if peer.isVerified {
-                                currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
+                            }
+                            
+                            if peer.isVerified {
+                                currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                            } else if let verification = peer.verification {
+                                currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                             }
                         }
                     default:
@@ -3037,15 +3089,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                        if case .channel = peer, peer.isVerified {
-                            currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                        }
-                        
                         currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
-                    } else if peer.isVerified {
-                        currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
+                    }
+                    
+                    if peer.isVerified {
+                        currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                    } else if let verification = peer.verification {
+                        currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
             }
@@ -3053,7 +3105,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 titleIconsWidth += currentSecretIconImage.size.width + 2.0
             }
             
+            var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
+                if titleLeftOffset.isZero, currentVerifiedIconContent != .none {
+                    titleLeftOffset += 20.0
+                }
+                
                 if titleIconsWidth.isZero {
                     titleIconsWidth += 4.0
                 } else {
@@ -3070,6 +3127,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             if let currentCredibilityIconContent {
+                if titleLeftOffset.isZero, case .verified = currentCredibilityIconContent {
+                    titleLeftOffset += 20.0
+                }
+                
                 if titleIconsWidth.isZero {
                     titleIconsWidth += 4.0
                 } else {
@@ -3257,6 +3318,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var peerRevealOptions: [ItemListRevealOption]
             var peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
+                case .loading:
+                    peerRevealOptions = []
+                    peerLeftRevealOptions = []
                 case let .peer(peerData):
                     let renderedPeer = peerData.peer
                     let presence = peerData.presence
@@ -3948,7 +4012,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     
-                    var titleOffset: CGFloat = 0.0
+                    var titleOffset: CGFloat = titleLeftOffset
                     if let currentSecretIconImage = currentSecretIconImage {
                         let iconNode: ASImageNode
                         if let current = strongSelf.secretIconNode {
@@ -4293,6 +4357,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let currentGiftIcon {
                         messageTypeIcon = currentGiftIcon
                         messageTypeIconOffset.y -= 2.0 - UIScreenPixel
+                    } else if let currentLocationIcon {
+                        messageTypeIcon = currentLocationIcon
+                        messageTypeIconOffset.y -= 2.0 - UIScreenPixel
                     }
                     
                     if let messageTypeIcon {
@@ -4422,7 +4489,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.credibilityIconView = credibilityIconView
                             strongSelf.mainContentContainerNode.view.addSubview(credibilityIconView)
                         }
-                        
+                                                
                         let credibilityIconComponent = EmojiStatusComponent(
                             context: item.context,
                             animationCache: item.interaction.animationCache,
@@ -4433,14 +4500,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         
+                        var iconOrigin: CGFloat = nextTitleIconOrigin
+                        let containerSize = CGSize(width: 20.0, height: 20.0)
+                        if case .verified = currentCredibilityIconContent {
+                            iconOrigin = contentRect.origin.x
+                        }
                         let iconSize = credibilityIconView.update(
                             transition: .immediate,
                             component: AnyComponent(credibilityIconComponent),
                             environment: {},
-                            containerSize: CGSize(width: 20.0, height: 20.0)
+                            containerSize: containerSize
                         )
-                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
-                        nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
+                        if case .verified = currentCredibilityIconContent {
+                        } else {
+                            nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
+                        }
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
                         credibilityIconView.removeFromSuperview()
@@ -4466,14 +4541,16 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.verifiedIconComponent = verifiedIconComponent
                         
+                        let iconOrigin = contentRect.origin.x
+                        let containerSize = CGSize(width: 16.0, height: 16.0)
+                        
                         let iconSize = verifiedIconView.update(
                             transition: .immediate,
                             component: AnyComponent(verifiedIconComponent),
                             environment: {},
-                            containerSize: CGSize(width: 20.0, height: 20.0)
+                            containerSize: containerSize
                         )
-                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
-                        nextTitleIconOrigin += verifiedIconView.bounds.width + 4.0
+                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
                     } else if let verifiedIconView = strongSelf.verifiedIconView {
                         strongSelf.verifiedIconView = nil
                         verifiedIconView.removeFromSuperview()
@@ -4577,8 +4654,57 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     strongSelf.avatarTapRecognizer?.isEnabled = item.interaction.inlineNavigationLocation == nil
+                    
+                    if case .loading = item.content {
+                        let shimmerNode: ShimmerEffectNode
+                        if let current = strongSelf.placeholderNode {
+                            shimmerNode = current
+                        } else {
+                            shimmerNode = ShimmerEffectNode()
+                            strongSelf.placeholderNode = shimmerNode
+                            strongSelf.addSubnode(shimmerNode)
+                        }
+                        shimmerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height - 1.0))
+                        if let (rect, size) = strongSelf.absoluteLocation {
+                            shimmerNode.updateAbsoluteRect(rect, within: size)
+                        }
+                        
+                        var shapes: [ShimmerEffectNode.Shape] = []
+                        
+                        let titleLineWidth: CGFloat = 180.0
+                        let dateLineWidth: CGFloat = 36.0
+                        let textFirstLineWidth: CGFloat = 240.0
+                        let textSecondLineWidth: CGFloat = 200.0
+                        let lineDiameter: CGFloat = 10.0
+                        
+                        shapes.append(.circle(avatarFrame))
+                        
+                        let titleFrame = strongSelf.titleNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                        
+                        let textFrame = strongSelf.textNode.textNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: textFrame.minX, y: textFrame.minY + 7.0), width: textFirstLineWidth, diameter: lineDiameter))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: textFrame.minX, y: textFrame.minY + 7.0 + lineDiameter + 9.0), width: textSecondLineWidth, diameter: lineDiameter))
+                        
+                        let dateFrame = strongSelf.dateNode.frame
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: dateFrame.maxX - dateLineWidth, y: dateFrame.minY + 3.0), width: dateLineWidth, diameter: lineDiameter))
+                        
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                    } else if let shimmerNode = strongSelf.placeholderNode {
+                        strongSelf.placeholderNode = nil
+                        shimmerNode.removeFromSupernode()
+                    }
                 }
             })
+        }
+    }
+    
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        var rect = rect
+        rect.origin.y += self.insets.top
+        self.absoluteLocation = (rect, containerSize)
+        if let shimmerNode = self.placeholderNode {
+            shimmerNode.updateAbsoluteRect(rect, within: containerSize)
         }
     }
     
@@ -4686,6 +4812,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch option.key {
             case RevealOptionKey.pin.rawValue:
                 switch item.content {
+                case .loading:
+                    break
                 case .peer:
                     let itemId: EngineChatList.PinnedItem.Id = .peer(index.messageIndex.id.peerId)
                     item.interaction.setItemPinned(itemId, true)
@@ -4694,6 +4822,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             case RevealOptionKey.unpin.rawValue:
                 switch item.content {
+                case .loading:
+                    break
                 case .peer:
                     let itemId: EngineChatList.PinnedItem.Id = .peer(index.messageIndex.id.peerId)
                     item.interaction.setItemPinned(itemId, false)
@@ -4892,6 +5022,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return
             }
             switch item.content {
+            case .loading:
+                break
             case let .peer(peerData):
                 item.interaction.openStories(.peer(peerData.peer.peerId), self)
             case .groupReference:
