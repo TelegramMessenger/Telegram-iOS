@@ -413,7 +413,7 @@ public func verifyAlertController(context: AccountContext, updatedPresentationDa
     })]
     
     //TODO:localize
-    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: "Verify Account", text: "Do you want to verify this account with your verification mark and description?", peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: true)
+    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: "Verify Account", text: "Do you want to verify this account with your verification mark and description?", peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: verifierSettings.canModifyDescription)
     contentNode.complete = {
         applyImpl?()
     }

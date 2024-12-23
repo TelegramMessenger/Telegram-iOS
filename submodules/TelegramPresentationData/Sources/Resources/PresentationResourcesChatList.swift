@@ -268,11 +268,11 @@ public struct PresentationResourcesChatList {
     public static func locationIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListLocationIcon.rawValue, { theme in
             if let image =  UIImage(bundleImageName: "Chat/Attach Menu/Location") {
-                return generateImage(image.size, contextGenerator: { size, context in
+                return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
                     if let cgImage = image.cgImage {
                         context.clear(CGRect(origin: CGPoint(), size: size))
                        
-                        context.clip(to: CGRect(origin: .zero, size: size).insetBy(dx: 5.0, dy: 5.0), mask: cgImage)
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                         context.setFillColor(theme.chatList.muteIconColor.cgColor)
                         context.fill(CGRect(origin: CGPoint(), size: size))
                     }

@@ -452,7 +452,7 @@ public extension ChatControllerImpl {
         self.attachmentController?.dismiss(animated: true, completion: nil)
         
         if let botApp {
-            let openBotApp: (Bool, Bool) -> Void = { [weak self] allowWrite, justInstalled in
+            let openBotApp: (Bool, Bool, BotAppSettings?) -> Void = { [weak self] allowWrite, justInstalled, appSettings in
                 guard let strongSelf = self else {
                     return
                 }
@@ -510,7 +510,7 @@ public extension ChatControllerImpl {
                         return
                     }
                     let context = strongSelf.context
-                    let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, botAddress: botPeer.addressName ?? "", appName: botApp.shortName, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen), appSettings: nil)
+                    let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, botVerified: botPeer.isVerified, botAddress: botPeer.addressName ?? "", appName: botApp.shortName, url: result.url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings), fullSize: result.flags.contains(.fullSize), isFullscreen: result.flags.contains(.fullScreen), appSettings: appSettings)
                     var presentImpl: ((ViewController, Any?) -> Void)?
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, forceUpdate, commit in
                         ChatControllerImpl.botOpenUrl(context: context, peerId: peerId, controller: self, url: url, concealed: concealed, forceUpdate: forceUpdate, present: { c, a in
@@ -551,8 +551,9 @@ public extension ChatControllerImpl {
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<AttachMenuBot?, NoError> in
                     return .single(nil)
-                }
-            ).startStandalone(next: { [weak self] noticed, attachMenuBots, attachMenuBot in
+                },
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.BotAppSettings(id: botPeer.id))
+            ).startStandalone(next: { [weak self] noticed, attachMenuBots, attachMenuBot, appSettings in
                 guard let self else {
                     return
                 }
@@ -575,17 +576,17 @@ public extension ChatControllerImpl {
                                 let _ = (context.engine.messages.addBotToAttachMenu(botId: botPeer.id, allowWrite: allowWrite)
                                          |> deliverOnMainQueue).startStandalone(error: { _ in
                                 }, completed: {
-                                    openBotApp(allowWrite, true)
+                                    openBotApp(allowWrite, true, appSettings)
                                 })
                             })
                             self.present(controller, in: .window(.root))
                         } else {
-                            openBotApp(false, false)
+                            openBotApp(false, false, appSettings)
                         }
                     } else {
                         let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
                             let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).startStandalone()
-                            openBotApp(allowWrite, false)
+                            openBotApp(allowWrite, false, appSettings)
                         }, showMore: { [weak self] in
                             if let self {
                                 self.openResolved(result: .peer(botPeer._asPeer(), .info(nil)), sourceMessageId: nil)
@@ -598,7 +599,7 @@ public extension ChatControllerImpl {
                         self.present(controller, in: .window(.root))
                     }
                 } else {
-                    openBotApp(false, false)
+                    openBotApp(false, false, appSettings)
                 }
             })
         } else {

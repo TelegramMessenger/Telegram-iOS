@@ -31,11 +31,12 @@ extension BotAppSettings {
 extension BotVerifierSettings {
     init(apiBotVerifierSettings: Api.BotVerifierSettings) {
         switch apiBotVerifierSettings {
-        case let .botVerifierSettings(_, iconFileId, companyName, customDescription):
+        case let .botVerifierSettings(flags, iconFileId, companyName, customDescription):
             self.init(
                 iconFileId: iconFileId,
                 companyName: companyName,
-                customDescription: customDescription
+                customDescription: customDescription,
+                canModifyDescription: (flags & (1 << 1)) != 0
             )
         }
     }
