@@ -2364,7 +2364,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         //if self. {
             //TODO:localize
-            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
+            //self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
         //}
     }
     
