@@ -1064,6 +1064,7 @@ public extension Api.payments {
     enum PaymentForm: TypeConstructorDescription {
         case paymentForm(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, providerId: Int64, url: String, nativeProvider: String?, nativeParams: Api.DataJSON?, additionalMethods: [Api.PaymentFormMethod]?, savedInfo: Api.PaymentRequestedInfo?, savedCredentials: [Api.PaymentSavedCredentials]?, users: [Api.User])
         case paymentFormStarGift(formId: Int64, invoice: Api.Invoice)
+        case paymentFormStarGiftUpgrade(formId: Int64, invoice: Api.Invoice, sampleAttributes: [Api.StarGiftAttribute])
         case paymentFormStars(flags: Int32, formId: Int64, botId: Int64, title: String, description: String, photo: Api.WebDocument?, invoice: Api.Invoice, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -1107,6 +1108,18 @@ public extension Api.payments {
                     serializeInt64(formId, buffer: buffer, boxed: false)
                     invoice.serialize(buffer, true)
                     break
+                case .paymentFormStarGiftUpgrade(let formId, let invoice, let sampleAttributes):
+                    if boxed {
+                        buffer.appendInt32(-317193530)
+                    }
+                    serializeInt64(formId, buffer: buffer, boxed: false)
+                    invoice.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sampleAttributes.count))
+                    for item in sampleAttributes {
+                        item.serialize(buffer, true)
+                    }
+                    break
                 case .paymentFormStars(let flags, let formId, let botId, let title, let description, let photo, let invoice, let users):
                     if boxed {
                         buffer.appendInt32(2079764828)
@@ -1133,6 +1146,8 @@ public extension Api.payments {
                 return ("paymentForm", [("flags", flags as Any), ("formId", formId as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("providerId", providerId as Any), ("url", url as Any), ("nativeProvider", nativeProvider as Any), ("nativeParams", nativeParams as Any), ("additionalMethods", additionalMethods as Any), ("savedInfo", savedInfo as Any), ("savedCredentials", savedCredentials as Any), ("users", users as Any)])
                 case .paymentFormStarGift(let formId, let invoice):
                 return ("paymentFormStarGift", [("formId", formId as Any), ("invoice", invoice as Any)])
+                case .paymentFormStarGiftUpgrade(let formId, let invoice, let sampleAttributes):
+                return ("paymentFormStarGiftUpgrade", [("formId", formId as Any), ("invoice", invoice as Any), ("sampleAttributes", sampleAttributes as Any)])
                 case .paymentFormStars(let flags, let formId, let botId, let title, let description, let photo, let invoice, let users):
                 return ("paymentFormStars", [("flags", flags as Any), ("formId", formId as Any), ("botId", botId as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("invoice", invoice as Any), ("users", users as Any)])
     }
@@ -1216,6 +1231,27 @@ public extension Api.payments {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.payments.PaymentForm.paymentFormStarGift(formId: _1!, invoice: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_paymentFormStarGiftUpgrade(_ reader: BufferReader) -> PaymentForm? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.Invoice?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Invoice
+            }
+            var _3: [Api.StarGiftAttribute]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.payments.PaymentForm.paymentFormStarGiftUpgrade(formId: _1!, invoice: _2!, sampleAttributes: _3!)
             }
             else {
                 return nil
@@ -1534,64 +1570,6 @@ public extension Api.payments {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum StarGifts: TypeConstructorDescription {
-        case starGifts(hash: Int32, gifts: [Api.StarGift])
-        case starGiftsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .starGifts(let hash, let gifts):
-                    if boxed {
-                        buffer.appendInt32(-1877571094)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(gifts.count))
-                    for item in gifts {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .starGiftsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1551326360)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .starGifts(let hash, let gifts):
-                return ("starGifts", [("hash", hash as Any), ("gifts", gifts as Any)])
-                case .starGiftsNotModified:
-                return ("starGiftsNotModified", [])
-    }
-    }
-    
-        public static func parse_starGifts(_ reader: BufferReader) -> StarGifts? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.StarGift]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGift.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.StarGifts.starGifts(hash: _1!, gifts: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_starGiftsNotModified(_ reader: BufferReader) -> StarGifts? {
-            return Api.payments.StarGifts.starGiftsNotModified
         }
     
     }

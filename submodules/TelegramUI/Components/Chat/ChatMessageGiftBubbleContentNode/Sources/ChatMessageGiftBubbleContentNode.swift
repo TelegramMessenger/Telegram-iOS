@@ -406,64 +406,66 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
-                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted):
-                            isStarGift = true
-                            let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
-                            title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
-                            if let giftText, !giftText.isEmpty {
-                                text = giftText
-                                entities = giftEntities ?? []
-                            } else {
+                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, _, _):
+                            if case let .generic(gift) = gift {
+                                isStarGift = true
+                                let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                if let giftText, !giftText.isEmpty {
+                                    text = giftText
+                                    entities = giftEntities ?? []
+                                } else {
+                                    if incoming {
+                                        if converted {
+                                            text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
+                                        } else if savedToProfile {
+                                            if let convertStars {
+                                                text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
+                                            } else {
+                                                text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
+                                            }
+                                        } else {
+                                            if let convertStars {
+                                                text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                            } else {
+                                                text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
+                                            }
+                                        }
+                                    } else {
+                                        var peerName = ""
+                                        if let peer = item.message.peers[item.message.id.peerId] {
+                                            peerName = EnginePeer(peer).compactDisplayTitle
+                                        }
+                                        if peerName.isEmpty {
+                                            if let convertStars {
+                                                text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                            } else {
+                                                text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
+                                            }
+                                        } else {
+                                            let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0)))
+                                            text = formattedString.string
+                                            if let starsRange = formattedString.ranges.last {
+                                                entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
+                                            }
+                                        }
+                                    }
+                                }
+                                animationFile = gift.file
+                                if let availability = gift.availability {
+                                    let availabilityString: String
+                                    if availability.total > 9999 {
+                                        availabilityString = compactNumericCountString(Int(availability.total))
+                                    } else {
+                                        availabilityString = "\(availability.total)"
+                                    }
+                                    ribbonTitle = item.presentationData.strings.Notification_StarGift_OneOf(availabilityString).string
+                                }
                                 if incoming {
-                                    if converted {
-                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
-                                    } else if savedToProfile {
-                                        if let convertStars {
-                                            text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
-                                        } else {
-                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
-                                        }
-                                    } else {
-                                        if let convertStars {
-                                            text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
-                                        } else {
-                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
-                                        }
-                                    }
+                                    buttonTitle = item.presentationData.strings.Notification_StarGift_View
                                 } else {
-                                    var peerName = ""
-                                    if let peer = item.message.peers[item.message.id.peerId] {
-                                        peerName = EnginePeer(peer).compactDisplayTitle
-                                    }
-                                    if peerName.isEmpty {
-                                        if let convertStars {
-                                            text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
-                                        } else {
-                                            text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
-                                        }
-                                    } else {
-                                        let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0)))
-                                        text = formattedString.string
-                                        if let starsRange = formattedString.ranges.last {
-                                            entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
-                                        }
-                                    }
+                                    buttonTitle = ""
                                 }
-                            }
-                            animationFile = gift.file
-                            if let availability = gift.availability {
-                                let availabilityString: String
-                                if availability.total > 9999 {
-                                    availabilityString = compactNumericCountString(Int(availability.total))
-                                } else {
-                                    availabilityString = "\(availability.total)"
-                                }
-                                ribbonTitle = item.presentationData.strings.Notification_StarGift_OneOf(availabilityString).string
-                            }
-                            if incoming {
-                                buttonTitle = item.presentationData.strings.Notification_StarGift_View
-                            } else {
-                                buttonTitle = ""
                             }
                         default:
                             break

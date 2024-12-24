@@ -1322,7 +1322,7 @@ final class GiftSetupScreenComponent: Component {
 public final class GiftSetupScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case premium(PremiumGiftProduct)
-        case starGift(StarGift)
+        case starGift(StarGift.Gift)
     }
     
     private let context: AccountContext

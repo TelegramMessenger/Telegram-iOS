@@ -2364,7 +2364,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         
         //if self. {
             //TODO:localize
-            self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
+            //self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
         //}
     }
     
@@ -2778,18 +2778,18 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     private weak var controller: MediaPickerScreenImpl?
     
     var selectionCount: Signal<Int, NoError> {
-        //if self.controller?.forCollage == true {
+        if self.controller?.forCollage == true {
             return .single(0)
-//        } else {
-//            return Signal { [weak self] subscriber in
-//                let disposable = self?.controller?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
-//                    subscriber.putNext(Int(self?.controller?.interaction?.selectionState?.count() ?? 0))
-//                }, error: { _ in }, completed: { })
-//                return ActionDisposable {
-//                    disposable?.dispose()
-//                }
-//            }
-//        }
+        } else {
+            return Signal { [weak self] subscriber in
+                let disposable = self?.controller?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
+                    subscriber.putNext(Int(self?.controller?.interaction?.selectionState?.count() ?? 0))
+                }, error: { _ in }, completed: { })
+                return ActionDisposable {
+                    disposable?.dispose()
+                }
+            }
+        }
     }
     
     var caption: Signal<NSAttributedString?, NoError> {

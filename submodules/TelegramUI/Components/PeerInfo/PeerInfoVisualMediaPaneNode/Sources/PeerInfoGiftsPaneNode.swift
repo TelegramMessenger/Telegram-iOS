@@ -164,11 +164,20 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     }
                     
                     let ribbonText: String?
-                    if let availability = product.gift.availability {
+                    if case let .generic(gift) = product.gift, let availability = gift.availability {
                         ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
                     } else {
                         ribbonText = nil
                     }
+                    
+                    let subject: GiftItemComponent.Subject
+                    switch product.gift {
+                    case let .generic(gift):
+                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                    case let .unique(gift):
+                        subject = .uniqueGift(gift: gift)
+                    }
+                    
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(
@@ -178,8 +187,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                         context: self.context,
                                         theme: params.presentationData.theme,
                                         peer: product.fromPeer.flatMap { .peer($0) } ?? .anonymous,
-                                        subject: .starGift(product.gift.id, product.gift.file),
-                                        price: "⭐️ \(product.gift.price)",
+                                        subject: subject,
                                         ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: .blue) },
                                         isHidden: !product.savedToProfile
                                     )

@@ -14,7 +14,7 @@ import SheetComponent
 import MultilineTextComponent
 import MultilineTextWithEntitiesComponent
 import BundleIconComponent
-import SolidRoundedButtonComponent
+import ButtonComponent
 import Markdown
 import BalancedTextComponent
 import AvatarNode
@@ -23,7 +23,14 @@ import TelegramStringFormatting
 import StarsAvatarComponent
 import EmojiTextAttachmentView
 import UndoUI
-import GiftAnimationComponent
+import ConfettiEffect
+import PlainButtonComponent
+import CheckComponent
+import TooltipUI
+
+private let modelButtonTag = GenericComponentViewTag()
+private let backdropButtonTag = GenericComponentViewTag()
+private let symbolButtonTag = GenericComponentViewTag()
 
 private final class GiftViewSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -37,6 +44,9 @@ private final class GiftViewSheetContent: CombinedComponent {
     let openStarsIntro: () -> Void
     let sendGift: (EnginePeer.Id) -> Void
     let openMyGifts: () -> Void
+    let transferGift: () -> Void
+    let showAttributeInfo: (Any) -> Void
+    let getController: () -> ViewController?
     
     init(
         context: AccountContext,
@@ -47,7 +57,10 @@ private final class GiftViewSheetContent: CombinedComponent {
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
     	sendGift: @escaping (EnginePeer.Id) -> Void,
-    	openMyGifts: @escaping () -> Void
+    	openMyGifts: @escaping () -> Void,
+        transferGift: @escaping () -> Void,
+        showAttributeInfo: @escaping (Any) -> Void,
+        getController: @escaping () -> ViewController?
     ) {
         self.context = context
         self.subject = subject
@@ -58,6 +71,9 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.openStarsIntro = openStarsIntro
         self.sendGift = sendGift
         self.openMyGifts = openMyGifts
+        self.transferGift = transferGift
+        self.showAttributeInfo = showAttributeInfo
+        self.getController = getController
     }
     
     static func ==(lhs: GiftViewSheetContent, rhs: GiftViewSheetContent) -> Bool {
@@ -72,20 +88,38 @@ private final class GiftViewSheetContent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
+        private let getController: () -> ViewController?
+        
         private var disposable: Disposable?
         var initialized = false
         
         var peerMap: [EnginePeer.Id: EnginePeer] = [:]
-        var starGiftsMap: [Int64: StarGift] = [:]
+        var starGiftsMap: [Int64: StarGift.Gift] = [:]
         
+        var cachedCircleImage: UIImage?
+        var cachedStarImage: (UIImage, PresentationTheme)?
         var cachedCloseImage: (UIImage, PresentationTheme)?
+        var cachedOverlayCloseImage: UIImage?
+        
         var cachedChevronImage: (UIImage, PresentationTheme)?
         var cachedSmallChevronImage: (UIImage, PresentationTheme)?
         
         var inProgress = false
         
-        init(context: AccountContext, subject: GiftViewScreen.Subject) {
+        var inUpgrade = false
+        var isUpgradedMock = false
+        
+        var keepName = false
+        
+        var mockFiles: [TelegramMediaFile] = []
+        var mockIconFiles: [TelegramMediaFile] = []
+        var upgradedMockId: Int = 0
+        var upgradedMockBackgroundColor: UIColor = .white
+        var upgradedMockIcon: TelegramMediaFile?
+        
+        init(context: AccountContext, subject: GiftViewScreen.Subject, getController: @escaping () -> ViewController?) {
             self.context = context
+            self.getController = getController
             
             super.init()
             
@@ -111,10 +145,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                         strongSelf.peerMap = peersMap
 
-                        var starGiftsMap: [Int64: StarGift] = [:]
+                        var starGiftsMap: [Int64: StarGift.Gift] = [:]
                         if let starGifts {
                             for gift in starGifts {
-                                starGiftsMap[gift.id] = gift
+                                if case let .generic(gift) = gift {
+                                    starGiftsMap[gift.id] = gift
+                                }
                             }
                         }
                         strongSelf.starGiftsMap = starGiftsMap
@@ -125,26 +161,70 @@ private final class GiftViewSheetContent: CombinedComponent {
                     }
                 })
             }
+            
+            #if DEBUG
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                self.context.engine.stickers.loadedStickerPack(reference: .name("RingColors"), forceActualized: false),
+                self.context.engine.stickers.loadedStickerPack(reference: .iconStatusEmoji, forceActualized: false)
+                |> map { result -> [TelegramMediaFile] in
+                    switch result {
+                    case let .result(_, items, _):
+                        return items.map(\.file)
+                    default:
+                        return []
+                    }
+                }
+                |> take(1)
+            ).start(next: { [weak self] result, icons in
+                guard let self else {
+                    return
+                }
+                if case let .result(_, items, _) = result {
+                    self.mockFiles = items.map { $0.file }
+                    self.mockIconFiles = icons
+                    self.updated()
+                }
+            })
+            #endif
         }
         
         deinit {
             self.disposable?.dispose()
         }
+        
+        func doMockUpgrade() {
+            self.inUpgrade = false
+            self.isUpgradedMock = true
+            self.upgradedMockId = Int.random(in: 0 ..< self.mockFiles.count)
+            self.upgradedMockBackgroundColor = self.context.peerNameColors.profileColors.values.randomElement()?.main ?? .white
+            self.upgradedMockIcon = self.mockIconFiles.randomElement()
+            self.updated(transition: .spring(duration: 0.4))
+            
+            if let controller = self.getController() {
+                controller.view.addSubview(ConfettiView(frame: controller.view.bounds))
+            }
+        }
     }
     
     func makeState() -> State {
-        return State(context: self.context, subject: self.subject)
+        return State(context: self.context, subject: self.subject, getController: self.getController)
     }
     
     static var body: Body {
         let closeButton = Child(Button.self)
-        let animation = Child(GiftAnimationComponent.self)
+        let animation = Child(GiftCompositionComponent.self)
         let title = Child(MultilineTextComponent.self)
         let description = Child(MultilineTextComponent.self)
         let hiddenText = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
         let additionalText = Child(MultilineTextComponent.self)
-        let button = Child(SolidRoundedButtonComponent.self)
+        let button = Child(ButtonComponent.self)
+        
+        let upgradeTitle = Child(MultilineTextComponent.self)
+        let upgradeDescription = Child(BalancedTextComponent.self)
+        let upgradePerks = Child(List<Empty>.self)
+        let upgradeKeepName = Child(PlainButtonComponent.self)
                 
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
         
@@ -161,16 +241,23 @@ private final class GiftViewSheetContent: CombinedComponent {
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
 
             let closeImage: UIImage
+            let closeOverlayImage: UIImage
             if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
                 closeImage = image
             } else {
                 closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: theme.actionSheet.inputClearButtonColor)!
                 state.cachedCloseImage = (closeImage, theme)
             }
+            if let image = state.cachedOverlayCloseImage {
+                closeOverlayImage = image
+            } else {
+                closeOverlayImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1), foregroundColor: .white)!
+                state.cachedOverlayCloseImage = closeOverlayImage
+            }
             
             let closeButton = closeButton.update(
                 component: Button(
-                    content: AnyComponent(Image(image: closeImage)),
+                    content: AnyComponent(Image(image: state.inUpgrade || state.isUpgradedMock ? closeOverlayImage : closeImage)),
                     action: { [weak component] in
                         component?.cancel(true)
                     }
@@ -179,8 +266,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let titleString: String
-            let animationFile: TelegramMediaFile?
+            var titleString: String
+            var animationFile: TelegramMediaFile?
             let stars: Int64
             let convertStars: Int64?
             let text: String?
@@ -193,6 +280,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var date: Int32?
             var soldOut = false
             var nameHidden = false
+            var canUpgrade = false
             if case let .soldOutGift(gift) = component.subject {
                 animationFile = gift.file
                 stars = gift.price
@@ -202,20 +290,21 @@ private final class GiftViewSheetContent: CombinedComponent {
                 convertStars = nil
                 soldOut = true
                 titleString = strings.Gift_View_UnavailableTitle
-            } else if let arguments = component.subject.arguments {
-                animationFile = arguments.gift.file
-                stars = arguments.gift.price
+            } else if let arguments = component.subject.arguments, case let .generic(gift) = arguments.gift {
+                animationFile = gift.file
+                stars = gift.price
                 text = arguments.text
                 entities = arguments.entities
-                limitTotal = arguments.gift.availability?.total
+                limitTotal = gift.availability?.total
                 convertStars = arguments.convertStars
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 savedToProfile = arguments.savedToProfile
                 converted = arguments.converted
-                giftId = arguments.gift.id
+                giftId = gift.id
                 date = arguments.date
                 titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
                 nameHidden = arguments.nameHidden
+                canUpgrade = arguments.canUpgrade
             } else {
                 animationFile = nil
                 stars = 0
@@ -226,184 +315,635 @@ private final class GiftViewSheetContent: CombinedComponent {
                 titleString = ""
             }
             
-            var descriptionText: String
-            if soldOut {
-                descriptionText = strings.Gift_View_UnavailableDescription
-            } else if incoming {
-                if let convertStars {
-                    if !converted {
-                        descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
-                    } else {
-                        descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
-                    }
-                } else {
-                    descriptionText = strings.Gift_View_BotDescription
-                }
-            } else if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
-                if case .message = component.subject, let convertStars {
-                    descriptionText = strings.Gift_View_OtherDescription(peer.compactDisplayTitle, strings.Gift_View_OtherDescription_Stars(Int32(convertStars))).string
-                } else {
-                    descriptionText = ""
-                }
-            } else {
-                descriptionText = ""
+            #if DEBUG
+            if state.mockFiles.count > 1 {
+                animationFile = state.mockFiles[1]
             }
-            if let spaceRegex {
-                let nsRange = NSRange(descriptionText.startIndex..., in: descriptionText)
-                let matches = spaceRegex.matches(in: descriptionText, options: [], range: nsRange)
-                var modifiedString = descriptionText
-                
-                for match in matches.reversed() {
-                    let matchRange = Range(match.range, in: descriptionText)!
-                    let matchedSubstring = String(descriptionText[matchRange])
-                    let replacedSubstring = matchedSubstring.replacingOccurrences(of: " ", with: "\u{00A0}")
-                    modifiedString.replaceSubrange(matchRange, with: replacedSubstring)
-                }
-                descriptionText = modifiedString
-            }
-                   
-            let title = title.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: titleString,
-                        font: Font.bold(25.0),
-                        textColor: theme.actionSheet.primaryTextColor,
-                        paragraphAlignment: .center
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 177.0))
-            )
-            
+            #endif
+                        
             var originY: CGFloat = 0.0
             if let animationFile {
+                let animationHeight: CGFloat
+                let animationSubject: GiftCompositionComponent.Subject
+                if state.isUpgradedMock {
+                    animationHeight = 240.0
+                    animationSubject = .unique(state.mockFiles[state.upgradedMockId], state.upgradedMockBackgroundColor, state.upgradedMockIcon)
+                } else if state.inUpgrade {
+                    animationHeight = 258.0
+                    animationSubject = .preview(state.mockFiles, state.mockIconFiles)
+                } else {
+                    animationHeight = 210.0
+                    if !state.mockFiles.isEmpty {
+                        animationSubject = .generic(state.mockFiles[1])
+                    } else {
+                        animationSubject = .generic(animationFile)
+                    }
+                }
                 let animation = animation.update(
-                    component: GiftAnimationComponent(
+                    component: GiftCompositionComponent(
                         context: component.context,
                         theme: environment.theme,
-                        file: animationFile
+                        subject: animationSubject
                     ),
-                    availableSize: CGSize(width: 128.0, height: 128.0),
+                    availableSize: CGSize(width: context.availableSize.width, height: animationHeight),
                     transition: .immediate
                 )
                 context.add(animation
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animation.size.height / 2.0 + 25.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animationHeight / 2.0))
                 )
-                originY += animation.size.height
-            }
-            originY += 80.0
-            if soldOut {
-                originY -= 12.0
+                originY += animationHeight
             }
             
-            let linkColor = theme.actionSheet.controlAccentColor
-            if !descriptionText.isEmpty {
-                if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
-                    state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
-                }
-                
-                let textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
-                let textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
-                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
-                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
-                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
-                }
-                let description = description.update(
+            if state.inUpgrade {
+                let upgradeTitle = upgradeTitle.update(
                     component: MultilineTextComponent(
-                        text: .plain(attributedString),
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.Gift_Upgrade_Title,
+                            font: Font.bold(20.0),
+                            textColor: .white,
+                            paragraphAlignment: .center
+                        )),
                         horizontalAlignment: .center,
-                        maximumNumberOfLines: 5,
-                        lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.1),
-                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
-                            }
-                        },
-                        tapAction: { _, _ in
-                            component.openStarsIntro()
-                        }
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
-                    transition: .immediate
-                )
-                context.add(description
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + description.size.height / 2.0))
-                )
-                originY += description.size.height + 21.0
-                if soldOut {
-                    originY -= 7.0
-                }
-            } else {
-                originY += 21.0
-            }
-            
-            if nameHidden && incoming {
-                let textFont = Font.regular(13.0)
-                let textColor = theme.list.itemSecondaryTextColor
-                
-                let hiddenText = hiddenText.update(
-                    component: MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden, font: textFont, textColor: textColor)),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 2,
-                        lineSpacing: 0.2
+                        maximumNumberOfLines: 1
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
-                context.add(hiddenText
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                context.add(upgradeTitle
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 191.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
                 )
+                
+                let upgradeDescription = upgradeDescription.update(
+                    component: BalancedTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.Gift_Upgrade_Description,
+                            font: Font.regular(13.0),
+                            textColor: UIColor.white.withAlphaComponent(0.6),
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 5,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(upgradeDescription
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 208.0 + upgradeDescription.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                originY += 24.0
+                
+                let textColor = theme.actionSheet.primaryTextColor
+                let secondaryTextColor = theme.actionSheet.secondaryTextColor
+                let linkColor = theme.actionSheet.controlAccentColor
+                
+                var items: [AnyComponentWithIdentity<Empty>] = []
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "unique",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Upgrade_Unique_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Upgrade_Unique_Description,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/Collectible/Unique",
+                            iconColor: linkColor
+                        ))
+                    )
+                )
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "transferable",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Upgrade_Transferable_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Upgrade_Transferable_Description,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/Collectible/Transferable",
+                            iconColor: linkColor
+                        ))
+                    )
+                )
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "tradable",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Upgrade_Tradable_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Upgrade_Tradable_Description,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/Collectible/Tradable",
+                            iconColor: linkColor,
+                            badge: strings.Gift_Upgrade_Soon
+                        ))
+                    )
+                )
+                
+                let perksSideInset = sideInset + 12.0
+                let upgradePerks = upgradePerks.update(
+                    component: List(items),
+                    availableSize: CGSize(width: context.availableSize.width - perksSideInset * 2.0, height: 10000.0),
+                    transition: context.transition
+                )
+                context.add(upgradePerks
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + upgradePerks.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                originY += upgradePerks.size.height
+                originY += 16.0
+                
+                let checkTheme = CheckComponent.Theme(
+                    backgroundColor: theme.list.itemCheckColors.fillColor,
+                    strokeColor: theme.list.itemCheckColors.foregroundColor,
+                    borderColor: theme.list.itemCheckColors.strokeColor,
+                    overlayBorder: false,
+                    hasInset: false,
+                    hasShadow: false
+                )
+                let upgradeKeepName = upgradeKeepName.update(
+                    component: PlainButtonComponent(
+                        content: AnyComponent(HStack([
+                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
+                                theme: checkTheme,
+                                size: CGSize(width: 18.0, height: 18.0),
+                                selected: state.keepName
+                            ))),
+                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: strings.Gift_Upgrade_AddName, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor))
+                            )))
+                        ],
+                        spacing: 10.0
+                        )),
+                        effectAlignment: .center,
+                        action: { [weak state] in
+                            guard let state else {
+                                return
+                            }
+                            state.keepName = !state.keepName
+                            state.updated(transition: .easeInOut(duration: 0.2))
+                        },
+                        animateAlpha: false,
+                        animateScale: false
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 1000.0),
+                    transition: context.transition
+                )
+                context.add(upgradeKeepName
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + upgradeKeepName.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                originY += upgradeKeepName.size.height
+                originY += 18.0
+            } else {
+                var descriptionText: String
+                if state.isUpgradedMock {
+                    //TODO:localize
+                    titleString = "Ring"
+                    descriptionText = "\(strings.Gift_Unique_Collectible) #175"
+                } else if soldOut {
+                    descriptionText = strings.Gift_View_UnavailableDescription
+                } else if incoming {
+                    if let convertStars {
+                        if !converted {
+                            descriptionText = strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                        } else {
+                            descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
+                        }
+                    } else {
+                        descriptionText = strings.Gift_View_BotDescription
+                    }
+                } else if let peerId = component.subject.arguments?.peerId, let peer = state.peerMap[peerId] {
+                    if case .message = component.subject, let convertStars {
+                        descriptionText = strings.Gift_View_OtherDescription(peer.compactDisplayTitle, strings.Gift_View_OtherDescription_Stars(Int32(convertStars))).string
+                    } else {
+                        descriptionText = ""
+                    }
+                } else {
+                    descriptionText = ""
+                }
+                if let spaceRegex {
+                    let nsRange = NSRange(descriptionText.startIndex..., in: descriptionText)
+                    let matches = spaceRegex.matches(in: descriptionText, options: [], range: nsRange)
+                    var modifiedString = descriptionText
+                    
+                    for match in matches.reversed() {
+                        let matchRange = Range(match.range, in: descriptionText)!
+                        let matchedSubstring = String(descriptionText[matchRange])
+                        let replacedSubstring = matchedSubstring.replacingOccurrences(of: " ", with: "\u{00A0}")
+                        modifiedString.replaceSubrange(matchRange, with: replacedSubstring)
+                    }
+                    descriptionText = modifiedString
+                }
+                
+                let title = title.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: titleString,
+                            font: state.isUpgradedMock ? Font.bold(20.0) : Font.bold(25.0),
+                            textColor: state.isUpgradedMock ? .white : theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                context.add(title
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: state.isUpgradedMock ? 190.0 : 177.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                
+//                originY += 32.0
+//                if soldOut {
+//                    originY -= 12.0
+//                }
+                
+                let linkColor = theme.actionSheet.controlAccentColor
+                if !descriptionText.isEmpty {
+                    if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                        state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
+                    }
+                    
+                    let textFont: UIFont
+                    let textColor: UIColor
+                    if state.isUpgradedMock {
+                        textFont = Font.regular(13.0)
+                        textColor = UIColor.white.withAlphaComponent(0.6)
+                    } else {
+                        textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
+                        textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
+                    }
 
-                originY += hiddenText.size.height
-                originY += 11.0
-            }
-            
-            let tableFont = Font.regular(15.0)
-            let tableBoldFont = Font.semibold(15.0)
-            let tableItalicFont = Font.italic(15.0)
-            let tableBoldItalicFont = Font.semiboldItalic(15.0)
-            let tableMonospaceFont = Font.monospace(15.0)
-            
-            let tableTextColor = theme.list.itemPrimaryTextColor
-            let tableLinkColor = theme.list.itemAccentColor
-            var tableItems: [TableComponent.Item] = []
-               
-            if !soldOut {
-                if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
-                    let fromComponent: AnyComponent<Empty>
-                    if incoming {
-                        fromComponent = AnyComponent(
+                    let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                        return (TelegramTextAttributes.URL, contents)
+                    })
+                    let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                    if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                        attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
+                    }
+                    let description = description.update(
+                        component: MultilineTextComponent(
+                            text: .plain(attributedString),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 5,
+                            lineSpacing: 0.2,
+                            highlightColor: linkColor.withAlphaComponent(0.1),
+                            highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { _, _ in
+                                component.openStarsIntro()
+                            }
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
+                        transition: .immediate
+                    )
+                    context.add(description
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: 207.0 + description.size.height / 2.0))
+                        .appear(.default(alpha: true))
+                        .disappear(.default(alpha: true))
+                    )
+                    
+                    if state.isUpgradedMock {
+                        originY += 16.0
+                    } else {
+                        originY += description.size.height + 21.0
+                        if soldOut {
+                            originY -= 7.0
+                        }
+                    }
+                } else {
+                    originY += 21.0
+                }
+                
+                if nameHidden && incoming && !state.isUpgradedMock {
+                    let textFont = Font.regular(13.0)
+                    let textColor = theme.list.itemSecondaryTextColor
+                    
+                    let hiddenText = hiddenText.update(
+                        component: MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden, font: textFont, textColor: textColor)),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 2,
+                            lineSpacing: 0.2
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                        transition: .immediate
+                    )
+                    context.add(hiddenText
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                    )
+                    
+                    originY += hiddenText.size.height
+                    originY += 11.0
+                }
+                
+                let tableFont = Font.regular(15.0)
+                let tableBoldFont = Font.semibold(15.0)
+                let tableItalicFont = Font.italic(15.0)
+                let tableBoldItalicFont = Font.semiboldItalic(15.0)
+                let tableMonospaceFont = Font.monospace(15.0)
+                
+                let tableTextColor = theme.list.itemPrimaryTextColor
+                let tableLinkColor = theme.list.itemAccentColor
+                var tableItems: [TableComponent.Item] = []
+                
+                if !soldOut {
+                    if state.isUpgradedMock {
+                        if let peer = state.peerMap[component.context.account.peerId] {
+                            let ownerComponent = AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(0),
+                                        component: AnyComponent(Button(
+                                            content: AnyComponent(
+                                                PeerCellComponent(
+                                                    context: component.context,
+                                                    theme: theme,
+                                                    strings: strings,
+                                                    peer: peer
+                                                )
+                                            ),
+                                            action: {
+                                                component.openPeer(peer)
+                                                Queue.mainQueue().after(1.0, {
+                                                    component.cancel(false)
+                                                })
+                                            }
+                                        ))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(1),
+                                        component: AnyComponent(Button(
+                                            content: AnyComponent(ButtonContentComponent(
+                                                context: component.context,
+                                                text: strings.Gift_Unique_Transfer,
+                                                color: theme.list.itemAccentColor
+                                            )),
+                                            action: {
+                                                component.transferGift()
+                                                Queue.mainQueue().after(1.0, {
+                                                    component.cancel(false)
+                                                })
+                                            }
+                                        ))
+                                    )
+                                ], spacing: 4.0)
+                            )
+                            tableItems.append(.init(
+                                id: "owner",
+                                title: strings.Gift_Unique_Owner,
+                                component: ownerComponent
+                            ))
+                        }
+                    } else if let peerId = component.subject.arguments?.fromPeerId, let peer = state.peerMap[peerId] {
+                        let fromComponent: AnyComponent<Empty>
+                        if incoming {
+                            fromComponent = AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(0),
+                                        component: AnyComponent(Button(
+                                            content: AnyComponent(
+                                                PeerCellComponent(
+                                                    context: component.context,
+                                                    theme: theme,
+                                                    strings: strings,
+                                                    peer: peer
+                                                )
+                                            ),
+                                            action: {
+                                                component.openPeer(peer)
+                                                Queue.mainQueue().after(1.0, {
+                                                    component.cancel(false)
+                                                })
+                                            }
+                                        ))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(1),
+                                        component: AnyComponent(Button(
+                                            content: AnyComponent(ButtonContentComponent(
+                                                context: component.context,
+                                                text: strings.Gift_View_Send,
+                                                color: theme.list.itemAccentColor
+                                            )),
+                                            action: {
+                                                component.sendGift(peerId)
+                                                Queue.mainQueue().after(1.0, {
+                                                    component.cancel(false)
+                                                })
+                                            }
+                                        ))
+                                    )
+                                ], spacing: 4.0)
+                            )
+                        } else {
+                            fromComponent = AnyComponent(Button(
+                                content: AnyComponent(
+                                    PeerCellComponent(
+                                        context: component.context,
+                                        theme: theme,
+                                        strings: strings,
+                                        peer: peer
+                                    )
+                                ),
+                                action: {
+                                    component.openPeer(peer)
+                                    Queue.mainQueue().after(1.0, {
+                                        component.cancel(false)
+                                    })
+                                }
+                            ))
+                        }
+                        tableItems.append(.init(
+                            id: "from",
+                            title: strings.Gift_View_From,
+                            component: fromComponent
+                        ))
+                    } else {
+                        tableItems.append(.init(
+                            id: "from_anon",
+                            title: strings.Gift_View_From,
+                            component: AnyComponent(
+                                PeerCellComponent(
+                                    context: component.context,
+                                    theme: theme,
+                                    strings: strings,
+                                    peer: nil
+                                )
+                            )
+                        ))
+                    }
+                }
+                
+                if state.isUpgradedMock {
+                    let showAttributeInfo = component.showAttributeInfo
+                    let modelComponent = AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Silver Glamour", font: tableFont, textColor: tableTextColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: "2%",
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        showAttributeInfo(modelButtonTag)
+                                    }
+                                ).tagged(modelButtonTag))
+                            )
+                        ], spacing: 4.0)
+                    )
+                    
+                    tableItems.append(.init(
+                        id: "model",
+                        title: strings.Gift_Unique_Model,
+                        component: modelComponent
+                    ))
+                    
+                    let circleImage: UIImage
+                    if let image = state.cachedCircleImage {
+                        circleImage = image
+                    } else {
+                        circleImage = generateFilledCircleImage(diameter: 14.0, color: .white)!.withRenderingMode(.alwaysTemplate)
+                        state.cachedCircleImage = circleImage
+                    }
+                    
+                    let backdropComponent = AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(Image(image: circleImage, tintColor: state.upgradedMockBackgroundColor, size: CGSize(width: 14.0, height: 14.0)))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Green", font: tableFont, textColor: tableTextColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(2),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: "5%",
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        showAttributeInfo(backdropButtonTag)
+                                    }
+                                ).tagged(backdropButtonTag))
+                            )
+                        ], spacing: 4.0)
+                    )
+                    tableItems.append(.init(
+                        id: "backdrop",
+                        title: strings.Gift_Unique_Backdrop,
+                        component: backdropComponent
+                    ))
+                    
+                    let symbolComponent = AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Monkey", font: tableFont, textColor: tableTextColor))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: "2%",
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        showAttributeInfo(symbolButtonTag)
+                                    }
+                                ).tagged(symbolButtonTag))
+                            )
+                        ], spacing: 4.0)
+                    )
+                    tableItems.append(.init(
+                        id: "symbol",
+                        title: strings.Gift_Unique_Symbol,
+                        component: symbolComponent
+                    ))
+                    
+                    tableItems.append(.init(
+                        id: "availability",
+                        title: strings.Gift_Unique_Availability,
+                        component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unique_Issued("354/985").string, font: tableFont, textColor: tableTextColor)))
+                        )
+                    ))
+                } else {
+                    if case let .soldOutGift(gift) = component.subject, let soldOut = gift.soldOut {
+                        tableItems.append(.init(
+                            id: "firstDate",
+                            title: strings.Gift_View_FirstSale,
+                            component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.firstSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                            )
+                        ))
+                        
+                        tableItems.append(.init(
+                            id: "lastDate",
+                            title: strings.Gift_View_LastSale,
+                            component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.lastSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                            )
+                        ))
+                    } else if let date {
+                        tableItems.append(.init(
+                            id: "date",
+                            title: strings.Gift_View_Date,
+                            component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                            )
+                        ))
+                    }
+                    
+                    let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator))"
+                    let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
+                    let range = (valueAttributedString.string as NSString).range(of: "⭐️")
+                    if range.location != NSNotFound {
+                        valueAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                        valueAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
+                    }
+                    
+                    let valueComponent: AnyComponent<Empty>
+                    if let convertStars, incoming && !converted {
+                        valueComponent = AnyComponent(
                             HStack([
                                 AnyComponentWithIdentity(
                                     id: AnyHashable(0),
-                                    component: AnyComponent(Button(
-                                        content: AnyComponent(
-                                            PeerCellComponent(
-                                                context: component.context,
-                                                theme: theme,
-                                                strings: strings,
-                                                peer: peer
-                                            )
-                                        ),
-                                        action: {
-                                            component.openPeer(peer)
-                                            Queue.mainQueue().after(1.0, {
-                                                component.cancel(false)
-                                            })
-                                        }
+                                    component: AnyComponent(MultilineTextWithEntitiesComponent(
+                                        context: component.context,
+                                        animationCache: component.context.animationCache,
+                                        animationRenderer: component.context.animationRenderer,
+                                        placeholderColor: theme.list.mediaPlaceholderColor,
+                                        text: .plain(valueAttributedString),
+                                        maximumNumberOfLines: 0
                                     ))
                                 ),
                                 AnyComponentWithIdentity(
@@ -411,322 +951,259 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     component: AnyComponent(Button(
                                         content: AnyComponent(ButtonContentComponent(
                                             context: component.context,
-                                            text: strings.Gift_View_Send,
+                                            text: strings.Gift_View_Sale(strings.Gift_View_Sale_Stars(Int32(convertStars))).string,
                                             color: theme.list.itemAccentColor
                                         )),
                                         action: {
-                                            component.sendGift(peerId)
-                                            Queue.mainQueue().after(1.0, {
-                                                component.cancel(false)
-                                            })
+                                            component.convertToStars()
                                         }
                                     ))
                                 )
                             ], spacing: 4.0)
                         )
                     } else {
-                        fromComponent = AnyComponent(Button(
-                            content: AnyComponent(
-                                PeerCellComponent(
-                                    context: component.context,
-                                    theme: theme,
-                                    strings: strings,
-                                    peer: peer
-                                )
-                            ),
-                            action: {
-                                component.openPeer(peer)
-                                Queue.mainQueue().after(1.0, {
-                                    component.cancel(false)
-                                })
-                            }
-                        ))
-                    }
-                    tableItems.append(.init(
-                        id: "from",
-                        title: strings.Gift_View_From,
-                        component: fromComponent
-                    ))
-                } else {
-                    tableItems.append(.init(
-                        id: "from_anon",
-                        title: strings.Gift_View_From,
-                        component: AnyComponent(
-                            PeerCellComponent(
-                                context: component.context,
-                                theme: theme,
-                                strings: strings,
-                                peer: nil
-                            )
-                        )
-                    ))
-                }
-            }
-         
-            if case let .soldOutGift(gift) = component.subject, let soldOut = gift.soldOut {
-                tableItems.append(.init(
-                    id: "firstDate",
-                    title: strings.Gift_View_FirstSale,
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.firstSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
-                    )
-                ))
-                
-                tableItems.append(.init(
-                    id: "lastDate",
-                    title: strings.Gift_View_LastSale,
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: soldOut.lastSale, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
-                    )
-                ))
-            } else if let date {
-                tableItems.append(.init(
-                    id: "date",
-                    title: strings.Gift_View_Date,
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
-                    )
-                ))
-            }
-                  
-            let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator))"
-            let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
-            let range = (valueAttributedString.string as NSString).range(of: "⭐️")
-            if range.location != NSNotFound {
-                valueAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
-                valueAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
-            }
-                        
-            let valueComponent: AnyComponent<Empty>
-            if let convertStars, incoming && !converted {
-                valueComponent = AnyComponent(
-                    HStack([
-                        AnyComponentWithIdentity(
-                            id: AnyHashable(0),
-                            component: AnyComponent(MultilineTextWithEntitiesComponent(
-                                context: component.context,
-                                animationCache: component.context.animationCache,
-                                animationRenderer: component.context.animationRenderer,
-                                placeholderColor: theme.list.mediaPlaceholderColor,
-                                text: .plain(valueAttributedString),
-                                maximumNumberOfLines: 0
-                            ))
-                        ),
-                        AnyComponentWithIdentity(
-                            id: AnyHashable(1),
-                            component: AnyComponent(Button(
-                                content: AnyComponent(ButtonContentComponent(
-                                    context: component.context,
-                                    text: strings.Gift_View_Sale(strings.Gift_View_Sale_Stars(Int32(convertStars))).string,
-                                    color: theme.list.itemAccentColor
-                                )),
-                                action: {
-                                    component.convertToStars()
-                                }
-                            ))
-                        )
-                    ], spacing: 4.0)
-                )
-            } else {
-                valueComponent = AnyComponent(MultilineTextWithEntitiesComponent(
-                    context: component.context,
-                    animationCache: component.context.animationCache,
-                    animationRenderer: component.context.animationRenderer,
-                    placeholderColor: theme.list.mediaPlaceholderColor,
-                    text: .plain(valueAttributedString),
-                    maximumNumberOfLines: 0
-                ))
-            }
-            
-            tableItems.append(.init(
-                id: "value",
-                title: strings.Gift_View_Value,
-                component: valueComponent,
-                insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
-            ))
-            
-            if let limitTotal {
-                var remains: Int32 = 0
-                if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
-                    remains = availability.remains
-                }
-                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
-                let totalString = presentationStringsFormattedNumber(limitTotal, environment.dateTimeFormat.groupingSeparator)
-                tableItems.append(.init(
-                    id: "availability",
-                    title: strings.Gift_View_Availability,
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_NewOf("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
-                    )
-                ))
-            }
-            
-            if incoming && savedToProfile {
-                tableItems.append(.init(
-                    id: "visibility",
-                    title: strings.Gift_View_Visibility,
-                    component: AnyComponent(
-                        HStack([
-                            AnyComponentWithIdentity(
-                                id: AnyHashable(0),
-                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Visibility_Visible, font: tableFont, textColor: tableTextColor))))
-                            ),
-                            AnyComponentWithIdentity(
-                                id: AnyHashable(1),
-                                component: AnyComponent(Button(
-                                    content: AnyComponent(ButtonContentComponent(
-                                        context: component.context,
-                                        text: strings.Gift_View_Visibility_Hide,
-                                        color: theme.list.itemAccentColor
-                                    )),
-                                    action: {
-                                        component.updateSavedToProfile(false)
-                                    }
-                                ))
-                            )
-                        ], spacing: 4.0)
-                    ),
-                    insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
-                ))
-            }
-
-            if let text {
-                let attributedText = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: tableTextColor, linkColor: tableLinkColor, baseFont: tableFont, linkFont: tableFont, boldFont: tableBoldFont, italicFont: tableItalicFont, boldItalicFont: tableBoldItalicFont, fixedFont: tableMonospaceFont, blockQuoteFont: tableFont, message: nil)
-                
-                tableItems.append(.init(
-                    id: "text",
-                    title: nil,
-                    component: AnyComponent(
-                        MultilineTextWithEntitiesComponent(
+                        valueComponent = AnyComponent(MultilineTextWithEntitiesComponent(
                             context: component.context,
                             animationCache: component.context.animationCache,
                             animationRenderer: component.context.animationRenderer,
                             placeholderColor: theme.list.mediaPlaceholderColor,
-                            text: .plain(attributedText),
-                            maximumNumberOfLines: 0,
-                            handleSpoilers: true
-                        )
-                    )
-                ))
-            }
-            
-            let table = table.update(
-                component: TableComponent(
-                    theme: environment.theme,
-                    items: tableItems
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            context.add(table
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
-            )
-            originY += table.size.height + 23.0
-                        
-            if incoming && !converted {
-                if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
-                    state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
-                }
-                let descriptionText = savedToProfile ? strings.Gift_View_DisplayedInfo : strings.Gift_View_HiddenInfo
-                
-                let textFont = Font.regular(13.0)
-                let textColor = theme.list.itemSecondaryTextColor
-                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
-                let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
-                if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedSmallChevronImage?.0 {
-                    attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
-                }
-                
-                originY -= 5.0
-                let additionalText = additionalText.update(
-                    component: MultilineTextComponent(
-                        text: .plain(attributedString),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 5,
-                        lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.1),
-                        highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
-                            }
-                        },
-                        tapAction: { _, _ in
-                            component.openMyGifts()
-                            Queue.mainQueue().after(1.0, {
-                                component.cancel(false)
-                            })
+                            text: .plain(valueAttributedString),
+                            maximumNumberOfLines: 0
+                        ))
+                    }
+                    
+                    tableItems.append(.init(
+                        id: "value",
+                        title: strings.Gift_View_Value,
+                        component: valueComponent,
+                        insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
+                    ))
+                    
+                    if let limitTotal {
+                        var remains: Int32 = 0
+                        if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
+                            remains = availability.remains
                         }
+                        let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                        let totalString = presentationStringsFormattedNumber(limitTotal, environment.dateTimeFormat.groupingSeparator)
+                        tableItems.append(.init(
+                            id: "availability",
+                            title: strings.Gift_View_Availability,
+                            component: AnyComponent(
+                                MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_NewOf("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
+                            )
+                        ))
+                    }
+                    
+                    if !soldOut && canUpgrade {
+                        //TODO:localize
+                        var items: [AnyComponentWithIdentity<Empty>] = []
+                        items.append(
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Status_NonUnique, font: tableFont, textColor: tableTextColor))))
+                            )
+                        )
+                        if incoming {
+                            items.append(
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable(1),
+                                    component: AnyComponent(Button(
+                                        content: AnyComponent(ButtonContentComponent(
+                                            context: component.context,
+                                            text: strings.Gift_View_Status_Upgrade,
+                                            color: theme.list.itemAccentColor
+                                        )),
+                                        action: { [weak state] in
+                                            state?.inUpgrade = true
+                                            state?.updated(transition: .spring(duration: 0.4))
+                                        }
+                                    ))
+                                )
+                            )
+                        }
+                        tableItems.append(.init(
+                            id: "status",
+                            title: strings.Gift_View_Status,
+                            component: AnyComponent(
+                                HStack(items, spacing: 4.0)
+                            ),
+                            insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
+                        ))
+                    }
+                    
+                    if let text {
+                        let attributedText = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: tableTextColor, linkColor: tableLinkColor, baseFont: tableFont, linkFont: tableFont, boldFont: tableBoldFont, italicFont: tableItalicFont, boldItalicFont: tableBoldItalicFont, fixedFont: tableMonospaceFont, blockQuoteFont: tableFont, message: nil)
+                        
+                        tableItems.append(.init(
+                            id: "text",
+                            title: nil,
+                            component: AnyComponent(
+                                MultilineTextWithEntitiesComponent(
+                                    context: component.context,
+                                    animationCache: component.context.animationCache,
+                                    animationRenderer: component.context.animationRenderer,
+                                    placeholderColor: theme.list.mediaPlaceholderColor,
+                                    text: .plain(attributedText),
+                                    maximumNumberOfLines: 0,
+                                    handleSpoilers: true
+                                )
+                            )
+                        ))
+                    }
+                }
+                
+                let table = table.update(
+                    component: TableComponent(
+                        theme: environment.theme,
+                        items: tableItems
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
                     transition: .immediate
                 )
-                context.add(additionalText
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + additionalText.size.height / 2.0))
+                context.add(table
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
                 )
-                originY += additionalText.size.height
-                originY += 16.0
+                originY += table.size.height + 23.0
+                
+                if incoming && !converted {
+                    if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
+                        state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
+                    }
+                    let descriptionText = savedToProfile ? strings.Gift_View_DisplayedInfoHide : strings.Gift_View_HiddenInfo
+                    
+                    let textFont = Font.regular(13.0)
+                    let textColor = theme.list.itemSecondaryTextColor
+                    let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                        return (TelegramTextAttributes.URL, contents)
+                    })
+                    let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
+                    if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedSmallChevronImage?.0 {
+                        attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
+                    }
+                    
+                    originY -= 5.0
+                    let additionalText = additionalText.update(
+                        component: MultilineTextComponent(
+                            text: .plain(attributedString),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 5,
+                            lineSpacing: 0.2,
+                            highlightColor: linkColor.withAlphaComponent(0.1),
+                            highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { _, _ in
+                                component.updateSavedToProfile(false)
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
+                            }
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                        transition: .immediate
+                    )
+                    context.add(additionalText
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + additionalText.size.height / 2.0))
+                        .appear(.default(alpha: true))
+                        .disappear(.default(alpha: true))
+                    )
+                    originY += additionalText.size.height
+                    originY += 16.0
+                }
             }
             
-            if incoming && !converted && !savedToProfile {
-                let button = button.update(
-                    component: SolidRoundedButtonComponent(
-                        title: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display,
-                        theme: SolidRoundedButtonComponent.Theme(theme: theme),
-                        font: .bold,
-                        fontSize: 17.0,
-                        height: 50.0,
-                        cornerRadius: 10.0,
-                        gloss: false,
-                        iconName: nil,
-                        animationName: nil,
-                        iconPosition: .left,
-                        isLoading: state.inProgress,
+            let buttonChild: _UpdatedChildComponent
+            if state.inUpgrade {
+                if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
+                    state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
+                }
+                
+                //TODO:localize
+                let amountString = "25"
+                let buttonAttributedString = NSMutableAttributedString(string: "\(strings.Gift_Upgrade_Upgrade)   #  \(amountString)", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+                if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
+                    buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.foregroundColor, value: environment.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
+                    buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
+                }
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                            cornerRadius: 10.0
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable(0),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: state.inProgress,
+                        action: { [weak state] in
+                            state?.doMockUpgrade()
+                        }),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+            } else if incoming && !converted && !savedToProfile {
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                            cornerRadius: 10.0
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable(0),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: state.inProgress,
                         action: {
                             component.updateSavedToProfile(!savedToProfile)
-                        }
-                    ),
+                        }),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                     transition: context.transition
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: button.size)
-                context.add(button
-                    .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
-                )
-                originY += button.size.height
-                originY += 7.0
             } else {
-                let button = button.update(
-                    component: SolidRoundedButtonComponent(
-                        title: strings.Common_OK,
-                        theme: SolidRoundedButtonComponent.Theme(theme: theme),
-                        font: .bold,
-                        fontSize: 17.0,
-                        height: 50.0,
-                        cornerRadius: 10.0,
-                        gloss: false,
-                        iconName: nil,
-                        animationName: nil,
-                        iconPosition: .left,
-                        isLoading: state.inProgress,
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                            cornerRadius: 10.0
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable(0),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Common_OK, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: state.inProgress,
                         action: {
                             component.cancel(true)
-                        }
-                    ),
+                        }),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                     transition: context.transition
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: button.size)
-                context.add(button
-                    .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
-                )
-                originY += button.size.height
-                originY += 7.0
             }
+            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: originY), size: buttonChild.size)
+            context.add(buttonChild
+                .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
+                .cornerRadius(10.0)
+            )
+            originY += buttonChild.size.height
+            originY += 7.0
             
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
@@ -750,6 +1227,8 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let openStarsIntro: () -> Void
     let sendGift: (EnginePeer.Id) -> Void
     let openMyGifts: () -> Void
+    let transferGift: () -> Void
+    let showAttributeInfo: (Any) -> Void
     
     init(
         context: AccountContext,
@@ -759,7 +1238,9 @@ private final class GiftViewSheetComponent: CombinedComponent {
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void,
-        openMyGifts: @escaping () -> Void
+        openMyGifts: @escaping () -> Void,
+        transferGift: @escaping () -> Void,
+        showAttributeInfo: @escaping (Any) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -769,6 +1250,8 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.openStarsIntro = openStarsIntro
         self.sendGift = sendGift
         self.openMyGifts = openMyGifts
+        self.transferGift = transferGift
+        self.showAttributeInfo = showAttributeInfo
     }
     
     static func ==(lhs: GiftViewSheetComponent, rhs: GiftViewSheetComponent) -> Bool {
@@ -813,7 +1296,10 @@ private final class GiftViewSheetComponent: CombinedComponent {
                         convertToStars: context.component.convertToStars,
                         openStarsIntro: context.component.openStarsIntro,
                         sendGift: context.component.sendGift,
-                        openMyGifts: context.component.openMyGifts
+                        openMyGifts: context.component.openMyGifts,
+                        transferGift: context.component.transferGift,
+                        showAttributeInfo: context.component.showAttributeInfo,
+                        getController: controller
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
@@ -883,16 +1369,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     public enum Subject: Equatable {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
-        case soldOutGift(StarGift)
+        case soldOutGift(StarGift.Gift)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, canUpgrade: Bool)? {
             switch self {
             case let .message(message):
-                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted) = action.action {
-                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted)
+                if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, _, _) = action.action {
+                    return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, canUpgrade: false)
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, gift.canUpgrade)
             case .soldOutGift:
                 return nil
             }
@@ -920,6 +1406,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         var openStarsIntroImpl: (() -> Void)?
         var sendGiftImpl: ((EnginePeer.Id) -> Void)?
         var openMyGiftsImpl: (() -> Void)?
+        var transferGiftImpl: (() -> Void)?
+        var showAttributeInfoImpl: ((Any) -> Void)?
         
         super.init(
             context: context,
@@ -943,6 +1431,12 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 },
                 openMyGifts: {
                     openMyGiftsImpl?()
+                },
+                transferGift: {
+                    transferGiftImpl?()
+                },
+                showAttributeInfo: { tag in
+                    showAttributeInfoImpl?(tag)
                 }
             ),
             navigationBarAppearance: .none,
@@ -987,10 +1481,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
             if let navigationController = self.navigationController as? NavigationController {
                 Queue.mainQueue().after(0.5) {
-                    if let lastController = navigationController.viewControllers.last as? ViewController {
+                    if let lastController = navigationController.viewControllers.last as? ViewController, case let .generic(gift) = arguments.gift {
                         let resultController = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .sticker(context: context, file: arguments.gift.file, loop: false, title: nil, text: text, undoText: updateSavedToProfile == nil ? presentationData.strings.Gift_Displayed_View : nil, customAction: nil),
+                            content: .sticker(context: context, file: gift.file, loop: false, title: nil, text: text, undoText: updateSavedToProfile == nil ? presentationData.strings.Gift_Displayed_View : nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
                             action: { [weak navigationController] action in
                                 if case .undo = action, let navigationController {
@@ -1135,6 +1629,33 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     navigationController.pushViewController(controller, animated: true)
                 }
             })
+        }
+        
+        transferGiftImpl = { [weak self] in
+            guard let self, let navigationController = self.navigationController as? NavigationController else {
+                return
+            }
+            let _ = (context.account.stateManager.contactBirthdays
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { birthdays in
+                let controller = context.sharedContext.makePremiumGiftController(context: context, source: .settings(birthdays), transfer: true, completion: nil)
+                navigationController.pushViewController(controller)
+            })
+        }
+        
+        showAttributeInfoImpl = { [weak self] tag in
+            guard let self else {
+                return
+            }
+            guard let sourceView = self.node.hostView.findTaggedView(tag: tag), let absoluteLocation = sourceView.superview?.convert(sourceView.center, to: self.view) else {
+                return
+            }
+            
+            let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 12.0), size: CGSize())
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: presentationData.strings.Gift_Unique_AttributeDescription("5%").string), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+                return .ignore
+            })
+            self.present(controller, in: .current)
         }
     }
     
@@ -1665,6 +2186,184 @@ private struct GiftConfiguration {
             return GiftConfiguration(convertToStarsPeriod: convertToStarsPeriod ?? GiftConfiguration.defaultValue.convertToStarsPeriod)
         } else {
             return .defaultValue
+        }
+    }
+}
+
+private final class ParagraphComponent: CombinedComponent {
+    let title: String
+    let titleColor: UIColor
+    let text: String
+    let textColor: UIColor
+    let accentColor: UIColor
+    let iconName: String
+    let iconColor: UIColor
+    let badge: String?
+    let action: () -> Void
+    
+    public init(
+        title: String,
+        titleColor: UIColor,
+        text: String,
+        textColor: UIColor,
+        accentColor: UIColor,
+        iconName: String,
+        iconColor: UIColor,
+        badge: String? = nil,
+        action: @escaping () -> Void = {}
+    ) {
+        self.title = title
+        self.titleColor = titleColor
+        self.text = text
+        self.textColor = textColor
+        self.accentColor = accentColor
+        self.iconName = iconName
+        self.iconColor = iconColor
+        self.badge = badge
+        self.action = action
+    }
+    
+    static func ==(lhs: ParagraphComponent, rhs: ParagraphComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.titleColor != rhs.titleColor {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.iconColor != rhs.iconColor {
+            return false
+        }
+        if lhs.badge != rhs.badge {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let title = Child(MultilineTextComponent.self)
+        let text = Child(MultilineTextComponent.self)
+        let icon = Child(BundleIconComponent.self)
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeText = Child(MultilineTextComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let leftInset: CGFloat = 32.0
+            let rightInset: CGFloat = 24.0
+            let textSideInset: CGFloat = leftInset + 8.0
+            let spacing: CGFloat = 5.0
+            
+            let textTopInset: CGFloat = 9.0
+            
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: component.title,
+                        font: Font.semibold(15.0),
+                        textColor: component.titleColor,
+                        paragraphAlignment: .natural
+                    )),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude),
+                transition: .immediate
+            )
+            
+            let textFont = Font.regular(15.0)
+            let boldTextFont = Font.semibold(15.0)
+            let textColor = component.textColor
+            let accentColor = component.accentColor
+            let markdownAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                link: MarkdownAttributeSet(font: textFont, textColor: accentColor),
+                linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }
+            )
+                        
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .markdown(text: component.text, attributes: markdownAttributes),
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2,
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { _, _ in
+                        component.action()
+                    }
+                ),
+                availableSize: CGSize(width: context.availableSize.width - leftInset - rightInset, height: context.availableSize.height),
+                transition: .immediate
+            )
+            
+            let icon = icon.update(
+                component: BundleIconComponent(
+                    name: component.iconName,
+                    tintColor: component.iconColor
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                transition: .immediate
+            )
+         
+            context.add(title
+                .position(CGPoint(x: textSideInset + title.size.width / 2.0, y: textTopInset + title.size.height / 2.0))
+            )
+            
+            if let badge = component.badge {
+                let badgeText = badgeText.update(
+                    component: MultilineTextComponent(text: .plain(NSAttributedString(string: badge, font: Font.semibold(11.0), textColor: .white))),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                
+                let badgeWidth = badgeText.size.width + 7.0
+                let badgeBackground = badgeBackground.update(
+                    component: RoundedRectangle(
+                        color: component.accentColor,
+                        cornerRadius: 5.0),
+                    availableSize: CGSize(width: badgeWidth, height: 16.0),
+                    transition: context.transition
+                )
+                
+                context.add(badgeBackground
+                    .position(CGPoint(x: textSideInset + title.size.width + badgeWidth / 2.0 + 5.0, y: textTopInset + title.size.height / 2.0))
+                )
+                
+                context.add(badgeText
+                    .position(CGPoint(x: textSideInset + title.size.width + badgeWidth / 2.0 + 5.0, y: textTopInset + title.size.height / 2.0))
+                )
+            }
+            
+            context.add(text
+                .position(CGPoint(x: textSideInset + text.size.width / 2.0, y: textTopInset + title.size.height + spacing + text.size.height / 2.0))
+            )
+            
+            context.add(icon
+                .position(CGPoint(x: 15.0, y: textTopInset + 18.0))
+            )
+        
+            return CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + text.size.height + 20.0)
         }
     }
 }

@@ -1209,7 +1209,13 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_SavedMessagesTabTitle
             case .gifts:
                 title = presentationData.strings.PeerInfo_PaneGifts
-                icons = data?.profileGiftsContext?.currentState?.gifts.prefix(3).map { $0.gift.file } ?? []
+                icons = data?.profileGiftsContext?.currentState?.gifts.prefix(3).compactMap { gift in
+                    if case let .generic(gift) = gift.gift {
+                        return gift.file
+                    } else {
+                        return nil
+                    }
+                } ?? []
             }
             return PeerInfoPaneSpecifier(key: key, title: title, icons: icons)
         }, selectedPane: self.currentPaneKey, disableSwitching: disableTabSwitching, transitionFraction: self.transitionFraction, transition: transition)

@@ -383,6 +383,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1734841331] = { return Api.InputInvoice.parse_inputInvoicePremiumGiftCode($0) }
     dict[-1020867857] = { return Api.InputInvoice.parse_inputInvoiceSlug($0) }
     dict[634962392] = { return Api.InputInvoice.parse_inputInvoiceStarGift($0) }
+    dict[-1691016928] = { return Api.InputInvoice.parse_inputInvoiceStarGiftUpgrade($0) }
     dict[1710230755] = { return Api.InputInvoice.parse_inputInvoiceStars($0) }
     dict[-122978821] = { return Api.InputMedia.parse_inputMediaContact($0) }
     dict[-428884101] = { return Api.InputMedia.parse_inputMediaDice($0) }
@@ -906,6 +907,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[1237678029] = { return Api.StarGift.parse_starGift($0) }
+    dict[1779697613] = { return Api.StarGift.parse_starGiftUnique($0) }
+    dict[-1809377438] = { return Api.StarGiftAttribute.parse_starGiftAttributeBackdrop($0) }
+    dict[-1560829736] = { return Api.StarGiftAttribute.parse_starGiftAttributeModel($0) }
+    dict[-1070837941] = { return Api.StarGiftAttribute.parse_starGiftAttributeOriginalDetails($0) }
+    dict[-1196212701] = { return Api.StarGiftAttribute.parse_starGiftAttributePattern($0) }
     dict[-586389774] = { return Api.StarRefProgram.parse_starRefProgram($0) }
     dict[-1145654109] = { return Api.StarsAmount.parse_starsAmount($0) }
     dict[1577421297] = { return Api.StarsGiftOption.parse_starsGiftOption($0) }
@@ -1092,6 +1098,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2103604867] = { return Api.Update.parse_updateSentStoryReaction($0) }
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[-245208620] = { return Api.Update.parse_updateSmsJob($0) }
+    dict[1987894852] = { return Api.Update.parse_updateStarGiftUpgraded($0) }
     dict[1317053305] = { return Api.Update.parse_updateStarsBalance($0) }
     dict[-1518030823] = { return Api.Update.parse_updateStarsRevenueStatus($0) }
     dict[834816008] = { return Api.Update.parse_updateStickerSets($0) }
@@ -1124,7 +1131,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1751309450] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
-    dict[-291202450] = { return Api.UserStarGift.parse_userStarGift($0) }
+    dict[731361026] = { return Api.UserStarGift.parse_userStarGift($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
     dict[1703516023] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
     dict[1410997530] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
@@ -1361,6 +1368,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-512366993] = { return Api.payments.GiveawayInfo.parse_giveawayInfoResults($0) }
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[-1272590367] = { return Api.payments.PaymentForm.parse_paymentFormStarGift($0) }
+    dict[-317193530] = { return Api.payments.PaymentForm.parse_paymentFormStarGiftUpgrade($0) }
     dict[2079764828] = { return Api.payments.PaymentForm.parse_paymentFormStars($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[-625215430] = { return Api.payments.PaymentReceipt.parse_paymentReceiptStars($0) }
@@ -2058,6 +2066,8 @@ public extension Api {
             case let _1 as Api.SponsoredMessageReportOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StarGift:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StarGiftAttribute:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StarRefProgram:
                 _1.serialize(buffer, boxed)
