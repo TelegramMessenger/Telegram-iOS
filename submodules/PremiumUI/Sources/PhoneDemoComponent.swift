@@ -233,7 +233,7 @@ private final class PhoneView: UIView {
             hintDimensions: CGSize(width: 1170, height: 1754),
             storeAfterDownload: nil
         )
-        let videoNode = UniversalVideoNode(accountId: context.account.id, postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
+        let videoNode = UniversalVideoNode(context: context, postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
         videoNode.canAttachContent = true
         self.videoNode = videoNode
         

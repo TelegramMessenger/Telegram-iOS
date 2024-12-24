@@ -132,7 +132,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var videoRenderer: AVSampleBufferDisplayLayer
     private var audioRenderer: AVSampleBufferAudioRenderer?
     
-    private var partsState = ChunkMediaPlayerPartsState(duration: nil, parts: [])
+    private var partsState = ChunkMediaPlayerPartsState(duration: nil, content: .parts([]))
     private var loadedParts: [LoadedPart] = []
     private var loadedPartsMediaData: QueueLocalObject<LoadedPartsMediaData>
     private var hasSound: Bool = false
@@ -161,6 +161,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var isMuted: Bool
     
     private var seekId: Int = 0
+    private var seekTimestamp: Double = 0.0
     private var pendingSeekTimestamp: Double?
     private var pendingContinuePlaybackAfterSeekToTimestamp: Double?
     private var shouldNotifySeeked: Bool = false
@@ -219,7 +220,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         case let .externalParts(partsState):
             self.source = ChunkMediaPlayerExternalSourceImpl(partsState: partsState)
         case let .directFetch(resource):
-            self.source = ChunkMediaPlayerDirectFetchSourceImpl(resource: resource)
+            self.source = ChunkMediaPlayerDirectFetchSourceImpl(dataQueue: self.dataQueue, resource: resource)
         }
         
         self.updateTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true, block: { [weak self] _ in
@@ -347,7 +348,6 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
         
         var validParts: [ChunkMediaPlayerPart] = []
-        
         var minStartTime: Double = 0.0
         for i in 0 ..< self.partsState.parts.count {
             let part = self.partsState.parts[i]
@@ -672,6 +672,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
     private func seek(timestamp: Double, play: Bool?, notify: Bool) {
         self.seekId += 1
+        self.seekTimestamp = timestamp
         let seekId = self.seekId
         self.pendingSeekTimestamp = timestamp
         self.pendingContinuePlaybackAfterSeekToTimestamp = timestamp

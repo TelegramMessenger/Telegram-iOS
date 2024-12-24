@@ -393,6 +393,7 @@ private func extractFFMpegFrameSegmentInfo(path: String) -> FFMpegFrameSegmentIn
 }
 
 final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
+    private let dataQueue: Queue
     private let resource: ChunkMediaPlayerV2.SourceDescription.ResourceDescription
     
     private let partsStateValue = Promise<ChunkMediaPlayerPartsState>()
@@ -403,7 +404,8 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
     private var completeFetchDisposable: Disposable?
     private var dataDisposable: Disposable?
     
-    init(resource: ChunkMediaPlayerV2.SourceDescription.ResourceDescription) {
+    init(dataQueue: Queue, resource: ChunkMediaPlayerV2.SourceDescription.ResourceDescription) {
+        self.dataQueue = dataQueue
         self.resource = resource
         
         if resource.fetchAutomatically {
@@ -458,18 +460,18 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
                     
                     self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
                         duration: mainTrack.duration.seconds,
-                        parts: parts
+                        content: .parts(parts)
                     )))
                 } else {
                     self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
                         duration: nil,
-                        parts: []
+                        content: .parts([])
                     )))
                 }
             } else {
                 self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
                     duration: nil,
-                    parts: []
+                    content: .parts([])
                 )))
             }
         })

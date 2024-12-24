@@ -1076,7 +1076,7 @@ final class BrowserInstantPageContent: UIView, BrowserContent, UIScrollViewDeleg
                     }
                 }
             }
-            self.context.sharedContext.mediaManager.setPlaylist((self.context.account, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music, control: .playback(.play))
+            self.context.sharedContext.mediaManager.setPlaylist((self.context, InstantPageMediaPlaylist(webPage: webPage, items: medias, initialItemIndex: initialIndex)), type: file.isVoice ? .voice : .music, control: .playback(.play))
             return
         }
         

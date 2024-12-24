@@ -106,6 +106,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case disableCallV2(Bool)
     case experimentalCallMute(Bool)
     case conferenceCalls(Bool)
+    case playerV2(Bool)
     case benchmarkReflectors
     case enableLocalTranslation(Bool)
     case preferredVideoCodec(Int, String, String?, Bool)
@@ -132,7 +133,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .conferenceCalls, .benchmarkReflectors, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .conferenceCalls, .playerV2, .benchmarkReflectors, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -251,12 +252,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 52
         case .conferenceCalls:
             return 53
-        case .benchmarkReflectors:
+        case .playerV2:
             return 54
-        case .enableLocalTranslation:
+        case .benchmarkReflectors:
             return 55
+        case .enableLocalTranslation:
+            return 56
         case let .preferredVideoCodec(index, _, _, _):
-            return 56 + index
+            return 57 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -1355,6 +1358,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .playerV2(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "PlayerV2", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.playerV2 = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case .benchmarkReflectors:
             return ItemListActionItem(presentationData: presentationData, title: "Benchmark Reflectors", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -1578,6 +1591,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.experimentalCallMute(experimentalSettings.experimentalCallMute))
         
         entries.append(.conferenceCalls(experimentalSettings.conferenceCalls))
+        entries.append(.playerV2(experimentalSettings.playerV2))
         
         entries.append(.benchmarkReflectors)
         entries.append(.enableLocalTranslation(experimentalSettings.enableLocalTranslation))

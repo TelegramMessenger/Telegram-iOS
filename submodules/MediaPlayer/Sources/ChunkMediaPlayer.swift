@@ -80,12 +80,39 @@ public final class ChunkMediaPlayerPart {
 }
 
 public final class ChunkMediaPlayerPartsState {
-    public let duration: Double?
-    public let parts: [ChunkMediaPlayerPart]
+    public final class DirectReader {
+        public final class Impl {
+            public let video: MediaDataReader?
+            public let audio: MediaDataReader?
+            
+            public init(video: MediaDataReader?, audio: MediaDataReader?) {
+                self.video = video
+                self.audio = audio
+            }
+        }
+        
+        public let seekPosition: Double
+        public let availableUntilPosition: Double
+        public let impl: QueueLocalObject<Impl>
+        
+        public init(seekPosition: Double, availableUntilPosition: Double, impl: QueueLocalObject<Impl>) {
+            self.seekPosition = seekPosition
+            self.availableUntilPosition = availableUntilPosition
+            self.impl = impl
+        }
+    }
     
-    public init(duration: Double?, parts: [ChunkMediaPlayerPart]) {
+    public enum Content {
+        case parts([ChunkMediaPlayerPart])
+        case directReader(DirectReader)
+    }
+    
+    public let duration: Double?
+    public let content: Content
+    
+    public init(duration: Double?, content: Content) {
         self.duration = duration
-        self.parts = parts
+        self.content = content
     }
 }
 

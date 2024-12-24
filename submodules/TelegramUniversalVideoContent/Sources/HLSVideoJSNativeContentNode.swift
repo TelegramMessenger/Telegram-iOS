@@ -1022,7 +1022,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
     private var didBecomeActiveObserver: NSObjectProtocol?
     private var willResignActiveObserver: NSObjectProtocol?
     
-    private let chunkPlayerPartsState = Promise<ChunkMediaPlayerPartsState>(ChunkMediaPlayerPartsState(duration: nil, parts: []))
+    private let chunkPlayerPartsState = Promise<ChunkMediaPlayerPartsState>(ChunkMediaPlayerPartsState(duration: nil, content: .parts([])))
     private var sourceBufferStateDisposable: Disposable?
     
     private var playerStatusDisposable: Disposable?
@@ -1333,7 +1333,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             return
         }
         
-        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, parts: sourceBuffer.items)))
+        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, content: .parts(sourceBuffer.items))))
     }
     
     fileprivate func onMediaSourceBuffersUpdated() {
@@ -1347,7 +1347,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             return
         }
 
-        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, parts: sourceBuffer.items)))
+        self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, content: .parts(sourceBuffer.items))))
         if self.sourceBufferStateDisposable == nil {
             self.sourceBufferStateDisposable = (sourceBuffer.updated.signal()
             |> deliverOnMainQueue).startStrict(next: { [weak self, weak sourceBuffer] _ in
@@ -1357,7 +1357,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
                 guard let mediaSource = SharedHLSVideoJSContext.shared.mediaSources[sourceBuffer.mediaSourceId] else {
                     return
                 }
-                self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, parts: sourceBuffer.items)))
+                self.chunkPlayerPartsState.set(.single(ChunkMediaPlayerPartsState(duration: mediaSource.duration, content: .parts(sourceBuffer.items))))
                 
                 self.updateBuffered()
             })
