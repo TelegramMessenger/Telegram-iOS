@@ -171,7 +171,7 @@ final class PeerSelectionLoadingView: UIView {
                     context: context,
                     peerMode: .peer,
                     peer: .peer(peer: peer1, chatPeer: peer1),
-                    status: .custom(string: "status", multiline: false, isActive: false, icon: nil),
+                    status: .custom(string: NSAttributedString(string: "status"), multiline: false, isActive: false, icon: nil),
                     badge: nil,
                     requiresPremiumForMessaging: false,
                     enabled: true,
@@ -242,7 +242,7 @@ final class PeerSelectionLoadingView: UIView {
                     let titleFrame = itemNodes[sampleIndex].titleNode.frame.offsetBy(dx: 0.0, dy: currentY)
                     fillLabelPlaceholderRect(origin: CGPoint(x: titleFrame.minX, y: floor(titleFrame.midY - fakeLabelPlaceholderHeight / 2.0)), width: 100.0)
                     
-                    let textFrame = itemNodes[sampleIndex].statusNode.frame.offsetBy(dx: 0.0, dy: currentY)
+                    let textFrame = itemNodes[sampleIndex].statusNode.textNode.frame.offsetBy(dx: 0.0, dy: currentY)
                     fillLabelPlaceholderRect(origin: CGPoint(x: textFrame.minX, y: currentY + itemHeight - floor(itemNodes[sampleIndex].titleNode.frame.midY - fakeLabelPlaceholderHeight / 2.0) - fakeLabelPlaceholderHeight), width: 40.0)
                     
                     context.setBlendMode(.normal)

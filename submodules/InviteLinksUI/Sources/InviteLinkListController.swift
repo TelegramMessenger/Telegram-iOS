@@ -56,7 +56,7 @@ private enum InviteLinksListSection: Int32 {
 }
 
 private enum InviteLinksListEntry: ItemListNodeEntry {
-    case header(PresentationTheme, String)
+    case header(PresentationTheme, NSAttributedString)
    
     case mainLinkHeader(PresentationTheme, String)
     case mainLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
@@ -278,7 +278,7 @@ private func inviteLinkListControllerEntries(presentationData: PresentationData,
         } else {
             helpText = presentationData.strings.InviteLink_CreatePrivateLinkHelp
         }
-        entries.append(.header(presentationData.theme, helpText))
+        entries.append(.header(presentationData.theme, NSAttributedString(string: helpText)))
     }
     
     let mainInvite: ExportedInvitation?

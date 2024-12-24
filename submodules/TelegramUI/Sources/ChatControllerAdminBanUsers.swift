@@ -94,7 +94,7 @@ extension ChatControllerImpl {
         self.present(
             UndoOverlayController(
                 presentationData: self.presentationData,
-                content: undoRights.isEmpty ? .actionSucceeded(title: title, text: text, cancel: nil, destructive: false) : .removedChat(title: title ?? text, text: title == nil ? nil : text),
+                content: undoRights.isEmpty ? .actionSucceeded(title: title, text: text, cancel: nil, destructive: false) : .removedChat(context: self.context, title: NSAttributedString(string: title ?? text), text: title == nil ? nil : text),
                 elevatedLayout: false,
                 action: { [weak self] action in
                     guard let self else {
@@ -357,7 +357,7 @@ extension ChatControllerImpl {
         self.chatDisplayNode.historyNode.ignoreMessageIds = Set(messageIds)
         
         let undoTitle = self.presentationData.strings.Chat_MessagesDeletedToast_Text(Int32(messageIds.count))
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: undoTitle, text: nil), elevatedLayout: false, position: .top, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: undoTitle), text: nil), elevatedLayout: false, position: .top, action: { [weak self] value in
             guard let self else {
                 return false
             }

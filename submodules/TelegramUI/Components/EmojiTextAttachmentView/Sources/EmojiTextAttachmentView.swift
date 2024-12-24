@@ -382,6 +382,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
+    public var enableAnimation: Bool = true
+    
     public weak var mirrorLayer: CALayer? {
         didSet {
             if let mirrorLayer = self.mirrorLayer {

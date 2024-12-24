@@ -7,6 +7,7 @@ import AccountContext
 import MultilineTextComponent
 import TelegramPresentationData
 import TelegramCore
+import MultilineTextWithEntitiesComponent
 
 final class BadgeComponent: Component {
     let fillColor: UIColor
@@ -84,17 +85,20 @@ final class BadgeComponent: Component {
 }
 
 final class ChatFolderLinkHeaderComponent: Component {
+    let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
     let title: ChatFolderTitle
     let badge: String?
     
     init(
+        context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
         title: ChatFolderTitle,
         badge: String?
     ) {
+        self.context = context
         self.theme = theme
         self.strings = strings
         self.title = title
@@ -213,10 +217,16 @@ final class ChatFolderLinkHeaderComponent: Component {
             }
             contentWidth += spacing
             
-            //TODO:release
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: component.title.text, font: Font.semibold(17.0), color: component.theme.list.itemAccentColor)),
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: component.context,
+                    animationCache: component.context.animationCache,
+                    animationRenderer: component.context.animationRenderer,
+                    placeholderColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.1),
+                    text: .plain(component.title.attributedString(font: Font.semibold(17.0), textColor: component.theme.list.itemAccentColor)),
+                    manualVisibilityControl: false
+                )),
                 environment: {},
                 containerSize: CGSize(width: 200.0, height: 100.0)
             )

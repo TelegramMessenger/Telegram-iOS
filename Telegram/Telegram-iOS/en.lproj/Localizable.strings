@@ -13521,3 +13521,17 @@ Sorry for the inconvenience.";
 "PeerInfo.VerificationInfo.Channel" = "This channel is verified as official by the representatives of Telegram.";
 "PeerInfo.VerificationInfo.Group" = "This group is verified as official by the representatives of Telegram.";
 "PeerInfo.VerificationInfo.URL" = "https://telegram.org/verify";
+
+"ChatList.ToastFolderMutedV2" = "All chats in {folder} are now muted";
+"ChatList.ToastFolderUnmutedV2" = "All chats in {folder} are now unmuted";
+"ChatList.AddedToFolderTooltipV2" = "{chat} has been added to folder {folder}";
+"ChatList.RemovedFromFolderTooltipV2" = "{chat} has been removed from folder {folder}";
+
+"FolderLinkScreen.TitleDescriptionDeselectedV2" = "Anyone with this link can add {folder} folder and the chats selected below.";
+"FolderLinkScreen.TitleDescriptionSelectedV2" = "Anyone with this link can add {folder} folder and {chats} selected below.";
+"Chat.NextChannelFolderSwipeProgressV2" = "Swipe up to go to the {folder} folder";
+"Chat.NextChannelFolderSwipeActionV2" = "Release to go to the {folder} folder";
+"FolderLinkPreview.TextAddChatsV2" = "Do you want to add {chats} to the\nfolder {folder}?";
+"FolderLinkPreview.ToastLeftTitleV2" = "Folder {folder} deleted";
+"FolderLinkPreview.ToastChatsAddedTitleV2" = "Folder {folder} Updated";
+"FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";

@@ -342,9 +342,17 @@ extension ChatListFilter {
         case .dialogFilterDefault:
             self = .allChats
         case let .dialogFilter(flags, id, title, emoticon, color, pinnedPeers, includePeers, excludePeers):
+            let titleText: String
+            let titleEntities: [MessageTextEntity]
+            switch title {
+            case let .textWithEntities(text, entities):
+                titleText = text
+                titleEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            let disableTitleAnimations = (flags & (1 << 28)) != 0
             self = .filter(
                 id: id,
-                title: ChatFolderTitle(text: title, entities: [], enableAnimations: true),
+                title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimations),
                 emoticon: emoticon,
                 data: ChatListFilterData(
                     isShared: false,
@@ -392,9 +400,18 @@ extension ChatListFilter {
                 )
             )
         case let .dialogFilterChatlist(flags, id, title, emoticon, color, pinnedPeers, includePeers):
+            let titleText: String
+            let titleEntities: [MessageTextEntity]
+            switch title {
+            case let .textWithEntities(text, entities):
+                titleText = text
+                titleEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            let disableTitleAnimations = (flags & (1 << 28)) != 0
+            
             self = .filter(
                 id: id,
-                title: ChatFolderTitle(text: title, entities: [], enableAnimations: true),
+                title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimations),
                 emoticon: emoticon,
                 data: ChatListFilterData(
                     isShared: true,
@@ -446,7 +463,10 @@ extension ChatListFilter {
                 if data.color != nil {
                     flags |= 1 << 27
                 }
-                return .dialogFilterChatlist(flags: flags, id: id, title: title.text, emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                if !title.enableAnimations {
+                    flags |= 1 << 28
+                }
+                return .dialogFilterChatlist(flags: flags, id: id, title: .textWithEntities(text: title.text, entities: apiEntitiesFromMessageTextEntities(title.entities, associatedPeers: SimpleDictionary())), emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
                     if data.includePeers.pinnedPeers.contains(peerId) {
@@ -472,7 +492,10 @@ extension ChatListFilter {
                 if data.color != nil {
                     flags |= 1 << 27
                 }
-                return .dialogFilter(flags: flags, id: id, title: title.text, emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                if !title.enableAnimations {
+                    flags |= 1 << 28
+                }
+                return .dialogFilter(flags: flags, id: id, title: .textWithEntities(text: title.text, entities: apiEntitiesFromMessageTextEntities(title.entities, associatedPeers: SimpleDictionary())), emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
                     if data.includePeers.pinnedPeers.contains(peerId) {

@@ -90,7 +90,7 @@ public enum ChatTitleContent: Equatable {
         case replies
     }
     
-    case peer(peerView: PeerData, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
+    case peer(peerView: PeerData, customTitle: String?, onlineMemberCount: (total: Int32?, recent: Int32?), isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?, isEnabled: Bool)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
     
@@ -104,7 +104,7 @@ public enum ChatTitleContent: Equatable {
                 if customTitle != rhsCustomTitle {
                     return false
                 }
-                if onlineMemberCount != rhsOnlineMemberCount {
+                if onlineMemberCount.0 != rhsOnlineMemberCount.0 || onlineMemberCount.1 != rhsOnlineMemberCount.1 {
                     return false
                 }
                 if isScheduledMessages != rhsIsScheduledMessages {
@@ -616,7 +616,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     if channel.flags.contains(.isForum), customTitle != nil {
                                         let string = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(string, .generic)
-                                    } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
+                                    } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = onlineMemberCount.total ?? cachedChannelData.participantsSummary.memberCount {
                                         if memberCount == 0 {
                                             let string: NSAttributedString
                                             if case .group = channel.info {
@@ -626,7 +626,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                             }
                                             state = .info(string, .generic)
                                         } else {
-                                            if case .group = channel.info, let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+                                            if case .group = channel.info, let onlineMemberCount = onlineMemberCount.recent, onlineMemberCount > 1 {
                                                 let string = NSMutableAttributedString()
                                                 
                                                 string.append(NSAttributedString(string: "\(strings.Conversation_StatusMembers(Int32(memberCount))), ", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor))

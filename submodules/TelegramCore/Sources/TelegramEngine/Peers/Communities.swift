@@ -273,8 +273,10 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
     |> mapToSignal { result -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> in
         return account.postbox.transaction { transaction -> ChatFolderLinkContents in
             switch result {
-            case let .chatlistInvite(_, title, emoticon, peers, chats, users):
+            case let .chatlistInvite(flags, title, emoticon, peers, chats, users):
                 let _ = emoticon
+                
+                let disableTitleAnimation = (flags & (1 << 1)) != 0
                 
                 let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]
@@ -301,7 +303,15 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     }
                 }
                 
-                return ChatFolderLinkContents(localFilterId: nil, title: ChatFolderTitle(text: title, entities: [], enableAnimations: true), peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
+                let titleText: String
+                let titleEntities: [MessageTextEntity]
+                switch title {
+                case let .textWithEntities(text, entities):
+                    titleText = text
+                    titleEntities = messageTextEntitiesFromApiEntities(entities)
+                }
+                
+                return ChatFolderLinkContents(localFilterId: nil, title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimation), peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             case let .chatlistInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
                 let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]

@@ -28,6 +28,7 @@ import EmojiStatusComponent
 import AvatarVideoNode
 import AppBundle
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import ShimmerEffect
 
 public enum ChatListItemContent {
@@ -82,10 +83,10 @@ public enum ChatListItemContent {
     
     public struct Tag: Equatable {
         public var id: Int32
-        public var title: String
+        public var title: ChatFolderTitle
         public var colorId: Int32
         
-        public init(id: Int32, title: String, colorId: Int32) {
+        public init(id: Int32, title: ChatFolderTitle, colorId: Int32) {
             self.id = id
             self.title = title
             self.colorId = colorId
@@ -269,6 +270,8 @@ private final class ChatListItemTagListComponent: Component {
         let backgroundView: UIImageView
         let title = ComponentView<Empty>()
         
+        private var currentTitle: ChatFolderTitle?
+        
         override init(frame: CGRect) {
             self.backgroundView = UIImageView(image: tagBackgroundImage)
             
@@ -281,11 +284,20 @@ private final class ChatListItemTagListComponent: Component {
             preconditionFailure()
         }
         
-        func update(context: AccountContext, title: String, backgroundColor: UIColor, foregroundColor: UIColor, sizeFactor: CGFloat) -> CGSize {
+        func update(context: AccountContext, title: ChatFolderTitle, backgroundColor: UIColor, foregroundColor: UIColor, sizeFactor: CGFloat) -> CGSize {
+            self.currentTitle = title
+            
+            let titleValue = ChatFolderTitle(text: title.text.isEmpty ? " " : title.text, entities: title.entities, enableAnimations: title.enableAnimations)
             let titleSize = self.title.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: title.isEmpty ? " " : title, font: Font.semibold(floor(11.0 * sizeFactor)), textColor: foregroundColor))
+                component: AnyComponent(MultilineTextWithEntitiesComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    placeholderColor: foregroundColor.withMultipliedAlpha(0.1),
+                    text: .plain(titleValue.attributedString(font: Font.semibold(floor(11.0 * sizeFactor)), textColor: foregroundColor)),
+                    manualVisibilityControl: true,
+                    resetAnimationsOnVisibilityChange: true
                 )),
                 environment: {},
                 containerSize: CGSize(width: 100.0, height: 100.0)
@@ -309,10 +321,29 @@ private final class ChatListItemTagListComponent: Component {
             
             return backgroundSize
         }
+        
+        func updateVisibility(_ isVisible: Bool) {
+            guard let currentTitle = self.currentTitle else {
+                return
+            }
+            if let titleView = self.title.view as? MultilineTextWithEntitiesComponent.View {
+                titleView.updateVisibility(isVisible && currentTitle.enableAnimations)
+            }
+        }
     }
     
     final class View: UIView {
         private var itemViews: [Int32: ItemView] = [:]
+        
+        var isVisible: Bool = false {
+            didSet {
+                if self.isVisible != oldValue {
+                    for (_, itemView) in self.itemViews {
+                        itemView.updateVisibility(self.isVisible)
+                    }
+                }
+            }
+        }
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -332,13 +363,13 @@ private final class ChatListItemTagListComponent: Component {
                 }
                 
                 let itemId: Int32
-                let itemTitle: String
+                let itemTitle: ChatFolderTitle
                 let itemBackgroundColor: UIColor
                 let itemForegroundColor: UIColor
                 
                 if validIds.count >= 3 {
                     itemId = Int32.max
-                    itemTitle = "+\(component.tags.count - validIds.count)"
+                    itemTitle = ChatFolderTitle(text: "+\(component.tags.count - validIds.count)", entities: [], enableAnimations: true)
                     itemForegroundColor = component.theme.chatList.dateTextColor
                     itemBackgroundColor = itemForegroundColor.withMultipliedAlpha(0.1)
                 } else {
@@ -347,7 +378,7 @@ private final class ChatListItemTagListComponent: Component {
                     let tagColor = PeerNameColor(rawValue: tag.colorId)
                     let resolvedColor = component.context.peerNameColors.getChatFolderTag(tagColor, dark: component.theme.overallDarkAppearance)
                     
-                    itemTitle = tag.title.uppercased()
+                    itemTitle = ChatFolderTitle(text: tag.title.text.uppercased(), entities: tag.title.entities, enableAnimations: tag.title.enableAnimations)
                     itemBackgroundColor = resolvedColor.main.withMultipliedAlpha(0.1)
                     itemForegroundColor = resolvedColor.main
                 }
@@ -364,6 +395,7 @@ private final class ChatListItemTagListComponent: Component {
                 let itemSize = itemView.update(context: component.context, title: itemTitle, backgroundColor: itemBackgroundColor, foregroundColor: itemForegroundColor, sizeFactor: component.sizeFactor)
                 let itemFrame = CGRect(origin: CGPoint(x: nextX, y: 0.0), size: itemSize)
                 itemView.frame = itemFrame
+                itemView.updateVisibility(self.isVisible)
                 
                 validIds.append(itemId)
                 nextX += itemSize.width
@@ -1451,6 +1483,10 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     )
                 }
                 self.authorNode.visibilityStatus = self.visibilityStatus
+                
+                if let itemTagListView = self.itemTagList?.view as? ChatListItemTagListComponent.View {
+                    itemTagListView.isVisible = self.visibilityStatus
+                }
             }
         }
     }
@@ -4243,13 +4279,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             environment: {},
                             containerSize: itemTagListFrame.size
                         )
-                        if let itemTagListView = itemTagList.view {
+                        if let itemTagListView = itemTagList.view as? ChatListItemTagListComponent.View {
                             if itemTagListView.superview == nil {
                                 itemTagListView.isUserInteractionEnabled = false
                                 strongSelf.mainContentContainerNode.view.addSubview(itemTagListView)
                             }
                             
                             itemTagListTransition.updateFrame(view: itemTagListView, frame: itemTagListFrame)
+                            itemTagListView.isVisible = strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji
                         }
                     } else {
                         if let itemTagList = strongSelf.itemTagList {
