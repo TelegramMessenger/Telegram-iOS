@@ -2477,6 +2477,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             case let .user(userType):
                                 if case let .user(user) = peer {
                                     match = true
+                                    if user.id.isVerificationCodes {
+                                        match = false
+                                    }
                                     if let isBot = userType.isBot {
                                         if isBot != (user.botInfo != nil) {
                                             match = false

@@ -34,6 +34,7 @@ swift_library(
         "//submodules/ContextUI",
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/Chat/ForwardAccessoryPanelNode",
+        "//submodules/CounterControllerTitleView",
     ],
     visibility = [
         "//visibility:public",
