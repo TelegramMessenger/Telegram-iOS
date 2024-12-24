@@ -1091,7 +1091,8 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         self.contextDisposable = SharedHLSVideoJSContext.shared.register(context: self)
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
-        var didProcessFramesToDisplay = false
+        
+        /*var didProcessFramesToDisplay = false
         self.playerNode.isHidden = true
         self.playerNode.hasSentFramesToDisplay = { [weak self] in
             guard let self, !didProcessFramesToDisplay else {
@@ -1099,7 +1100,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             didProcessFramesToDisplay = true
             self.playerNode.isHidden = false
-        }
+        }*/
 
         //let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
         
