@@ -274,7 +274,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         
         super.init()
         
-        var didProcessFramesToDisplay = false
+        /*var didProcessFramesToDisplay = false
         self.playerNode.isHidden = true
         self.playerNode.hasSentFramesToDisplay = { [weak self] in
             guard let self, !didProcessFramesToDisplay else {
@@ -283,7 +283,7 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             didProcessFramesToDisplay = true
             self.playerNode.isHidden = false
             self.hasSentFramesToDisplay?()
-        }
+        }*/
         
         if let dimensions = hintDimensions {
             self.dimensions = dimensions

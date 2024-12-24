@@ -27,7 +27,7 @@ public struct HLSCodecConfiguration {
 
 public extension HLSCodecConfiguration {
     init(context: AccountContext) {
-        var isSoftwareAv1Supported = false
+        /*var isSoftwareAv1Supported = false
         var isHardwareAv1Supported = false
         
         var length: Int = 4
@@ -44,7 +44,9 @@ public extension HLSCodecConfiguration {
             isSoftwareAv1Supported = value != 0.0
         }
         
-        self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)
+        self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)*/
+        
+        self.init(isHardwareAv1Supported: false, isSoftwareAv1Supported: false)
     }
 }
 
