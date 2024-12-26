@@ -1090,10 +1090,34 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
+            case let .starGiftUnique(gift, isUpgrade, isTransferred, _, _, _):
+                if case let .unique(gift) = gift {
+                    if !forAdditionalServiceMessage {
+                        attributedString = NSAttributedString(string: "\(gift.title) #\(gift.number)", font: titleFont, textColor: primaryTextColor)
+                    } else if let messagePeer = message.peers[message.id.peerId] {
+                        let peerName = EnginePeer(messagePeer).compactDisplayTitle
+                        let peerIds: [(Int, EnginePeer.Id?)] = [(0, messagePeer.id)]
+                        if isUpgrade {
+                            if message.author?.id == accountPeerId {
+                                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_UpgradeYou(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                            } else {
+                                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Upgrade(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                            }
+                        } else if isTransferred {
+                            if message.author?.id == accountPeerId {
+                                attributedString = NSAttributedString(string: strings.Notification_StarsGift_TransferYou, font: titleFont, textColor: primaryTextColor)
+                            } else {
+                                let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                                attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Transfer(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                            }
+                        }
+                    }
+                }
             case .unknown:
                 attributedString = nil
             }
-            
             break
         } else if let expiredMedia = media as? TelegramMediaExpiredContent {
             switch expiredMedia.data {

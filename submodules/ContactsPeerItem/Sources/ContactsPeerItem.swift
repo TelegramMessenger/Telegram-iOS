@@ -796,8 +796,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     
                     if peer.isVerified {
                         verifiedIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                    } else if let verification = peer.verification {
-                        verifiedIcon = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
+                    } else if let verificationIconFileId = peer.verificationIconFileId {
+                        verifiedIcon = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
             case .deviceContact:

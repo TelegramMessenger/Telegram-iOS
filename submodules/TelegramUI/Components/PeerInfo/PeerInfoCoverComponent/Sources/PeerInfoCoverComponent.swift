@@ -61,7 +61,7 @@ private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -
 public final class PeerInfoCoverComponent: Component {
     public enum Subject: Equatable {
         case peer(EnginePeer)
-        case custom(UIColor?, UIColor?, Int64?)
+        case custom(UIColor?, UIColor?, UIColor?, Int64?)
         
         func colors(context: AccountContext, isDark: Bool) -> (UIColor, UIColor)? {
             switch self {
@@ -73,7 +73,7 @@ public final class PeerInfoCoverComponent: Component {
                 } else {
                     return nil
                 }
-            case let .custom(color, secondColor, _):
+            case let .custom(color, secondColor, _, _):
                 if let color {
                     if let secondColor {
                         return (color, secondColor)
@@ -90,7 +90,7 @@ public final class PeerInfoCoverComponent: Component {
             switch self {
             case let .peer(peer):
                 return peer.profileBackgroundEmojiId
-            case let .custom(_, _, fileId):
+            case let .custom(_, _, _, fileId):
                 return fileId
             }
         }
@@ -354,9 +354,9 @@ public final class PeerInfoCoverComponent: Component {
             
             self.backgroundView.backgroundColor = secondaryBackgroundColor
             
+            self.backgroundGradientLayer.type = .axial
             self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 1.0)
             self.backgroundGradientLayer.endPoint = CGPoint(x: 0.5, y: 0.0)
-            self.backgroundGradientLayer.type = .axial
             self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
             self.backgroundGradientLayer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             
@@ -384,24 +384,35 @@ public final class PeerInfoCoverComponent: Component {
             let avatarPatternFrame = CGSize(width: 380.0, height: floor(component.defaultHeight * 1.0)).centered(around: component.avatarCenter)
             transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
             
-            if component.subject?.colors(context: component.context, isDark: component.isDark) != nil {
-                self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
-                self.avatarBackgroundPatternContentsLayer.colors = [
-                    UIColor(white: 0.0, alpha: 0.6).cgColor,
-                    UIColor(white: 0.0, alpha: 0.0).cgColor
-                ]
-                
-            } else {
+            if case let .custom(_, _, patternColor, _) = component.subject, let patternColor {
                 self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
-                let baseWhite: CGFloat = component.isDark ? 0.5 : 0.3
-                
                 self.avatarBackgroundPatternContentsLayer.colors = [
-                    UIColor(white: baseWhite, alpha: 0.6).cgColor,
-                    UIColor(white: baseWhite, alpha: 0.0).cgColor
+                    patternColor.withAlphaComponent(0.6).cgColor,
+                    patternColor.withAlphaComponent(0.0).cgColor
                 ]
+            } else {
+                if component.subject?.colors(context: component.context, isDark: component.isDark) != nil {
+                    self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
+                    self.avatarBackgroundPatternContentsLayer.colors = [
+                        UIColor(white: 0.0, alpha: 0.6).cgColor,
+                        UIColor(white: 0.0, alpha: 0.0).cgColor
+                    ]
+                    
+                } else {
+                    self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
+                    let baseWhite: CGFloat = component.isDark ? 0.5 : 0.3
+                    self.avatarBackgroundPatternContentsLayer.colors = [
+                        UIColor(white: baseWhite, alpha: 0.6).cgColor,
+                        UIColor(white: baseWhite, alpha: 0.0).cgColor
+                    ]
+                }
             }
             
-            self.avatarBackgroundGradientLayer.isHidden = component.subject?.colors(context: component.context, isDark: component.isDark) == nil
+            if case .custom = component.subject {
+                self.avatarBackgroundGradientLayer.isHidden = true
+            } else {
+                self.avatarBackgroundGradientLayer.isHidden = component.subject?.colors(context: component.context, isDark: component.isDark) == nil
+            }
             transition.setFrame(layer: self.avatarBackgroundGradientLayer, frame: CGSize(width: 300.0, height: 300.0).centered(around: component.avatarCenter))
             transition.setAlpha(layer: self.avatarBackgroundGradientLayer, alpha: 1.0 - component.avatarTransitionFraction)
             
@@ -413,6 +424,19 @@ public final class PeerInfoCoverComponent: Component {
                 transition.setAlpha(view: self.backgroundPatternContainer, alpha: component.patternTransitionFraction)
 //            }
             
+            var baseDistance: CGFloat = 72.0
+            var baseRowDistance: CGFloat = 28.0
+            var baseItemSize: CGFloat = 26.0
+            if availableSize.width <= 60.0 {
+                baseDistance *= 0.35
+                baseRowDistance *= 0.3
+                baseItemSize *= 0.4
+            } else if availableSize.width < 150.0 {
+                baseDistance *= 0.6
+                baseRowDistance *= 0.6
+                baseItemSize *= 0.75
+            }
+            
             var avatarBackgroundPatternLayerCount = 0
             let lokiRng = LokiRng(seed0: 123, seed1: 0, seed2: 0)
             let numRows = 5
@@ -421,9 +445,9 @@ public final class PeerInfoCoverComponent: Component {
                 let avatarPatternAngleSpan: CGFloat = CGFloat.pi * 2.0 / CGFloat(avatarPatternCount - 1)
                 
                 for i in 0 ..< avatarPatternCount - 1 {
-                    let baseItemDistance: CGFloat = 72.0 + CGFloat(row) * 28.0
+                    let baseItemDistance: CGFloat = baseDistance + CGFloat(row) * baseRowDistance
                     
-                    let itemDistanceFraction = max(0.0, min(1.0, baseItemDistance / 140.0))
+                    let itemDistanceFraction = max(0.0, min(1.0, baseItemDistance / (baseDistance * 2.0)))
                     let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: itemDistanceFraction, reverse: false)
                     let itemDistance = baseItemDistance * (1.0 - itemScaleFraction) + 20.0 * itemScaleFraction
                     
@@ -437,7 +461,7 @@ public final class PeerInfoCoverComponent: Component {
                     var itemScale: CGFloat
                     itemScale = 0.7 + CGFloat(lokiRng.next()) * (1.0 - 0.7)
                     
-                    let itemSize: CGFloat = floor(26.0 * itemScale)
+                    let itemSize: CGFloat = floor(baseItemSize * itemScale)
                     let itemFrame = CGSize(width: itemSize, height: itemSize).centered(around: itemPosition)
                     
                     let itemLayer: SimpleLayer

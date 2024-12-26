@@ -422,7 +422,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             if let convertStars {
                                                 text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
                                             } else {
-                                                text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
+                                                text = item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
                                             }
                                         } else {
                                             if let convertStars {
@@ -466,6 +466,21 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     buttonTitle = ""
                                 }
+                            }
+                        case let .starGiftUnique(gift, _, _, _, _, _):
+                            if case let .unique(uniqueGift) = gift {
+                                isStarGift = true
+                                let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                for attribute in uniqueGift.attributes {
+                                    if case let .model(_, file, _) = attribute {
+                                        animationFile = file
+                                        break
+                                    }
+                                }
+                                //TODO:localize
+                                ribbonTitle = "gift"
+                                buttonTitle = item.presentationData.strings.Notification_StarGift_View
                             }
                         default:
                             break
@@ -618,7 +633,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.animationNode.autoplay = true
                                 
                                 if let file = animationFile {
-                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    strongSelf.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, isVideo: file.mimeType == "video/webm"), width: 384, height: 384, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                                     if strongSelf.fetchDisposable == nil {
                                         strongSelf.fetchDisposable = freeMediaFileResourceInteractiveFetched(postbox: item.context.account.postbox, userLocation: .other, fileReference: .message(message: MessageReference(item.message), media: file), resource: file.resource).start()
                                     }

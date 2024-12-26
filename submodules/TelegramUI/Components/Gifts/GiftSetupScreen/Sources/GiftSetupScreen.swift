@@ -31,6 +31,7 @@ import TextFormat
 import InAppPurchaseManager
 import BlurredBackgroundComponent
 import ProgressNavigationButtonNode
+import Markdown
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -79,6 +80,7 @@ final class GiftSetupScreenComponent: Component {
         private let remainingCount = ComponentView<Empty>()
         private let introContent = ComponentView<Empty>()
         private let introSection = ComponentView<Empty>()
+        private let upgradeSection = ComponentView<Empty>()
         private let hideSection = ComponentView<Empty>()
     
         private let buttonBackground = ComponentView<Empty>()
@@ -111,6 +113,7 @@ final class GiftSetupScreenComponent: Component {
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
         
         private var hideName = false
+        private var includeUpgrade = false
         private var inProgress = false
         
         private var previousHadInputHeight: Bool = false
@@ -128,6 +131,8 @@ final class GiftSetupScreenComponent: Component {
             }
         }
         private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
+        
+        private var cachedChevronImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -319,7 +324,7 @@ final class GiftSetupScreenComponent: Component {
                 self.state?.updated()
                 
                 let entities = generateChatInputTextEntities(self.textInputState.text)
-                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, peerId: component.peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
+                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: component.peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
                 
                 let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
                 |> map(Optional.init)
@@ -629,30 +634,32 @@ final class GiftSetupScreenComponent: Component {
                 let remains: Int32 = availability.remains
                 let total: Int32 = availability.total
                 let position = CGFloat(remains) / CGFloat(total)
-                let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
-                let totalString = presentationStringsFormattedNumber(total, environment.dateTimeFormat.groupingSeparator)
+                let sold = total - remains
+                //let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
+                //let soldString = presentationStringsFormattedNumber(total - remains, environment.dateTimeFormat.groupingSeparator)
+                //let totalString = presentationStringsFormattedNumber(total, environment.dateTimeFormat.groupingSeparator)
                 let remainingCountSize = self.remainingCount.update(
                     transition: transition,
                     component: AnyComponent(RemainingCountComponent(
                         inactiveColor: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                         activeColors: [UIColor(rgb: 0x5bc2ff), UIColor(rgb: 0x2d9eff)],
-                        inactiveTitle: environment.strings.Gift_Send_Limited,
+                        inactiveTitle: environment.strings.Gift_Send_Remains(remains),
                         inactiveValue: "",
                         inactiveTitleColor: environment.theme.list.itemSecondaryTextColor,
                         activeTitle: "",
-                        activeValue: totalString,
+                        activeValue: environment.strings.Gift_Send_Sold(sold),//totalString,
                         activeTitleColor: .white,
-                        badgeText: "\(remainsString)",
+                        badgeText: "",
                         badgePosition: position,
                         badgeGraphPosition: position,
                         invertProgress: true,
-                        leftString: environment.strings.Gift_Send_Remains(remains).replacingOccurrences(of: remainsString, with: "").trimmingCharacters(in: .whitespacesAndNewlines),
+                        leftString: "",
                         groupingSeparator: environment.dateTimeFormat.groupingSeparator
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
                 )
-                let remainingCountFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight - 36.0), size: remainingCountSize)
+                let remainingCountFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight - 77.0), size: remainingCountSize)
                 if let remainingCountView = self.remainingCount.view {
                     if remainingCountView.superview == nil {
                         self.scrollView.addSubview(remainingCountView)
@@ -660,7 +667,7 @@ final class GiftSetupScreenComponent: Component {
                     transition.setFrame(view: remainingCountView, frame: remainingCountFrame)
                 }
                 contentHeight += remainingCountSize.height
-                contentHeight -= 36.0
+                contentHeight -= 77.0
                 contentHeight += sectionSpacing
             }
             
@@ -798,7 +805,8 @@ final class GiftSetupScreenComponent: Component {
                                 accountPeer: accountPeer,
                                 subject: subject,
                                 text: self.textInputState.text.string,
-                                entities: generateChatInputTextEntities(self.textInputState.text)
+                                entities: generateChatInputTextEntities(self.textInputState.text),
+                                includeUpgrade: self.includeUpgrade
                             ),
                             params: listItemParams
                         )
@@ -818,7 +826,72 @@ final class GiftSetupScreenComponent: Component {
                 }
             }
     
-            if case .starGift = component.subject {
+            if case let .starGift(gift) = component.subject {
+                if let upgradeStars = gift.upgradeStars, component.peerId != component.context.account.peerId {
+                    let parsedString = parseMarkdownIntoAttributedString(environment.strings.Gift_Send_Upgrade_Info(peerName).string, attributes: MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
+                        bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
+                        link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
+                        linkAttribute: { url in
+                            return ("URL", url)
+                        }))
+                    
+                    let upgradeFooterText = NSMutableAttributedString(attributedString: parsedString)
+                    
+                    if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== environment.theme {
+                        self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
+                    }
+                    if let range = upgradeFooterText.string.range(of: ">"), let chevronImage = self.cachedChevronImage?.0 {
+                        upgradeFooterText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: upgradeFooterText.string))
+                    }
+                    
+                    let upgradeSectionSize = self.upgradeSection.update(
+                        transition: transition,
+                        component: AnyComponent(ListSectionComponent(
+                            theme: environment.theme,
+                            header: nil,
+                            footer: AnyComponent(MultilineTextComponent(
+                                text: .plain(upgradeFooterText),
+                                maximumNumberOfLines: 0
+                            )),
+                            items: [
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                    theme: environment.theme,
+                                    title: AnyComponent(VStack([
+                                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
+                                            text: .plain(NSAttributedString(
+                                                string: environment.strings.Gift_Send_Upgrade("\(upgradeStars)").string,
+                                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
+                                                textColor: environment.theme.list.itemPrimaryTextColor
+                                            )),
+                                            maximumNumberOfLines: 1
+                                        ))),
+                                    ], alignment: .left, spacing: 2.0)),
+                                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.includeUpgrade, action: { [weak self] _ in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.includeUpgrade = !self.includeUpgrade
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    })),
+                                    action: nil
+                                )))
+                            ]
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    )
+                    let upgradeSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: upgradeSectionSize)
+                    if let upgradeSectionView = self.upgradeSection.view {
+                        if upgradeSectionView.superview == nil {
+                            self.scrollView.addSubview(upgradeSectionView)
+                        }
+                        transition.setFrame(view: upgradeSectionView, frame: upgradeSectionFrame)
+                    }
+                    contentHeight += upgradeSectionSize.height
+                    contentHeight += sectionSpacing
+                }
+                
                 let hideSectionSize = self.hideSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(

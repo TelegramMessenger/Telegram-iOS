@@ -33,6 +33,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let subject: ChatGiftPreviewItem.Subject
     let text: String
     let entities: [MessageTextEntity]
+    let includeUpgrade: Bool
     
     init(
         context: AccountContext,
@@ -48,7 +49,8 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         accountPeer: EnginePeer?,
         subject: ChatGiftPreviewItem.Subject,
         text: String,
-        entities: [MessageTextEntity]
+        entities: [MessageTextEntity],
+        includeUpgrade: Bool
     ) {
         self.context = context
         self.theme = theme
@@ -64,6 +66,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.subject = subject
         self.text = text
         self.entities = entities
+        self.includeUpgrade = includeUpgrade
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -221,7 +224,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, transferred: false)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, upgradeStars: item.includeUpgrade ? 0 : gift.upgradeStars)
                         )
                     ]
                 }

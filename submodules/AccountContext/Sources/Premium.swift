@@ -50,6 +50,7 @@ public enum PremiumGiftSource: Equatable {
     case settings([EnginePeer.Id: TelegramBirthday]?)
     case chatList([EnginePeer.Id: TelegramBirthday]?)
     case stars([EnginePeer.Id: TelegramBirthday]?)
+    case starGiftTransfer([EnginePeer.Id: TelegramBirthday]?, EngineMessage.Id, StarGift.UniqueGift, Int64, Int32?)
     case channelBoost
     case deeplink(String?)
 }
@@ -131,6 +132,7 @@ public enum StarsPurchasePurpose: Equatable {
     case gift(peerId: EnginePeer.Id)
     case unlockMedia(requiredStars: Int64)
     case starGift(peerId: EnginePeer.Id, requiredStars: Int64)
+    case upgradeStarGift(requiredStars: Int64)
 }
 
 public struct PremiumConfiguration {

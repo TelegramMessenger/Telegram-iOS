@@ -56,6 +56,10 @@ private final class UpdatedStarsRevenueStatusSubscriberContext {
     let subscribers = Bag<([PeerId: StarsRevenueStats.Balances]) -> Void>()
 }
 
+private final class UpgradedStarGiftsSubscriberContext {
+    let subscribers = Bag<([(ProfileGiftsContext.State.StarGift, ProfileGiftsContext.State.StarGift)]) -> Void>()
+}
+
 public enum DeletedMessageId: Hashable {
     case global(Int32)
     case messageId(MessageId)
@@ -346,6 +350,7 @@ public final class AccountStateManager {
         private var updatedRevenueBalancesContext = UpdatedRevenueBalancesSubscriberContext()
         private var updatedStarsBalanceContext = UpdatedStarsBalanceSubscriberContext()
         private var updatedStarsRevenueStatusContext = UpdatedStarsRevenueStatusSubscriberContext()
+        private var upgradedStarGiftsContext = UpgradedStarGiftsSubscriberContext()
         
         private let delayNotificatonsUntil = Atomic<Int32?>(value: nil)
         private let appliedMaxMessageIdPromise = Promise<Int32?>(nil)
@@ -1108,6 +1113,9 @@ public final class AccountStateManager {
                             if !events.updatedStarsRevenueStatus.isEmpty {
                                 strongSelf.notifyUpdatedStarsRevenueStatus(events.updatedStarsRevenueStatus)
                             }
+                            if !events.updatedUpgradedStarGifts.isEmpty {
+                                strongSelf.notifyUpgradedStarGifts(events.updatedUpgradedStarGifts)
+                            }
                             if !events.updatedCalls.isEmpty {
                                 for call in events.updatedCalls {
                                     strongSelf.callSessionManager?.updateSession(call, completion: { _ in })
@@ -1767,6 +1775,33 @@ public final class AccountStateManager {
             }
         }
         
+        public func upgradedStarGifts() -> Signal<[(ProfileGiftsContext.State.StarGift, ProfileGiftsContext.State.StarGift)], NoError> {
+            let queue = self.queue
+            return Signal { [weak self] subscriber in
+                let disposable = MetaDisposable()
+                queue.async {
+                    if let strongSelf = self {
+                        let index = strongSelf.upgradedStarGiftsContext.subscribers.add({ upgradedGifts in
+                            subscriber.putNext(upgradedGifts)
+                        })
+                        
+                        disposable.set(ActionDisposable {
+                            if let strongSelf = self {
+                                strongSelf.upgradedStarGiftsContext.subscribers.remove(index)
+                            }
+                        })
+                    }
+                }
+                return disposable
+            }
+        }
+        
+        private func notifyUpgradedStarGifts(_ upgradedStarGifts: [(ProfileGiftsContext.State.StarGift, ProfileGiftsContext.State.StarGift)]) {
+            for subscriber in self.upgradedStarGiftsContext.subscribers.copyItems() {
+                subscriber(upgradedStarGifts)
+            }
+        }
+        
         func notifyDeletedMessages(messageIds: [MessageId]) {
             self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
         }
@@ -2105,6 +2140,12 @@ public final class AccountStateManager {
     public func updatedStarsRevenueStatus() -> Signal<[PeerId: StarsRevenueStats.Balances], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.updatedStarsRevenueStatus().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    public func upgradedStarGifts() -> Signal<[(ProfileGiftsContext.State.StarGift, ProfileGiftsContext.State.StarGift)], NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.upgradedStarGifts().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
         }
     }
     

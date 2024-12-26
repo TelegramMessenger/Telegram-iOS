@@ -1255,7 +1255,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     canViewStarsRevenue = true
                 }
                 #if DEBUG
-                canViewStarsRevenue = "".isEmpty
+                canViewStarsRevenue = peerId != context.account.peerId
                 #endif
                 
                 guard canViewStarsRevenue else {
@@ -1280,7 +1280,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     canViewRevenue = true
                 }
                 #if DEBUG
-                canViewRevenue = "".isEmpty
+                canViewRevenue = peerId != context.account.peerId
                 #endif
                 guard canViewRevenue else {
                     return .single((nil, nil))

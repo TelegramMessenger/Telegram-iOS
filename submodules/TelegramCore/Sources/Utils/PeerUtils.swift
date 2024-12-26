@@ -269,12 +269,12 @@ public extension Peer {
         }
     }
     
-    var verification: PeerVerification? {
+    var verificationIconFileId: Int64? {
         switch self {
         case let user as TelegramUser:
-            return user.verification
+            return user.verificationIconFileId
         case let channel as TelegramChannel:
-            return channel.verification
+            return channel.verificationIconFileId
         default:
             return nil
         }

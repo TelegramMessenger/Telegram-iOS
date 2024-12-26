@@ -280,8 +280,8 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleVerifiedIcon = .verified
                                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
-                                    } else if let verification = peer.verification {
-                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil))
+                                    } else if let verificationIconFileId = peer.verificationIconFileId {
+                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verificationIconFileId, expirationDate: nil))
                                     }
                                 }
                             }

@@ -52,6 +52,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             case availability
             case soldOut
             case flags
+            case upgradeStars
         }
         
         public struct Availability: Equatable, Codable, PostboxCoding {
@@ -115,8 +116,9 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public let availability: Availability?
         public let soldOut: SoldOut?
         public let flags: Flags
+        public let upgradeStars: Int64?
         
-        public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?, flags: Flags) {
+        public init(id: Int64, file: TelegramMediaFile, price: Int64, convertStars: Int64, availability: Availability?, soldOut: SoldOut?, flags: Flags, upgradeStars: Int64?) {
             self.id = id
             self.file = file
             self.price = price
@@ -124,6 +126,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.availability = availability
             self.soldOut = soldOut
             self.flags = flags
+            self.upgradeStars = upgradeStars
         }
         
         public init(from decoder: Decoder) throws {
@@ -141,6 +144,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.availability = try container.decodeIfPresent(Availability.self, forKey: .availability)
             self.soldOut = try container.decodeIfPresent(SoldOut.self, forKey: .soldOut)
             self.flags = Flags(rawValue: try container .decodeIfPresent(Int32.self, forKey: .flags) ?? 0)
+            self.upgradeStars = try container.decodeIfPresent(Int64.self, forKey: .upgradeStars)
         }
         
         public init(decoder: PostboxDecoder) {
@@ -151,6 +155,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { StarGift.Gift.Availability(decoder: $0) }) as? StarGift.Gift.Availability
             self.soldOut = decoder.decodeObjectForKey(CodingKeys.soldOut.rawValue, decoder: { StarGift.Gift.SoldOut(decoder: $0) }) as? StarGift.Gift.SoldOut
             self.flags = Flags(rawValue: decoder.decodeInt32ForKey(CodingKeys.flags.rawValue, orElse: 0))
+            self.upgradeStars = decoder.decodeOptionalInt64ForKey(CodingKeys.upgradeStars.rawValue)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -167,6 +172,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             try container.encodeIfPresent(self.availability, forKey: .availability)
             try container.encodeIfPresent(self.soldOut, forKey: .soldOut)
             try container.encode(self.flags.rawValue, forKey: .flags)
+            try container.encodeIfPresent(self.upgradeStars, forKey: .upgradeStars)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
@@ -185,6 +191,11 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 encoder.encodeNil(forKey: CodingKeys.soldOut.rawValue)
             }
             encoder.encodeInt32(self.flags.rawValue, forKey: CodingKeys.flags.rawValue)
+            if let upgradeStars = self.upgradeStars {
+                encoder.encodeInt64(upgradeStars, forKey: CodingKeys.upgradeStars.rawValue)
+            } else {
+                encoder.encodeNil(forKey: CodingKeys.upgradeStars.rawValue)
+            }
         }
     }
     
@@ -202,7 +213,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             enum CodingKeys: String, CodingKey {
                 case type
                 case name
-                case fileId
+                case file
                 case innerColor
                 case outerColor
                 case patternColor
@@ -215,10 +226,30 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case rarity
             }
             
-            case model(name: String, fileId: Int64, rarity: Int32)
-            case pattern(name: String, fileId: Int64, rarity: Int32)
+            public enum AttributeType {
+                case model
+                case pattern
+                case backdrop
+                case originalInfo
+            }
+            
+            case model(name: String, file: TelegramMediaFile, rarity: Int32)
+            case pattern(name: String, file: TelegramMediaFile, rarity: Int32)
             case backdrop(name: String, innerColor: Int32, outerColor: Int32, patternColor: Int32, textColor: Int32, rarity: Int32)
             case originalInfo(senderPeerId: EnginePeer.Id?, recipientPeerId: EnginePeer.Id, date: Int32, text: String?, entities: [MessageTextEntity]?)
+            
+            public var attributeType: AttributeType {
+                switch self {
+                case .model:
+                    return .model
+                case .pattern:
+                    return .pattern
+                case .backdrop:
+                    return .backdrop
+                case .originalInfo:
+                    return .originalInfo
+                }
+            }
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -228,13 +259,13 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case 0:
                     self = .model(
                         name: try container.decode(String.self, forKey: .name),
-                        fileId: try container.decode(Int64.self, forKey: .fileId),
+                        file: try container.decode(TelegramMediaFile.self, forKey: .file),
                         rarity: try container.decode(Int32.self, forKey: .rarity)
                     )
                 case 1:
                     self = .pattern(
                         name: try container.decode(String.self, forKey: .name),
-                        fileId: try container.decode(Int64.self, forKey: .fileId),
+                        file: try container.decode(TelegramMediaFile.self, forKey: .file),
                         rarity: try container.decode(Int32.self, forKey: .rarity)
                     )
                 case 2:
@@ -266,13 +297,13 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 case 0:
                     self = .model(
                         name: decoder.decodeStringForKey(CodingKeys.name.rawValue, orElse: ""),
-                        fileId: decoder.decodeInt64ForKey(CodingKeys.fileId.rawValue, orElse: 0),
+                        file: decoder.decodeObjectForKey(CodingKeys.file.rawValue) as! TelegramMediaFile,
                         rarity: decoder.decodeInt32ForKey(CodingKeys.rarity.rawValue, orElse: 0)
                     )
                 case 1:
                     self = .pattern(
                         name: decoder.decodeStringForKey(CodingKeys.name.rawValue, orElse: ""),
-                        fileId: decoder.decodeInt64ForKey(CodingKeys.fileId.rawValue, orElse: 0),
+                        file: decoder.decodeObjectForKey(CodingKeys.file.rawValue) as! TelegramMediaFile,
                         rarity: decoder.decodeInt32ForKey(CodingKeys.rarity.rawValue, orElse: 0)
                     )
                 case 2:
@@ -301,15 +332,15 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 
                 switch self {
-                case let .model(name, fileId, rarity):
+                case let .model(name, file, rarity):
                     try container.encode(Int32(0), forKey: .type)
                     try container.encode(name, forKey: .name)
-                    try container.encode(fileId, forKey: .fileId)
+                    try container.encode(file, forKey: .file)
                     try container.encode(rarity, forKey: .rarity)
-                case let .pattern(name, fileId, rarity):
+                case let .pattern(name, file, rarity):
                     try container.encode(Int32(1), forKey: .type)
                     try container.encode(name, forKey: .name)
-                    try container.encode(fileId, forKey: .fileId)
+                    try container.encode(file, forKey: .file)
                     try container.encode(rarity, forKey: .rarity)
                 case let .backdrop(name, innerColor, outerColor, patternColor, textColor, rarity):
                     try container.encode(Int32(2), forKey: .type)
@@ -331,15 +362,15 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             
             public func encode(_ encoder: PostboxEncoder) {
                 switch self {
-                case let .model(name, fileId, rarity):
+                case let .model(name, file, rarity):
                     encoder.encodeInt32(0, forKey: CodingKeys.type.rawValue)
                     encoder.encodeString(name, forKey: CodingKeys.name.rawValue)
-                    encoder.encodeInt64(fileId, forKey: CodingKeys.fileId.rawValue)
+                    encoder.encodeObject(file, forKey: CodingKeys.file.rawValue)
                     encoder.encodeInt32(rarity, forKey: CodingKeys.rarity.rawValue)
-                case let .pattern(name, fileId, rarity):
+                case let .pattern(name, file, rarity):
                     encoder.encodeInt32(1, forKey: CodingKeys.type.rawValue)
                     encoder.encodeString(name, forKey: CodingKeys.name.rawValue)
-                    encoder.encodeInt64(fileId, forKey: CodingKeys.fileId.rawValue)
+                    encoder.encodeObject(file, forKey: CodingKeys.file.rawValue)
                     encoder.encodeInt32(rarity, forKey: CodingKeys.rarity.rawValue)
                 case let .backdrop(name, innerColor, outerColor, patternColor, textColor, rarity):
                     encoder.encodeInt32(2, forKey: CodingKeys.type.rawValue)
@@ -521,7 +552,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
 extension StarGift {
     init?(apiStarGift: Api.StarGift) {
         switch apiStarGift {
-        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale):
+        case let .starGift(apiFlags, id, sticker, stars, availabilityRemains, availabilityTotal, convertStars, firstSale, lastSale, upgradeStars):
             var flags = StarGift.Gift.Flags()
             if (apiFlags & (1 << 2)) != 0 {
                 flags.insert(.isBirthdayGift)
@@ -538,9 +569,9 @@ extension StarGift {
             guard let file = telegramMediaFileFromApiDocument(sticker, altDocuments: nil) else {
                 return nil
             }
-            self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags))
+            self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
         case let .starGiftUnique(id, title, num, ownerId, attributes, availabilityIssued, availabilityTotal):
-            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, ownerPeerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)), attributes: attributes.map { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal)))
+            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, ownerPeerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)), attributes: attributes.compactMap { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal)))
         }
     }
 }
@@ -595,56 +626,168 @@ func managedStarGiftsUpdates(postbox: Postbox, network: Network) -> Signal<Never
 }
 
 func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputUser)
+    return account.network.request(Api.functions.payments.convertStarGift(msgId: messageId.id))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+        return .single(nil)
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
-        guard let inputUser else {
-            return .complete()
-        }
-        return account.network.request(Api.functions.payments.convertStarGift(userId: inputUser, msgId: messageId.id))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-            return .single(nil)
-        }
-        |> mapToSignal { result in
-            if let result, case .boolTrue = result {
-                return account.postbox.transaction { transaction -> Void in
-                    transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
-                        if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
-                            var updatedData = cachedData
-                            updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
-                            return updatedData
-                        } else {
-                            return cachedData
-                        }
-                    })
-                }
+    |> mapToSignal { result in
+        if let result, case .boolTrue = result {
+            return account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
+                        var updatedData = cachedData
+                        updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                        return updatedData
+                    } else {
+                        return cachedData
+                    }
+                })
             }
-            return .complete()
         }
-        |> ignoreValues
+        return .complete()
     }
+    |> ignoreValues
 }
 
 func _internal_updateStarGiftAddedToProfile(account: Account, messageId: EngineMessage.Id, added: Bool) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputUser)
+    var flags: Int32 = 0
+    if !added {
+        flags |= (1 << 0)
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
+    return account.network.request(Api.functions.payments.saveStarGift(flags: flags, msgId: messageId.id))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+        return .single(nil)
+    }
+    |> ignoreValues
+}
+
+public enum TransferStarGiftError {
+    case generic
+}
+
+func _internal_transferStarGift(account: Account, prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+    return account.postbox.transaction { transaction -> Api.InputUser? in
+        return transaction.getPeer(peerId).flatMap(apiInputUser)
+    }
+    |> castError(TransferStarGiftError.self)
+    |> mapToSignal { inputUser -> Signal<Never, TransferStarGiftError> in
         guard let inputUser else {
             return .complete()
         }
+        if prepaid {
+            return account.network.request(Api.functions.payments.transferStarGift(msgId: messageId.id, toId: inputUser))
+            |> mapError { _ -> TransferStarGiftError in
+                return .generic
+            }
+            |> mapToSignal { updates -> Signal<Void, TransferStarGiftError> in
+                account.stateManager.addUpdates(updates)
+                return .complete()
+            }
+            |> ignoreValues
+        } else {
+            let source: BotPaymentInvoiceSource = .starGiftTransfer(messageId: messageId, toPeerId: peerId)
+            return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
+            |> mapError { _ -> TransferStarGiftError in
+                return .generic
+            }
+            |> mapToSignal { paymentForm in
+                return _internal_sendStarsPaymentForm(account: account, formId: paymentForm.id, source: source)
+                |> mapError { _ -> TransferStarGiftError in
+                    return .generic
+                }
+                |> ignoreValues
+            }
+        }
+    }
+}
+
+public enum UpgradeStarGiftError {
+    case generic
+}
+
+func _internal_upgradeStarGift(account: Account, prepaid: Bool, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+    if prepaid {
         var flags: Int32 = 0
-        if !added {
+        if keepOriginalInfo {
             flags |= (1 << 0)
         }
-        return account.network.request(Api.functions.payments.saveStarGift(flags: flags, userId: inputUser, msgId: messageId.id))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-            return .single(nil)
+        return account.network.request(Api.functions.payments.upgradeStarGift(flags: flags, msgId: messageId.id))
+        |> mapError { _ -> UpgradeStarGiftError in
+            return .generic
         }
-        |> ignoreValues
+        |> mapToSignal { updates in
+            account.stateManager.addUpdates(updates)
+            
+            return account.stateManager.upgradedStarGifts()
+            |> castError(UpgradeStarGiftError.self)
+            |> take(until: { updates in
+                for update in updates {
+                    if update.0.messageId == messageId {
+                        return .init(passthrough: true, complete: true)
+                    }
+                }
+                return .init(passthrough: false, complete: false)
+            })
+            |> mapToSignal { updates in
+                for update in updates {
+                    if update.0.messageId == messageId {
+                        return .single(update.1)
+                    }
+                }
+                return .complete()
+            }
+        }
+    } else {
+        let source: BotPaymentInvoiceSource = .starGiftUpgrade(keepOriginalInfo: keepOriginalInfo, messageId: messageId)
+        return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
+        |> mapError { _ -> UpgradeStarGiftError in
+            return .generic
+        }
+        |> mapToSignal { paymentForm in
+            return _internal_sendStarsPaymentForm(account: account, formId: paymentForm.id, source: source)
+            |> mapError { _ -> UpgradeStarGiftError in
+                return .generic
+            }
+            |> mapToSignal { _ in
+                return account.stateManager.upgradedStarGifts()
+                |> castError(UpgradeStarGiftError.self)
+                |> take(until: { updates in
+                    for update in updates {
+                        if update.0.messageId == messageId {
+                            return .init(passthrough: true, complete: true)
+                        }
+                    }
+                    return .init(passthrough: false, complete: false)
+                })
+                |> mapToSignal { updates in
+                    for update in updates {
+                        if update.0.messageId == messageId {
+                            return .single(update.1)
+                        }
+                    }
+                    return .complete()
+                }
+            }
+        }
+    }
+}
+
+func _internal_starGiftUpgradePreview(account: Account, giftId: Int64) -> Signal<[StarGift.UniqueGift.Attribute], NoError> {
+    return account.network.request(Api.functions.payments.getStarGiftUpgradePreview(giftId: giftId))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.payments.StarGiftUpgradePreview?, NoError> in
+        return .single(nil)
+    }
+    |> map { result in
+        guard let result else {
+            return []
+        }
+        switch result {
+        case let .starGiftUpgradePreview(sampleAttributes):
+            return sampleAttributes.compactMap { StarGift.UniqueGift.Attribute(apiAttribute: $0) }
+        }
     }
 }
 
@@ -766,6 +909,24 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
+    func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) {
+        self.actionDisposable.set(
+            _internal_transferStarGift(account: self.account, prepaid: prepaid, messageId: messageId, peerId: peerId).startStrict()
+        )
+        if let count = self.count {
+            self.count = max(0, count - 1)
+        }
+        self.gifts.removeAll(where: { $0.messageId == messageId })
+        self.pushState()
+    }
+    
+    func upgradeStarGift(prepaid: Bool, messageId: EngineMessage.Id, keepOriginalInfo: Bool) {
+        self.actionDisposable.set(
+            _internal_upgradeStarGift(account: self.account, prepaid: prepaid, messageId: messageId, keepOriginalInfo: keepOriginalInfo).startStrict()
+        )
+        self.pushState()
+    }
+    
     private func pushState() {
         self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)
         self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)))
@@ -786,6 +947,8 @@ public final class ProfileGiftsContext {
             public let convertStars: Int64?
             public let canUpgrade: Bool
             public let canExportDate: Int32?
+            public let upgradeStars: Int64?
+            public let transferStars: Int64?
             
             public func withSavedToProfile(_ savedToProfile: Bool) -> StarGift {
                 return StarGift(
@@ -799,7 +962,9 @@ public final class ProfileGiftsContext {
                     savedToProfile: savedToProfile,
                     convertStars: self.convertStars,
                     canUpgrade: self.canUpgrade,
-                    canExportDate: self.canExportDate
+                    canExportDate: self.canExportDate,
+                    upgradeStars: self.upgradeStars,
+                    transferStars: self.transferStars
                 )
             }
         }
@@ -856,6 +1021,18 @@ public final class ProfileGiftsContext {
         }
     }
     
+    public func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) {
+        self.impl.with { impl in
+            impl.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+        }
+    }
+    
+    public func upgradeStarGift(prepaid: Bool, messageId: EngineMessage.Id, keepOriginalInfo: Bool) {
+        self.impl.with { impl in
+            impl.upgradeStarGift(prepaid: prepaid, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+        }
+    }
+    
     public var currentState: ProfileGiftsContext.State? {
         var state: ProfileGiftsContext.State?
         self.impl.syncWith { impl in
@@ -865,10 +1042,10 @@ public final class ProfileGiftsContext {
     }
 }
 
-private extension ProfileGiftsContext.State.StarGift {
+extension ProfileGiftsContext.State.StarGift {
     init?(apiUserStarGift: Api.UserStarGift, transaction: Transaction) {
         switch apiUserStarGift {
-        case let .userStarGift(flags, fromId, date, apiGift, message, msgId, convertStars, canExportDate):
+        case let .userStarGift(flags, fromId, date, apiGift, message, msgId, convertStars, upgradeStars, canExportDate, transferStars):
             guard let gift = StarGift(apiStarGift: apiGift) else {
                 return nil
             }
@@ -890,8 +1067,14 @@ private extension ProfileGiftsContext.State.StarGift {
                 self.text = nil
                 self.entities = nil
             }
-            if let fromPeer = self.fromPeer, let msgId {
-                self.messageId = EngineMessage.Id(peerId: fromPeer.id, namespace: Namespaces.Message.Cloud, id: msgId)
+            if let msgId {
+                if let fromPeer = self.fromPeer {
+                    self.messageId = EngineMessage.Id(peerId: fromPeer.id, namespace: Namespaces.Message.Cloud, id: msgId)
+                } else if case .unique = gift {
+                    self.messageId = EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Cloud, id: msgId)
+                } else {
+                    self.messageId = nil
+                }
             } else {
                 self.messageId = nil
             }
@@ -900,17 +1083,25 @@ private extension ProfileGiftsContext.State.StarGift {
             self.convertStars = convertStars
             self.canUpgrade = (flags & (1 << 6)) != 0
             self.canExportDate = canExportDate
+            self.upgradeStars = upgradeStars
+            self.transferStars = transferStars
         }
     }
 }
 
 extension StarGift.UniqueGift.Attribute {
-    init(apiAttribute: Api.StarGiftAttribute) {
+    init?(apiAttribute: Api.StarGiftAttribute) {
         switch apiAttribute {
-        case let .starGiftAttributeModel(name, documentId, rarityPermille):
-            self = .model(name: name, fileId: documentId, rarity: rarityPermille)
-        case let .starGiftAttributePattern(name, documentId, rarityPermille):
-            self = .pattern(name: name, fileId: documentId, rarity: rarityPermille)
+        case let .starGiftAttributeModel(name, document, rarityPermille):
+            guard let file = telegramMediaFileFromApiDocument(document, altDocuments: nil) else {
+                return nil
+            }
+            self = .model(name: name, file: file, rarity: rarityPermille)
+        case let .starGiftAttributePattern(name, document, rarityPermille):
+            guard let file = telegramMediaFileFromApiDocument(document, altDocuments: nil) else {
+                return nil
+            }
+            self = .pattern(name: name, file: file, rarity: rarityPermille)
         case let .starGiftAttributeBackdrop(name, centerColor, edgeColor, patternColor, textColor, rarityPermille):
             self = .backdrop(name: name, innerColor: centerColor, outerColor: edgeColor, patternColor: patternColor, textColor: textColor, rarity: rarityPermille)
         case let .starGiftAttributeOriginalDetails(_, senderId, recipientId, date, message):
@@ -924,4 +1115,3 @@ extension StarGift.UniqueGift.Attribute {
         }
     }
 }
-

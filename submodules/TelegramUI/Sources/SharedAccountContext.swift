@@ -2213,7 +2213,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var presentBirthdayPickerImpl: (() -> Void)?
-        let starsMode: ContactSelectionControllerMode = .starsGifting(birthdays: birthdays, hasActions: false)
+        let starsMode: ContactSelectionControllerMode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false)
     
         let contactOptions: Signal<[ContactListAdditionalOption], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId))
         |> map { birthday in
@@ -2278,39 +2278,62 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, transfer: Bool, completion: (([EnginePeer.Id]) -> Void)?) -> ViewController {
+    public func makePremiumGiftController(context: AccountContext, source: PremiumGiftSource, completion: (([EnginePeer.Id]) -> Void)?) -> ViewController {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
-        var presentTransferAlertImpl: (() -> Void)?
+        var presentExportAlertImpl: (() -> Void)?
+        var presentTransferAlertImpl: ((EnginePeer) -> Void)?
         
         var presentBirthdayPickerImpl: (() -> Void)?
         var mode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
+        if case let .starGiftTransfer(birthdays, _, _, _, _) = source {
+            if let birthdays, !birthdays.isEmpty {
+                mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: true)
+                currentBirthdays = birthdays
+            } else {
+                mode = .starsGifting(birthdays: nil, hasActions: false, showSelf: true)
+            }
+        }
         if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: false)
             currentBirthdays = birthdays
         } else if case let .settings(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: false)
             currentBirthdays = birthdays
         } else {
-            mode = .starsGifting(birthdays: nil, hasActions: true)
+            mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false)
         }
         
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
-        if transfer {
-            //TODO:localize
-            contactOptions = .single([
-                ContactListAdditionalOption(
-                    title: presentationData.strings.Gift_Transfer_SendViaBlockchain,
-                    subtitle: presentationData.strings.Gift_Transfer_SendUnlocks("21 days").string,
-                    icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
-                    action: {
-                        presentTransferAlertImpl?()
-                    },
-                    clearHighlightAutomatically: true
-                )
-            ])
+        if case let .starGiftTransfer(_, _, _, _, canExportDate) = source {
+            var subtitle: String?
+            if let canExportDate {
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                if currentTime > canExportDate {
+                    subtitle = nil
+                } else {
+                    let delta = canExportDate - currentTime
+                    let days: Int32 = Int32(ceil(Float(delta) / 86400.0))
+                    let daysString = presentationData.strings.Gift_Transfer_SendUnlocks_Days(days)
+                    subtitle = presentationData.strings.Gift_Transfer_SendUnlocks(daysString).string
+                }
+                contactOptions = .single([
+                    ContactListAdditionalOption(
+                        title: presentationData.strings.Gift_Transfer_SendViaBlockchain,
+                        subtitle: subtitle,
+                        icon: .generic(UIImage(bundleImageName: "Item List/Ton")!),
+                        style: .generic,
+                        action: {
+                            presentExportAlertImpl?()
+                        },
+                        clearHighlightAutomatically: true
+                    )
+                ])
+            } else {
+                contactOptions = .single([])
+            }
         } else if currentBirthdays != nil || "".isEmpty {
             contactOptions = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId))
             |> map { birthday in
@@ -2335,13 +2358,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var openProfileImpl: ((EnginePeer) -> Void)?
         var sendMessageImpl: ((EnginePeer) -> Void)?
         
+        let title: String
+        if case .starGiftTransfer = source {
+            title = presentationData.strings.Gift_Transfer_Title
+        } else {
+            title = presentationData.strings.Gift_PremiumOrStars_Title
+        }
+        
         let options = Promise<[PremiumGiftCodeOption]>()
         options.set(context.engine.payments.premiumGiftCodeOptions(peerId: nil))
         let controller = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(
             context: context,
             mode: mode,
             autoDismiss: false,
-            title: { strings in return transfer ? presentationData.strings.Gift_Transfer_Title :  presentationData.strings.Gift_PremiumOrStars_Title },
+            title: { _ in return title },
             options: contactOptions,
             openProfile: { peer in
                 openProfileImpl?(peer)
@@ -2355,10 +2385,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = combineLatest(queue: Queue.mainQueue(), controller.result, options.get())
         .startStandalone(next: { [weak controller] result, options in
             if let (peers, _, _, _, _, _) = result, let contactPeer = peers.first, case let .peer(peer, _, _) = contactPeer, let starsContext = context.starsContext {
-                let premiumOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions, hasBirthday: currentBirthdays?[peer.id] != nil)
-                giftController.navigationPresentation = .modal
-                controller?.push(giftController)
+                if case .starGiftTransfer = source {
+                    presentTransferAlertImpl?(EnginePeer(peer))
+                } else {
+                    let premiumOptions = options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                    let giftController = GiftOptionsScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumOptions, hasBirthday: currentBirthdays?[peer.id] != nil)
+                    giftController.navigationPresentation = .modal
+                    controller?.push(giftController)
+                }
             }
         })
         
@@ -2419,11 +2453,38 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controller.push(birthdayController)
         }
         
-        presentTransferAlertImpl = { [weak controller] in
-            let alertController = textAlertController(context: context, title: presentationData.strings.Gift_Transfer_UnlockPending_Title, text: presentationData.strings.Gift_Transfer_UnlockPending_Text("21 days").string, actions: [
+        presentExportAlertImpl = { [weak controller] in
+            guard let controller, case let .starGiftTransfer(_, _, _, _, canExportDate) = source, let canExportDate else {
+                return
+            }
+            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+            let title: String
+            let text: String
+            if currentTime > canExportDate {
+                title = presentationData.strings.Gift_Transfer_UpdateRequired_Title
+                text = presentationData.strings.Gift_Transfer_UpdateRequired_Text
+            } else {
+                let delta = canExportDate - currentTime
+                let days: Int32 = Int32(ceil(Float(delta) / 86400.0))
+                let daysString = presentationData.strings.Gift_Transfer_UnlockPending_Text_Days(days)
+                title = presentationData.strings.Gift_Transfer_UnlockPending_Title
+                text = presentationData.strings.Gift_Transfer_UnlockPending_Text(daysString).string
+            }
+            let alertController = textAlertController(context: context, title: title, text: text, actions: [
                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
             ])
-            controller?.present(alertController, in: .window(.root))
+            controller.present(alertController, in: .window(.root))
+        }
+        
+        presentTransferAlertImpl = { [weak controller] peer in
+            guard let controller, case let .starGiftTransfer(_, messageId, gift, transferStars, _) = source else {
+                return
+            }
+            let alertController = giftTransferAlertController(context: context, gift: gift, peer: peer, transferStars: transferStars, commit: { [weak controller] in
+                controller?.dismiss()
+                let _ = context.engine.payments.transferStarGift(prepaid: transferStars == 0, messageId: messageId, peerId: peer.id).start()
+            })
+            controller.present(alertController, in: .window(.root))
         }
         
         return controller

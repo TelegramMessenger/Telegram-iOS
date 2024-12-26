@@ -32,8 +32,6 @@ extension PremiumGiftSource {
             return "attach"
         case .settings:
             return "settings"
-        case .stars:
-            return ""
         case .chatList:
             return "chats"
         case .channelBoost:
@@ -44,6 +42,8 @@ extension PremiumGiftSource {
             } else {
                 return "deeplink"
             }
+        case .stars, .starGiftTransfer:
+            return ""
         }
     }
 }
