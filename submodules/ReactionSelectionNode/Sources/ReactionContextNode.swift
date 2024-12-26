@@ -130,7 +130,7 @@ private final class ExpandItemView: UIView {
     
     override init(frame: CGRect) {
         self.tintView = UIView()
-        self.tintView.backgroundColor = .white
+        self.tintView.backgroundColor = .black
         
         self.arrowView = UIImageView()
         self.arrowView.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReactionExpandArrow"), color: .white)
@@ -187,9 +187,9 @@ private final class TitleLabelView: UIView {
             return nil
         })
         
-        let tintBody = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .white)
-        let tintBold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: .white)
-        let tintLink = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .white, additionalAttributes: [TelegramTextAttributes.URL: true as NSNumber])
+        let tintBody = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .black)
+        let tintBold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: .black)
+        let tintLink = MarkdownAttributeSet(font: Font.regular(13.0), textColor: .black, additionalAttributes: [TelegramTextAttributes.URL: true as NSNumber])
         let tintAttributes = MarkdownAttributes(body: tintBody, bold: tintBold, link: tintLink, linkAttribute: { _ in
             return (TelegramTextAttributes.URL, "")
         })
@@ -1593,10 +1593,8 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             transition: transition
         )
         
-        if let vibrancyEffectView = self.backgroundNode.vibrancyEffectView {
-            if self.contentTintContainer.view.superview !== vibrancyEffectView.contentView {
-                vibrancyEffectView.contentView.addSubview(self.contentTintContainer.view)
-            }
+        if self.contentTintContainer.view.superview !== self.backgroundNode.backgroundTintMaskContainer {
+            self.backgroundNode.backgroundTintMaskContainer.addSubview(self.contentTintContainer.view)
         }
         
         if let animateInFromAnchorRect = animateInFromAnchorRect, !self.reduceMotion {
@@ -2431,7 +2429,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: emojiContentLayout,
-            externalBackground: self.backgroundNode.vibrancyEffectView == nil ? nil : EmojiPagerContentComponent.ExternalBackground(
+            externalBackground: self.backgroundNode.backgroundTintMaskContainer.isHidden ? nil : EmojiPagerContentComponent.ExternalBackground(
                 effectContainerView: self.backgroundNode.vibrantExpandedContentContainer
             ),
             externalExpansionView: self.view,

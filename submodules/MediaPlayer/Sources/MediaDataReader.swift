@@ -19,6 +19,7 @@ public protocol MediaDataReader: AnyObject {
 }
 
 public final class FFMpegMediaDataReader: MediaDataReader {
+    private let content: ChunkMediaPlayerPart.Content
     private let isVideo: Bool
     private let videoSource: SoftwareVideoReader?
     private let audioSource: SoftwareAudioSource?
@@ -31,15 +32,42 @@ public final class FFMpegMediaDataReader: MediaDataReader {
         return self.audioSource != nil
     }
     
-    public init(filePath: String, isVideo: Bool, codecName: String?) {
+    public init(content: ChunkMediaPlayerPart.Content, isVideo: Bool, codecName: String?) {
+        self.content = content
         self.isVideo = isVideo
+        
+        let filePath: String
+        var focusedPart: MediaStreamFocusedPart?
+        switch content {
+        case let .tempFile(tempFile):
+            filePath = tempFile.file.path
+        case let .directFile(directFile):
+            filePath = directFile.path
+            
+            let stream = isVideo ? directFile.video : directFile.audio
+            guard let stream else {
+                self.videoSource = nil
+                self.audioSource = nil
+                return
+            }
+            
+            focusedPart = MediaStreamFocusedPart(
+                seekStreamIndex: stream.index,
+                startPts: stream.startPts,
+                endPts: stream.endPts
+            )
+        }
         
         if self.isVideo {
             var passthroughDecoder = true
             if (codecName == "av1" || codecName == "av01") && !internal_isHardwareAv1Supported {
                 passthroughDecoder = false
             }
-            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder)
+            if codecName == "vp9" || codecName == "vp8" {
+                passthroughDecoder = false
+            }
+            
+            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder, focusedPart: focusedPart)
             if videoSource.hasStream {
                 self.videoSource = videoSource
             } else {
@@ -47,7 +75,7 @@ public final class FFMpegMediaDataReader: MediaDataReader {
             }
             self.audioSource = nil
         } else {
-            let audioSource = SoftwareAudioSource(path: filePath)
+            let audioSource = SoftwareAudioSource(path: filePath, focusedPart: focusedPart)
             if audioSource.hasStream {
                 self.audioSource = audioSource
             } else {

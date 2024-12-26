@@ -417,7 +417,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
                 let color = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
 
                 iconLayer.contents = generateIcon(color: color)?.cgImage
-                tintIconLayer.contents = generateIcon(color: .white)?.cgImage
+                tintIconLayer.contents = generateIcon(color: .black)?.cgImage
                 
                 tintIconLayer.isHidden = !needsVibrancy
             }

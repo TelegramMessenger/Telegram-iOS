@@ -68,7 +68,7 @@ final class EmptySearchResultsView: UIView {
         )
         let _ = self.titleTintLabel.update(
             transition: .immediate,
-            component: AnyComponent(Text(text: text, font: Font.regular(15.0), color: .white)),
+            component: AnyComponent(Text(text: text, font: Font.regular(15.0), color: .black)),
             environment: {},
             containerSize: CGSize(width: size.width, height: 100.0)
         )

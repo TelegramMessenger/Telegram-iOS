@@ -389,7 +389,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)?.withRenderingMode(.alwaysTemplate)
             self.clearIconView.tintColor = useOpaqueTheme ? theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
             
-            self.clearIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)
+            self.clearIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .black)
         }
         
         self.params = params
@@ -402,13 +402,13 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         if theme.overallDarkAppearance && forceNeedsVibrancy {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.withMultipliedAlpha(0.3).cgColor
-            self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.2).cgColor
         } else if useOpaqueTheme {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
-            self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor.black.cgColor
         } else {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-            self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor(white: 0.0, alpha: 0.2).cgColor
         }
         
         self.backgroundLayer.cornerRadius = inputHeight * 0.5
@@ -436,7 +436,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             component: AnyComponent(Text(
                 text: strings.Common_Cancel,
                 font: Font.regular(17.0),
-                color: .white
+                color: .black
             )),
             environment: {},
             containerSize: CGSize(width: size.width - 32.0, height: 100.0)

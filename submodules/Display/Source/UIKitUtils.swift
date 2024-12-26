@@ -796,6 +796,10 @@ public extension CALayer {
     static func luminanceToAlpha() -> NSObject? {
         return makeLuminanceToAlphaFilter()
     }
+    
+    static func colorInvert() -> NSObject? {
+        return makeColorInvertFilter()
+    }
 }
 
 public extension CALayer {

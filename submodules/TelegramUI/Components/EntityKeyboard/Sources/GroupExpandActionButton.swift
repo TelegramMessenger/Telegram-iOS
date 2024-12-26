@@ -88,7 +88,7 @@ final class GroupExpandActionButton: UIButton {
         } else {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.cgColor
         }
-        self.tintContainerLayer.backgroundColor = UIColor.white.cgColor
+        self.tintContainerLayer.backgroundColor = UIColor.black.cgColor
         
         let textSize: CGSize
         if let currentTextLayout = self.currentTextLayout, currentTextLayout.string == title, currentTextLayout.color == color, currentTextLayout.constrainedWidth == textConstrainedWidth {

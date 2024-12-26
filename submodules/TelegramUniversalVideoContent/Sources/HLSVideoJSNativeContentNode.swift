@@ -1076,7 +1076,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         var onSeeked: (() -> Void)?
         self.player = ChunkMediaPlayerV2(
             audioSessionManager: audioSessionManager,
-            partsState: self.chunkPlayerPartsState.get(),
+            source: .externalParts(self.chunkPlayerPartsState.get()),
             video: true,
             enableSound: self.enableSound,
             baseRate: baseRate,
@@ -1085,25 +1085,14 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             },
             playerNode: self.playerNode
         )
-        /*self.player = ChunkMediaPlayerImpl(
-            postbox: postbox,
-            audioSessionManager: audioSessionManager,
-            partsState: self.chunkPlayerPartsState.get(),
-            video: true,
-            enableSound: self.enableSound,
-            baseRate: baseRate,
-            onSeeked: {
-                onSeeked?()
-            },
-            playerNode: self.playerNode
-        )*/
         
         super.init()
         
         self.contextDisposable = SharedHLSVideoJSContext.shared.register(context: self)
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
-        var didProcessFramesToDisplay = false
+        
+        /*var didProcessFramesToDisplay = false
         self.playerNode.isHidden = true
         self.playerNode.hasSentFramesToDisplay = { [weak self] in
             guard let self, !didProcessFramesToDisplay else {
@@ -1111,7 +1100,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             didProcessFramesToDisplay = true
             self.playerNode.isHidden = false
-        }
+        }*/
 
         //let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference)?.file ?? fileReference
         
@@ -1843,7 +1832,7 @@ private final class SourceBuffer {
                         let item = ChunkMediaPlayerPart(
                             startTime: fragmentInfo.startTime.seconds,
                             endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
-                            file: tempFile,
+                            content: .tempFile(ChunkMediaPlayerPart.Content.TempFile(file: tempFile)),
                             codecName: videoCodecName
                         )
                         self.items.append(item)

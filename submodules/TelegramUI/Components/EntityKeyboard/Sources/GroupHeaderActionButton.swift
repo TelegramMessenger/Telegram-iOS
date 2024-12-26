@@ -100,7 +100,7 @@ final class GroupHeaderActionButton: UIButton {
         }
         
         self.backgroundLayer.backgroundColor = backgroundColor.cgColor
-        self.tintBackgroundLayer.backgroundColor = UIColor.white.withAlphaComponent(0.2).cgColor
+        self.tintBackgroundLayer.backgroundColor = UIColor.black.withAlphaComponent(0.2).cgColor
         
         self.tintContainerLayer.isHidden = !needsVibrancy
         
@@ -110,7 +110,7 @@ final class GroupHeaderActionButton: UIButton {
         } else {
             let font: UIFont = compact ? Font.medium(11.0) : Font.semibold(15.0)
             let string = NSAttributedString(string: title.uppercased(), font: font, textColor: foregroundColor)
-            let tintString = NSAttributedString(string: title.uppercased(), font: font, textColor: .white)
+            let tintString = NSAttributedString(string: title.uppercased(), font: font, textColor: .black)
             let stringBounds = string.boundingRect(with: CGSize(width: textConstrainedWidth, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
             textSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
             self.textLayer.contents = generateImage(textSize, opaque: false, scale: 0.0, rotatedContext: { size, context in
