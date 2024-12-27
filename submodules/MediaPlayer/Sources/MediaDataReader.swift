@@ -3,6 +3,7 @@ import AVFoundation
 import CoreMedia
 import FFMpegBinding
 import VideoToolbox
+import Postbox
 
 #if os(macOS)
 private let internal_isHardwareAv1Supported: Bool = {
@@ -11,15 +12,131 @@ private let internal_isHardwareAv1Supported: Bool = {
 }()
 #endif
 
+public enum MediaDataReaderReadSampleBufferResult {
+    case frame(CMSampleBuffer)
+    case waitingForMoreData
+    case endOfStream
+    case error
+}
+
 public protocol MediaDataReader: AnyObject {
     var hasVideo: Bool { get }
     var hasAudio: Bool { get }
         
-    func readSampleBuffer() -> CMSampleBuffer?
+    func readSampleBuffer() -> MediaDataReaderReadSampleBufferResult
 }
 
-public final class FFMpegMediaDataReader: MediaDataReader {
-    private let content: ChunkMediaPlayerPart.Content
+public final class FFMpegMediaDataReaderV2: MediaDataReader {
+    public enum Content {
+        case tempFile(ChunkMediaPlayerPart.TempFile)
+        case directStream(ChunkMediaPlayerPartsState.DirectReader.Stream)
+    }
+    
+    private let content: Content
+    private let isVideo: Bool
+    private let videoSource: FFMpegFileReader?
+    private let audioSource: FFMpegFileReader?
+    
+    public var hasVideo: Bool {
+        return self.videoSource != nil
+    }
+    
+    public var hasAudio: Bool {
+        return self.audioSource != nil
+    }
+    
+    public init(content: Content, isVideo: Bool, codecName: String?) {
+        self.content = content
+        self.isVideo = isVideo
+        
+        let source: FFMpegFileReader.SourceDescription
+        var seek: (streamIndex: Int, pts: Int64)?
+        var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
+        switch content {
+        case let .tempFile(tempFile):
+            source = .file(tempFile.file.path)
+        case let .directStream(directStream):
+            source = .resource(mediaBox: directStream.mediaBox, resource: directStream.resource, size: directStream.size)
+            seek = (directStream.seek.streamIndex, directStream.seek.pts)
+            maxReadablePts = directStream.maxReadablePts
+        }
+        
+        if self.isVideo {
+            var passthroughDecoder = true
+            var useHardwareAcceleration = false
+            
+            if (codecName == "av1" || codecName == "av01") {
+                passthroughDecoder = false
+                useHardwareAcceleration = internal_isHardwareAv1Supported
+            }
+            if codecName == "vp9" || codecName == "vp8" {
+                passthroughDecoder = false
+            }
+            
+            /*#if DEBUG
+            if codecName == "h264" {
+                passthroughDecoder = false
+                useHardwareAcceleration = true
+            }
+            #endif*/
+            
+            if let videoSource = FFMpegFileReader(source: source, passthroughDecoder: passthroughDecoder, useHardwareAcceleration: useHardwareAcceleration, selectedStream: .mediaType(.video), seek: seek, maxReadablePts: maxReadablePts) {
+                self.videoSource = videoSource
+            } else {
+                self.videoSource = nil
+            }
+            self.audioSource = nil
+        } else {
+            if let audioSource = FFMpegFileReader(source: source, passthroughDecoder: false, useHardwareAcceleration: false, selectedStream: .mediaType(.audio), seek: seek, maxReadablePts: maxReadablePts) {
+                self.audioSource = audioSource
+            } else {
+                self.audioSource = nil
+            }
+            self.videoSource = nil
+        }
+    }
+    
+    public func update(content: Content) {
+        guard case let .directStream(directStream) = content else {
+            return
+        }
+        if let audioSource = self.audioSource {
+            audioSource.updateMaxReadablePts(pts: directStream.maxReadablePts)
+        } else if let videoSource = self.videoSource {
+            videoSource.updateMaxReadablePts(pts: directStream.maxReadablePts)
+        }
+    }
+    
+    public func readSampleBuffer() -> MediaDataReaderReadSampleBufferResult {
+        if let videoSource {
+            switch videoSource.readFrame() {
+            case let .frame(frame):
+                return .frame(frame.sampleBuffer)
+            case .waitingForMoreData:
+                return .waitingForMoreData
+            case .endOfStream:
+                return .endOfStream
+            case .error:
+                return .error
+            }
+        } else if let audioSource {
+            switch audioSource.readFrame() {
+            case let .frame(frame):
+                return .frame(frame.sampleBuffer)
+            case .waitingForMoreData:
+                return .waitingForMoreData
+            case .endOfStream:
+                return .endOfStream
+            case .error:
+                return .error
+            }
+        } else {
+            return .endOfStream
+        }
+    }
+}
+
+public final class FFMpegMediaDataReaderV1: MediaDataReader {
     private let isVideo: Bool
     private let videoSource: SoftwareVideoReader?
     private let audioSource: SoftwareAudioSource?
@@ -32,42 +149,15 @@ public final class FFMpegMediaDataReader: MediaDataReader {
         return self.audioSource != nil
     }
     
-    public init(content: ChunkMediaPlayerPart.Content, isVideo: Bool, codecName: String?) {
-        self.content = content
+    public init(filePath: String, isVideo: Bool, codecName: String?) {
         self.isVideo = isVideo
-        
-        let filePath: String
-        var focusedPart: MediaStreamFocusedPart?
-        switch content {
-        case let .tempFile(tempFile):
-            filePath = tempFile.file.path
-        case let .directFile(directFile):
-            filePath = directFile.path
-            
-            let stream = isVideo ? directFile.video : directFile.audio
-            guard let stream else {
-                self.videoSource = nil
-                self.audioSource = nil
-                return
-            }
-            
-            focusedPart = MediaStreamFocusedPart(
-                seekStreamIndex: stream.index,
-                startPts: stream.startPts,
-                endPts: stream.endPts
-            )
-        }
         
         if self.isVideo {
             var passthroughDecoder = true
             if (codecName == "av1" || codecName == "av01") && !internal_isHardwareAv1Supported {
                 passthroughDecoder = false
             }
-            if codecName == "vp9" || codecName == "vp8" {
-                passthroughDecoder = false
-            }
-            
-            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder, focusedPart: focusedPart)
+            let videoSource = SoftwareVideoReader(path: filePath, hintVP9: false, passthroughDecoder: passthroughDecoder)
             if videoSource.hasStream {
                 self.videoSource = videoSource
             } else {
@@ -75,7 +165,7 @@ public final class FFMpegMediaDataReader: MediaDataReader {
             }
             self.audioSource = nil
         } else {
-            let audioSource = SoftwareAudioSource(path: filePath, focusedPart: focusedPart)
+            let audioSource = SoftwareAudioSource(path: filePath)
             if audioSource.hasStream {
                 self.audioSource = audioSource
             } else {
@@ -85,19 +175,23 @@ public final class FFMpegMediaDataReader: MediaDataReader {
         }
     }
     
-    public func readSampleBuffer() -> CMSampleBuffer? {
+    public func readSampleBuffer() -> MediaDataReaderReadSampleBufferResult {
         if let videoSource {
             let frame = videoSource.readFrame()
             if let frame {
-                return frame.sampleBuffer
+                return .frame(frame.sampleBuffer)
             } else {
-                return nil
+                return .endOfStream
             }
         } else if let audioSource {
-            return audioSource.readSampleBuffer()
+            if let sampleBuffer = audioSource.readSampleBuffer() {
+                return .frame(sampleBuffer)
+            } else {
+                return .endOfStream
+            }
+        } else {
+            return .endOfStream
         }
-        
-        return nil
     }
 }
 
@@ -140,14 +234,18 @@ public final class AVAssetVideoDataReader: MediaDataReader {
         }
     }
     
-    public func readSampleBuffer() -> CMSampleBuffer? {
+    public func readSampleBuffer() -> MediaDataReaderReadSampleBufferResult {
         guard let mediaInfo = self.mediaInfo, let assetReader = self.assetReader, let assetOutput = self.assetOutput else {
-            return nil
+            return .endOfStream
         }
         var retryCount = 0
         while true {
             if let sampleBuffer = assetOutput.copyNextSampleBuffer() {
-                return createSampleBuffer(fromSampleBuffer: sampleBuffer, withTimeOffset: mediaInfo.startTime, duration: nil)
+                if let convertedSampleBuffer = createSampleBuffer(fromSampleBuffer: sampleBuffer, withTimeOffset: mediaInfo.startTime, duration: nil) {
+                    return .frame(convertedSampleBuffer)
+                } else {
+                    return .endOfStream
+                }
             } else if assetReader.status == .reading && retryCount < 100 {
                 Thread.sleep(forTimeInterval: 1.0 / 60.0)
                 retryCount += 1
@@ -156,7 +254,7 @@ public final class AVAssetVideoDataReader: MediaDataReader {
             }
         }
         
-        return nil
+        return .endOfStream
     }
 }
 

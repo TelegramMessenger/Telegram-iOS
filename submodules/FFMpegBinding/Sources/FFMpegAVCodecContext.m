@@ -6,6 +6,10 @@
 #import "libavformat/avformat.h"
 #import "libavcodec/avcodec.h"
 
+static enum AVPixelFormat getPreferredPixelFormat(__unused AVCodecContext *ctx, __unused const enum AVPixelFormat *pix_fmts) {
+    return AV_PIX_FMT_VIDEOTOOLBOX;
+}
+
 @interface FFMpegAVCodecContext () {
     FFMpegAVCodec *_codec;
     AVCodecContext *_impl;
@@ -59,6 +63,11 @@
 - (bool)sendEnd {
     int status = avcodec_send_packet(_impl, nil);
     return status == 0;
+}
+
+- (void)setupHardwareAccelerationIfPossible {
+    av_hwdevice_ctx_create(&_impl->hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nil, nil, 0);
+    _impl->get_format = getPreferredPixelFormat;
 }
 
 - (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame {

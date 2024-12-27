@@ -277,6 +277,17 @@ private enum PlayerImpl {
     }
 }
 
+extension ChunkMediaPlayerV2.MediaDataReaderParams {
+    init(context: AccountContext) {
+        var useV2Reader = true
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_video_v2_reader"] as? Double {
+            useV2Reader = value != 0.0
+        }
+        
+        self.init(useV2Reader: useV2Reader)
+    }
+}
+
 private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
     private let postbox: Postbox
     private let userLocation: MediaResourceUserLocation
@@ -510,9 +521,11 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
             self.initializePlayer(player: .legacy(mediaPlayer))
         } else {
             let mediaPlayer = ChunkMediaPlayerV2(
+                params: ChunkMediaPlayerV2.MediaDataReaderParams(context: context),
                 audioSessionManager: audioSessionManager,
                 source: .directFetch(ChunkMediaPlayerV2.SourceDescription.ResourceDescription(
                     postbox: postbox,
+                    size: selectedFile.size ?? 0,
                     reference: fileReference.resourceReference(selectedFile.resource),
                     userLocation: userLocation,
                     userContentType: userContentType,

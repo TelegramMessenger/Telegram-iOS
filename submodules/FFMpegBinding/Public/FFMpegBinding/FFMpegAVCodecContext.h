@@ -25,6 +25,7 @@ typedef NS_ENUM(NSUInteger, FFMpegAVCodecContextReceiveResult)
 
 - (bool)open;
 - (bool)sendEnd;
+- (void)setupHardwareAccelerationIfPossible;
 - (FFMpegAVCodecContextReceiveResult)receiveIntoFrame:(FFMpegAVFrame *)frame;
 - (void)flushBuffers;
 

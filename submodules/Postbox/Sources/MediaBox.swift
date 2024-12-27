@@ -705,6 +705,17 @@ public final class MediaBox {
         }
     }
     
+    public func internal_resourceDataIsCached(id: MediaResourceId, size: Int64, in range: Range<Int64>) -> Bool {
+        let paths = self.storePathsForId(id)
+        
+        if let _ = fileSize(paths.complete) {
+            return true
+        } else {
+            let tempManager = MediaBoxFileManager(queue: nil)
+            return MediaBoxPartialFile.internal_isPartialDataCached(manager: tempManager, path: paths.partial, metaPath: paths.partial + ".meta", range: range)
+        }
+    }
+    
     public func resourceData(id: MediaResourceId, size: Int64, in range: Range<Int64>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()

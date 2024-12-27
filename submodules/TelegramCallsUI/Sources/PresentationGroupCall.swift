@@ -2365,22 +2365,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                             if let muteState = filteredMuteState {
                                 if muteState.canUnmute {
-                                    switch strongSelf.isMutedValue {
-                                    case let .muted(isPushToTalkActive):
-                                        if !isPushToTalkActive {
-                                            strongSelf.genericCallContext?.setIsMuted(true)
-                                        }
-                                    case .unmuted:
+                                    if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                         strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                        strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
+                                        strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                         strongSelf.genericCallContext?.setIsMuted(true)
+                                    } else {
+                                        switch strongSelf.isMutedValue {
+                                        case .muted:
+                                            break
+                                        case .unmuted:
+                                            let _ = strongSelf.updateMuteState(peerId: strongSelf.joinAsPeerId, isMuted: false)
+                                        }
                                     }
                                 } else {
                                     strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                    strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                                     strongSelf.genericCallContext?.setIsMuted(true)
+                                    strongSelf.stateValue.muteState = muteState
                                 }
-                                strongSelf.stateValue.muteState = muteState
                             } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                                 strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.genericCallContext?.setIsMuted(true)
                             }
