@@ -980,7 +980,7 @@ private final class NotificationServiceHandler {
 
                     enum Action {
                         case logout
-                        case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?)
+                        case poll(peerId: PeerId, content: NotificationContent, messageId: MessageId?, reportDelivery: Bool)
                         case pollStories(peerId: PeerId, content: NotificationContent, storyId: Int32, isReaction: Bool)
                         case deleteMessage([MessageId])
                         case readReactions([MessageId])
@@ -999,7 +999,7 @@ private final class NotificationServiceHandler {
                             action = .logout
                         case "MESSAGE_MUTED":
                             if let peerId = peerId {
-                                action = .poll(peerId: peerId, content: NotificationContent(isLockedMessage: nil), messageId: nil)
+                                action = .poll(peerId: peerId, content: NotificationContent(isLockedMessage: nil), messageId: nil, reportDelivery: false)
                             }
                         case "MESSAGE_DELETED":
                             if let peerId = peerId {
@@ -1183,9 +1183,16 @@ private final class NotificationServiceHandler {
                                 
                                 action = .pollStories(peerId: peerId, content: content, storyId: storyId, isReaction: isReaction)
                             } else {
-                                action = .poll(peerId: peerId, content: content, messageId: messageIdValue)
+                                var reportDelivery = false
+                                if let reportDeliveryUntilDate = aps["report_delivery_until_date"] as? Int32, let messageId = messageIdValue {
+                                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                                    if reportDeliveryUntilDate > currentTime {
+                                        reportDelivery = true
+                                    }
+                                }
+                                action = .poll(peerId: peerId, content: content, messageId: messageIdValue, reportDelivery: reportDelivery)
                             }
-
+                            
                             updateCurrentContent(content)
                         }
                     }
@@ -1245,7 +1252,7 @@ private final class NotificationServiceHandler {
                             let content = NotificationContent(isLockedMessage: nil)
                             updateCurrentContent(content)
                             completed()
-                        case let .poll(peerId, initialContent, messageId):
+                        case let .poll(peerId, initialContent, messageId, reportDelivery):
                             Logger.shared.log("NotificationService \(episode)", "Will poll")
                             if let stateManager = strongSelf.stateManager {
                                 let shouldKeepConnection = stateManager.network.shouldKeepConnection
@@ -1683,12 +1690,23 @@ private final class NotificationServiceHandler {
                                     pollWithUpdatedContent = pollSignal
                                     |> map { _ -> (NotificationContent, Media?) in }
                                 }
+                                
+                                let reportDeliverySignal: Signal<Bool, NoError>
+                                if reportDelivery, let messageId {
+                                    reportDeliverySignal = _internal_reportMessageDelivery(postbox: stateManager.postbox, network: stateManager.network, messageIds: [messageId], fromPushNotification: true)
+                                    |> mapToSignal { _ -> Signal<Bool, NoError> in
+                                        return .single(true)
+                                    }
+                                    |> then(.single(true))
+                                } else {
+                                    reportDeliverySignal = .single(true)
+                                }
 
                                 var updatedContent = initialContent
                                 var updatedMedia: Media?
-                                strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content, media in
-                                    updatedContent = content
-                                    updatedMedia = media
+                                strongSelf.pollDisposable.set(combineLatest(pollWithUpdatedContent, reportDeliverySignal).start(next: { contentAndMedia, _ in
+                                    updatedContent = contentAndMedia.0
+                                    updatedMedia = contentAndMedia.1
                                 }, completed: {
                                     pollCompletion(updatedContent, updatedMedia)
                                 }))
@@ -1951,6 +1969,8 @@ private final class NotificationServiceHandler {
                                 } else {
                                     pollWithUpdatedContent = .complete()
                                 }
+                                
+                                
 
                                 var updatedContent = initialContent
                                 strongSelf.pollDisposable.set(pollWithUpdatedContent.start(next: { content in

@@ -721,6 +721,7 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
     updatedState.mergeChats(chats)
     updatedState.mergeUsers(users)
     
+    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
     for message in messages {
         if let preCachedResources = message.preCachedResources {
             for (resource, data) in preCachedResources {
@@ -738,6 +739,10 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
         }
         if let message = StoreMessage(apiMessage: message, accountPeerId: accountPeerId, peerIsForum: peerIsForum) {
             updatedState.addMessages([message], location: .UpperHistoryBlock)
+            
+            if let reportDeliveryAttribute = message.attributes.first(where: { $0 is ReportDeliveryMessageAttribute }) as? ReportDeliveryMessageAttribute, case let .Id(id) = message.id, reportDeliveryAttribute.untilDate > currentTime {
+                updatedState.addReportMessageDelivery(messageIds: [id])
+            }
         }
     }
     
@@ -900,6 +905,8 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             }
         }
     }
+    
+    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
     
     var missingUpdatesFromChannels = Set<PeerId>()
     
@@ -1110,6 +1117,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         }
                     }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
+                    
+                    if let reportDeliveryAttribute = message.attributes.first(where: { $0 is ReportDeliveryMessageAttribute }) as? ReportDeliveryMessageAttribute, case let .Id(id) = message.id, reportDeliveryAttribute.untilDate > currentTime {
+                        updatedState.addReportMessageDelivery(messageIds: [id])
+                    }
                 }
             case let .updateServiceNotification(flags, date, type, text, media, entities):
                 let popup = (flags & (1 << 0)) != 0
@@ -3282,7 +3293,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsAreAnonymousByDefault:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsAreAnonymousByDefault, .ReportMessageDelivery:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3421,6 +3432,7 @@ func replayFinalState(
     var updatedStarsBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
     var updatedStarsReactionsAreAnonymousByDefault: Bool?
+    var reportMessageDelivery = Set<MessageId>()
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
     var clearHolesFromPreviousStateForChannelMessagesWithPts: [PeerIdAndMessageNamespace: Int32] = [:]
@@ -4855,6 +4867,8 @@ func replayFinalState(
                 updatedStarsRevenueStatus[peerId] = status
             case let .UpdateStarsReactionsAreAnonymousByDefault(value):
                 updatedStarsReactionsAreAnonymousByDefault = value
+            case let .ReportMessageDelivery(messageIds):
+                reportMessageDelivery = Set(messageIds)
         }
     }
     
@@ -5376,6 +5390,7 @@ func replayFinalState(
         updatedRevenueBalances: updatedRevenueBalances,
         updatedStarsBalance: updatedStarsBalance,
         updatedStarsRevenueStatus: updatedStarsRevenueStatus,
-        sentScheduledMessageIds: finalState.state.sentScheduledMessageIds
+        sentScheduledMessageIds: finalState.state.sentScheduledMessageIds,
+        reportMessageDelivery: reportMessageDelivery
     )
 }

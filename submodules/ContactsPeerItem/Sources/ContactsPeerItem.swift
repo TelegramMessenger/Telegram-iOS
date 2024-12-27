@@ -1352,6 +1352,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             let _ = titleApply()
                             
                             var titleLeftOffset: CGFloat = 0.0
+                            var nextIconX: CGFloat = titleFrame.maxX
                             if let verifiedIcon {
                                 let animationCache = item.context.animationCache
                                 let animationRenderer = item.context.animationRenderer
@@ -1375,17 +1376,30 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     emojiFileUpdated: nil
                                 )
                                 strongSelf.verifiedIconComponent = verifiedIconComponent
+                                                                
+                                let iconOrigin: CGFloat
+                                if case .animation = verifiedIcon {
+                                    iconOrigin = titleFrame.minX
+                                } else {
+                                    nextIconX += 4.0
+                                    iconOrigin = nextIconX
+                                }
+                                let containerSize = CGSize(width: 16.0, height: 16.0)
                                 
                                 let iconSize = verifiedIconView.update(
                                     transition: .immediate,
                                     component: AnyComponent(verifiedIconComponent),
                                     environment: {},
-                                    containerSize: CGSize(width: 16.0, height: 16.0)
+                                    containerSize: containerSize
                                 )
                                 
-                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                                 
-                                titleLeftOffset += iconSize.width + 4.0
+                                if case .animation = verifiedIcon {
+                                    titleLeftOffset += iconSize.width + 4.0
+                                } else {
+                                    nextIconX += iconSize.width
+                                }
                             } else if let verifiedIconView = strongSelf.verifiedIconView {
                                 strongSelf.verifiedIconView = nil
                                 verifiedIconView.removeFromSuperview()
@@ -1424,7 +1438,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 }
                             }
                             
-                            var nextIconX: CGFloat = titleFrame.maxX
                             if let credibilityIcon {
                                 let animationCache = item.context.animationCache
                                 let animationRenderer = item.context.animationRenderer

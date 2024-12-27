@@ -1306,7 +1306,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var nextIconX: CGFloat = titleSize.width
         var nextExpandedIconX: CGFloat = titleExpandedSize.width
         
-        if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize {
+        if let credibilityIconSize = self.credibilityIconSize, let titleExpandedCredibilityIconSize = self.titleExpandedCredibilityIconSize, credibilityIconSize.width > 0.0 {
             let offset = (credibilityIconSize.width + 4.0) / 2.0
            
             let leftOffset: CGFloat = nextIconX + 4.0
@@ -1325,13 +1325,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             nextExpandedIconX += 4.0 + titleExpandedCredibilityIconSize.width
         }
         
-        if let verifiedIconSize = self.verifiedIconSize, let titleExpandedVerifiedIconSize = self.titleExpandedVerifiedIconSize {
-            let offset = (verifiedIconSize.width + 4.0) / 2.0
-            titleHorizontalOffset += offset
-            titleExpandedHorizontalOffset += offset
-            
-            let leftOffset: CGFloat = -verifiedIconSize.width - 4.0
-            let leftExpandedOffset: CGFloat = -titleExpandedVerifiedIconSize.width - 4.0
+        if let verifiedIconSize = self.verifiedIconSize, let titleExpandedVerifiedIconSize = self.titleExpandedVerifiedIconSize, verifiedIconSize.width > 0.0 {
+            let leftOffset: CGFloat
+            let leftExpandedOffset: CGFloat
+            if case .verified = verifiedIcon {
+                titleHorizontalOffset -= (verifiedIconSize.width + 4.0) / 2.0
+                
+                leftOffset = nextIconX + 4.0
+                leftExpandedOffset = nextExpandedIconX + 4.0
+            } else {
+                titleHorizontalOffset += (verifiedIconSize.width + 4.0) / 2.0
+                titleExpandedHorizontalOffset += titleExpandedVerifiedIconSize.width
+                
+                leftOffset = -verifiedIconSize.width - 4.0
+                leftExpandedOffset = -titleExpandedVerifiedIconSize.width - 8.0
+            }
            
             var collapsedTransitionOffset: CGFloat = 0.0
             if let navigationTransition = self.navigationTransition {
@@ -1340,6 +1348,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             
             transition.updateFrame(view: self.titleVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftOffset + collapsedTransitionOffset, y: floor((titleSize.height - verifiedIconSize.height) / 2.0)), size: verifiedIconSize))
             transition.updateFrame(view: self.titleExpandedVerifiedIconView, frame: CGRect(origin: CGPoint(x: leftExpandedOffset, y: floor((titleExpandedSize.height - titleExpandedVerifiedIconSize.height) / 2.0) + 1.0), size: titleExpandedVerifiedIconSize))
+            
+            if case .verified = verifiedIcon {
+                nextIconX += 4.0 + verifiedIconSize.width
+                nextExpandedIconX += 4.0 + titleExpandedVerifiedIconSize.width
+            }
         }
         
         var titleFrame: CGRect
@@ -1759,7 +1772,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 var titleFrame = titleFrame
                 if !self.isAvatarExpanded {
-                    titleFrame = titleFrame.offsetBy(dx: self.isAvatarExpanded ? titleExpandedHorizontalOffset : titleHorizontalOffset * titleScale, dy: 0.0)
+                    titleFrame = titleFrame.offsetBy(dx: titleHorizontalOffset * titleScale, dy: 0.0)
+                } else {
+                    titleFrame = titleFrame.offsetBy(dx: titleExpandedHorizontalOffset, dy: 0.0)
                 }
                 
                 let titleCenter = CGPoint(x: transitionFraction * transitionSourceTitleFrame.midX + (1.0 - transitionFraction) * titleFrame.midX, y: transitionFraction * transitionSourceTitleFrame.midY + (1.0 - transitionFraction) * titleFrame.midY)

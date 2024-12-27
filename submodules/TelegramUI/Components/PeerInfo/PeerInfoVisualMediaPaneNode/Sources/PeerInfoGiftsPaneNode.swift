@@ -234,6 +234,18 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return
                                             }
                                             self.profileGifts.convertStarGift(messageId: messageId)
+                                        },
+                                        transferGift: { [weak self] prepaid, peerId in
+                                            guard let self, let messageId = product.messageId else {
+                                                return
+                                            }
+                                            self.profileGifts.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+                                        },
+                                        upgradeGift: { [weak self] formId, keepOriginalInfo in
+                                            guard let self, let messageId = product.messageId else {
+                                                return .never()
+                                            }
+                                            return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
                                         }
                                     )
                                     self.parentController?.push(controller)

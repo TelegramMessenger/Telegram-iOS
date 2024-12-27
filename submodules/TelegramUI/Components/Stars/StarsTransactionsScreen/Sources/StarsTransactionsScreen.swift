@@ -765,7 +765,7 @@ final class StarsTransactionsScreenComponent: Component {
                         if let photo = subscription.photo {
                             nameGroupComponent = AnyComponent(
                                 HStack([
-                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: nil, photo: photo, media: [], backgroundColor: .clear, size: CGSize(width: 19.0, height: 19.0)))),
+                                    AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: nil, photo: photo, media: [], uniqueGift: nil, backgroundColor: .clear, size: CGSize(width: 19.0, height: 19.0)))),
                                     AnyComponentWithIdentity(id: AnyHashable(1), component: nameComponent)
                                 ], spacing: 6.0)
                             )
@@ -806,7 +806,7 @@ final class StarsTransactionsScreenComponent: Component {
                                 theme: environment.theme,
                                 title: AnyComponent(VStack(titleComponents, alignment: .left, spacing: 2.0)),
                                 contentInsets: UIEdgeInsets(top: 9.0, left: 0.0, bottom: 8.0, right: 0.0),
-                                leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], backgroundColor: environment.theme.list.plainBackgroundColor))), false),
+                                leftIcon: .custom(AnyComponentWithIdentity(id: "avatar", component: AnyComponent(StarsAvatarComponent(context: component.context, theme: environment.theme, peer: .peer(subscription.peer), photo: nil, media: [], uniqueGift: nil, backgroundColor: environment.theme.list.plainBackgroundColor))), false),
                                 icon: nil,
                                 accessory: .custom(ListActionItemComponent.CustomAccessory(component: labelComponent, insets: UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 16.0))),
                                 action: { [weak self] _ in

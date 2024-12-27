@@ -175,6 +175,7 @@ extension BotPaymentMethod {
 public enum BotPaymentFormRequestError {
     case generic
     case alreadyActive
+    case noPaymentNeeded
 }
 
 extension BotPaymentInvoice {
@@ -457,7 +458,10 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
         }
 
         return network.request(Api.functions.payments.getPaymentForm(flags: flags, invoice: invoice, themeParams: serializedThemeParams))
-        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+        |> `catch` { error -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+            if error.errorDescription == "NO_PAYMENT_NEEDED" {
+                return .fail(.noPaymentNeeded)
+            }
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
@@ -622,7 +626,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?)
+    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?, uniqueStarGift: ProfileGiftsContext.State.StarGift?)
     case externalVerificationRequired(url: String)
 }
 
@@ -671,12 +675,12 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                     case .starsChatSubscription:
                         let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
                         if let first = chats.first {
-                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id, uniqueStarGift: nil)
                         }
                     default:
                         break
                     }
-                
+                                
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -721,7 +725,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                             }
                         }
                     }
-                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil, uniqueStarGift: nil)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

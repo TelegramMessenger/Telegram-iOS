@@ -12299,6 +12299,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.ConvertedGift" = "Converted Gift";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Intro.Transaction.Refund" = "Refund";
+"Stars.Intro.Transaction.GiftUpgrade" = "Gift Upgrade";
 
 "Stars.Intro.PurchasedTitle" = "Stars Acquired";
 "Stars.Intro.PurchasedText" = "**%@** added to your balance.";
@@ -13503,9 +13504,9 @@ Sorry for the inconvenience.";
 "Gift.Unique.Availability" = "Availability";
 "Gift.Unique.Issued" = "%@ issued";
 "Gift.Unique.OriginalInfo" = "Gifted to %1$@ on %2$@.";
-"Gift.Unique.OriginalInfoWithText" = "Gifted to %1$@ on %2$@ with comment \"%3$@\"";
+"Gift.Unique.OriginalInfoWithText" = "Gifted to %1$@ on %2$@ with comment \"%3$@\".";
 "Gift.Unique.OriginalInfoSender" = "Gifted by %1$@ to %2$@ on %3$@.";
-"Gift.Unique.OriginalInfoSenderWithText" = "Gifted by %1$@ to %2$@ on %3$@ with comment \"%4$@\"";
+"Gift.Unique.OriginalInfoSenderWithText" = "Gifted by %1$@ to %2$@ on %3$@ with comment \"%4$@\".";
 
 "Gift.Unique.AttributeDescription" = "Only %@ of such collectibles have this attribute.";
 
@@ -13533,6 +13534,7 @@ Sorry for the inconvenience.";
 
 "Gift.View.UpgradeForFree" = "Upgrade for Free";
 "Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
+"Gift.View.KeepOrUpgradeDescription" = "You can keep this gift or upgrade it.";
 
 "PeerInfo.VerificationInfo.Bot" = "This bot is verified as official by the representatives of Telegram.";
 "PeerInfo.VerificationInfo.Channel" = "This channel is verified as official by the representatives of Telegram.";
@@ -13561,4 +13563,7 @@ Sorry for the inconvenience.";
 "Notification.StarGift.Subtitle.Refunded" = "This gift cannot be converted to Stars because the payment related to it was refunded.";
 "Notification.StarGift.Subtitle.Downgraded" = "This gift was downgraded because a request to refund the payment related to this gift was made, and the money was returned.";
 
-"Gift.View.KeepOrUpgradeDescription" = "You can keep this gift or upgrade it.";
+"Notification.StarGift.Subtitle.Other" = "%1$@ can keep this gift or upgrade it.";
+
+"Stars.Transaction.GiftFrom" = "Gift From";
+"Stars.Transaction.GiftUpgrade" = "Gift Upgrade";

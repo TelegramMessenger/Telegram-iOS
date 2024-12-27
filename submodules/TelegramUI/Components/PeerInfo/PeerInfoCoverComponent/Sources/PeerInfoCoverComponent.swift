@@ -351,10 +351,21 @@ public final class PeerInfoCoverComponent: Component {
             
             self.backgroundView.backgroundColor = secondaryBackgroundColor
             
-            self.backgroundGradientLayer.type = .axial
-            self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 1.0)
-            self.backgroundGradientLayer.endPoint = CGPoint(x: 0.5, y: 0.0)
-            self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
+            if case .custom = component.subject {
+                if availableSize.width < availableSize.height {
+                    self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.25)
+                } else {
+                    self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
+                }
+                self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+                self.backgroundGradientLayer.type = .radial
+                self.backgroundGradientLayer.colors = [secondaryBackgroundColor.cgColor, backgroundColor.cgColor]
+            } else {
+                self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 1.0)
+                self.backgroundGradientLayer.endPoint = CGPoint(x: 0.5, y: 0.0)
+                self.backgroundGradientLayer.type = .axial
+                self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
+            }
             self.backgroundGradientLayer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
             
             let gradientHeight: CGFloat = component.defaultHeight
@@ -431,7 +442,7 @@ public final class PeerInfoCoverComponent: Component {
             } else if availableSize.width < 150.0 {
                 baseDistance *= 0.6
                 baseRowDistance *= 0.6
-                baseItemSize *= 0.75
+                baseItemSize *= 0.83
             }
             
             var avatarBackgroundPatternLayerCount = 0

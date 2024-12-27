@@ -259,7 +259,7 @@ public func giftTransferAlertController(context: AccountContext, gift: StarGift.
     let buttonText: String
     if transferStars > 0 {
         text = strings.Gift_Transfer_Confirmation_Text("\(gift.title) #\(gift.number)", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), strings.Gift_Transfer_Confirmation_Text_Stars(Int32(transferStars))).string
-        buttonText = "\(strings.Gift_Transfer_Confirmation_Transfer) ⭐️\(transferStars)"
+        buttonText = "\(strings.Gift_Transfer_Confirmation_Transfer)  $  \(transferStars)"
     } else {
         text = strings.Gift_Transfer_Confirmation_TextFree("\(gift.title) #\(gift.number)", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)).string
         buttonText = strings.Gift_Transfer_Confirmation_TransferFree

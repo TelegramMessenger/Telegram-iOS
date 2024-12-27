@@ -139,7 +139,7 @@ final class GiftSetupScreenComponent: Component {
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
-            self.scrollView.showsVerticalScrollIndicator = true
+            self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.scrollsToTop = false
             self.scrollView.delaysContentTouches = false
@@ -253,6 +253,10 @@ final class GiftSetupScreenComponent: Component {
                     |> deliverOnMainQueue).start(next: { [weak self] status in
                         if let completion {
                             completion()
+                            
+                            if let self, let controller = self.environment?.controller() {
+                                controller.dismiss()
+                            }
                         } else {
                             guard let self, case .purchased = status, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
                                 return
@@ -631,7 +635,6 @@ final class GiftSetupScreenComponent: Component {
                 transition.setFrame(view: navigationTitleView, frame: navigationTitleFrame)
             }
             
-            let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let sectionSpacing: CGFloat = 24.0
             
@@ -842,8 +845,8 @@ final class GiftSetupScreenComponent: Component {
                         body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
                         link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
-                        linkAttribute: { url in
-                            return ("URL", url)
+                        linkAttribute: { contents in
+                            return (TelegramTextAttributes.URL, contents)
                         }))
                     
                     let upgradeFooterText = NSMutableAttributedString(attributedString: parsedString)
@@ -986,19 +989,19 @@ final class GiftSetupScreenComponent: Component {
                 contentHeight += hideSectionSize.height
             }
             
-            contentHeight += bottomContentInset
+            contentHeight += 24.0
             
-            let combinedBottomInset = max(inputHeight, environment.safeInsets.bottom)
-            contentHeight += combinedBottomInset
-            
-            if self.starImage == nil || self.starImage?.1 !== environment.theme {
-                self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
-            }
-
             let buttonHeight: CGFloat = 50.0
             let bottomPanelPadding: CGFloat = 12.0
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
             let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
+            
+            let combinedBottomInset = max(inputHeight, environment.safeInsets.bottom)
+            contentHeight += max(bottomPanelHeight, combinedBottomInset)
+            
+            if self.starImage == nil || self.starImage?.1 !== environment.theme {
+                self.starImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: environment.theme.list.itemCheckColors.foregroundColor)!, environment.theme)
+            }
 
             let bottomPanelSize = self.buttonBackground.update(
                 transition: transition,

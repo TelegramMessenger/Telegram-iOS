@@ -1228,8 +1228,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                         controller.videoCompletion = { [weak self] image, url, adjustments, commit in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                     commit()
                                                 }
                                             }
@@ -1263,8 +1263,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }, videoCompletion: { [weak self] image, url, adjustments in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                 }
                                             }
                                         })
