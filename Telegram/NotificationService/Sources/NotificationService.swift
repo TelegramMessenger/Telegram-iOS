@@ -593,8 +593,10 @@ private struct NotificationContent: CustomStringConvertible {
         if !self.userInfo.isEmpty {
             content.userInfo = self.userInfo
         }
-        if !self.attachments.isEmpty {
-            content.attachments = self.attachments
+        if self.isLockedMessage == nil {
+            if !self.attachments.isEmpty {
+                content.attachments = self.attachments
+            }
         }
 
         if #available(iOS 15.0, *) {

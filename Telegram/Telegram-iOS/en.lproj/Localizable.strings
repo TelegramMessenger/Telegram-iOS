@@ -13576,3 +13576,8 @@ Sorry for the inconvenience.";
 "Notification.StarGift.Subtitle.Downgraded" = "This gift was downgraded because a request to refund the payment related to this gift was made, and the money was returned.";
 
 "Gift.View.KeepOrUpgradeDescription" = "You can keep this gift or upgrade it.";
+
+"VideoChat.IncomingVideoQuality.AudioOnly" = "Audio Only";
+"VideoChat.IncomingVideoQuality.Title" = "Receive Video Quality";
+
+"ChatList.EmptyResult.SearchInAll" = "Search in All Messages";
