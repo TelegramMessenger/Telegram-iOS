@@ -2365,14 +2365,14 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let forwardInfo = message.forwardInfo {
                             effectiveAuthor = forwardInfo.author
                             if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature  {
-                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verification: nil)
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                             }
                         }
                         if let sourceAuthorInfo = message._asMessage().sourceAuthorInfo {
                             if let originalAuthor = sourceAuthorInfo.originalAuthor, let peer = message.peers[originalAuthor] {
                                 effectiveAuthor = peer
                             } else if let authorSignature = sourceAuthorInfo.originalAuthorName {
-                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verification: nil)
+                                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                             }
                         }
                         
@@ -2636,7 +2636,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         displayLocationIcon = true
                                     } else if let action = media as? TelegramMediaAction {
                                         switch action.action {
-                                        case .giftPremium, .giftStars, .starGift:
+                                        case .giftPremium, .giftStars, .starGift, .starGiftUnique:
                                             displayGiftIcon = true
                                         case let .giftCode(_, _, _, boostPeerId, _, _, _, _, _, _, _):
                                             if boostPeerId == nil {
@@ -3104,9 +3104,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             
                             if peer.isVerified {
-                                currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                            } else if let verification = peer.verification {
-                                currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
+                                currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                            } else if let verificationIconFileId = peer.verificationIconFileId {
+                                currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                             }
                         }
                     default:
@@ -3131,9 +3131,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if peer.isVerified {
-                        currentVerifiedIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                    } else if let verification = peer.verification {
-                        currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verification.iconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
+                        currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                    } else if let verificationIconFileId = peer.verificationIconFileId {
+                        currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
             }
@@ -3143,7 +3143,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
-                if titleLeftOffset.isZero, currentVerifiedIconContent != .none {
+                if titleLeftOffset.isZero, case .animation = currentVerifiedIconContent {
                     titleLeftOffset += 20.0
                 }
                 
@@ -3163,10 +3163,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             if let currentCredibilityIconContent {
-                if titleLeftOffset.isZero, case .verified = currentCredibilityIconContent {
-                    titleLeftOffset += 20.0
-                }
-                
                 if titleIconsWidth.isZero {
                     titleIconsWidth += 4.0
                 } else {
@@ -4537,11 +4533,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         
-                        var iconOrigin: CGFloat = nextTitleIconOrigin
+                        let iconOrigin: CGFloat = nextTitleIconOrigin
                         let containerSize = CGSize(width: 20.0, height: 20.0)
-                        if case .verified = currentCredibilityIconContent {
-                            iconOrigin = contentRect.origin.x
-                        }
                         let iconSize = credibilityIconView.update(
                             transition: .immediate,
                             component: AnyComponent(credibilityIconComponent),
@@ -4549,10 +4542,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             containerSize: containerSize
                         )
                         transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
-                        if case .verified = currentCredibilityIconContent {
-                        } else {
-                            nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
-                        }
+                        nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
                         credibilityIconView.removeFromSuperview()
@@ -4578,7 +4568,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.verifiedIconComponent = verifiedIconComponent
                         
-                        let iconOrigin = contentRect.origin.x
+                        let iconOrigin: CGFloat
+                        if case .animation = currentVerifiedIconContent {
+                            iconOrigin = contentRect.origin.x
+                        } else {
+                            iconOrigin = nextTitleIconOrigin
+                        }
                         let containerSize = CGSize(width: 16.0, height: 16.0)
                         
                         let iconSize = verifiedIconView.update(

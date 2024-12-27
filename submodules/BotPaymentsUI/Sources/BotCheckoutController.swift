@@ -30,9 +30,10 @@ public final class BotCheckoutController: ViewController {
         public static func fetch(context: AccountContext, source: BotPaymentInvoiceSource) -> Signal<InputData, FetchError> {
             let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
             let themeParams: [String: Any]?
-            if case .starGift = source {
+            switch source {
+            case .starGift, .starGiftUpgrade:
                 themeParams = nil
-            } else {
+            default:
                 themeParams = [
                     "bg_color": Int32(bitPattern: theme.list.plainBackgroundColor.rgb),
                     "secondary_bg_color": Int32(bitPattern: theme.list.blocksBackgroundColor.rgb),

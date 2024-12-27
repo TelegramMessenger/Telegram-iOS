@@ -824,48 +824,40 @@ public extension Api {
 }
 public extension Api {
     enum BotVerification: TypeConstructorDescription {
-        case botVerification(flags: Int32, botId: Int64, icon: Int64, company: String, description: String?)
+        case botVerification(botId: Int64, icon: Int64, description: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .botVerification(let flags, let botId, let icon, let company, let description):
+                case .botVerification(let botId, let icon, let description):
                     if boxed {
-                        buffer.appendInt32(1243376956)
+                        buffer.appendInt32(-113453988)
                     }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(botId, buffer: buffer, boxed: false)
                     serializeInt64(icon, buffer: buffer, boxed: false)
-                    serializeString(company, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    serializeString(description, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .botVerification(let flags, let botId, let icon, let company, let description):
-                return ("botVerification", [("flags", flags as Any), ("botId", botId as Any), ("icon", icon as Any), ("company", company as Any), ("description", description as Any)])
+                case .botVerification(let botId, let icon, let description):
+                return ("botVerification", [("botId", botId as Any), ("icon", icon as Any), ("description", description as Any)])
     }
     }
     
         public static func parse_botVerification(_ reader: BufferReader) -> BotVerification? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _3: String?
+            _3 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.BotVerification.botVerification(flags: _1!, botId: _2!, icon: _3!, company: _4!, description: _5)
+            if _c1 && _c2 && _c3 {
+                return Api.BotVerification.botVerification(botId: _1!, icon: _2!, description: _3!)
             }
             else {
                 return nil

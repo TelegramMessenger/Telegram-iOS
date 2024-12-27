@@ -1621,7 +1621,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openReport(.default)
                     }))
                 }
-                
+                                
                 if user.isVerified {
                     let description = presentationData.strings.PeerInfo_VerificationInfo_Bot
                     
@@ -1633,21 +1633,17 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
                     }))
-                } else if let verification = user.verification {
+                } else if let verification = (data.cachedData as? CachedUserData)?.verification {
                     let description: String
-                    if let customDescription = verification.customDescription {
-                        let entities = generateTextEntities(customDescription, enabledTypes: [.allUrl])
-                        if let entity = entities.first {
-                            let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                            let url = (customDescription as NSString).substring(with: range)
-                            description = customDescription.replacingOccurrences(of: url, with: "[\(url)](\(url))")
-                        } else {
-                            description = customDescription
-                        }
+                    let descriptionString = verification.description
+                    let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
+                    if let entity = entities.first {
+                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                        let url = (descriptionString as NSString).substring(with: range)
+                        description = descriptionString.replacingOccurrences(of: url, with: "[\(url)](\(url))")
                     } else {
-                        description = presentationData.strings.PeerInfo_VerificationInfo_Custom_Bot(verification.companyName).string
+                        description = descriptionString
                     }
-                    
                     let attributedPrefix = NSMutableAttributedString(string: "  ")
                     attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSMakeRange(0, 1))
                     
@@ -1821,23 +1817,16 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
                     }))
-                } else if let verification = channel.verification {
+                } else if let verification = (data.cachedData as? CachedChannelData)?.verification {
                     let description: String
-                    if let customDescription = verification.customDescription {
-                        let entities = generateTextEntities(customDescription, enabledTypes: [.allUrl])
-                        if let entity = entities.first {
-                            let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                            let url = (customDescription as NSString).substring(with: range)
-                            description = customDescription.replacingOccurrences(of: url, with: "[\(url)](\(url))")
-                        } else {
-                            description = customDescription
-                        }
+                    let descriptionString = verification.description
+                    let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
+                    if let entity = entities.first {
+                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                        let url = (descriptionString as NSString).substring(with: range)
+                        description = descriptionString.replacingOccurrences(of: url, with: "[\(url)](\(url))")
                     } else {
-                        if case .group = channel.info {
-                            description = presentationData.strings.PeerInfo_VerificationInfo_Custom_Group(verification.companyName).string
-                        } else {
-                            description = presentationData.strings.PeerInfo_VerificationInfo_Custom_Channel(verification.companyName).string
-                        }
+                        description = descriptionString
                     }
                     
                     let attributedPrefix = NSMutableAttributedString(string: "  ")
@@ -8842,7 +8831,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let _ = (iconPromise.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { verifierIcon in
-                if let _ = peer.verification {
+                if let _ = peer.verificationIconFileId {
                     let removeController = removeVerificationAlertController(
                         context: self.context,
                         peer: peer,
@@ -10176,7 +10165,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), transfer: false, completion: nil)
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
                 self.controller?.push(controller)
             })
         case .stickers:

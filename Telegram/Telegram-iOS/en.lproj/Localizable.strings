@@ -13086,6 +13086,8 @@ Sorry for the inconvenience.";
 "Gift.Send.Limited" = "Limited";
 "Gift.Send.Remains_1" = "%@ left";
 "Gift.Send.Remains_any" = "%@ left";
+"Gift.Send.Sold_1" = "%@ sold";
+"Gift.Send.Sold_any" = "%@ sold";
 
 "Gift.Send.ErrorUnknown" = "An error occurred. Please try again.";
 "Gift.Send.ErrorOutOfStock" = "Sorry, this gift is sold out. Please choose another gift.";
@@ -13467,31 +13469,43 @@ Sorry for the inconvenience.";
 "Gift.View.Status.NonUnique" = "Non-Unique";
 "Gift.View.Status.Upgrade" = "upgrade";
 "Gift.View.DisplayedInfoHide" = "The gift is visible on your Page. [Hide >]()";
+"Gift.View.HiddenInfoShow" = "This gift is hidden. Only you can see it. [Show >]()";
 
 "Gift.Upgrade.Title" = "Upgrade Gift";
+"Gift.Upgrade.IncludeTitle" = "Make Unique";
 "Gift.Upgrade.Description" = "Turn your gift into a unique collectible that you can transfer or auction.";
+"Gift.Upgrade.IncludeDescription" = "Let %@ turn your gift into a unique collectible.";
 "Gift.Upgrade.Unique.Title" = "Unique";
-"Gift.Upgrade.Unique.Description" = "Get a unique number, model backdrop and and symbol for your gift.";
+"Gift.Upgrade.Unique.Description" = "Get a unique number, model, backdrop, and symbol for your gift.";
+"Gift.Upgrade.Unique.IncludeDescription" = "The recipient will get a unique number, model, backdrop, and symbol for the gift.";
 "Gift.Upgrade.Transferable.Title" = "Transferable";
 "Gift.Upgrade.Transferable.Description" = "Send your upgraded gift to any of your friends on Telegram.";
+"Gift.Upgrade.Transferable.IncludeDescription" = "The recipient will be able to send the gift to anyone Telegram.";
 "Gift.Upgrade.Tradable.Title" = "Tradable";
 "Gift.Upgrade.Tradable.Description" = "Sell or auction your gift on third-party NFT marketplaces.";
+"Gift.Upgrade.Tradable.IncludeDescription" = "The recipient will be able to auction the gift on third-party NFT marketplaces.";
 "Gift.Upgrade.Soon" = "SOON";
 "Gift.Upgrade.AddName" = "Add sender's name";
 "Gift.Upgrade.AddNameAndComment" = "Add sender's name and comment";
+"Gift.Upgrade.AddMyName" = "Add my name to the gift";
 "Gift.Upgrade.Upgrade" = "Upgrade";
+"Gift.Upgrade.Confirm" = "Confirm";
 
 "Gift.Upgrade.Succeed.Title" = "The gift is now collectible";
 "Gift.Upgrade.Succeed.Text" = "You have received a unique number, model, backdrop and symbol for your gift.";
 
 "Gift.Unique.Collectible" = "Collectible";
 "Gift.Unique.Owner" = "Owner";
-"Gift.Unique.Transfer" = "transfer";
+"Gift.Unique.Transfer" = "change";
 "Gift.Unique.Model" = "Model";
 "Gift.Unique.Backdrop" = "Backdrop";
 "Gift.Unique.Symbol" = "Symbol";
 "Gift.Unique.Availability" = "Availability";
 "Gift.Unique.Issued" = "%@ issued";
+"Gift.Unique.OriginalInfo" = "Gifted to %1$@ on %2$@.";
+"Gift.Unique.OriginalInfoWithText" = "Gifted to %1$@ on %2$@ with comment \"%3$@\"";
+"Gift.Unique.OriginalInfoSender" = "Gifted by %1$@ to %2$@ on %3$@.";
+"Gift.Unique.OriginalInfoSenderWithText" = "Gifted by %1$@ to %2$@ on %3$@ with comment \"%4$@\"";
 
 "Gift.Unique.AttributeDescription" = "Only %@ of such collectibles have this attribute.";
 
@@ -13509,13 +13523,16 @@ Sorry for the inconvenience.";
 "Gift.Transfer.UpdateRequired.Title" = "Update Required";
 "Gift.Transfer.UpdateRequired.Text" = "Please update your Telegram application to the latest version.";
 
+"Gift.Transfer.Confirmation.Title" = "Confirm Transfer";
+"Gift.Transfer.Confirmation.TextFree" = "Dou you want to transfer ownership of **%1$@** to **%2$@**?";
+"Gift.Transfer.Confirmation.Text" = "Dou you want to transfer ownership of **%1$@** to **%2$@** for **%3$@**?";
+"Gift.Transfer.Confirmation.Text.Stars_1" = "%@ Star";
+"Gift.Transfer.Confirmation.Text.Stars_any" = "%@ Stars";
+"Gift.Transfer.Confirmation.Transfer" = "Transfer for";
+"Gift.Transfer.Confirmation.TransferFree" = "Transfer";
+
+"Gift.View.UpgradeForFree" = "Upgrade for Free";
 "Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
-
-
-"PeerInfo.VerificationInfo.Custom.User" = "This user is verified by %@.";
-"PeerInfo.VerificationInfo.Custom.Bot" = "This bot is verified by %@.";
-"PeerInfo.VerificationInfo.Custom.Channel" = "This channel is verified by %@.";
-"PeerInfo.VerificationInfo.Custom.Group" = "This group is verified by %@.";
 
 "PeerInfo.VerificationInfo.Bot" = "This bot is verified as official by the representatives of Telegram.";
 "PeerInfo.VerificationInfo.Channel" = "This channel is verified as official by the representatives of Telegram.";
@@ -13535,3 +13552,27 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ToastLeftTitleV2" = "Folder {folder} deleted";
 "FolderLinkPreview.ToastChatsAddedTitleV2" = "Folder {folder} Updated";
 "FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
+
+"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade yort gift into a unique collectible.";
+
+"Gift.Send.Upgrade" = "Make Unique for %@";
+"Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";
+
+"Notification.StarGift.Unpack" = "Unpack";
+
+"Notification.StarGift.Model" = "Model";
+"Notification.StarGift.Backdrop" = "Backdrop";
+"Notification.StarGift.Symbol" = "Symbol";
+
+"Notification.StarGift.Gift" = "gift";
+
+"Notification.StarsGift.Upgrade" = "%@ turned the gift from you to a unique collectible";
+"Notification.StarsGift.UpgradeYou" = "You turned the gift from %@ to a unique collectible";
+
+"Notification.StarsGift.Transfer" = "%@ transferred you a unique collectible";
+"Notification.StarsGift.TransferYou" = "You transferred a unique collectible";
+
+"Notification.StarGift.Subtitle.Refunded" = "This gift cannot be converted to Stars because the payment related to it was refunded.";
+"Notification.StarGift.Subtitle.Downgraded" = "This gift was downgraded because a request to refund the payment related to this gift was made, and the money was returned.";
+
+"Gift.View.KeepOrUpgradeDescription" = "You can keep this gift or upgrade it.";

@@ -1210,9 +1210,15 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             case .gifts:
                 title = presentationData.strings.PeerInfo_PaneGifts
                 icons = data?.profileGiftsContext?.currentState?.gifts.prefix(3).compactMap { gift in
-                    if case let .generic(gift) = gift.gift {
+                    switch gift.gift {
+                    case let .generic(gift):
                         return gift.file
-                    } else {
+                    case let .unique(gift):
+                        for attribute in gift.attributes {
+                            if case let .model(_, file, _) = attribute {
+                                return file
+                            }
+                        }
                         return nil
                     }
                 } ?? []

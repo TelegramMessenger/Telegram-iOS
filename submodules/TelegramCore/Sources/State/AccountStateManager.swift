@@ -1766,7 +1766,7 @@ public final class AccountStateManager {
                 subscriber(updatedStarsRevenueStatus)
             }
         }
-        
+                
         func notifyDeletedMessages(messageIds: [MessageId]) {
             self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
         }

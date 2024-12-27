@@ -150,7 +150,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 if isVisible {
-                    let itemId = AnyHashable(index)
+                    let info: String
+                    switch product.gift {
+                    case let .generic(gift):
+                        info = "g_\(gift.id)"
+                    case let .unique(gift):
+                        info = "u_\(gift.id)"
+                    }
+                    let id = "\(index)_\(info)"
+                    let itemId = AnyHashable(id)
                     validIds.append(itemId)
                     
                     var itemTransition = transition
@@ -164,18 +172,33 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     }
                     
                     let ribbonText: String?
-                    if case let .generic(gift) = product.gift, let availability = gift.availability {
-                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
-                    } else {
-                        ribbonText = nil
+                    var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
+                    switch product.gift {
+                    case let .generic(gift):
+                        if let availability = gift.availability {
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
+                        } else {
+                            ribbonText = nil
+                        }
+                    case let .unique(gift):
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total))).string
+                        for attribute in gift.attributes {
+                            if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
+                                ribbonColor = .custom(outerColor, innerColor)
+                                break
+                            }
+                        }
                     }
                     
+                    let peer: GiftItemComponent.Peer?
                     let subject: GiftItemComponent.Subject
                     switch product.gift {
                     case let .generic(gift):
                         subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                        peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
                     case let .unique(gift):
                         subject = .uniqueGift(gift: gift)
+                        peer = nil
                     }
                     
                     let _ = visibleItem.update(
@@ -186,9 +209,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     GiftItemComponent(
                                         context: self.context,
                                         theme: params.presentationData.theme,
-                                        peer: product.fromPeer.flatMap { .peer($0) } ?? .anonymous,
+                                        peer: peer,
                                         subject: subject,
-                                        ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: .blue) },
+                                        ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: ribbonColor) },
                                         isHidden: !product.savedToProfile
                                     )
                                 ),
@@ -389,7 +412,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             guard let self else {
                 return
             }
-            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), transfer: false, completion: nil)
+            let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .settings(birthdays), completion: nil)
             controller.navigationPresentation = .modal
             self.chatControllerInteraction.navigationController()?.pushViewController(controller)
         })
@@ -436,10 +459,4 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     public func updateSelectedMessages(animated: Bool) {
     }
-}
-
-private struct StarsGiftProduct: Equatable {
-    let emoji: String
-    let price: Int64
-    let isLimited: Bool
 }

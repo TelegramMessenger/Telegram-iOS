@@ -107,7 +107,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     }
     
     
-    if let peer = chatPresentationInterfaceState.renderedPeer?.peer, let _ = peer.verification, chatPresentationInterfaceState.displayVerificationDescription {
+    if let _ = chatPresentationInterfaceState.peerVerification {
         if let currentPanel = currentPanel as? ChatVerifiedPeerTitlePanelNode {
             return currentPanel
         } else if let controllerInteraction = controllerInteraction {

@@ -1027,7 +1027,7 @@ private let tonImage: UIImage? = {
 }()
 
 private let verificationImage: UIImage? = {
-    if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Share/QrPlaneIcon") {
+    if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
         return generateImage(backgroundImage.size, contextGenerator: { size, context in
             let fittedRect = CGRect(origin: .zero, size: size).insetBy(dx: 2.0 + UIScreenPixel, dy: 2.0 + UIScreenPixel)
             if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {

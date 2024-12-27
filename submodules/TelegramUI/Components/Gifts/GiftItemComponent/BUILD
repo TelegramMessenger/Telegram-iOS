@@ -29,6 +29,7 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/Stars/ItemShimmeringLoadingComponent",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoCoverComponent",
     ],
     visibility = [
         "//visibility:public",

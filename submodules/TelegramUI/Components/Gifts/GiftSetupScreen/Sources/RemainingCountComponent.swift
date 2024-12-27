@@ -169,7 +169,7 @@ public class RemainingCountComponent: Component {
             self.container.addSubview(self.activeContainer)
             self.activeContainer.layer.addSublayer(self.activeBackground)
             
-            self.addSubview(self.badgeView)
+            //self.addSubview(self.badgeView)
             self.badgeView.layer.addSublayer(self.badgeForeground)
             //self.badgeView.addSubview(self.badgeLabel)
             

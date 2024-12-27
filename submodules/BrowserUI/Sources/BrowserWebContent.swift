@@ -301,9 +301,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoBack), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.canGoForward), options: [], context: nil)
         self.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.hasOnlySecureContent), options: [], context: nil)
-        if #available(iOS 15.0, *) {
-            self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
-        }
         if #available(iOS 16.4, *) {
             self.webView.isInspectable = true
         }
@@ -400,7 +397,6 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
         self.presentationData = presentationData
         if #available(iOS 15.0, *) {
             self.backgroundColor = presentationData.theme.list.plainBackgroundColor
-            self.webView.underPageBackgroundColor = presentationData.theme.list.plainBackgroundColor
         }
         if let (size, insets, fullInsets, safeInsets) = self.validLayout {
             self.updateLayout(size: size, insets: insets, fullInsets: fullInsets, safeInsets: safeInsets, transition: .immediate)

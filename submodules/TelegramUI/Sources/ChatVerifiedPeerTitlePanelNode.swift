@@ -57,11 +57,11 @@ final class ChatVerifiedPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         guard let navigationController = self.interfaceInteraction?.getNavigationController(), let interfaceState = self.presentationInterfaceState else {
             return
         }
-        if let verification = interfaceState.renderedPeer?.peer?.verification, let description = verification.customDescription {
-            let entities = generateTextEntities(description, enabledTypes: [.allUrl])
+        if let verification = interfaceState.peerVerification {
+            let entities = generateTextEntities(verification.description, enabledTypes: [.allUrl])
             if let entity = entities.first {
                 let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
-                let url = (description as NSString).substring(with: range)
+                let url = (verification.description as NSString).substring(with: range)
                 self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
             }
         }
@@ -78,8 +78,8 @@ final class ChatVerifiedPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         var panelHeight: CGFloat = 8.0
-
-        if let peer = interfaceState.renderedPeer?.peer, let verification = peer.verification {
+        
+        if let peer = interfaceState.renderedPeer?.peer, let verification = interfaceState.peerVerification {
             if isFirstTime {
                 let _ = ApplicationSpecificNotice.setDisplayedPeerVerification(accountManager: self.context.sharedContext.accountManager, peerId: peer.id).start()
             }
@@ -87,29 +87,7 @@ final class ChatVerifiedPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             let emojiStatus = PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil)
             let emojiStatusTextNode = self.emojiStatusTextNode
 
-            let description: String
-            if let customDescription = verification.customDescription {
-                description = customDescription
-            } else {
-                switch peer {
-                case let user as TelegramUser:
-                    if let _ = user.botInfo {
-                        description = interfaceState.strings.PeerInfo_VerificationInfo_Custom_Bot(verification.companyName).string
-                    } else {
-                        description = interfaceState.strings.PeerInfo_VerificationInfo_Custom_User(verification.companyName).string
-                    }
-                case let channel as TelegramChannel:
-                    switch channel.info {
-                    case .group:
-                        description = interfaceState.strings.PeerInfo_VerificationInfo_Custom_Group(verification.companyName).string
-                    case .broadcast:
-                        description = interfaceState.strings.PeerInfo_VerificationInfo_Custom_Channel(verification.companyName).string
-                    }
-                default:
-                    description = ""
-                }
-            }
-            
+            let description = verification.description
             let plainText = "  \(description)"
             let entities = generateTextEntities(plainText, enabledTypes: [.allUrl])
             

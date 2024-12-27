@@ -14,24 +14,37 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 
 final class GiftCompositionComponent: Component {
+    public class ExternalState {
+        public fileprivate(set) var previewPatternColor: UIColor?
+        public init() {
+            self.previewPatternColor = nil
+        }
+    }
+    
     enum Subject: Equatable {
         case generic(TelegramMediaFile)
-        case unique(TelegramMediaFile, UIColor, TelegramMediaFile?)
-        case preview([TelegramMediaFile], [TelegramMediaFile])
+        case unique(StarGift.UniqueGift)
+        case preview([StarGift.UniqueGift.Attribute])
     }
     
     let context: AccountContext
     let theme: PresentationTheme
     let subject: Subject
+    let externalState: ExternalState
+    let requestUpdate: () -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        subject: Subject
+        subject: Subject,
+        externalState: ExternalState,
+        requestUpdate: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
         self.subject = subject
+        self.externalState = externalState
+        self.requestUpdate = requestUpdate
     }
 
     static func ==(lhs: GiftCompositionComponent, rhs: GiftCompositionComponent) -> Bool {
@@ -54,10 +67,19 @@ final class GiftCompositionComponent: Component {
         private let background = ComponentView<Empty>()
         private var animationNode: AnimatedStickerNode?
         
+        private var disposables = DisposableSet()
+        private var fetchedFiles = Set<Int64>()
+        
         private var previewTimer: SwiftSignalKit.Timer?
-        private var previewAnimationIndex: Int32 = 0
-        private var previewBackgroundIndex: Int32 = 0
-        private var previewBackgroundFileIndex: Int32 = 1
+        
+        private var currentFile: TelegramMediaFile?
+        private var previewModels: [StarGift.UniqueGift.Attribute] = []
+        private var previewBackdrops: [StarGift.UniqueGift.Attribute] = []
+        private var previewPatterns: [StarGift.UniqueGift.Attribute] = []
+        
+        private var previewModelIndex: Int32 = 0
+        private var previewBackdropIndex: Int32 = 0
+        private var previewPatternIndex: Int32 = 0
         private var animatePreviewTransition = false
         
         override init(frame: CGRect) {
@@ -66,6 +88,10 @@ final class GiftCompositionComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.disposables.dispose()
         }
         
         func update(component: GiftCompositionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
@@ -77,53 +103,103 @@ final class GiftCompositionComponent: Component {
             var animationFile: TelegramMediaFile?
             var backgroundColor: UIColor?
             var secondBackgroundColor: UIColor?
-            var backgroundFile: TelegramMediaFile?
+            var patternColor: UIColor?
+            var patternFile: TelegramMediaFile?
             var files: [Int64: TelegramMediaFile] = [:]
-            
+                        
             switch component.subject {
             case let .generic(file):
                 animationFile = file
-                                
-                if let previewTimer = self.previewTimer {
-                    previewTimer.invalidate()
-                    self.previewTimer = nil
-                }
-            case let .unique(file, color, icon):
-                animationFile = file
-                backgroundColor = color
-                backgroundFile = icon
-                if let backgroundFile {
-                    files[backgroundFile.fileId.id] = backgroundFile
-                }
+                self.currentFile = file
                 
                 if let previewTimer = self.previewTimer {
                     previewTimer.invalidate()
                     self.previewTimer = nil
                 }
-            case let .preview(iconFiles, backgroundFiles):
-                animationFile = iconFiles[Int(self.previewAnimationIndex)]
-                
-                let colors = component.context.peerNameColors.profileColors[self.previewBackgroundIndex]
-                backgroundColor = colors?.main
-                secondBackgroundColor = colors?.secondary
-                
-                backgroundFile = backgroundFiles[Int(self.previewBackgroundFileIndex)]
-                if let backgroundFile {
-                    files[backgroundFile.fileId.id] = backgroundFile
+            case let .unique(gift):
+                for attribute in gift.attributes {
+                    switch attribute {
+                    case let .model(_, file, _):
+                        animationFile = file
+                        if !self.fetchedFiles.contains(file.fileId.id) {
+                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                            self.fetchedFiles.insert(file.fileId.id)
+                        }
+                    case let .pattern(_, file, _):
+                        patternFile = file
+                        files[file.fileId.id] = file
+                    case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _):
+                        backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
+                        secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
+                        patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                    default:
+                        break
+                    }
                 }
                 
-                for file in iconFiles {
-                    let _ = freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start()
+                if let previewTimer = self.previewTimer {
+                    previewTimer.invalidate()
+                    self.previewTimer = nil
+                }
+            case let .preview(sampleAttributes):
+                if self.previewModels.isEmpty {
+                    var models: [StarGift.UniqueGift.Attribute] = []
+                    var patterns: [StarGift.UniqueGift.Attribute] = []
+                    var backdrops: [StarGift.UniqueGift.Attribute] = []
+                    for attribute in sampleAttributes {
+                        switch attribute {
+                        case .model:
+                            models.append(attribute)
+                        case .pattern:
+                            patterns.append(attribute)
+                        case .backdrop:
+                            backdrops.append(attribute)
+                        default:
+                            break
+                        }
+                    }
+                    self.previewModels = models
+                    self.previewPatterns = patterns
+                    self.previewBackdrops = backdrops
                 }
                 
+                for case let .model(_, file, _) in self.previewModels {
+                    if !self.fetchedFiles.contains(file.fileId.id) {
+                        self.disposables.add(freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                        self.fetchedFiles.insert(file.fileId.id)
+                    }
+                }
+                
+                for case let .pattern(_, file, _) in self.previewModels {
+                    if !self.fetchedFiles.contains(file.fileId.id) {
+                        self.disposables.add(freeMediaFileResourceInteractiveFetched(account: component.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                        self.fetchedFiles.insert(file.fileId.id)
+                    }
+                }
+                
+                if case let .model(_, file, _) = self.previewModels[Int(self.previewModelIndex)] {
+                    animationFile = file
+                }
+                
+                if case let .pattern(_, file, _) = self.previewPatterns[Int(self.previewPatternIndex)] {
+                    patternFile = file
+                    files[file.fileId.id] = file
+                }
+                
+                if case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _) = self.previewBackdrops[Int(self.previewBackdropIndex)] {
+                    backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
+                    secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
+                    patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                }
+                    
                 if self.previewTimer == nil {
                     self.previewTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
-                        guard let self, let component = self.component else {
+                        guard let self else {
                             return
                         }
-                        self.previewAnimationIndex = (self.previewAnimationIndex + 1) % Int32(iconFiles.count)
-                        self.previewBackgroundIndex = (self.previewBackgroundIndex + 1) % Int32(component.context.peerNameColors.profileColors.count)
-                        self.previewBackgroundFileIndex = (self.previewBackgroundFileIndex + 1) % Int32(backgroundFiles.count)
+                        self.previewModelIndex = (self.previewModelIndex + 1) % Int32(self.previewModels.count)
+                        self.previewPatternIndex = (self.previewPatternIndex + 1) % Int32(self.previewPatterns.count)
+                        self.previewBackdropIndex = (self.previewBackdropIndex + 1) % Int32(self.previewBackdrops.count)
                         self.animatePreviewTransition = true
                         self.componentState?.updated(transition: .easeInOut(duration: 0.25))
                     }, queue: Queue.mainQueue())
@@ -131,11 +207,17 @@ final class GiftCompositionComponent: Component {
                 }
             }
             
+            component.externalState.previewPatternColor = secondBackgroundColor
+                                    
             var animateTransition = false
             if self.animatePreviewTransition {
                 animateTransition = true
                 self.animatePreviewTransition = false
             } else if let previousComponent, case .preview = previousComponent.subject, case .unique = component.subject {
+                animateTransition = true
+            } else if let previousComponent, case .generic = previousComponent.subject, case .preview = component.subject {
+                animateTransition = true
+            } else if let previousComponent, case .preview = previousComponent.subject, case .generic = component.subject {
                 animateTransition = true
             }
             
@@ -149,7 +231,7 @@ final class GiftCompositionComponent: Component {
                     transition: backgroundTransition,
                     component: AnyComponent(PeerInfoCoverComponent(
                         context: component.context,
-                        subject: .custom(backgroundColor, secondBackgroundColor, backgroundFile?.fileId.id),
+                        subject: .custom(backgroundColor, secondBackgroundColor, patternColor, patternFile?.fileId.id),
                         files: files,
                         isDark: false,
                         avatarCenter: CGPoint(x: availableSize.width / 2.0, y: 104.0),
@@ -172,7 +254,7 @@ final class GiftCompositionComponent: Component {
                     backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: .zero, size: availableSize))
                 }
             } else if let backgroundView = self.background.view, backgroundView.superview != nil {
-                backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { _ in
+                backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     backgroundView.removeFromSuperview()
                 })
             }
@@ -201,7 +283,6 @@ final class GiftCompositionComponent: Component {
                                         
                     if let startFromIndex {
                         animationNode.play(firstFrame: false, fromIndex: startFromIndex)
-                        //animationNode.seekTo(.frameIndex(startFromIndex))
                     } else {
                         animationNode.playLoop()
                     }
@@ -213,31 +294,6 @@ final class GiftCompositionComponent: Component {
                     }
                 }
             }
-                
-//            if self.animationLayer == nil, let animationFile {
-//                let emoji = ChatTextInputTextCustomEmojiAttribute(
-//                    interactivelySelectedFromPackId: nil,
-//                    fileId: animationFile.fileId.id,
-//                    file: animationFile
-//                )
-//                
-//                let animationLayer = InlineStickerItemLayer(
-//                    context: .account(component.context),
-//                    userLocation: .other,
-//                    attemptSynchronousLoad: false,
-//                    emoji: emoji,
-//                    file: animationFile,
-//                    cache: component.context.animationCache,
-//                    renderer: component.context.animationRenderer,
-//                    unique: true,
-//                    placeholderColor: component.theme.list.mediaPlaceholderColor,
-//                    pointSize: CGSize(width: iconSize.width * 1.2, height: iconSize.height * 1.2),
-//                    loopCount: 1
-//                )
-//                animationLayer.isVisibleForAnimations = true
-//                self.animationLayer = animationLayer
-//                self.layer.addSublayer(animationLayer)
-//            }
             if let animationNode = self.animationNode {
                 transition.setFrame(layer: animationNode.layer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: 25.0), size: iconSize))
             }

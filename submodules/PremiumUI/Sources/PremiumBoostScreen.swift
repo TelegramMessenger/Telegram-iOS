@@ -239,7 +239,7 @@ public func PremiumBoostScreen(
                                         dismissImpl?()
                                         
                                         Queue.mainQueue().after(0.4) {
-                                            let controller = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, transfer: false, completion: nil)
+                                            let controller = context.sharedContext.makePremiumGiftController(context: context, source: .channelBoost, completion: nil)
                                             pushController(controller)
                                         }
                                     }),

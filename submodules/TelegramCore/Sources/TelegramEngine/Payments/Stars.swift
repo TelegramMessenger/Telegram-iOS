@@ -612,6 +612,9 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 11)) != 0 {
                 flags.insert(.isReaction)
             }
+            if (apiFlags & (1 << 18)) != 0 {
+                flags.insert(.isStarGiftUpgrade)
+            }
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
@@ -662,6 +665,7 @@ public final class StarsContext {
                 public static let isFailed = Flags(rawValue: 1 << 3)
                 public static let isGift = Flags(rawValue: 1 << 4)
                 public static let isReaction = Flags(rawValue: 1 << 5)
+                public static let isStarGiftUpgrade = Flags(rawValue: 1 << 6)
             }
             
             public enum Peer: Equatable {
@@ -1456,11 +1460,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode, .stars, .starsGift:
-                                            receiptMessageId = nil
-                                        case .starsChatSubscription:
-                                            receiptMessageId = nil
-                                        case .starGift:
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer:
                                             receiptMessageId = nil
                                         }
                                     }

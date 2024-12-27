@@ -539,8 +539,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             if peer.isVerified {
                 verifiedIcon = .verified
-            } else if let verification = peer.verification {
-                verifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil))
+            } else if let verificationIconFileId = peer.verificationIconFileId {
+                verifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verificationIconFileId, expirationDate: nil))
             }
         } else {
             credibilityIcon = .none

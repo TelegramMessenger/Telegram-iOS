@@ -299,7 +299,7 @@ public final class EmojiStatusComponent: Component {
                         imageNamePrefix = "Peer Info/VerifiedIcon"
                     }
                     
-                    if let backgroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Background"), let foregroundImage = UIImage(bundleImageName: "Share/QrPlaneIcon") {
+                    if let backgroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Background"), let foregroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Foreground") {
                         iconImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
                             if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
                                 context.clear(CGRect(origin: CGPoint(), size: size))

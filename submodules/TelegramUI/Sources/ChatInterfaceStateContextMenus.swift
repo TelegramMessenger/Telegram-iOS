@@ -2241,7 +2241,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         switch action.action {
                         case .phoneCall:
                             optionsMap[id]!.insert(.rateCall)
-                        case .starGift:
+                        case .starGift, .starGiftUnique:
                             optionsMap[id]!.insert(.sendGift)
                         default:
                             break

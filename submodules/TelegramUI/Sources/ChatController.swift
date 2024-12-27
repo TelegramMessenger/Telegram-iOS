@@ -1197,7 +1197,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
                             strongSelf.push(controller)
                             return true
-                        case .starGift:
+                        case .starGift, .starGiftUnique:
                             let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message))
                             strongSelf.push(controller)
                             return true
@@ -5758,10 +5758,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var autoremoveTimeout: Int32?
                         var copyProtectionEnabled: Bool = false
                         var hasBirthdayToday = false
-                        var displayVerificationDescription = false
+                        var peerVerification: PeerVerification?
                         if let peer = peerView.peers[peerView.peerId] {
-                            if let _ = peer.verification, !displayedPeerVerification {
-                                displayVerificationDescription = true
+                            if !displayedPeerVerification {
+                                if let cachedUserData = peerView.cachedData as? CachedUserData {
+                                    peerVerification = cachedUserData.verification
+                                } else if let cachedChannelData = peerView.cachedData as? CachedChannelData {
+                                    peerVerification = cachedChannelData.verification
+                                }
                             }
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
@@ -5933,7 +5937,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedHasBirthdayToday(hasBirthdayToday)
                              .updatedBusinessIntro(businessIntro)
                              .updatedAdMessage(adMessage)
-                             .updatedDisplayVerificationDescription(displayVerificationDescription)
+                             .updatedPeerVerification(peerVerification)
                              .updatedInterfaceState { interfaceState in
                                  var interfaceState = interfaceState
                                  

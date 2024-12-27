@@ -242,7 +242,7 @@ private class AdMessagesHistoryContextImpl {
                 emojiStatus: nil,
                 approximateBoostLevel: nil,
                 subscriptionUntilDate: nil,
-                verification: nil
+                verificationIconFileId: nil
             )
             messagePeers[author.id] = author
             

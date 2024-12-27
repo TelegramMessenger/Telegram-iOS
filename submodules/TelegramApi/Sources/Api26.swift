@@ -1106,7 +1106,6 @@ public extension Api {
         case updateSentStoryReaction(peer: Api.Peer, storyId: Int32, reaction: Api.Reaction)
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateSmsJob(jobId: String)
-        case updateStarGiftUpgraded(gift: Api.UserStarGift, toGift: Api.UserStarGift)
         case updateStarsBalance(balance: Api.StarsAmount)
         case updateStarsRevenueStatus(peer: Api.Peer, status: Api.StarsRevenueStatus)
         case updateStickerSets(flags: Int32)
@@ -2229,13 +2228,6 @@ public extension Api {
                     }
                     serializeString(jobId, buffer: buffer, boxed: false)
                     break
-                case .updateStarGiftUpgraded(let gift, let toGift):
-                    if boxed {
-                        buffer.appendInt32(1987894852)
-                    }
-                    gift.serialize(buffer, true)
-                    toGift.serialize(buffer, true)
-                    break
                 case .updateStarsBalance(let balance):
                     if boxed {
                         buffer.appendInt32(1317053305)
@@ -2616,8 +2608,6 @@ public extension Api {
                 return ("updateServiceNotification", [("flags", flags as Any), ("inboxDate", inboxDate as Any), ("type", type as Any), ("message", message as Any), ("media", media as Any), ("entities", entities as Any)])
                 case .updateSmsJob(let jobId):
                 return ("updateSmsJob", [("jobId", jobId as Any)])
-                case .updateStarGiftUpgraded(let gift, let toGift):
-                return ("updateStarGiftUpgraded", [("gift", gift as Any), ("toGift", toGift as Any)])
                 case .updateStarsBalance(let balance):
                 return ("updateStarsBalance", [("balance", balance as Any)])
                 case .updateStarsRevenueStatus(let peer, let status):
@@ -4870,24 +4860,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateSmsJob(jobId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateStarGiftUpgraded(_ reader: BufferReader) -> Update? {
-            var _1: Api.UserStarGift?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.UserStarGift
-            }
-            var _2: Api.UserStarGift?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.UserStarGift
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.Update.updateStarGiftUpgraded(gift: _1!, toGift: _2!)
             }
             else {
                 return nil

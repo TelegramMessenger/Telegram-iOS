@@ -1747,7 +1747,7 @@ public final class ChatListNode: ListView {
                     self.push?(controller)
                 })
             } else {
-                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), transfer: false, completion: nil)
+                let controller = self.context.sharedContext.makePremiumGiftController(context: self.context, source: .chatList(birthdays), completion: nil)
                 controller.navigationPresentation = .modal
                 self.push?(controller)
             }
