@@ -14,6 +14,13 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 
 final class GiftCompositionComponent: Component {
+    public class ExternalState {
+        public fileprivate(set) var previewPatternColor: UIColor?
+        public init() {
+            self.previewPatternColor = nil
+        }
+    }
+    
     enum Subject: Equatable {
         case generic(TelegramMediaFile)
         case unique(StarGift.UniqueGift)
@@ -23,15 +30,21 @@ final class GiftCompositionComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let subject: Subject
+    let externalState: ExternalState
+    let requestUpdate: () -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
-        subject: Subject
+        subject: Subject,
+        externalState: ExternalState,
+        requestUpdate: @escaping () -> Void
     ) {
         self.context = context
         self.theme = theme
         self.subject = subject
+        self.externalState = externalState
+        self.requestUpdate = requestUpdate
     }
 
     static func ==(lhs: GiftCompositionComponent, rhs: GiftCompositionComponent) -> Bool {
@@ -193,12 +206,18 @@ final class GiftCompositionComponent: Component {
                     self.previewTimer?.start()
                 }
             }
+            
+            component.externalState.previewPatternColor = secondBackgroundColor
                                     
             var animateTransition = false
             if self.animatePreviewTransition {
                 animateTransition = true
                 self.animatePreviewTransition = false
             } else if let previousComponent, case .preview = previousComponent.subject, case .unique = component.subject {
+                animateTransition = true
+            } else if let previousComponent, case .generic = previousComponent.subject, case .preview = component.subject {
+                animateTransition = true
+            } else if let previousComponent, case .preview = previousComponent.subject, case .generic = component.subject {
                 animateTransition = true
             }
             
@@ -235,7 +254,7 @@ final class GiftCompositionComponent: Component {
                     backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: .zero, size: availableSize))
                 }
             } else if let backgroundView = self.background.view, backgroundView.superview != nil {
-                backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { _ in
+                backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                     backgroundView.removeFromSuperview()
                 })
             }
@@ -264,7 +283,6 @@ final class GiftCompositionComponent: Component {
                                         
                     if let startFromIndex {
                         animationNode.play(firstFrame: false, fromIndex: startFromIndex)
-                        //animationNode.seekTo(.frameIndex(startFromIndex))
                     } else {
                         animationNode.playLoop()
                     }
@@ -276,31 +294,6 @@ final class GiftCompositionComponent: Component {
                     }
                 }
             }
-                
-//            if self.animationLayer == nil, let animationFile {
-//                let emoji = ChatTextInputTextCustomEmojiAttribute(
-//                    interactivelySelectedFromPackId: nil,
-//                    fileId: animationFile.fileId.id,
-//                    file: animationFile
-//                )
-//                
-//                let animationLayer = InlineStickerItemLayer(
-//                    context: .account(component.context),
-//                    userLocation: .other,
-//                    attemptSynchronousLoad: false,
-//                    emoji: emoji,
-//                    file: animationFile,
-//                    cache: component.context.animationCache,
-//                    renderer: component.context.animationRenderer,
-//                    unique: true,
-//                    placeholderColor: component.theme.list.mediaPlaceholderColor,
-//                    pointSize: CGSize(width: iconSize.width * 1.2, height: iconSize.height * 1.2),
-//                    loopCount: 1
-//                )
-//                animationLayer.isVisibleForAnimations = true
-//                self.animationLayer = animationLayer
-//                self.layer.addSublayer(animationLayer)
-//            }
             if let animationNode = self.animationNode {
                 transition.setFrame(layer: animationNode.layer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: 25.0), size: iconSize))
             }

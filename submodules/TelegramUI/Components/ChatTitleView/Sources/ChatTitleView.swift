@@ -909,7 +909,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var titleFrame: CGRect
         if size.height > 40.0 {
             var titleInsets: UIEdgeInsets = .zero
-            if verifiedIconWidth > 0.0 {
+            if case .emojiStatus = self.titleVerifiedIcon, verifiedIconWidth > 0.0 {
                 titleInsets.left = verifiedIconWidth + 2.0
             }
             
@@ -951,7 +951,18 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             
             var nextIconX: CGFloat = titleFrame.width
             
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
+            var verifiedIconX: CGFloat
+            if case .emojiStatus = self.titleVerifiedIcon {
+                verifiedIconX = 0.0
+            } else {
+                verifiedIconX = nextIconX - titleVerifiedSize.width
+            }
+            
+            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: verifiedIconX, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
+            if case .emojiStatus = self.titleVerifiedIcon {
+            } else {
+                nextIconX -= titleVerifiedSize.width
+            }
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width

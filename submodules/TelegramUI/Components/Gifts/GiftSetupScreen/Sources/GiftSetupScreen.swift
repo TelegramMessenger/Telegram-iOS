@@ -13,6 +13,7 @@ import AccountContext
 import ComponentFlow
 import ViewControllerComponent
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import BalancedTextComponent
 import ListSectionComponent
 import ListActionItemComponent
@@ -32,6 +33,7 @@ import InAppPurchaseManager
 import BlurredBackgroundComponent
 import ProgressNavigationButtonNode
 import Markdown
+import GiftViewScreen
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -131,6 +133,7 @@ final class GiftSetupScreenComponent: Component {
             }
         }
         private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
+        private let previewPromise = Promise<[StarGift.UniqueGift.Attribute]?>(nil)
         
         private var cachedChevronImage: (UIImage, PresentationTheme)?
         
@@ -578,7 +581,7 @@ final class GiftSetupScreenComponent: Component {
                     }
                 )
                 
-                if case .starGift = component.subject {
+                if case let .starGift(gift) = component.subject {
                     self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
                     |> deliverOnMainQueue).start(next: { [weak self] options in
                         guard let self else {
@@ -586,6 +589,13 @@ final class GiftSetupScreenComponent: Component {
                         }
                         self.options = options
                     })
+                    
+                    if let _ = gift.upgradeStars {
+                        self.previewPromise.set(
+                            component.context.engine.payments.starGiftUpgradePreview(giftId: gift.id)
+                            |> map(Optional.init)
+                        )
+                    }
                 }
             }
             
@@ -845,6 +855,13 @@ final class GiftSetupScreenComponent: Component {
                         upgradeFooterText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: upgradeFooterText.string))
                     }
                     
+                    let upgradeAttributedText = NSMutableAttributedString(string: environment.strings.Gift_Send_Upgrade("#\(upgradeStars)").string, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                    let range = (upgradeAttributedText.string as NSString).range(of: "#")
+                    if range.location != NSNotFound {
+                        upgradeAttributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                        upgradeAttributedText.addAttribute(.baselineOffset, value: 1.0, range: range)
+                    }
+                    
                     let upgradeSectionSize = self.upgradeSection.update(
                         transition: transition,
                         component: AnyComponent(ListSectionComponent(
@@ -852,20 +869,47 @@ final class GiftSetupScreenComponent: Component {
                             header: nil,
                             footer: AnyComponent(MultilineTextComponent(
                                 text: .plain(upgradeFooterText),
-                                maximumNumberOfLines: 0
+                                maximumNumberOfLines: 0,
+                                highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
+                                highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                                highlightAction: { attributes in
+                                    if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                        return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                    } else {
+                                        return nil
+                                    }
+                                },
+                                tapAction: { [weak self] _, _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = (self.previewPromise.get()
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak self] attributes in
+                                        guard let self, let component = self.component, let controller = self.environment?.controller(), let attributes else {
+                                            return
+                                        }
+                                        let previewController = GiftViewScreen(
+                                            context: component.context,
+                                            subject: .upgradePreview(attributes, peerName)
+                                        )
+                                        controller.push(previewController)
+                                    })
+                                }
                             )),
                             items: [
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
                                     theme: environment.theme,
                                     title: AnyComponent(VStack([
-                                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
-                                            text: .plain(NSAttributedString(
-                                                string: environment.strings.Gift_Send_Upgrade("\(upgradeStars)").string,
-                                                font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
-                                                textColor: environment.theme.list.itemPrimaryTextColor
-                                            )),
-                                            maximumNumberOfLines: 1
-                                        ))),
+                                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(
+                                            MultilineTextWithEntitiesComponent(
+                                                context: component.context,
+                                                animationCache: component.context.animationCache,
+                                                animationRenderer: component.context.animationRenderer,
+                                                placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                                                text: .plain(upgradeAttributedText)
+                                            )
+                                        )),
                                     ], alignment: .left, spacing: 2.0)),
                                     accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.includeUpgrade, action: { [weak self] _ in
                                         guard let self else {
@@ -982,7 +1026,11 @@ final class GiftSetupScreenComponent: Component {
                 let amountString = product.price
                 buttonString = "\(environment.strings.Gift_Send_Send) \(amountString)"
             case let .starGift(starGift):
-                let amountString = presentationStringsFormattedNumber(Int32(starGift.price), presentationData.dateTimeFormat.groupingSeparator)
+                var finalPrice: Int64 = starGift.price
+                if self.includeUpgrade, let upgradePrice = starGift.upgradeStars {
+                    finalPrice += upgradePrice
+                }
+                let amountString = presentationStringsFormattedNumber(Int32(finalPrice), presentationData.dateTimeFormat.groupingSeparator)
                 buttonString = "\(environment.strings.Gift_Send_Send)  #  \(amountString)"
                 if let availability = starGift.availability, availability.remains == 0 {
                     buttonIsEnabled = false

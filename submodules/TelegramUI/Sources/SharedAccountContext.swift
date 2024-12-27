@@ -2289,18 +2289,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
         if case let .starGiftTransfer(birthdays, _, _, _, _) = source {
-            if let birthdays, !birthdays.isEmpty {
-                mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: true)
-                currentBirthdays = birthdays
-            } else {
-                mode = .starsGifting(birthdays: nil, hasActions: false, showSelf: true)
-            }
-        }
-        if case let .chatList(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: false)
+            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false)
             currentBirthdays = birthdays
-        } else if case let .settings(birthdays) = source, let birthdays, !birthdays.isEmpty {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: false)
+        } else if case let .chatList(birthdays) = source {
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
+            currentBirthdays = birthdays
+        } else if case let .settings(birthdays) = source {
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
             currentBirthdays = birthdays
         } else {
             mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false)

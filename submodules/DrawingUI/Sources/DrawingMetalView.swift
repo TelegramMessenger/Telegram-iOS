@@ -47,6 +47,7 @@ final class DrawingMetalView: MTKView {
         super.init(frame: CGRect(origin: .zero, size: size), device: device)
         
         self.drawableSize = self.size
+        self.colorPixelFormat = .bgra8Unorm
         self.autoResizeDrawable = false
         self.isOpaque = false
         self.contentScaleFactor = 1.0
@@ -123,7 +124,7 @@ final class DrawingMetalView: MTKView {
         let pipelineDescription = MTLRenderPipelineDescriptor()
         pipelineDescription.vertexFunction = vertexFunction
         pipelineDescription.fragmentFunction = fragmentFunction
-        pipelineDescription.colorAttachments[0].pixelFormat = colorPixelFormat
+        pipelineDescription.colorAttachments[0].pixelFormat = self.colorPixelFormat
 
         do {
             self.pipelineState = try self.device?.makeRenderPipelineState(descriptor: pipelineDescription)
@@ -250,6 +251,7 @@ private class Drawable {
         attachment?.texture = self.texture?.texture
         attachment?.loadAction = .load
         attachment?.storeAction = .store
+        attachment?.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         
         self.updateBuffer(with: size)
     }
@@ -287,7 +289,6 @@ private class Drawable {
         }
         return commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
     }
-    
     
     internal func commit(wait: Bool = false) {
         self.commandBuffer?.commit()
@@ -673,9 +674,9 @@ final class Texture {
             origin: MTLOrigin(x: 0, y: 0, z: 0),
             size: MTLSize(width: self.width, height: self.height, depth: 1)
         )
-        let data = Data(capacity: Int(self.bytesPerRow * self.height))
-        if let bytes = data.withUnsafeBytes({ $0.baseAddress }) {
-            self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes, bytesPerRow: self.bytesPerRow)
+        let zeroData = [UInt8](repeating: 0, count: self.bytesPerRow * self.height)
+        zeroData.withUnsafeBytes { bytes in
+            self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes.baseAddress!, bytesPerRow: self.bytesPerRow)
         }
     }
     

@@ -373,7 +373,7 @@ public extension Api {
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetChatWallPaper(flags: Int32, wallpaper: Api.WallPaper)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
-        case messageActionStarGift(flags: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, convertStars: Int64?, upgradeStars: Int64?)
+        case messageActionStarGift(flags: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, convertStars: Int64?, upgradeMsgId: Int32?, upgradeStars: Int64?)
         case messageActionStarGiftUnique(flags: Int32, gift: Api.StarGift, canExportAt: Int32?, transferStars: Int64?)
         case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
@@ -720,14 +720,15 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionStarGift(let flags, let gift, let message, let convertStars, let upgradeStars):
+                case .messageActionStarGift(let flags, let gift, let message, let convertStars, let upgradeMsgId, let upgradeStars):
                     if boxed {
-                        buffer.appendInt32(1785072017)
+                        buffer.appendInt32(-655036249)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     gift.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 4) != 0 {serializeInt64(convertStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(upgradeMsgId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeInt64(upgradeStars!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionStarGiftUnique(let flags, let gift, let canExportAt, let transferStars):
@@ -864,8 +865,8 @@ public extension Api {
                 return ("messageActionSetChatWallPaper", [("flags", flags as Any), ("wallpaper", wallpaper as Any)])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", flags as Any), ("period", period as Any), ("autoSettingFrom", autoSettingFrom as Any)])
-                case .messageActionStarGift(let flags, let gift, let message, let convertStars, let upgradeStars):
-                return ("messageActionStarGift", [("flags", flags as Any), ("gift", gift as Any), ("message", message as Any), ("convertStars", convertStars as Any), ("upgradeStars", upgradeStars as Any)])
+                case .messageActionStarGift(let flags, let gift, let message, let convertStars, let upgradeMsgId, let upgradeStars):
+                return ("messageActionStarGift", [("flags", flags as Any), ("gift", gift as Any), ("message", message as Any), ("convertStars", convertStars as Any), ("upgradeMsgId", upgradeMsgId as Any), ("upgradeStars", upgradeStars as Any)])
                 case .messageActionStarGiftUnique(let flags, let gift, let canExportAt, let transferStars):
                 return ("messageActionStarGiftUnique", [("flags", flags as Any), ("gift", gift as Any), ("canExportAt", canExportAt as Any), ("transferStars", transferStars as Any)])
                 case .messageActionSuggestProfilePhoto(let photo):
@@ -1528,15 +1529,18 @@ public extension Api {
             } }
             var _4: Int64?
             if Int(_1!) & Int(1 << 4) != 0 {_4 = reader.readInt64() }
-            var _5: Int64?
-            if Int(_1!) & Int(1 << 8) != 0 {_5 = reader.readInt64() }
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_5 = reader.readInt32() }
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 8) != 0 {_6 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 8) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MessageAction.messageActionStarGift(flags: _1!, gift: _2!, message: _3, convertStars: _4, upgradeStars: _5)
+            let _c5 = (Int(_1!) & Int(1 << 5) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 8) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MessageAction.messageActionStarGift(flags: _1!, gift: _2!, message: _3, convertStars: _4, upgradeMsgId: _5, upgradeStars: _6)
             }
             else {
                 return nil

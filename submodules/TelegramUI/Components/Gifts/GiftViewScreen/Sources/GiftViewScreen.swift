@@ -51,7 +51,7 @@ private final class GiftViewSheetContent: CombinedComponent {
     init(
         context: AccountContext,
         subject: GiftViewScreen.Subject,
-        cancel: @escaping  (Bool) -> Void,
+        cancel: @escaping (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
@@ -108,11 +108,13 @@ private final class GiftViewSheetContent: CombinedComponent {
         var inProgress = false
         
         var inUpgradePreview = false
+        var upgradeForm: BotPaymentForm?
+        var upgradeDisposable: Disposable?
+        
         var sampleGiftAttributes: [StarGift.UniqueGift.Attribute]?
-        var sampleDisposable: Disposable?
+        let sampleDisposable = DisposableSet()
         
         var keepOriginalInfo = false
-        var upgradeDisposable: Disposable?
                 
         private var optionsDisposable: Disposable?
         private(set) var options: [StarsTopUpOption] = [] {
@@ -151,15 +153,40 @@ private final class GiftViewSheetContent: CombinedComponent {
                             break
                         }
                     }
-                } else if case let .generic(gift) = arguments.gift, let _ = arguments.upgradeStars {
-                    self.sampleDisposable = (context.engine.payments.starGiftUpgradePreview(giftId: gift.id)
-                    |> deliverOnMainQueue).start(next: { [weak self] attributes in
-                        guard let self else {
-                            return
+                } else if case let .generic(gift) = arguments.gift {
+                    if arguments.canUpgrade || arguments.upgradeStars != nil {
+                        self.sampleDisposable.add((context.engine.payments.starGiftUpgradePreview(giftId: gift.id)
+                        |> deliverOnMainQueue).start(next: { [weak self] attributes in
+                            guard let self else {
+                                return
+                            }
+                            self.sampleGiftAttributes = attributes
+                            
+                            for attribute in attributes {
+                                switch attribute {
+                                case let .model(_, file, _):
+                                    self.sampleDisposable.add(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                                case let .pattern(_, file, _):
+                                    self.sampleDisposable.add(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
+                                default:
+                                    break
+                                }
+                            }
+
+                            self.updated()
+                        }))
+                        
+                        if arguments.upgradeStars == nil, let messageId = arguments.messageId {
+                            self.upgradeDisposable = (context.engine.payments.fetchBotPaymentForm(source: .starGiftUpgrade(keepOriginalInfo: false, messageId: messageId), themeParams: nil)
+                            |> deliverOnMainQueue).start(next: { [weak self] paymentForm in
+                                guard let self else {
+                                    return
+                                }
+                                self.upgradeForm = paymentForm
+                                self.updated()
+                            })
                         }
-                        self.sampleGiftAttributes = attributes
-                        self.updated()
-                    })
+                    }
                 }
                 self.disposable = combineLatest(queue: Queue.mainQueue(),
                     context.engine.data.get(EngineDataMap(
@@ -209,7 +236,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         
         deinit {
             self.disposable?.dispose()
-            self.sampleDisposable?.dispose()
+            self.sampleDisposable.dispose()
             self.upgradeDisposable?.dispose()
         }
         
@@ -217,20 +244,22 @@ private final class GiftViewSheetContent: CombinedComponent {
             guard let _ = self.subject.arguments?.upgradeStars else {
                 return
             }
+            self.context.starsContext?.load(force: false)
+            
             self.inUpgradePreview = true
             self.updated(transition: .spring(duration: 0.4))
         }
         
         func commitUpgrade() {
-            guard let arguments = self.subject.arguments, let messageId = arguments.messageId, let starsContext = self.context.starsContext, let starsState = starsContext.currentState, let upgradeStars = arguments.upgradeStars else {
+            guard let arguments = self.subject.arguments, let messageId = arguments.messageId, let starsContext = self.context.starsContext, let starsState = starsContext.currentState else {
                 return
             }
             let peerId = arguments.peerId
-            let proceed: (Bool) -> Void = { prepaid in
+            let proceed: (Int64?) -> Void = { formId in
                 self.inProgress = true
                 self.updated()
                 
-                let _ = (self.context.engine.payments.upgradeStarGift(prepaid: prepaid, messageId: messageId, keepOriginalInfo: self.keepOriginalInfo)
+                let _ = (self.context.engine.payments.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: self.keepOriginalInfo)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let self, let controller = self.getController() as? GiftViewScreen else {
                         return
@@ -245,8 +274,10 @@ private final class GiftViewSheetContent: CombinedComponent {
                 })
             }
             
-            if upgradeStars > 0 {
-                if starsState.balance < StarsAmount(value: upgradeStars, nanos: 0) {
+            if let upgradeStars = arguments.upgradeStars, upgradeStars > 0 {
+                proceed(nil)
+            } else if let upgradeForm = self.upgradeForm, let price = upgradeForm.invoice.prices.first?.amount {
+                if starsState.balance < StarsAmount(value: price, nanos: 0) {
                     let _ = (self.optionsPromise.get()
                     |> filter { $0 != nil }
                     |> take(1)
@@ -258,21 +289,19 @@ private final class GiftViewSheetContent: CombinedComponent {
                             context: self.context,
                             starsContext: starsContext,
                             options: options ?? [],
-                            purpose: .upgradeStarGift(requiredStars: upgradeStars),
+                            purpose: .upgradeStarGift(requiredStars: price),
                             completion: { [weak starsContext] stars in
                                 starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
                                 Queue.mainQueue().after(2.0) {
-                                    proceed(false)
+                                    proceed(upgradeForm.id)
                                 }
                             }
                         )
                         controller.push(purchaseController)
                     })
                 } else {
-                    proceed(false)
+                    proceed(upgradeForm.id)
                 }
-            } else {
-                proceed(true)
             }
         }
     }
@@ -297,6 +326,8 @@ private final class GiftViewSheetContent: CombinedComponent {
         let upgradeKeepName = Child(PlainButtonComponent.self)
                 
         let spaceRegex = try? NSRegularExpression(pattern: "\\[(.*?)\\]", options: [])
+        
+        let giftCompositionExternalState = GiftCompositionComponent.ExternalState()
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -326,6 +357,8 @@ private final class GiftViewSheetContent: CombinedComponent {
             var date: Int32?
             var soldOut = false
             var nameHidden = false
+            var upgraded = false
+            var canUpgrade = false
             var upgradeStars: Int64?
             var uniqueGift: StarGift.UniqueGift?
             if case let .soldOutGift(gift) = subject {
@@ -351,6 +384,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     converted = arguments.converted
                     giftId = gift.id
                     date = arguments.date
+                    upgraded = arguments.upgraded
+                    canUpgrade = arguments.canUpgrade
                     upgradeStars = arguments.upgradeStars
                 case let .unique(gift):
                     stars = 0
@@ -387,11 +422,27 @@ private final class GiftViewSheetContent: CombinedComponent {
                 state.cachedOverlayCloseImage = closeOverlayImage
             }
             
+            var showUpgradePreview = false
+            if state.inUpgradePreview, let _ = state.sampleGiftAttributes {
+                showUpgradePreview = true
+            } else if case .upgradePreview = component.subject {
+                showUpgradePreview = true
+            }
+            
+            let cancel = component.cancel
             let closeButton = closeButton.update(
                 component: Button(
-                    content: AnyComponent(Image(image: state.inUpgradePreview || uniqueGift != nil ? closeOverlayImage : closeImage)),
-                    action: { [weak component] in
-                        component?.cancel(true)
+                    content: AnyComponent(Image(image: showUpgradePreview || uniqueGift != nil ? closeOverlayImage : closeImage)),
+                    action: { [weak state] in
+                        guard let state else {
+                            return
+                        }
+                        if state.inUpgradePreview {
+                            state.inUpgradePreview = false
+                            state.updated(transition: .spring(duration: 0.4))
+                        } else {
+                            cancel(true)
+                        }
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -405,9 +456,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             if let uniqueGift {
                 animationHeight = 240.0
                 animationSubject = .unique(uniqueGift)
-            } else if state.inUpgradePreview, let sampleGiftAttributes = state.sampleGiftAttributes {
+            } else if state.inUpgradePreview, let attributes = state.sampleGiftAttributes {
                 animationHeight = 258.0
-                animationSubject = .preview(sampleGiftAttributes)
+                animationSubject = .preview(attributes)
+            } else if case let .upgradePreview(attributes, _) = component.subject {
+                animationHeight = 258.0
+                animationSubject = .preview(attributes)
             } else if let animationFile {
                 animationHeight = 210.0
                 animationSubject = .generic(animationFile)
@@ -420,7 +474,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                     component: GiftCompositionComponent(
                         context: component.context,
                         theme: environment.theme,
-                        subject: animationSubject
+                        subject: animationSubject,
+                        externalState: giftCompositionExternalState,
+                        requestUpdate: { [weak state] in
+                            state?.updated()
+                        }
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: animationHeight),
                     transition: .immediate
@@ -430,13 +488,31 @@ private final class GiftViewSheetContent: CombinedComponent {
                 )
             }
             originY += animationHeight
-            
-            
-            if state.inUpgradePreview, let _ = state.sampleGiftAttributes {
+                        
+            if showUpgradePreview {
+                let title: String
+                let description: String
+                let uniqueText: String
+                let transferableText: String
+                let tradableText: String
+                if case let .upgradePreview(_, name) = component.subject {
+                    title = environment.strings.Gift_Upgrade_IncludeTitle
+                    description = environment.strings.Gift_Upgrade_IncludeDescription(name).string
+                    uniqueText = strings.Gift_Upgrade_Unique_IncludeDescription
+                    transferableText = strings.Gift_Upgrade_Transferable_IncludeDescription
+                    tradableText = strings.Gift_Upgrade_Tradable_IncludeDescription
+                } else {
+                    title = environment.strings.Gift_Upgrade_Title
+                    description = environment.strings.Gift_Upgrade_Description
+                    uniqueText = strings.Gift_Upgrade_Unique_Description
+                    transferableText = strings.Gift_Upgrade_Transferable_Description
+                    tradableText = strings.Gift_Upgrade_Tradable_Description
+                }
+                
                 let upgradeTitle = upgradeTitle.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Gift_Upgrade_Title,
+                            string: title,
                             font: Font.bold(20.0),
                             textColor: .white,
                             paragraphAlignment: .center
@@ -447,18 +523,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
-                context.add(upgradeTitle
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 191.0))
-                    .appear(.default(alpha: true))
-                    .disappear(.default(alpha: true))
-                )
-                
+                let descriptionColor: UIColor
+                if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
+                    descriptionColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
+                } else {
+                    descriptionColor = UIColor.white.withAlphaComponent(0.6)
+                }
                 let upgradeDescription = upgradeDescription.update(
                     component: BalancedTextComponent(
                         text: .plain(NSAttributedString(
-                            string: environment.strings.Gift_Upgrade_Description,
+                            string: description,
                             font: Font.regular(13.0),
-                            textColor: UIColor.white.withAlphaComponent(0.6),
+                            textColor: descriptionColor,
                             paragraphAlignment: .center
                         )),
                         horizontalAlignment: .center,
@@ -468,8 +544,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
+                
+                let spacing: CGFloat = 6.0
+                let totalHeight: CGFloat = upgradeTitle.size.height + spacing + upgradeDescription.size.height
+                
+                context.add(upgradeTitle
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: floor(212.0 - totalHeight / 2.0 + upgradeTitle.size.height / 2.0)))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+               
                 context.add(upgradeDescription
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 208.0 + upgradeDescription.size.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: floor(212.0 + totalHeight / 2.0 - upgradeDescription.size.height / 2.0)))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
@@ -486,7 +572,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Upgrade_Unique_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Upgrade_Unique_Description,
+                            text: uniqueText,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Unique",
@@ -500,7 +586,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Upgrade_Transferable_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Upgrade_Transferable_Description,
+                            text: transferableText,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Transferable",
@@ -514,7 +600,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Upgrade_Tradable_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Upgrade_Tradable_Description,
+                            text: tradableText,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Tradable",
@@ -538,55 +624,59 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += upgradePerks.size.height
                 originY += 16.0
                 
-                let checkTheme = CheckComponent.Theme(
-                    backgroundColor: theme.list.itemCheckColors.fillColor,
-                    strokeColor: theme.list.itemCheckColors.foregroundColor,
-                    borderColor: theme.list.itemCheckColors.strokeColor,
-                    overlayBorder: false,
-                    hasInset: false,
-                    hasShadow: false
-                )
-                let keepInfoText: String
-                if let nameHidden = subject.arguments?.nameHidden, nameHidden {
-                    keepInfoText = strings.Gift_Upgrade_AddMyName
+                if case .upgradePreview = component.subject {
+                    
                 } else {
-                    keepInfoText = text != nil ? strings.Gift_Upgrade_AddNameAndComment : strings.Gift_Upgrade_AddName
+                    let checkTheme = CheckComponent.Theme(
+                        backgroundColor: theme.list.itemCheckColors.fillColor,
+                        strokeColor: theme.list.itemCheckColors.foregroundColor,
+                        borderColor: theme.list.itemCheckColors.strokeColor,
+                        overlayBorder: false,
+                        hasInset: false,
+                        hasShadow: false
+                    )
+                    let keepInfoText: String
+                    if let nameHidden = subject.arguments?.nameHidden, nameHidden {
+                        keepInfoText = strings.Gift_Upgrade_AddMyName
+                    } else {
+                        keepInfoText = text != nil ? strings.Gift_Upgrade_AddNameAndComment : strings.Gift_Upgrade_AddName
+                    }
+                    let upgradeKeepName = upgradeKeepName.update(
+                        component: PlainButtonComponent(
+                            content: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
+                                    theme: checkTheme,
+                                    size: CGSize(width: 18.0, height: 18.0),
+                                    selected: state.keepOriginalInfo
+                                ))),
+                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: keepInfoText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor))
+                                )))
+                            ],
+                            spacing: 10.0
+                            )),
+                            effectAlignment: .center,
+                            action: { [weak state] in
+                                guard let state else {
+                                    return
+                                }
+                                state.keepOriginalInfo = !state.keepOriginalInfo
+                                state.updated(transition: .easeInOut(duration: 0.2))
+                            },
+                            animateAlpha: false,
+                            animateScale: false
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 1000.0),
+                        transition: context.transition
+                    )
+                    context.add(upgradeKeepName
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + upgradeKeepName.size.height / 2.0))
+                        .appear(.default(alpha: true))
+                        .disappear(.default(alpha: true))
+                    )
+                    originY += upgradeKeepName.size.height
+                    originY += 18.0
                 }
-                let upgradeKeepName = upgradeKeepName.update(
-                    component: PlainButtonComponent(
-                        content: AnyComponent(HStack([
-                            AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
-                                theme: checkTheme,
-                                size: CGSize(width: 18.0, height: 18.0),
-                                selected: state.keepOriginalInfo
-                            ))),
-                            AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
-                                text: .plain(NSAttributedString(string: keepInfoText, font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor))
-                            )))
-                        ],
-                        spacing: 10.0
-                        )),
-                        effectAlignment: .center,
-                        action: { [weak state] in
-                            guard let state else {
-                                return
-                            }
-                            state.keepOriginalInfo = !state.keepOriginalInfo
-                            state.updated(transition: .easeInOut(duration: 0.2))
-                        },
-                        animateAlpha: false,
-                        animateScale: false
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 1000.0),
-                    transition: context.transition
-                )
-                context.add(upgradeKeepName
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + upgradeKeepName.size.height / 2.0))
-                    .appear(.default(alpha: true))
-                    .disappear(.default(alpha: true))
-                )
-                originY += upgradeKeepName.size.height
-                originY += 18.0
             } else {
                 var descriptionText: String
                 if let uniqueGift {
@@ -595,12 +685,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                 } else if soldOut {
                     descriptionText = strings.Gift_View_UnavailableDescription
                 } else if incoming {
-                    if let convertStars {
+                    if let convertStars, !upgraded {
                         if !converted {
-                            descriptionText = strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                            if canUpgrade || upgradeStars != nil {
+                                descriptionText = strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                            } else {
+                                descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                            }
                         } else {
                             descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
                         }
+                    } else if (canUpgrade || upgradeStars != nil) && !upgraded {
+                        descriptionText = strings.Gift_View_KeepOrUpgradeDescription
                     } else {
                         descriptionText = strings.Gift_View_BotDescription
                     }
@@ -660,17 +756,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                     
                     let textFont: UIFont
                     let textColor: UIColor
-                    if let uniqueGift {
+                    if let _ = uniqueGift {
                         textFont = Font.regular(13.0)
-                        
-                        var giftTextColor: UIColor?
-                        for attribute in uniqueGift.attributes {
-                            if case let .backdrop(_, _, _, _, textColor, _) = attribute {
-                                giftTextColor = UIColor(rgb: UInt32(bitPattern: textColor))
-                                break
-                            }
+                        if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
+                            textColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
+                        } else {
+                            textColor = UIColor.white.withAlphaComponent(0.6)
                         }
-                        textColor = giftTextColor ?? UIColor.white.withAlphaComponent(0.6)
                     } else {
                         textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
                         textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
@@ -1043,7 +1135,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                         ))
                     }
                     
-                    let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(stars)), dateTimeFormat.groupingSeparator))"
+                    var finalStars = stars
+                    if let upgradeStars, upgradeStars > 0 {
+                        finalStars += upgradeStars
+                    }
+                    let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(finalStars)), dateTimeFormat.groupingSeparator))"
                     let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
                     let range = (valueAttributedString.string as NSString).range(of: "⭐️")
                     if range.location != NSNotFound {
@@ -1115,7 +1211,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         ))
                     }
                     
-                    if !soldOut && upgradeStars != nil {
+                    if !soldOut && canUpgrade {
                         var items: [AnyComponentWithIdentity<Empty>] = []
                         items.append(
                             AnyComponentWithIdentity(
@@ -1190,7 +1286,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                     if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
                         state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
                     }
-                    let descriptionText = savedToProfile ? strings.Gift_View_DisplayedInfoHide : strings.Gift_View_HiddenInfo
+                    let descriptionText: String
+                    if savedToProfile {
+                        descriptionText = strings.Gift_View_DisplayedInfoHide
+                    } else if let upgradeStars, upgradeStars > 0 && !upgraded {
+                        descriptionText = strings.Gift_View_HiddenInfoShow
+                    } else {
+                        descriptionText = strings.Gift_View_HiddenInfo
+                    }
                     
                     let textFont = Font.regular(13.0)
                     let textColor = theme.list.itemSecondaryTextColor
@@ -1219,7 +1322,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 }
                             },
                             tapAction: { _, _ in
-                                component.updateSavedToProfile(false)
+                                component.updateSavedToProfile(!savedToProfile)
                                 Queue.mainQueue().after(1.0, {
                                     component.cancel(false)
                                 })
@@ -1239,11 +1342,15 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             let buttonChild: _UpdatedChildComponent
-            if state.inUpgradePreview, let upgradeStars = subject.arguments?.upgradeStars {
+            if state.inUpgradePreview {
                 if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
                     state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
                 }
-                let buttonTitle = upgradeStars > 0 ? "\(strings.Gift_Upgrade_Upgrade)   #  \(upgradeStars)" : strings.Gift_Upgrade_Confirm
+                var upgradeString = strings.Gift_Upgrade_Upgrade
+                if let upgradeForm = state.upgradeForm, let price = upgradeForm.invoice.prices.first?.amount {
+                    upgradeString += "   #  \(price)"
+                }
+                let buttonTitle = subject.arguments?.upgradeStars != nil ? strings.Gift_Upgrade_Confirm : upgradeString
                 let buttonAttributedString = NSMutableAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
                 if let range = buttonAttributedString.string.range(of: "#"), let starImage = state.cachedStarImage?.0 {
                     buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
@@ -1259,7 +1366,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             cornerRadius: 10.0
                         ),
                         content: AnyComponentWithIdentity(
-                            id: AnyHashable(0),
+                            id: AnyHashable("upgrade"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                         ),
                         isEnabled: true,
@@ -1270,7 +1377,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                     transition: context.transition
                 )
-            } else if incoming && !converted && !savedToProfile {
+            } else if incoming && !converted && !upgraded, let upgradeStars, upgradeStars > 0 {
+                let buttonTitle = strings.Gift_View_UpgradeForFree
                 buttonChild = button.update(
                     component: ButtonComponent(
                         background: ButtonComponent.Background(
@@ -1280,8 +1388,36 @@ private final class GiftViewSheetContent: CombinedComponent {
                             cornerRadius: 10.0
                         ),
                         content: AnyComponentWithIdentity(
-                            id: AnyHashable(0),
-                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                            id: AnyHashable("freeUpgrade"),
+                            component: AnyComponent(HStack([
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))
+                                ))),
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Premium/GiftUpgrade", tintColor: theme.list.itemCheckColors.foregroundColor)))
+                            ], spacing: 6.0))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: state.inProgress,
+                        action: { [weak state] in
+                            state?.requestUpgradePreview()
+                        }
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
+            } else if incoming && !converted && !savedToProfile {
+                let buttonTitle = savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                            cornerRadius: 10.0
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable("button"),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
                         ),
                         isEnabled: true,
                         displaysProgress: state.inProgress,
@@ -1301,7 +1437,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             cornerRadius: 10.0
                         ),
                         content: AnyComponentWithIdentity(
-                            id: AnyHashable(0),
+                            id: AnyHashable("ok"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Common_OK, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
                         ),
                         isEnabled: true,
@@ -1486,23 +1622,30 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case message(EngineMessage)
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         case soldOutGift(StarGift.Gift)
+        case upgradePreview([StarGift.UniqueGift.Attribute], String)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction {
                     switch action.action {
-                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, _, upgradeStars):
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, false, upgradeStars, nil, nil)
-                    case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars):
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, nil, transferStars, canExportDate)
+                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _):
+                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil)
+                    case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _):
+                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, true, false, nil, transferStars, canExportDate)
                     default:
                         return nil
                     }
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate)
+                var upgraded = false
+                if case .unique = gift.gift {
+                    upgraded = true
+                }
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, upgraded, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate)
             case .soldOutGift:
+                return nil
+            case .upgradePreview:
                 return nil
             }
             return nil
@@ -1772,6 +1915,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
+            self.dismissAllTooltips()
+            
             guard let sourceView = self.node.hostView.findTaggedView(tag: tag), let absoluteLocation = sourceView.superview?.convert(sourceView.center, to: self.view) else {
                 return
             }
@@ -1818,13 +1963,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     fileprivate func dismissAllTooltips() {
         self.window?.forEachController({ controller in
             if let controller = controller as? TooltipScreen {
-                controller.dismiss()
+                controller.dismiss(inPlace: false)
             }
             if let controller = controller as? UndoOverlayController {
                 controller.dismiss()
             }
         })
         self.forEachController({ controller in
+            if let controller = controller as? TooltipScreen {
+                controller.dismiss(inPlace: false)
+            }
             if let controller = controller as? UndoOverlayController {
                 controller.dismiss()
             }

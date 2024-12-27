@@ -222,29 +222,24 @@ public final class PeerInfoCoverComponent: Component {
         }
         
         public func animateTransition() {
-            if let snapshotLayer = self.backgroundView.layer.snapshotContentTree() {
-                self.layer.insertSublayer(snapshotLayer, above: self.backgroundGradientLayer)
-                if let gradientSnapshotLayer = self.backgroundGradientLayer.snapshotContentTree() {
-                    self.layer.insertSublayer(gradientSnapshotLayer, above: snapshotLayer)
-                    snapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                        snapshotLayer.removeFromSuperlayer()
-                    })
-                    gradientSnapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                        gradientSnapshotLayer.removeFromSuperlayer()
-                    })
-                }
+            if let gradientSnapshotLayer = self.backgroundGradientLayer.snapshotContentTree() {
+                gradientSnapshotLayer.frame = self.backgroundGradientLayer.frame
+                self.layer.insertSublayer(gradientSnapshotLayer, above: self.backgroundGradientLayer)
+                gradientSnapshotLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                    gradientSnapshotLayer.removeFromSuperlayer()
+                })
             }
             for layer in self.avatarPatternContentLayers {
-                if let snapshot = layer.snapshotContentTree() {
+                if let _ = layer.contents, let snapshot = layer.snapshotContentTree() {
                     layer.superlayer?.addSublayer(snapshot)
                     snapshot.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                         snapshot.removeFromSuperlayer()
                     })
-                    layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                 }
+                layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
             }
             let values: [NSNumber] = [1.0, 1.08, 1.0]
-            self.avatarBackgroundPatternContentsLayer.animateKeyframes(values: values, duration: 0.25, keyPath: "transform.scale")
+            self.avatarBackgroundPatternContentsLayer.animateKeyframes(values: values, duration: 0.25, keyPath: "sublayerTransform.scale")
         }
         
         private func loadPatternFromFile() {
@@ -298,7 +293,10 @@ public final class PeerInfoCoverComponent: Component {
         }
         
         func update(component: PeerInfoCoverComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            if self.component?.subject?.fileId != component.subject?.fileId {
+            let previousComponent = self.component
+            self.component = component
+            
+            if previousComponent?.subject?.fileId != component.subject?.fileId {
                 if let fileId = component.subject?.fileId, fileId != 0 {
                     if self.patternContentsTarget == nil {
                         self.patternContentsTarget = PatternContentsTarget(imageUpdated: { [weak self] hadContents in
@@ -337,8 +335,7 @@ public final class PeerInfoCoverComponent: Component {
                     self.updatePatternLayerImages(animated: false)
                 }
             }
-            
-            self.component = component
+        
             self.state = state
             
             let backgroundColor: UIColor

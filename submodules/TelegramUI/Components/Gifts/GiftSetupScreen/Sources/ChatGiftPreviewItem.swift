@@ -143,6 +143,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         if lhs.entities != rhs.entities {
             return false
         }
+        if lhs.includeUpgrade != rhs.includeUpgrade {
+            return false
+        }
         return true
     }
 }
@@ -224,7 +227,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, upgradeStars: item.includeUpgrade ? 0 : gift.upgradeStars)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.includeUpgrade ? gift.upgradeStars : 0, isRefunded: false)
                         )
                     ]
                 }

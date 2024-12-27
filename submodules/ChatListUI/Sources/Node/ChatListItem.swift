@@ -3107,7 +3107,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
-                if titleLeftOffset.isZero, currentVerifiedIconContent != .none {
+                if titleLeftOffset.isZero, case .animation = currentVerifiedIconContent {
                     titleLeftOffset += 20.0
                 }
                 
@@ -3127,10 +3127,6 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             if let currentCredibilityIconContent {
-                if titleLeftOffset.isZero, case .verified = currentCredibilityIconContent {
-                    titleLeftOffset += 20.0
-                }
-                
                 if titleIconsWidth.isZero {
                     titleIconsWidth += 4.0
                 } else {
@@ -4500,11 +4496,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         
-                        var iconOrigin: CGFloat = nextTitleIconOrigin
+                        let iconOrigin: CGFloat = nextTitleIconOrigin
                         let containerSize = CGSize(width: 20.0, height: 20.0)
-                        if case .verified = currentCredibilityIconContent {
-                            iconOrigin = contentRect.origin.x
-                        }
                         let iconSize = credibilityIconView.update(
                             transition: .immediate,
                             component: AnyComponent(credibilityIconComponent),
@@ -4512,10 +4505,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             containerSize: containerSize
                         )
                         transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
-                        if case .verified = currentCredibilityIconContent {
-                        } else {
-                            nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
-                        }
+                        nextTitleIconOrigin += credibilityIconView.bounds.width + 4.0
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
                         credibilityIconView.removeFromSuperview()
@@ -4541,7 +4531,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         )
                         strongSelf.verifiedIconComponent = verifiedIconComponent
                         
-                        let iconOrigin = contentRect.origin.x
+                        let iconOrigin: CGFloat
+                        if case .animation = currentVerifiedIconContent {
+                            iconOrigin = contentRect.origin.x
+                        } else {
+                            iconOrigin = nextTitleIconOrigin
+                        }
                         let containerSize = CGSize(width: 16.0, height: 16.0)
                         
                         let iconSize = verifiedIconView.update(
