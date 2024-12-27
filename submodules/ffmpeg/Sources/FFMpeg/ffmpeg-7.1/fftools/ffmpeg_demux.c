@@ -840,7 +840,6 @@ static void ist_free(InputStream **pist)
 
     av_dict_free(&ds->decoder_opts);
     av_freep(&ist->filters);
-    av_freep(&ist->outputs);
     av_freep(&ds->dec_opts.hwaccel_device);
 
     avcodec_parameters_free(&ist->par);
@@ -874,8 +873,8 @@ void ifile_close(InputFile **pf)
     av_freep(pf);
 }
 
-static int ist_use(InputStream *ist, int decoding_needed,
-                   const ViewSpecifier *vs, SchedulerNode *src)
+int ist_use(InputStream *ist, int decoding_needed,
+            const ViewSpecifier *vs, SchedulerNode *src)
 {
     Demuxer      *d = demuxer_from_ifile(ist->file);
     DemuxStream *ds = ds_from_ist(ist);
@@ -973,25 +972,6 @@ static int ist_use(InputStream *ist, int decoding_needed,
     }
 
     return 0;
-}
-
-int ist_output_add(InputStream *ist, OutputStream *ost)
-{
-    DemuxStream *ds = ds_from_ist(ist);
-    SchedulerNode src;
-    int ret;
-
-    ret = ist_use(ist, ost->enc ? DECODING_FOR_OST : 0, NULL, &src);
-    if (ret < 0)
-        return ret;
-
-    ret = GROW_ARRAY(ist->outputs, ist->nb_outputs);
-    if (ret < 0)
-        return ret;
-
-    ist->outputs[ist->nb_outputs - 1] = ost;
-
-    return ost->enc ? ds->sch_idx_dec : ds->sch_idx_stream;
 }
 
 int ist_filter_add(InputStream *ist, InputFilter *ifilter, int is_simple,

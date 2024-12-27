@@ -103,6 +103,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Settings/PeerNameColorItem",
         "//submodules/TelegramUI/Components/Settings/BirthdayPickerScreen",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/TelegramUI/Components/Stories/StoryStealthModeSheetScreen",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
         "//submodules/TelegramUI/Components/TextFieldComponent",
@@ -110,6 +111,7 @@ swift_library(
         "//submodules/ComposePollUI",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/TelegramUI/Components/LottieComponent",
     ],
     visibility = [
         "//visibility:public",

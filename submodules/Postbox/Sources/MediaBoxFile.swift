@@ -106,6 +106,16 @@ final class MediaBoxPartialFile {
         return (fd, Int(clippedRange.upperBound - clippedRange.lowerBound))
     }
     
+    static func internal_isPartialDataCached(manager: MediaBoxFileManager, path: String, metaPath: String, range: Range<Int64>) -> Bool {
+        guard let fileMap = try? MediaBoxFileMap.read(manager: manager, path: metaPath) else {
+            return false
+        }
+        guard let _ = fileMap.contains(range) else {
+            return false
+        }
+        return true
+    }
+    
     var storedSize: Int64 {
         assert(self.queue.isCurrent())
         return self.fileMap.sum

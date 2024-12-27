@@ -1762,7 +1762,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             let mediaManager = item.context.sharedContext.mediaManager
             
-            let videoNode = UniversalVideoNode(accountId: item.context.account.id, postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
+            let videoNode = UniversalVideoNode(context: item.context, postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .gallery)
             let videoScale: CGFloat
             if item.content is WebEmbedVideoContent {
                 videoScale = 1.0
@@ -2849,7 +2849,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             let baseNavigationController = self.baseNavigationController()
             let mediaManager = self.context.sharedContext.mediaManager
             var expandImpl: (() -> Void)?
-            let overlayNode = OverlayUniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, expand: {
+            let overlayNode = OverlayUniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, expand: {
                 expandImpl?()
             }, close: { [weak mediaManager] in
                 mediaManager?.setOverlayVideoNode(nil)
@@ -3073,7 +3073,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 self.disablePictureInPicturePlaceholder = true
 
-                let overlayVideoNode = UniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)
+                let overlayVideoNode = UniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: item.content, priority: .overlay)
                 let absoluteRect = videoNode.view.convert(videoNode.view.bounds, to: nil)
                 overlayVideoNode.frame = absoluteRect
                 overlayVideoNode.updateLayout(size: absoluteRect.size, transition: .immediate)
@@ -3156,7 +3156,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     shouldBeDismissed = .single(false)
                 }
 
-                let overlayNode = OverlayUniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, shouldBeDismissed: shouldBeDismissed, expand: {
+                let overlayNode = OverlayUniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, content: item.content, shouldBeDismissed: shouldBeDismissed, expand: {
                     expandImpl?()
                 }, close: { [weak mediaManager] in
                     mediaManager?.setOverlayVideoNode(nil)

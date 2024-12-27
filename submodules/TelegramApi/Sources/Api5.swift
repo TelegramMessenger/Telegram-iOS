@@ -1166,19 +1166,19 @@ public extension Api {
 }
 public extension Api {
     enum DialogFilter: TypeConstructorDescription {
-        case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
-        case dialogFilterChatlist(flags: Int32, id: Int32, title: String, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer])
+        case dialogFilter(flags: Int32, id: Int32, title: Api.TextWithEntities, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilterChatlist(flags: Int32, id: Int32, title: Api.TextWithEntities, emoticon: String?, color: Int32?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer])
         case dialogFilterDefault
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .dialogFilter(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers, let excludePeers):
                     if boxed {
-                        buffer.appendInt32(1605718587)
+                        buffer.appendInt32(-1438177711)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
                     if Int(flags) & Int(1 << 25) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 27) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
@@ -1199,11 +1199,11 @@ public extension Api {
                     break
                 case .dialogFilterChatlist(let flags, let id, let title, let emoticon, let color, let pinnedPeers, let includePeers):
                     if boxed {
-                        buffer.appendInt32(-1612542300)
+                        buffer.appendInt32(-1772913705)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
                     if Int(flags) & Int(1 << 25) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 27) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
@@ -1242,8 +1242,10 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             var _4: String?
             if Int(_1!) & Int(1 << 25) != 0 {_4 = parseString(reader) }
             var _5: Int32?
@@ -1280,8 +1282,10 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             var _4: String?
             if Int(_1!) & Int(1 << 25) != 0 {_4 = parseString(reader) }
             var _5: Int32?

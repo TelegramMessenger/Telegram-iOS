@@ -382,6 +382,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
+    public var enableAnimation: Bool = true
+    
     public weak var mirrorLayer: CALayer? {
         didSet {
             if let mirrorLayer = self.mirrorLayer {
@@ -742,6 +744,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             self.loadAnimation()
         } else {
             let isTemplate = file.isCustomTemplateEmoji
+            self.updateTintColor()
             
             let pointSize = arguments.pointSize
             let placeholderColor = arguments.placeholderColor

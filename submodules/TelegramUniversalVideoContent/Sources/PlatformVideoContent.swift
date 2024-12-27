@@ -95,7 +95,7 @@ public final class PlatformVideoContent: UniversalVideoContent {
         self.fetchAutomatically = fetchAutomatically
     }
     
-    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+    public func makeContentNode(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         return PlatformVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, content: self.content, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically)
     }
     

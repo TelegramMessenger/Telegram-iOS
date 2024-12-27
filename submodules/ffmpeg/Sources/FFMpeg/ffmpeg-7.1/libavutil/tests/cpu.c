@@ -23,6 +23,10 @@
 #include "libavutil/cpu.h"
 #include "libavutil/avstring.h"
 
+#if ARCH_AARCH64
+#include "libavutil/aarch64/cpu.h"
+#endif
+
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -40,6 +44,8 @@ static const struct {
     { AV_CPU_FLAG_VFP,       "vfp"        },
     { AV_CPU_FLAG_DOTPROD,   "dotprod"    },
     { AV_CPU_FLAG_I8MM,      "i8mm"       },
+    { AV_CPU_FLAG_SVE,       "sve"        },
+    { AV_CPU_FLAG_SVE2,      "sve2"       },
 #elif ARCH_ARM
     { AV_CPU_FLAG_ARMV5TE,   "armv5te"    },
     { AV_CPU_FLAG_ARMV6,     "armv6"      },
@@ -161,6 +167,10 @@ int main(int argc, char **argv)
     print_cpu_flags(cpu_flags_raw, "raw");
     print_cpu_flags(cpu_flags_eff, "effective");
     printf("threads = %s (cpu_count = %d)\n", threads, cpu_count);
+#if ARCH_AARCH64 && HAVE_SVE
+    if (cpu_flags_raw & AV_CPU_FLAG_SVE)
+        printf("sve_vector_length = %d\n", 8 * ff_aarch64_sve_length());
+#endif
 
     return 0;
 }

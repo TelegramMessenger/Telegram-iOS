@@ -308,7 +308,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     playerType = (file.isVoice || file.isInstantVideo) ? .voice : .file
                 }
-                params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
+                params.context.sharedContext.mediaManager.setPlaylist((params.context, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true
             case let .story(storyController):
                 params.dismissInput()

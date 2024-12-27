@@ -330,7 +330,7 @@ public final class PeerInfoChatListPaneNode: ASDisplayNode, PeerInfoPaneNode, AS
                     }
                     
                     let context = self.context
-                    let undoController = UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: self.presentationData.strings.SavedMessages_SubChatDeleted, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                    let undoController = UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: self.presentationData.strings.SavedMessages_SubChatDeleted), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                         if value == .commit {
                             let _ = context.engine.messages.clearHistoryInteractively(peerId: context.account.peerId, threadId: peer.id.toInt64(), type: .forLocalPeer).startStandalone(completed: {
                                 guard let self else {

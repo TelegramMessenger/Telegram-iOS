@@ -171,23 +171,38 @@ static int open_output_file(const char *filename)
              * sample rate etc.). These properties can be changed for output
              * streams easily using filters */
             if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
+                const enum AVPixelFormat *pix_fmts = NULL;
+
                 enc_ctx->height = dec_ctx->height;
                 enc_ctx->width = dec_ctx->width;
                 enc_ctx->sample_aspect_ratio = dec_ctx->sample_aspect_ratio;
+
+                ret = avcodec_get_supported_config(dec_ctx, NULL,
+                                                   AV_CODEC_CONFIG_PIX_FORMAT, 0,
+                                                   (const void**)&pix_fmts, NULL);
+
                 /* take first format from list of supported formats */
-                if (encoder->pix_fmts)
-                    enc_ctx->pix_fmt = encoder->pix_fmts[0];
-                else
-                    enc_ctx->pix_fmt = dec_ctx->pix_fmt;
+                enc_ctx->pix_fmt = (ret >= 0 && pix_fmts) ?
+                                   pix_fmts[0] : dec_ctx->pix_fmt;
+
                 /* video time_base can be set to whatever is handy and supported by encoder */
                 enc_ctx->time_base = av_inv_q(dec_ctx->framerate);
             } else {
+                const enum AVSampleFormat *sample_fmts = NULL;
+
                 enc_ctx->sample_rate = dec_ctx->sample_rate;
                 ret = av_channel_layout_copy(&enc_ctx->ch_layout, &dec_ctx->ch_layout);
                 if (ret < 0)
                     return ret;
+
+                ret = avcodec_get_supported_config(dec_ctx, NULL,
+                                                   AV_CODEC_CONFIG_SAMPLE_FORMAT, 0,
+                                                   (const void**)&sample_fmts, NULL);
+
                 /* take first format from list of supported formats */
-                enc_ctx->sample_fmt = encoder->sample_fmts[0];
+                enc_ctx->sample_fmt = (ret >= 0 && sample_fmts) ?
+                                      sample_fmts[0] : dec_ctx->sample_fmt;
+
                 enc_ctx->time_base = (AVRational){1, enc_ctx->sample_rate};
             }
 
@@ -283,10 +298,10 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
             goto end;
         }
 
-        ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out",
-                NULL, NULL, filter_graph);
-        if (ret < 0) {
+        buffersink_ctx = avfilter_graph_alloc_filter(filter_graph, buffersink, "out");
+        if (!buffersink_ctx) {
             av_log(NULL, AV_LOG_ERROR, "Cannot create buffer sink\n");
+            ret = AVERROR(ENOMEM);
             goto end;
         }
 
@@ -295,6 +310,12 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
                 AV_OPT_SEARCH_CHILDREN);
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
+            goto end;
+        }
+
+        ret = avfilter_init_dict(buffersink_ctx, NULL);
+        if (ret < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Cannot initialize buffer sink\n");
             goto end;
         }
     } else if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -322,10 +343,10 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
             goto end;
         }
 
-        ret = avfilter_graph_create_filter(&buffersink_ctx, buffersink, "out",
-                NULL, NULL, filter_graph);
-        if (ret < 0) {
+        buffersink_ctx = avfilter_graph_alloc_filter(filter_graph, buffersink, "out");
+        if (!buffersink_ctx) {
             av_log(NULL, AV_LOG_ERROR, "Cannot create audio buffer sink\n");
+            ret = AVERROR(ENOMEM);
             goto end;
         }
 
@@ -350,6 +371,15 @@ static int init_filter(FilteringContext* fctx, AVCodecContext *dec_ctx,
                 AV_OPT_SEARCH_CHILDREN);
         if (ret < 0) {
             av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n");
+            goto end;
+        }
+
+        if (enc_ctx->frame_size > 0)
+            av_buffersink_set_frame_size(buffersink_ctx, enc_ctx->frame_size);
+
+        ret = avfilter_init_dict(buffersink_ctx, NULL);
+        if (ret < 0) {
+            av_log(NULL, AV_LOG_ERROR, "Cannot initialize audio buffer sink\n");
             goto end;
         }
     } else {

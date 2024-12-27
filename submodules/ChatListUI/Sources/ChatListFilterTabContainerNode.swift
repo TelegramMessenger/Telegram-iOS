@@ -109,11 +109,13 @@ private final class ItemNode: ASDisplayNode {
         self.titleNode = ImmediateTextNodeWithEntities()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.titleNode.resetEmojiToFirstFrameAutomatically = true
         
         self.titleActiveNode = ImmediateTextNodeWithEntities()
         self.titleActiveNode.displaysAsynchronously = false
         self.titleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         self.titleActiveNode.alpha = 0.0
+        self.titleActiveNode.resetEmojiToFirstFrameAutomatically = true
         
         self.shortTitleContainer = ASDisplayNode()
         
@@ -121,12 +123,14 @@ private final class ItemNode: ASDisplayNode {
         self.shortTitleNode.displaysAsynchronously = false
         self.shortTitleNode.alpha = 0.0
         self.shortTitleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.shortTitleNode.resetEmojiToFirstFrameAutomatically = true
         
         self.shortTitleActiveNode = ImmediateTextNodeWithEntities()
         self.shortTitleActiveNode.displaysAsynchronously = false
         self.shortTitleActiveNode.alpha = 0.0
         self.shortTitleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         self.shortTitleActiveNode.alpha = 0.0
+        self.shortTitleActiveNode.resetEmojiToFirstFrameAutomatically = true
         
         self.badgeContainerNode = ASDisplayNode()
         

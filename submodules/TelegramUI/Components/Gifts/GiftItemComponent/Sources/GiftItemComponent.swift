@@ -76,6 +76,12 @@ public final class GiftItemComponent: Component {
         case anonymous
     }
     
+    public enum Mode: Equatable {
+        case generic
+        case profile
+        case thumbnail
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let peer: GiftItemComponent.Peer?
@@ -86,7 +92,7 @@ public final class GiftItemComponent: Component {
     let isLoading: Bool
     let isHidden: Bool
     let isSoldOut: Bool
-    let isSquare: Bool
+    let mode: Mode
     
     public init(
         context: AccountContext,
@@ -99,7 +105,7 @@ public final class GiftItemComponent: Component {
         isLoading: Bool = false,
         isHidden: Bool = false,
         isSoldOut: Bool = false,
-        isSquare: Bool = false
+        mode: Mode = .generic
     ) {
         self.context = context
         self.theme = theme
@@ -111,7 +117,7 @@ public final class GiftItemComponent: Component {
         self.isLoading = isLoading
         self.isHidden = isHidden
         self.isSoldOut = isSoldOut
-        self.isSquare = isSquare
+        self.mode = mode
     }
 
     public static func ==(lhs: GiftItemComponent, rhs: GiftItemComponent) -> Bool {
@@ -145,7 +151,7 @@ public final class GiftItemComponent: Component {
         if lhs.isSoldOut != rhs.isSoldOut {
             return false
         }
-        if lhs.isSquare != rhs.isSquare {
+        if lhs.mode != rhs.mode {
             return false
         }
         return true
@@ -208,15 +214,21 @@ public final class GiftItemComponent: Component {
             let size: CGSize
             let iconSize: CGSize
             let cornerRadius: CGFloat
-            if component.isSquare {
-                size = CGSize(width: 60.0, height: 60.0)
-                iconSize = CGSize(width: 42.0, height: 42.0)
-                cornerRadius = 12.0
-            } else {
+            switch component.mode {
+            case .generic:
                 size = CGSize(width: availableSize.width, height: component.title != nil ? 178.0 : 154.0)
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
+            case .profile:
+                size = CGSize(width: availableSize.width, height: availableSize.width)
+                iconSize = CGSize(width: 88.0, height: 88.0)
+                cornerRadius = 10.0
+            case .thumbnail:
+                size = CGSize(width: 60.0, height: 60.0)
+                iconSize = CGSize(width: 42.0, height: 42.0)
+                cornerRadius = 12.0
             }
+            
             self.backgroundLayer.cornerRadius = cornerRadius
             
             if component.isLoading {
@@ -326,7 +338,7 @@ public final class GiftItemComponent: Component {
                 self.layer.addSublayer(animationLayer)
             }
             
-            let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.isSquare ? floorToScreenPixels((size.height - iconSize.height) / 2.0) : animationOffset), size: iconSize)
+            let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : floorToScreenPixels((size.height - iconSize.height) / 2.0)), size: iconSize)
             if let animationLayer = self.animationLayer {
                 transition.setFrame(layer: animationLayer, frame: animationFrame)
             }
@@ -361,7 +373,7 @@ public final class GiftItemComponent: Component {
                 }
             }
             
-            if !component.isSquare {
+            if case .generic = component.mode {
                 if let title = component.title {
                     let titleSize = self.title.update(
                         transition: transition,
@@ -503,7 +515,7 @@ public final class GiftItemComponent: Component {
                     avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon(isColored: true))
                 }
                 
-                avatarNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: 20.0, height: 20.0))
+                avatarNode.frame = CGRect(origin: CGPoint(x: 5.0, y: 5.0), size: CGSize(width: 20.0, height: 20.0))
             }
             
             if let backgroundColor, let _ = secondBackgroundColor {

@@ -206,7 +206,6 @@ Codecs:
   libgsm.c                              Michel Bardiaux
   libkvazaar.c                          Arttu Ylä-Outinen
   libopenh264enc.c                      Martin Storsjo, Linjie Fu
-  libopenjpeg.c                         Jaikrishnan Menon
   libopenjpegenc.c                      Michael Bradshaw
   libtheoraenc.c                        David Conrad
   libvorbis.c                           David Conrad
@@ -391,7 +390,7 @@ Muxers/Demuxers:
   dss.c                                 Oleksij Rempel
   dtsdec.c                              foo86
   dv.c                                  Roman Shaposhnik
-  dvdvideodec.c                         Marth64
+  dvdvideodec.c                     [2] Marth64
   electronicarts.c                      Peter Ross
   evc*                                  Samsung (Dawid Kozinski)
   ffm*                                  Baptiste Coudurier
@@ -445,7 +444,8 @@ Muxers/Demuxers:
   pva.c                                 Ivo van Poorten
   r3d.c                                 Baptiste Coudurier
   raw.c                                 Michael Niedermayer
-  rcwtenc.c                             Marth64
+  rcwtdec.c                         [2] Marth64
+  rcwtenc.c                         [2] Marth64
   rdt.c                                 Ronald S. Bultje
   rl2.c                                 Sascha Sommer
   rmdec.c, rmenc.c                      Ronald S. Bultje

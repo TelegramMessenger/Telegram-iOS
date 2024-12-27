@@ -36,6 +36,12 @@
 typedef struct MuxStream {
     OutputStream    ost;
 
+    /**
+     * Codec parameters for packets submitted to the muxer (i.e. before
+     * bitstream filtering, if any).
+     */
+    AVCodecParameters *par_in;
+
     // name used for logging
     char            log_name[32];
 
@@ -78,6 +84,10 @@ typedef struct MuxStream {
 #if FFMPEG_OPT_VSYNC_DROP
     int             ts_drop;
 #endif
+
+    AVRational      frame_rate;
+    AVRational      max_frame_rate;
+    int             force_fps;
 
     const char     *apad;
 } MuxStream;

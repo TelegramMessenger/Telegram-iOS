@@ -513,7 +513,11 @@ private final class TimeBasedCleanupImpl {
     }
     
     func touch(paths: [String]) {
-        self.scheduledTouches.append(contentsOf: paths)
+        for path in paths {
+            if !self.scheduledTouches.contains(path) {
+                self.scheduledTouches.append(path)
+            }
+        }
         self.scheduleTouches()
     }
     

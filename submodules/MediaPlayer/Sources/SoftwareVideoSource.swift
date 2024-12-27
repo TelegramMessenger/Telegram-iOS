@@ -163,7 +163,7 @@ public final class SoftwareVideoSource {
                     break
                 }
             } else {
-                if let codec = FFMpegAVCodec.find(forId: codecId) {
+                if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false) {
                     let codecContext = FFMpegAVCodecContext(codec: codec)
                     if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                         if codecContext.open() {
@@ -382,7 +382,6 @@ private func SoftwareAudioSource_seekCallback(userData: UnsafeMutableRawPointer?
 }
 
 public final class SoftwareAudioSource {
-    private let focusedPart: MediaStreamFocusedPart?
     private var readingError = false
     private var audioStream: SoftwareAudioStream?
     private var avIoContext: FFMpegAVIOContext?
@@ -397,10 +396,8 @@ public final class SoftwareAudioSource {
         return self.audioStream != nil
     }
     
-    public init(path: String, focusedPart: MediaStreamFocusedPart?) {
+    public init(path: String) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
-        
-        self.focusedPart = focusedPart
         
         var s = stat()
         stat(path, &s)
@@ -451,7 +448,7 @@ public final class SoftwareAudioSource {
             
             let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
             
-            let codec = FFMpegAVCodec.find(forId: codecId)
+            let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false)
             
             if let codec = codec {
                 let codecContext = FFMpegAVCodecContext(codec: codec)
@@ -466,12 +463,8 @@ public final class SoftwareAudioSource {
         
         self.audioStream = audioStream
         
-        if let focusedPart = self.focusedPart {
-            avFormatContext.seekFrame(forStreamIndex: Int32(focusedPart.seekStreamIndex), pts: focusedPart.startPts.value, positionOnKeyframe: true)
-        } else {
-            if let audioStream = self.audioStream {
-                avFormatContext.seekFrame(forStreamIndex: Int32(audioStream.index), pts: 0, positionOnKeyframe: false)
-            }
+        if let audioStream = self.audioStream {
+            avFormatContext.seekFrame(forStreamIndex: Int32(audioStream.index), pts: 0, positionOnKeyframe: false)
         }
     }
     
@@ -501,10 +494,6 @@ public final class SoftwareAudioSource {
             if let packet = self.readPacketInternal() {
                 if let audioStream = self.audioStream, Int(packet.streamIndex) == audioStream.index {
                     let packetPts = packet.pts
-                    
-                    if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
-                        self.hasReadToEnd = true
-                    }
                     
                     let pts = CMTimeMake(value: packetPts, timescale: audioStream.timebase.timescale)
                     let dts = CMTimeMake(value: packet.dts, timescale: audioStream.timebase.timescale)
@@ -579,18 +568,6 @@ public final class SoftwareAudioSource {
     }
 }
 
-public struct MediaStreamFocusedPart {
-    public let seekStreamIndex: Int
-    public let startPts: CMTime
-    public let endPts: CMTime
-    
-    public init(seekStreamIndex: Int, startPts: CMTime, endPts: CMTime) {
-        self.seekStreamIndex = seekStreamIndex
-        self.startPts = startPts
-        self.endPts = endPts
-    }
-}
-
 private func SoftwareVideoReader_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<SoftwareVideoReader>.fromOpaque(userData!).takeUnretainedValue()
     if let fd = context.fd {
@@ -617,7 +594,6 @@ private func SoftwareVideoReader_seekCallback(userData: UnsafeMutableRawPointer?
 }
 
 final class SoftwareVideoReader {
-    private let focusedPart: MediaStreamFocusedPart?
     private var readingError = false
     private var videoStream: SoftwareVideoStream?
     private var avIoContext: FFMpegAVIOContext?
@@ -636,10 +612,8 @@ final class SoftwareVideoReader {
         return self.videoStream != nil
     }
     
-    public init(path: String, hintVP9: Bool, passthroughDecoder: Bool = false, focusedPart: MediaStreamFocusedPart?) {
+    public init(path: String, hintVP9: Bool, passthroughDecoder: Bool = false) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
-        
-        self.focusedPart = focusedPart
         
         var s = stat()
         stat(path, &s)
@@ -721,7 +695,7 @@ final class SoftwareVideoReader {
                     break
                 }
             } else {
-                if let codec = FFMpegAVCodec.find(forId: codecId) {
+                if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false) {
                     let codecContext = FFMpegAVCodecContext(codec: codec)
                     if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                         if codecContext.open() {
@@ -737,12 +711,8 @@ final class SoftwareVideoReader {
         
         self.videoStream = videoStream
         
-        if let focusedPart = self.focusedPart {
-            avFormatContext.seekFrame(forStreamIndex: Int32(focusedPart.seekStreamIndex), pts: focusedPart.startPts.value, positionOnKeyframe: true)
-        } else {
-            if let videoStream = self.videoStream {
-                avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
-            }
+        if let videoStream = self.videoStream {
+            avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
         }
     }
     
@@ -774,10 +744,6 @@ final class SoftwareVideoReader {
             if let packet = self.readPacketInternal() {
                 if let videoStream = self.videoStream, Int(packet.streamIndex) == videoStream.index {
                     let packetPts = packet.pts
-                    
-                    if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
-                        self.hasReadToEnd = true
-                    }
                     
                     let pts = CMTimeMake(value: packetPts, timescale: videoStream.timebase.timescale)
                     let dts = CMTimeMake(value: packet.dts, timescale: videoStream.timebase.timescale)
@@ -958,21 +924,8 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
             var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
             duration = CMTimeMaximum(CMTime(value: 0, timescale: duration.timescale), CMTimeSubtract(duration, startTime))
             
-            var codecName: String?
             let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
-            if codecId == FFMpegCodecIdMPEG4 {
-                codecName = "mpeg4"
-            } else if codecId == FFMpegCodecIdH264 {
-                codecName = "h264"
-            } else if codecId == FFMpegCodecIdHEVC {
-                codecName = "hevc"
-            } else if codecId == FFMpegCodecIdAV1 {
-                codecName = "av1"
-            } else if codecId == FFMpegCodecIdVP9 {
-                codecName = "vp9"
-            } else if codecId == FFMpegCodecIdVP8 {
-                codecName = "vp8"
-            }
+            let codecName = resolveFFMpegCodecName(id: codecId)
             
             streamInfos.append((isVideo: isVideo, info: FFMpegMediaInfo.Info(
                 index: Int(streamIndex),
@@ -986,4 +939,22 @@ public func extractFFMpegMediaInfo(path: String) -> FFMpegMediaInfo? {
     }
     
     return FFMpegMediaInfo(audio: streamInfos.first(where: { !$0.isVideo })?.info, video: streamInfos.first(where: { $0.isVideo })?.info)
+}
+
+public func resolveFFMpegCodecName(id: Int32) -> String? {
+    if id == FFMpegCodecIdMPEG4 {
+        return "mpeg4"
+    } else if id == FFMpegCodecIdH264 {
+        return "h264"
+    } else if id == FFMpegCodecIdHEVC {
+        return "hevc"
+    } else if id == FFMpegCodecIdAV1 {
+        return "av1"
+    } else if id == FFMpegCodecIdVP9 {
+        return "vp9"
+    } else if id == FFMpegCodecIdVP8 {
+        return "vp8"
+    } else {
+        return nil
+    }
 }

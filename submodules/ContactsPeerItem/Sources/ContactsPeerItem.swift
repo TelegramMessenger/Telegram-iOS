@@ -21,6 +21,8 @@ import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusComponent
 import MoreButtonNode
+import TextFormat
+import TextNodeWithEntities
 
 public final class ContactItemHighlighting {
     public var chatLocation: ChatLocation?
@@ -39,7 +41,7 @@ public enum ContactsPeerItemStatus {
     case none
     case presence(EnginePeer.Presence, PresentationDateTimeFormat)
     case addressName(String)
-    case custom(string: String, multiline: Bool, isActive: Bool, icon: Icon?)
+    case custom(string: NSAttributedString, multiline: Bool, isActive: Bool, icon: Icon?)
 }
 
 public enum ContactsPeerItemSelection: Equatable {
@@ -437,7 +439,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var credibilityIconComponent: EmojiStatusComponent?
     private var verifiedIconView: ComponentHostView<Empty>?
     private var verifiedIconComponent: EmojiStatusComponent?
-    public let statusNode: TextNode
+    public let statusNode: TextNodeWithEntities
     private var statusIconNode: ASImageNode?
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
@@ -519,6 +521,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         containerSize: avatarIconView.bounds.size
                     )
                 }
+                self.statusNode.visibilityRect = self.visibilityStatus == false ? CGRect.zero : CGRect.infinite
             }
         }
     }
@@ -554,7 +557,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.avatarNode.isLayerBacked = false
         
         self.titleNode = TextNode()
-        self.statusNode = TextNode()
+        self.statusNode = TextNodeWithEntities()
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
@@ -575,7 +578,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.avatarNodeContainer.addSubnode(self.avatarNode)
         self.offsetContainerNode.addSubnode(self.avatarNodeContainer)
         self.offsetContainerNode.addSubnode(self.titleNode)
-        self.offsetContainerNode.addSubnode(self.statusNode)
+        self.offsetContainerNode.addSubnode(self.statusNode.textNode)
         
         self.addSubnode(self.maskNode)
         
@@ -708,7 +711,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     public func asyncLayout() -> (_ item: ContactsPeerItem, _ params: ListViewItemLayoutParams, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> (Signal<Void, NoError>?, (Bool, Bool) -> Void)) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
+        let makeStatusLayout = TextNodeWithEntities.asyncLayout(self.statusNode)
         let currentSelectionNode = self.selectionNode
         
         let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
@@ -939,7 +942,24 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                         }
                     case let .custom(text, multiline, isActive, icon):
-                        statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        let statusAttributedStringValue = NSMutableAttributedString(string: text.string)
+                        statusAttributedStringValue.addAttribute(.font, value: statusFont, range: NSRange(location: 0, length: statusAttributedStringValue.length))
+                        statusAttributedStringValue.addAttribute(.foregroundColor, value: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor, range: NSRange(location: 0, length: statusAttributedStringValue.length))
+                        text.enumerateAttributes(in: NSRange(location: 0, length: text.length), using: { attributes, range, _ in
+                            for (key, value) in attributes {
+                                if key == ChatTextInputAttributes.bold {
+                                    statusAttributedStringValue.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                                } else if key == ChatTextInputAttributes.italic {
+                                    statusAttributedStringValue.addAttribute(.font, value: Font.italic(14.0), range: range)
+                                } else if key == ChatTextInputAttributes.monospace {
+                                    statusAttributedStringValue.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                                } else {
+                                    statusAttributedStringValue.addAttribute(key, value: value, range: range)
+                                }
+                            }
+                        })
+                        
+                        statusAttributedString = statusAttributedStringValue
                         statusIcon = icon
                         statusIsActive = isActive
                         multilineStatus = multiline
@@ -964,7 +984,23 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 
                 switch item.status {
                 case let .custom(text, multiline, isActive, icon):
-                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                    let statusAttributedStringValue = NSMutableAttributedString(string: "")
+                    statusAttributedStringValue.addAttribute(.font, value: statusFont, range: NSRange(location: 0, length: text.length))
+                    statusAttributedStringValue.addAttribute(.foregroundColor, value: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor, range: NSRange(location: 0, length: text.length))
+                    text.enumerateAttributes(in: NSRange(location: 0, length: text.length), using: { attributes, range, _ in
+                        for (key, value) in attributes {
+                            if key == ChatTextInputAttributes.bold {
+                                statusAttributedStringValue.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.italic {
+                                statusAttributedStringValue.addAttribute(.font, value: Font.italic(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.monospace {
+                                statusAttributedStringValue.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                            } else {
+                                statusAttributedStringValue.addAttribute(key, value: value, range: range)
+                            }
+                        }
+                    })
+                    statusAttributedString = statusAttributedStringValue
                     multilineStatus = multiline
                     statusIsActive = isActive
                     statusIcon = icon
@@ -1409,17 +1445,24 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
-                            strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
+                            strongSelf.statusNode.textNode.alpha = item.enabled ? 1.0 : 1.0
                             
-                            let _ = statusApply()
+                            strongSelf.statusNode.visibilityRect = strongSelf.visibilityStatus == false ? CGRect.zero : CGRect.infinite
+                            let _ = statusApply(TextNodeWithEntities.Arguments(
+                                context: item.context,
+                                cache: item.context.animationCache,
+                                renderer: item.context.animationRenderer,
+                                placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                                attemptSynchronous: false
+                            ))
                             var statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY - 1.0), size: statusLayout.size)
                             if let statusIconImage {
                                 statusFrame.origin.x += statusIconImage.size.width + 1.0
                             }
-                            let previousStatusFrame = strongSelf.statusNode.frame
+                            let previousStatusFrame = strongSelf.statusNode.textNode.frame
                             
-                            strongSelf.statusNode.frame = statusFrame
-                            transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
+                            strongSelf.statusNode.textNode.frame = statusFrame
+                            transition.animatePositionAdditive(node: strongSelf.statusNode.textNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
                             if let statusIconImage {
                                 let statusIconNode: ASImageNode
@@ -1427,7 +1470,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     statusIconNode = current
                                 } else {
                                     statusIconNode = ASImageNode()
-                                    strongSelf.statusNode.addSubnode(statusIconNode)
+                                    strongSelf.statusNode.textNode.addSubnode(statusIconNode)
                                 }
                                 statusIconNode.image = statusIconImage
                                 statusIconNode.frame = CGRect(origin: CGPoint(x: -statusIconImage.size.width - 1.0, y: floor((statusFrame.height - statusIconImage.size.height) / 2.0) + 1.0), size: statusIconImage.size)

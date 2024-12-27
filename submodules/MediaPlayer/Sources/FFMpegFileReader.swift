@@ -1,0 +1,473 @@
+import Foundation
+#if !os(macOS)
+import UIKit
+#else
+import AppKit
+import TGUIKit
+#endif
+import CoreMedia
+import SwiftSignalKit
+import FFMpegBinding
+import Postbox
+import ManagedFile
+
+private func FFMpegFileReader_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+    guard let buffer else {
+        return FFMPEG_CONSTANT_AVERROR_EOF
+    }
+    let context = Unmanaged<FFMpegFileReader>.fromOpaque(userData!).takeUnretainedValue()
+    
+    switch context.source {
+    case let .file(file):
+        let result = file.read(buffer, Int(bufferSize))
+        if result == 0 {
+            return FFMPEG_CONSTANT_AVERROR_EOF
+        }
+        return Int32(result)
+    case let .resource(resource):
+        let readCount = min(256 * 1024, Int64(bufferSize))
+        let requestRange: Range<Int64> = resource.readingPosition ..< (resource.readingPosition + readCount)
+        
+        //TODO:improve thread safe read if incomplete
+        if let (file, readSize) = resource.mediaBox.internal_resourceData(id: resource.resource.id, size: resource.size, in: requestRange) {
+            let result = file.read(buffer, readSize)
+            if result == 0 {
+                return FFMPEG_CONSTANT_AVERROR_EOF
+            }
+            resource.readingPosition += Int64(result)
+            return Int32(result)
+        } else {
+            return FFMPEG_CONSTANT_AVERROR_EOF
+        }
+    }
+}
+
+private func FFMpegFileReader_seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+    let context = Unmanaged<FFMpegFileReader>.fromOpaque(userData!).takeUnretainedValue()
+    if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
+        switch context.source {
+        case let .file(file):
+            return file.getSize() ?? 0
+        case let .resource(resource):
+            return resource.size
+        }
+    } else {
+        switch context.source {
+        case let .file(file):
+            let _ = file.seek(position: offset)
+        case let .resource(resource):
+            resource.readingPosition = offset
+        }
+        return offset
+    }
+}
+
+final class FFMpegFileReader {
+    enum SourceDescription {
+        case file(String)
+        case resource(mediaBox: MediaBox, resource: MediaResource, size: Int64)
+    }
+    
+    final class StreamInfo: Equatable {
+        let index: Int
+        let codecId: Int32
+        let startTime: CMTime
+        let duration: CMTime
+        let timeBase: CMTimeValue
+        let timeScale: CMTimeScale
+        let fps: CMTime
+        
+        init(index: Int, codecId: Int32, startTime: CMTime, duration: CMTime, timeBase: CMTimeValue, timeScale: CMTimeScale, fps: CMTime) {
+            self.index = index
+            self.codecId = codecId
+            self.startTime = startTime
+            self.duration = duration
+            self.timeBase = timeBase
+            self.timeScale = timeScale
+            self.fps = fps
+        }
+        
+        static func ==(lhs: StreamInfo, rhs: StreamInfo) -> Bool {
+            if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.codecId != rhs.codecId {
+                return false
+            }
+            if lhs.startTime != rhs.startTime {
+                return false
+            }
+            if lhs.duration != rhs.duration {
+                return false
+            }
+            if lhs.timeBase != rhs.timeBase {
+                return false
+            }
+            if lhs.timeScale != rhs.timeScale {
+                return false
+            }
+            if lhs.fps != rhs.fps {
+                return false
+            }
+            return true
+        }
+    }
+    
+    fileprivate enum Source {
+        final class Resource {
+            let mediaBox: MediaBox
+            let resource: MediaResource
+            let size: Int64
+            var readingPosition: Int64 = 0
+            
+            init(mediaBox: MediaBox, resource: MediaResource, size: Int64) {
+                self.mediaBox = mediaBox
+                self.resource = resource
+                self.size = size
+            }
+        }
+        
+        case file(ManagedFile)
+        case resource(Resource)
+    }
+    
+    private enum Decoder {
+        case videoPassthrough(FFMpegMediaPassthroughVideoFrameDecoder)
+        case video(FFMpegMediaVideoFrameDecoder)
+        case audio(FFMpegAudioFrameDecoder)
+        
+        func send(frame: MediaTrackDecodableFrame) -> Bool {
+            switch self {
+            case let .videoPassthrough(decoder):
+                decoder.send(frame: frame)
+            case let .video(decoder):
+                decoder.send(frame: frame)
+            case let .audio(decoder):
+                decoder.send(frame: frame)
+            }
+        }
+        
+        func sendEnd() -> Bool {
+            switch self {
+            case let .videoPassthrough(decoder):
+                return decoder.sendEndToDecoder()
+            case let .video(decoder):
+                return decoder.sendEndToDecoder()
+            case let .audio(decoder):
+                return decoder.sendEndToDecoder()
+            }
+        }
+    }
+    
+    private final class Stream {
+        let info: StreamInfo
+        let decoder: Decoder
+        
+        init(info: StreamInfo, decoder: Decoder) {
+            self.info = info
+            self.decoder = decoder
+        }
+    }
+    
+    enum SelectedStream {
+        enum MediaType {
+            case audio
+            case video
+        }
+        
+        case mediaType(MediaType)
+        case index(Int)
+    }
+    
+    enum ReadFrameResult {
+        case frame(MediaTrackFrame)
+        case waitingForMoreData
+        case endOfStream
+        case error
+    }
+    
+    private(set) var readingError = false
+    private var stream: Stream?
+    private var avIoContext: FFMpegAVIOContext?
+    private var avFormatContext: FFMpegAVFormatContext?
+
+    fileprivate let source: Source
+    
+    private var didSendEndToDecoder: Bool = false
+    private var hasReadToEnd: Bool = false
+    
+    private var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
+    private var lastReadPts: (streamIndex: Int, pts: Int64)?
+    private var isWaitingForMoreData: Bool = false
+    
+    public init?(source: SourceDescription, passthroughDecoder: Bool = false, useHardwareAcceleration: Bool, selectedStream: SelectedStream, seek: (streamIndex: Int, pts: Int64)?, maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?) {
+        let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+        
+        switch source {
+        case let .file(path):
+            guard let file = ManagedFile(queue: nil, path: path, mode: .read) else {
+                return nil
+            }
+            self.source = .file(file)
+        case let .resource(mediaBox, resource, size):
+            self.source = .resource(Source.Resource(mediaBox: mediaBox, resource: resource, size: size))
+        }
+        
+        self.maxReadablePts = maxReadablePts
+        
+        let avFormatContext = FFMpegAVFormatContext()
+        /*if hintVP9 {
+            avFormatContext.forceVideoCodecId(FFMpegCodecIdVP9)
+        }*/
+        let ioBufferSize = 64 * 1024
+        
+        let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: FFMpegFileReader_readPacketCallback, writePacket: nil, seek: FFMpegFileReader_seekCallback, isSeekable: true)
+        self.avIoContext = avIoContext
+        
+        avFormatContext.setIO(self.avIoContext!)
+        
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
+            self.readingError = true
+            return nil
+        }
+        
+        if !avFormatContext.findStreamInfo() {
+            self.readingError = true
+            return nil
+        }
+        
+        self.avFormatContext = avFormatContext
+        
+        var stream: Stream?
+        outer: for mediaType in [.audio, .video] as [SelectedStream.MediaType] {
+            streamSearch: for streamIndexNumber in avFormatContext.streamIndices(for: mediaType == .video ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio) {
+                let streamIndex = Int(streamIndexNumber.int32Value)
+                if avFormatContext.isAttachedPic(atStreamIndex: Int32(streamIndex)) {
+                    continue
+                }
+                
+                switch selectedStream {
+                case let .mediaType(selectedMediaType):
+                    if mediaType != selectedMediaType {
+                        continue streamSearch
+                    }
+                case let .index(index):
+                    if streamIndex != index {
+                        continue streamSearch
+                    }
+                }
+                
+                let codecId = avFormatContext.codecId(atStreamIndex: Int32(streamIndex))
+                
+                let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: Int32(streamIndex), defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
+                let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
+                
+                let startTime: CMTime
+                let rawStartTime = avFormatContext.startTime(atStreamIndex: Int32(streamIndex))
+                if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                    startTime = CMTime(value: 0, timescale: timebase.timescale)
+                } else {
+                    startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
+                }
+                let duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: Int32(streamIndex)), timescale: timebase.timescale)
+                
+                let metrics = avFormatContext.metricsForStream(at: Int32(streamIndex))
+                
+                let rotationAngle: Double = metrics.rotationAngle
+                //let aspect = Double(metrics.width) / Double(metrics.height)
+                
+                let info = StreamInfo(
+                    index: streamIndex,
+                    codecId: codecId,
+                    startTime: startTime,
+                    duration: duration,
+                    timeBase: timebase.value,
+                    timeScale: timebase.timescale,
+                    fps: fps
+                )
+                
+                switch mediaType {
+                case .video:
+                    if passthroughDecoder {
+                        var videoFormatData: FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData?
+                        if codecId == FFMpegCodecIdMPEG4 {
+                            videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_MPEG4Video, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                        } else if codecId == FFMpegCodecIdH264 {
+                            videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_H264, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                        } else if codecId == FFMpegCodecIdHEVC {
+                            videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_HEVC, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                        } else if codecId == FFMpegCodecIdAV1 {
+                            videoFormatData = FFMpegMediaPassthroughVideoFrameDecoder.VideoFormatData(codecType: kCMVideoCodecType_AV1, width: metrics.width, height: metrics.height, extraData: Data(bytes: metrics.extradata, count: Int(metrics.extradataSize)))
+                        }
+                        
+                        if let videoFormatData {
+                            stream = Stream(
+                                info: info,
+                                decoder: .videoPassthrough(FFMpegMediaPassthroughVideoFrameDecoder(videoFormatData: videoFormatData, rotationAngle: rotationAngle))
+                            )
+                            break outer
+                        }
+                    } else {
+                        if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: useHardwareAcceleration) {
+                            let codecContext = FFMpegAVCodecContext(codec: codec)
+                            if avFormatContext.codecParams(atStreamIndex: Int32(streamIndex), to: codecContext) {
+                                if useHardwareAcceleration {
+                                    codecContext.setupHardwareAccelerationIfPossible()
+                                }
+                                
+                                if codecContext.open() {
+                                    stream = Stream(
+                                        info: info,
+                                        decoder: .video(FFMpegMediaVideoFrameDecoder(codecContext: codecContext))
+                                    )
+                                    break outer
+                                }
+                            }
+                        }
+                    }
+                case .audio:
+                    if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false) {
+                        let codecContext = FFMpegAVCodecContext(codec: codec)
+                        if avFormatContext.codecParams(atStreamIndex: Int32(streamIndex), to: codecContext) {
+                            if codecContext.open() {
+                                stream = Stream(
+                                    info: info,
+                                    decoder: .audio(FFMpegAudioFrameDecoder(codecContext: codecContext, sampleRate: 48000, channelCount: 1))
+                                )
+                                break outer
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        guard let stream else {
+            self.readingError = true
+            return nil
+        }
+        
+        self.stream = stream
+        
+        if let seek {
+            avFormatContext.seekFrame(forStreamIndex: Int32(seek.streamIndex), pts: seek.pts, positionOnKeyframe: true)
+        } else {
+            avFormatContext.seekFrame(forStreamIndex: Int32(stream.info.index), pts: 0, positionOnKeyframe: true)
+        }
+    }
+    
+    deinit {
+    }
+    
+    private func readPacketInternal() -> FFMpegPacket? {
+        guard let avFormatContext = self.avFormatContext else {
+            return nil
+        }
+        
+        if let maxReadablePts = self.maxReadablePts, !maxReadablePts.isEnded, let lastReadPts = self.lastReadPts, lastReadPts.streamIndex == maxReadablePts.streamIndex, lastReadPts.pts == maxReadablePts.pts {
+            self.isWaitingForMoreData = true
+            return nil
+        }
+        
+        let packet = FFMpegPacket()
+        if avFormatContext.readFrame(into: packet) {
+            self.lastReadPts = (Int(packet.streamIndex), packet.pts)
+            return packet
+        } else {
+            self.hasReadToEnd = true
+            return nil
+        }
+    }
+    
+    func readDecodableFrame() -> MediaTrackDecodableFrame? {
+        while !self.readingError && !self.hasReadToEnd && !self.isWaitingForMoreData {
+            if let packet = self.readPacketInternal() {
+                if let stream = self.stream, Int(packet.streamIndex) == stream.info.index {
+                    let packetPts = packet.pts
+                    
+                    /*if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
+                        self.hasReadToEnd = true
+                    }*/
+                    
+                    let pts = CMTimeMake(value: packetPts, timescale: stream.info.timeScale)
+                    let dts = CMTimeMake(value: packet.dts, timescale: stream.info.timeScale)
+                    
+                    let duration: CMTime
+                    
+                    let frameDuration = packet.duration
+                    if frameDuration != 0 {
+                        duration = CMTimeMake(value: frameDuration * stream.info.timeBase, timescale: stream.info.timeScale)
+                    } else {
+                        duration = stream.info.fps
+                    }
+                    
+                    let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
+                    return frame
+                }
+            } else {
+                break
+            }
+        }
+        
+        return nil
+    }
+    
+    public func readFrame() -> ReadFrameResult {
+        guard let stream = self.stream else {
+            return .error
+        }
+        
+        while true {
+            var result: MediaTrackFrame?
+            switch stream.decoder {
+            case let .video(decoder):
+                result = decoder.decode(ptsOffset: nil, forceARGB: false, unpremultiplyAlpha: false, displayImmediately: false)
+            case let .videoPassthrough(decoder):
+                result = decoder.decode()
+            case let .audio(decoder):
+                result = decoder.decode()
+            }
+            if let result {
+                if self.didSendEndToDecoder {
+                    assert(true)
+                }
+                return .frame(result)
+            }
+            
+            if !self.isWaitingForMoreData && !self.readingError && !self.hasReadToEnd {
+                if let decodableFrame = self.readDecodableFrame() {
+                    let _ = stream.decoder.send(frame: decodableFrame)
+                }
+            } else if self.hasReadToEnd && !self.didSendEndToDecoder {
+                self.didSendEndToDecoder = true
+                let _ = stream.decoder.sendEnd()
+            } else {
+                break
+            }
+        }
+        
+        if self.isWaitingForMoreData {
+            return .waitingForMoreData
+        } else {
+            return .endOfStream
+        }
+    }
+    
+    public func updateMaxReadablePts(pts: (streamIndex: Int, pts: Int64, isEnded: Bool)?) {
+        if self.maxReadablePts?.streamIndex != pts?.streamIndex || self.maxReadablePts?.pts != pts?.pts {
+            self.maxReadablePts = pts
+            
+            if let pts {
+                if pts.isEnded {
+                    self.isWaitingForMoreData = false
+                } else {
+                    if self.lastReadPts?.streamIndex != pts.streamIndex || self.lastReadPts?.pts != pts.pts {
+                        self.isWaitingForMoreData = false
+                    }
+                }
+            } else {
+                self.isWaitingForMoreData = false
+            }
+        }
+    }
+}

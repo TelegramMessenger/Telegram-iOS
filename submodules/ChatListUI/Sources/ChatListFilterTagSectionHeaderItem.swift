@@ -239,7 +239,8 @@ public class ChatListFilterTagSectionHeaderItemNode: ListViewItemNode {
                             cache: item.context.animationCache,
                             renderer: item.context.animationRenderer,
                             placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor,
-                            attemptSynchronous: true
+                            attemptSynchronous: true,
+                            emojiOffset: CGPoint(x: 0.0, y: -1.0)
                         ))
                         let badgeSideInset: CGFloat = 4.0
                         let badgeBackgroundSize: CGSize
@@ -248,7 +249,7 @@ public class ChatListFilterTagSectionHeaderItemNode: ListViewItemNode {
                         } else {
                             badgeBackgroundSize = CGSize(width: badgeSideInset * 2.0 + badgeLayoutAndApply.0.size.width, height: badgeLayoutAndApply.0.size.height + 3.0)
                         }
-                        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + badgeSpacing, y: strongSelf.titleNode.frame.minY - UIScreenPixel + floorToScreenPixels((strongSelf.titleNode.bounds.height - badgeBackgroundSize.height) * 0.5)), size: badgeBackgroundSize)
+                        let badgeBackgroundFrame = CGRect(origin: CGPoint(x: strongSelf.titleNode.frame.maxX + badgeSpacing, y: strongSelf.titleNode.frame.minY + floorToScreenPixels((strongSelf.titleNode.bounds.height - badgeBackgroundSize.height) * 0.5)), size: badgeBackgroundSize)
                         
                         let badgeBackgroundLayer: SimpleLayer
                         if let current = strongSelf.badgeBackgroundLayer {
@@ -262,6 +263,7 @@ public class ChatListFilterTagSectionHeaderItemNode: ListViewItemNode {
                         if strongSelf.badgeTextNode !== badgeTextNode {
                             strongSelf.badgeTextNode?.textNode.removeFromSupernode()
                             strongSelf.badgeTextNode = badgeTextNode
+                            badgeTextNode.resetEmojiToFirstFrameAutomatically = true
                             strongSelf.addSubnode(badgeTextNode.textNode)
                         }
                         

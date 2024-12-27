@@ -35,6 +35,7 @@ swift_library(
         "//submodules/PremiumUI",
         "//submodules/QrCodeUI",
         "//submodules/InviteLinksUI",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
     ],
     visibility = [
         "//visibility:public",

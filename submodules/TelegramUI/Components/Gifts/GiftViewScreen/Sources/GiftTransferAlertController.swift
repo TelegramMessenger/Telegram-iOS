@@ -152,7 +152,7 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
                     theme: self.presentationTheme,
                     peer: nil,
                     subject: .uniqueGift(gift: self.gift),
-                    isSquare: true
+                    mode: .thumbnail
                 )
             ),
             environment: {},

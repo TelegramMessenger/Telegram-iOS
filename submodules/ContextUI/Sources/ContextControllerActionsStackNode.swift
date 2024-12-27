@@ -317,7 +317,7 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
             if !self.item.entities.isEmpty {
                 let inputStateText = ChatTextInputStateText(text: self.item.text, attributes: self.item.entities.compactMap { entity -> ChatTextInputStateTextAttribute? in
                     if case let .CustomEmoji(_, fileId) = entity.type {
-                        return ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: fileId), range: entity.range)
+                        return ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: fileId, enableAnimation: true), range: entity.range)
                     }
                     return nil
                 })

@@ -1035,6 +1035,10 @@ public final class OngoingGroupCallContext {
             #endif
             
         }
+        
+        func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+            self.context.addRemoteConnectedEvent(isRemoteConntected)
+        }
     }
     
     private let queue = Queue()
@@ -1248,6 +1252,12 @@ public final class OngoingGroupCallContext {
     public func setTone(tone: Tone?) {
         self.impl.with { impl in
             impl.setTone(tone: tone)
+        }
+    }
+    
+    public func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+        self.impl.with { impl in
+            impl.addRemoteConnectedEvent(isRemoteConntected: isRemoteConntected)
         }
     }
 }

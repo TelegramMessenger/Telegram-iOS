@@ -58,7 +58,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
             fileValue = file
         }
         
-        self.videoNode = UniversalVideoNode(accountId: context.account.id, postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: fileValue!), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor, storeAfterDownload: nil), priority: .embedded, autoplay: true)
+        self.videoNode = UniversalVideoNode(context: context, postbox: context.account.postbox, audioSession: context.sharedContext.mediaManager.audioSession, manager: context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: NativeVideoContent(id: .instantPage(webPage.webpageId, media.media.id!), userLocation: userLocation, fileReference: .webPage(webPage: WebpageReference(webPage), media: fileValue!), imageReference: imageReference, streamVideo: streamVideo ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, placeholderColor: theme.pageBackgroundColor, storeAfterDownload: nil), priority: .embedded, autoplay: true)
         self.videoNode.isUserInteractionEnabled = false
         
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
