@@ -1712,9 +1712,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     var encryptionKey: Data?
                     encryptionKey = self.encryptionKey?.key
-                    if "".isEmpty {
-                        encryptionKey = nil
-                    }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
