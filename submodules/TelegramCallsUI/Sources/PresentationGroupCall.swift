@@ -871,6 +871,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let conferenceFromCallId: CallId?
     private let isConference: Bool
     
+    var internal_isRemoteConnected = Promise<Bool>()
+    private var internal_isRemoteConnectedDisposable: Disposable?
+    
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
     
     init(
@@ -1228,6 +1231,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.screencastFramesDisposable?.dispose()
         self.screencastAudioDataDisposable?.dispose()
         self.screencastStateDisposable?.dispose()
+        
+        self.internal_isRemoteConnectedDisposable?.dispose()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
@@ -1783,6 +1788,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     })
                     
                     self.signalBarsPromise.set(callContext.signalBars)
+                    
+                    self.internal_isRemoteConnectedDisposable = (self.internal_isRemoteConnected.get()
+                    |> distinctUntilChanged
+                    |> deliverOnMainQueue).startStrict(next: { [weak callContext] isRemoteConnected in
+                        guard let callContext else {
+                            return
+                        }
+                        callContext.addRemoteConnectedEvent(isRemoteConntected: isRemoteConnected)
+                    })
                 }
             }
             

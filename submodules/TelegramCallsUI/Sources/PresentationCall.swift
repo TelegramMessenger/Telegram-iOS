@@ -786,6 +786,28 @@ public final class PresentationCallImpl: PresentationCall {
                             strongSelf.audioLevelPromise.set(level)
                         }
                     })
+                    
+                    let localIsConnected = conferenceCall.state
+                    |> map { state -> Bool in
+                        switch state.networkState {
+                        case .connected:
+                            return true
+                        default:
+                            return false
+                        }
+                    }
+                    |> distinctUntilChanged
+                    
+                    let bothLocalAndRemoteConnected = combineLatest(queue: .mainQueue(),
+                        localIsConnected,
+                        remoteIsConnectedAggregated
+                    )
+                    |> map { localIsConnected, remoteIsConnectedAggregated -> Bool in
+                        return localIsConnected && remoteIsConnectedAggregated
+                    }
+                    |> distinctUntilChanged
+                    
+                    conferenceCall.internal_isRemoteConnected.set(bothLocalAndRemoteConnected)
                 })
             }
         }

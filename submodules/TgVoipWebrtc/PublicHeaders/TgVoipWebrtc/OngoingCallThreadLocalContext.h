@@ -453,6 +453,8 @@ isConference:(bool)isConference;
 
 - (void)getStats:(void (^ _Nonnull)(OngoingGroupCallStats * _Nonnull))completion;
 
+- (void)addRemoteConnectedEvent:(bool)isRemoteConnected;
+
 @end
 
 #endif
