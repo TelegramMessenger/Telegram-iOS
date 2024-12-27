@@ -528,6 +528,11 @@ static av_cold int encode_init(AVCodecContext *avctx)
         avctx->slices > 1)
         s->version = FFMAX(s->version, 2);
 
+    if ((avctx->flags & (AV_CODEC_FLAG_PASS1 | AV_CODEC_FLAG_PASS2)) && s->ac == AC_GOLOMB_RICE) {
+        av_log(avctx, AV_LOG_ERROR, "2 Pass mode is not possible with golomb coding\n");
+        return AVERROR(EINVAL);
+    }
+
     // Unspecified level & slices, we choose version 1.2+ to ensure multithreaded decodability
     if (avctx->slices == 0 && avctx->level < 0 && avctx->width * avctx->height > 720*576)
         s->version = FFMAX(s->version, 2);
@@ -918,10 +923,10 @@ static void encode_slice_header(FFV1Context *f, FFV1SliceContext *sc)
     int j;
     memset(state, 128, sizeof(state));
 
-    put_symbol(c, state, (sc->slice_x     +1)*f->num_h_slices / f->width   , 0);
-    put_symbol(c, state, (sc->slice_y     +1)*f->num_v_slices / f->height  , 0);
-    put_symbol(c, state, (sc->slice_width +1)*f->num_h_slices / f->width -1, 0);
-    put_symbol(c, state, (sc->slice_height+1)*f->num_v_slices / f->height-1, 0);
+    put_symbol(c, state, sc->sx, 0);
+    put_symbol(c, state, sc->sy, 0);
+    put_symbol(c, state, 0, 0);
+    put_symbol(c, state, 0, 0);
     for (j=0; j<f->plane_count; j++) {
         put_symbol(c, state, sc->plane[j].quant_table_index, 0);
         av_assert0(sc->plane[j].quant_table_index == f->context_model);

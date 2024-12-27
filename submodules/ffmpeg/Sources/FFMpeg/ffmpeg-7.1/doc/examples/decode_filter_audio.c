@@ -96,8 +96,7 @@ static int init_filters(const char *filters_descr)
     const AVFilter *abuffersink = avfilter_get_by_name("abuffersink");
     AVFilterInOut *outputs = avfilter_inout_alloc();
     AVFilterInOut *inputs  = avfilter_inout_alloc();
-    static const enum AVSampleFormat out_sample_fmts[] = { AV_SAMPLE_FMT_S16, -1 };
-    static const int out_sample_rates[] = { 8000, -1 };
+    static const int out_sample_rate = 8000;
     const AVFilterLink *outlink;
     AVRational time_base = fmt_ctx->streams[audio_stream_index]->time_base;
 
@@ -123,31 +122,37 @@ static int init_filters(const char *filters_descr)
     }
 
     /* buffer audio sink: to terminate the filter chain. */
-    ret = avfilter_graph_create_filter(&buffersink_ctx, abuffersink, "out",
-                                       NULL, NULL, filter_graph);
-    if (ret < 0) {
+    buffersink_ctx = avfilter_graph_alloc_filter(filter_graph, abuffersink, "out");
+    if (!buffersink_ctx) {
         av_log(NULL, AV_LOG_ERROR, "Cannot create audio buffer sink\n");
+        ret = AVERROR(ENOMEM);
         goto end;
     }
 
-    ret = av_opt_set_int_list(buffersink_ctx, "sample_fmts", out_sample_fmts, -1,
-                              AV_OPT_SEARCH_CHILDREN);
+    ret = av_opt_set(buffersink_ctx, "sample_formats", "s16",
+                     AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
         av_log(NULL, AV_LOG_ERROR, "Cannot set output sample format\n");
         goto end;
     }
 
-    ret = av_opt_set(buffersink_ctx, "ch_layouts", "mono",
-                              AV_OPT_SEARCH_CHILDREN);
+    ret = av_opt_set(buffersink_ctx, "channel_layouts", "mono",
+                     AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
         av_log(NULL, AV_LOG_ERROR, "Cannot set output channel layout\n");
         goto end;
     }
 
-    ret = av_opt_set_int_list(buffersink_ctx, "sample_rates", out_sample_rates, -1,
-                              AV_OPT_SEARCH_CHILDREN);
+    ret = av_opt_set_array(buffersink_ctx, "samplerates", AV_OPT_SEARCH_CHILDREN,
+                           0, 1, AV_OPT_TYPE_INT, &out_sample_rate);
     if (ret < 0) {
         av_log(NULL, AV_LOG_ERROR, "Cannot set output sample rate\n");
+        goto end;
+    }
+
+    ret = avfilter_init_dict(buffersink_ctx, NULL);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "Cannot initialize audio buffer sink\n");
         goto end;
     }
 
