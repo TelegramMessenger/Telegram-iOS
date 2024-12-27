@@ -1320,7 +1320,9 @@ public final class TextFieldComponent: Component {
                         return UIView()
                     }
                     let pointSize = floor(24.0 * 1.3)
-                    return EmojiTextAttachmentView(context: component.context, userLocation: .other, emoji: emoji, file: emoji.file, cache: component.context.animationCache, renderer: component.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                    let emojiView = EmojiTextAttachmentView(context: component.context, userLocation: .other, emoji: emoji, file: emoji.file, cache: component.context.animationCache, renderer: component.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                    emojiView.updateTextColor(component.textColor)
+                    return emojiView
                 }
                 
                 self.chatInputTextNodeDidUpdateText()

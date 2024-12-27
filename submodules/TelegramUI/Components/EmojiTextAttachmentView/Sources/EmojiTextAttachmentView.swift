@@ -744,6 +744,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             self.loadAnimation()
         } else {
             let isTemplate = file.isCustomTemplateEmoji
+            self.updateTintColor()
             
             let pointSize = arguments.pointSize
             let placeholderColor = arguments.placeholderColor
