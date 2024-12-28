@@ -100,7 +100,7 @@ private enum InviteRequestsEntry: ItemListNodeEntry {
         let arguments = arguments as! InviteRequestsControllerArguments
         switch self {
             case let .header(theme, text):
-                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: text, animationName: "Requests", sectionId: self.section, linkAction: { _ in
+                return InviteLinkHeaderItem(context: arguments.context, theme: theme, text: NSAttributedString(string: text), animationName: "Requests", sectionId: self.section, linkAction: { _ in
                     arguments.openLinks()
                 })
             case let .requestsHeader(_, text):

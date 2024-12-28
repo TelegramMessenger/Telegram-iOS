@@ -51,6 +51,7 @@ import PeerInfoStoryGridScreen
 import ArchiveInfoScreen
 import BirthdayPickerScreen
 import OldChannelsController
+import TextFormat
 
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
@@ -1453,7 +1454,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                         }
                         
-                        let contextController = ContextController(presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                        let contextController = ContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                         strongSelf.presentInGlobalOverlay(contextController)
                         
                         dismissPreviewingImpl = { [weak contextController] in
@@ -1526,7 +1527,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     contextContentSource = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                 }
                 
-                let contextController = ContextController(presentationData: strongSelf.presentationData, source: contextContentSource, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf, joined: false) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let contextController = ContextController(context: strongSelf.context, presentationData: strongSelf.presentationData, source: contextContentSource, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, promoInfo: nil, source: .search(source), chatListController: strongSelf, joined: false) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
@@ -1811,28 +1812,42 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                             return
                                                         }
                                                         
-                                                        //TODO:release
                                                         let iconColor: UIColor = .white
                                                         let overlayController: UndoOverlayController
                                                         if !filterPeersAreMuted.areMuted {
-                                                            let text =  strongSelf.presentationData.strings.ChatList_ToastFolderMuted(title.text).string
-                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                                            let text = NSMutableAttributedString(string: strongSelf.presentationData.strings.ChatList_ToastFolderMutedV2)
+                                                            let folderNameRange = (text.string as NSString).range(of: "{folder}")
+                                                            if folderNameRange.location != NSNotFound {
+                                                                text.replaceCharacters(in: folderNameRange, with: "")
+                                                                text.insert(title.attributedString(attributes: [
+                                                                    ChatTextInputAttributes.bold: true
+                                                                ]), at: folderNameRange.location)
+                                                            }
+                                                            
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universalWithEntities(context: strongSelf.context, animation: "anim_profilemute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
                                                                 "Bottom.Group 1.Fill 1": iconColor,
                                                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                                                 "Line.Group 1.Stroke 1": iconColor
-                                                            ], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                            ], title: nil, text: text, animateEntities: title.enableAnimations, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         } else {
-                                                            //TODO:release
-                                                            let text = strongSelf.presentationData.strings.ChatList_ToastFolderUnmuted(title.text).string
-                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                                                            let text = NSMutableAttributedString(string: strongSelf.presentationData.strings.ChatList_ToastFolderUnmutedV2)
+                                                            let folderNameRange = (text.string as NSString).range(of: "{folder}")
+                                                            if folderNameRange.location != NSNotFound {
+                                                                text.replaceCharacters(in: folderNameRange, with: "")
+                                                                text.insert(title.attributedString(attributes: [
+                                                                    ChatTextInputAttributes.bold: true
+                                                                ]), at: folderNameRange.location)
+                                                            }
+                                                            
+                                                            overlayController = UndoOverlayController(presentationData: strongSelf.presentationData, content: .universalWithEntities(context: strongSelf.context, animation: "anim_profileunmute", scale: 0.075, colors: [
                                                                 "Middle.Group 1.Fill 1": iconColor,
                                                                 "Top.Group 1.Fill 1": iconColor,
                                                                 "Bottom.Group 1.Fill 1": iconColor,
                                                                 "EXAMPLE.Group 1.Fill 1": iconColor,
                                                                 "Line.Group 1.Stroke 1": iconColor
-                                                            ], title: nil, text: text, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
+                                                            ], title: nil, text: text, animateEntities: title.enableAnimations, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false })
                                                         }
                                                         strongSelf.present(overlayController, in: .current)
                                                     })
@@ -4736,7 +4751,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let text = strongSelf.presentationData.strings.ChatList_DeletedThreads(Int32(threadIds.count))
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: strongSelf.context, title: NSAttributedString(string: text), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -4842,7 +4857,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             
                             let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
                             
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: strongSelf.context, title: NSAttributedString(string: text), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                                 guard let strongSelf = self else {
                                     return false
                                 }
@@ -4914,7 +4929,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
                         
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: strongSelf.context, title: NSAttributedString(string: text), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                             guard let strongSelf = self else {
                                 return false
                             }
@@ -5274,7 +5289,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return true
                             })
                             
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: strongSelf.presentationData.strings.Undo_ChatCleared, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: strongSelf.context, title: NSAttributedString(string: strongSelf.presentationData.strings.Undo_ChatCleared), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { value in
                                 guard let strongSelf = self else {
                                     return false
                                 }
@@ -5496,7 +5511,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let statusText = self.presentationData.strings.Undo_DeletedTopic
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: statusText), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let self else {
                 return false
             }
@@ -5793,7 +5808,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return true
         })
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: statusText), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
             guard let strongSelf = self else {
                 return false
             }
@@ -5933,7 +5948,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             badge = ContextMenuActionBadge(value: "\(item.1)", color: item.2 ? .accent : .inactive)
                         }
                     }
-                    //TODO:release
                     items.append(.action(ContextMenuActionItem(text: title.text, entities: title.entities, enableEntityAnimations: title.enableAnimations, badge: badge, icon: { theme in
                         let imageName: String
                         if isDisabled {
@@ -6347,9 +6361,9 @@ private final class ChatListLocationContext {
             let peerView = Promise<PeerView>()
             peerView.set(context.account.viewTracker.peerView(peerId))
             
-            var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+            var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
             
-            let recentOnlineSignal: Signal<Int32?, NoError> = peerView.get()
+            let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView.get()
             |> map { view -> Bool? in
                 if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
                     if case .broadcast = peer.info {
@@ -6364,17 +6378,21 @@ private final class ChatListLocationContext {
                 }
             }
             |> distinctUntilChanged
-            |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+            |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
                 if let isLarge = isLarge {
                     if isLarge {
                         return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
-                        |> map(Optional.init)
+                        |> map { value -> (total: Int32?, recent: Int32?) in
+                            return (nil, value)
+                        }
                     } else {
                         return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
-                        |> map(Optional.init)
+                        |> map { value -> (total: Int32?, recent: Int32?) in
+                            return (value.total, value.recent)
+                        }
                     }
                 } else {
-                    return .single(nil)
+                    return .single((nil, nil))
                 }
             }
             onlineMemberCount = recentOnlineSignal
@@ -6783,7 +6801,7 @@ private final class ChatListLocationContext {
     private func updateForum(
         peerId: EnginePeer.Id,
         peerView: PeerView,
-        onlineMemberCount: Int32?,
+        onlineMemberCount: (total: Int32?, recent: Int32?),
         stateAndFilterId: (state: ChatListNodeState, filterId: Int32?),
         presentationData: PresentationData
     ) {

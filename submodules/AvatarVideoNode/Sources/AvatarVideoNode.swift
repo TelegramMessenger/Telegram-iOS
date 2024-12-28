@@ -234,7 +234,7 @@ public final class AvatarVideoNode: ASDisplayNode {
             if self.videoNode == nil {
                 let context = self.context
                 let mediaManager = context.sharedContext.mediaManager
-                let videoNode = UniversalVideoNode(accountId: context.account.id, postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
+                let videoNode = UniversalVideoNode(context: context, postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: VideoDecoration(), content: videoContent, priority: .embedded)
                 videoNode.clipsToBounds = true
                 videoNode.isUserInteractionEnabled = false
                 videoNode.isHidden = true

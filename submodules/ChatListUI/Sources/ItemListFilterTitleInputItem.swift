@@ -238,6 +238,7 @@ public class ItemListFilterTitleInputItemNode: ListViewItemNode, UITextFieldDele
                         backspaceKeyAction: nil,
                         selection: nil,
                         inputMode: item.inputMode,
+                        alwaysDisplayInputModeSelector: true,
                         toggleInputMode: { [weak self] in
                             guard let self else {
                                 return
@@ -268,6 +269,9 @@ public class ItemListFilterTitleInputItemNode: ListViewItemNode, UITextFieldDele
     }
     
     public func focus() {
+        if let textFieldView = self.textField.view as? ListComposePollOptionComponent.View {
+            textFieldView.activateInput()
+        }
     }
     
     public func selectAll() {

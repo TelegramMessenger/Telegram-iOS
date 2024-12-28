@@ -1527,7 +1527,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     switch result {
-                        case let .done(receiptMessageId, _):
+                        case let .done(receiptMessageId, _, _):
                             proceedWithCompletion(true, receiptMessageId)
                         case let .externalVerificationRequired(url):
                             strongSelf.updateActionButton()

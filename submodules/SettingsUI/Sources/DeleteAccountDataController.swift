@@ -117,7 +117,7 @@ private enum DeleteAccountDataEntry: ItemListNodeEntry, Equatable {
         let arguments = arguments as! DeleteAccountDataArguments
         switch self {
             case let .header(theme, animation, title, text, hideOnSmallScreens):
-                return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: text, animationName: animation, hideOnSmallScreens: hideOnSmallScreens, sectionId: self.section, linkAction: nil)
+                return InviteLinkHeaderItem(context: arguments.context, theme: theme, title: title, text: NSAttributedString(string: text), animationName: animation, hideOnSmallScreens: hideOnSmallScreens, sectionId: self.section, linkAction: nil)
             case let .peers(_, peers):
                 return DeleteAccountPeersItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, peers: peers, sectionId: self.section)
             case let .info(_, text):

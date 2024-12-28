@@ -689,15 +689,23 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, messageId: Engi
         } else {
             let source: BotPaymentInvoiceSource = .starGiftTransfer(messageId: messageId, toPeerId: peerId)
             return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
-            |> mapError { _ -> TransferStarGiftError in
-                return .generic
+            |> map(Optional.init)
+            |> `catch` { error -> Signal<BotPaymentForm?, TransferStarGiftError> in
+                if case .noPaymentNeeded = error {
+                    return .single(nil)
+                }
+                return .fail(.generic)
             }
             |> mapToSignal { paymentForm in
-                return _internal_sendStarsPaymentForm(account: account, formId: paymentForm.id, source: source)
-                |> mapError { _ -> TransferStarGiftError in
-                    return .generic
+                if let paymentForm {
+                    return _internal_sendStarsPaymentForm(account: account, formId: paymentForm.id, source: source)
+                    |> mapError { _ -> TransferStarGiftError in
+                        return .generic
+                    }
+                    |> ignoreValues
+                } else {
+                    return _internal_transferStarGift(account: account, prepaid: true, messageId: messageId, peerId: peerId)
                 }
-                |> ignoreValues
             }
         }
     }
@@ -714,8 +722,12 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, messageId: Engi
         |> mapError { _ -> UpgradeStarGiftError in
             return .generic
         }
-        |> mapToSignal { _ in
-            return .complete()
+        |> mapToSignal { result in
+            if case let .done(_, _, gift) = result, let gift {
+                return .single(gift)
+            } else {
+                return .complete()
+            }
         }
     } else {
         var flags: Int32 = 0
@@ -970,16 +982,30 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
-    func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) {
-        self.actionDisposable.set(
-            _internal_upgradeStarGift(account: self.account, formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo).startStrict(next: { [weak self] result in
-                guard let self else {
-                    return
-                }
-                let _ = self
-            })
-        )
-        self.pushState()
+    func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+        return Signal { [weak self] subscriber in
+            guard let self else {
+                return EmptyDisposable
+            }
+            let disposable = MetaDisposable()
+            disposable.set(
+                _internal_upgradeStarGift(account: self.account, formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo).startStrict(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    if let index = self.gifts.firstIndex(where: { $0.messageId == messageId }) {
+                        self.gifts[index] = result
+                        self.pushState()
+                    }
+                    subscriber.putNext(result)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+            )
+            return disposable
+        }
     }
     
     private func pushState() {
@@ -1186,9 +1212,19 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) {
-        self.impl.with { impl in
-            impl.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+    public func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo).start(next: { value in
+                    subscriber.putNext(value)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
     

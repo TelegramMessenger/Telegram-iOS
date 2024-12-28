@@ -871,6 +871,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private let conferenceFromCallId: CallId?
     private let isConference: Bool
     
+    var internal_isRemoteConnected = Promise<Bool>()
+    private var internal_isRemoteConnectedDisposable: Disposable?
+    
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
     
     init(
@@ -1228,6 +1231,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.screencastFramesDisposable?.dispose()
         self.screencastAudioDataDisposable?.dispose()
         self.screencastStateDisposable?.dispose()
+        
+        self.internal_isRemoteConnectedDisposable?.dispose()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
@@ -1712,9 +1717,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     var encryptionKey: Data?
                     encryptionKey = self.encryptionKey?.key
-                    if "".isEmpty {
-                        encryptionKey = nil
-                    }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
@@ -1786,6 +1788,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     })
                     
                     self.signalBarsPromise.set(callContext.signalBars)
+                    
+                    self.internal_isRemoteConnectedDisposable = (self.internal_isRemoteConnected.get()
+                    |> distinctUntilChanged
+                    |> deliverOnMainQueue).startStrict(next: { [weak callContext] isRemoteConnected in
+                        guard let callContext else {
+                            return
+                        }
+                        callContext.addRemoteConnectedEvent(isRemoteConntected: isRemoteConnected)
+                    })
                 }
             }
             
@@ -2365,22 +2376,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
                             if let muteState = filteredMuteState {
                                 if muteState.canUnmute {
-                                    switch strongSelf.isMutedValue {
-                                    case let .muted(isPushToTalkActive):
-                                        if !isPushToTalkActive {
-                                            strongSelf.genericCallContext?.setIsMuted(true)
-                                        }
-                                    case .unmuted:
+                                    if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                         strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                        strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
+                                        strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                         strongSelf.genericCallContext?.setIsMuted(true)
+                                    } else {
+                                        switch strongSelf.isMutedValue {
+                                        case .muted:
+                                            break
+                                        case .unmuted:
+                                            let _ = strongSelf.updateMuteState(peerId: strongSelf.joinAsPeerId, isMuted: false)
+                                        }
                                     }
                                 } else {
                                     strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                    strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                                     strongSelf.genericCallContext?.setIsMuted(true)
+                                    strongSelf.stateValue.muteState = muteState
                                 }
-                                strongSelf.stateValue.muteState = muteState
                             } else if let currentMuteState = strongSelf.stateValue.muteState, !currentMuteState.canUnmute {
                                 strongSelf.isMutedValue = .muted(isPushToTalkActive: false)
+                                strongSelf.isMutedPromise.set(strongSelf.isMutedValue)
                                 strongSelf.stateValue.muteState = GroupCallParticipantsContext.Participant.MuteState(canUnmute: true, mutedByYou: false)
                                 strongSelf.genericCallContext?.setIsMuted(true)
                             }

@@ -467,7 +467,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
-                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, _, upgradeStars, isRefunded):
+                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, _, upgradeStars, isRefunded, _):
                             if case let .generic(gift) = gift {
                                 isStarGift = true
                                 let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
@@ -488,7 +488,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                                 text = item.presentationData.strings.Notification_StarGift_Bot_Subtitle_Displaying
                                             }
                                         } else {
-                                            if let convertStars {
+                                            if let convertStars, convertStars > 0 {
                                                 text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
                                             } else {
                                                 text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
@@ -500,16 +500,20 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             peerName = EnginePeer(peer).compactDisplayTitle
                                         }
                                         if peerName.isEmpty {
-                                            if let convertStars {
+                                            if let convertStars, convertStars > 0 {
                                                 text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
                                             } else {
                                                 text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
                                             }
                                         } else {
-                                            let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars ?? 0)))
-                                            text = formattedString.string
-                                            if let starsRange = formattedString.ranges.last {
-                                                entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
+                                            if let convertStars, convertStars > 0 {
+                                                let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars)))
+                                                text = formattedString.string
+                                                if let starsRange = formattedString.ranges.last {
+                                                    entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
+                                                }
+                                            } else {
+                                                
                                             }
                                         }
                                     }
@@ -524,17 +528,22 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                     }
                                     ribbonTitle = item.presentationData.strings.Notification_StarGift_OneOf(availabilityString).string
                                 }
-                                if incoming, let upgradeStars, upgradeStars > 0, !upgraded {
+                                if incoming || item.presentationData.isPreview, let upgradeStars, upgradeStars > 0, !upgraded {
                                     buttonTitle = item.presentationData.strings.Notification_StarGift_Unpack
                                     buttonIcon = "Premium/GiftUnpack"
                                 } else {
                                     buttonTitle = item.presentationData.strings.Notification_StarGift_View
                                 }
                             }
-                        case let .starGiftUnique(gift, _, _, _, _, _, isRefunded):
+                        case let .starGiftUnique(gift, isUpgrade, _, _, _, _, isRefunded):
                             if case let .unique(uniqueGift) = gift {
                                 isStarGift = true
-                                let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                let authorName: String
+                                if isUpgrade && item.message.author?.id == item.context.account.peerId {
+                                    authorName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                } else {
+                                    authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                }
                                 title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
                                 text = "**\(uniqueGift.title) #\(uniqueGift.number)**"
                                 ribbonTitle = item.presentationData.strings.Notification_StarGift_Gift

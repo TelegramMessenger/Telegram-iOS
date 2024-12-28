@@ -352,6 +352,7 @@ public final class AccountStateManager {
         private let appliedMaxMessageIdDisposable = MetaDisposable()
         private let appliedQtsPromise = Promise<Int32?>(nil)
         private let appliedQtsDisposable = MetaDisposable()
+        private let reportMessageDeliveryDisposable = DisposableSet()
         
         let updateConfigRequested: (() -> Void)?
         let isPremiumUpdated: (() -> Void)?
@@ -391,6 +392,7 @@ public final class AccountStateManager {
             self.operationDisposable.dispose()
             self.appliedMaxMessageIdDisposable.dispose()
             self.appliedQtsDisposable.dispose()
+            self.reportMessageDeliveryDisposable.dispose()
         }
         
         public func reset() {
@@ -1129,6 +1131,9 @@ public final class AccountStateManager {
                             }
                             if !events.sentScheduledMessageIds.isEmpty {
                                 strongSelf.sentScheduledMessageIdsPipe.putNext(events.sentScheduledMessageIds)
+                            }
+                            if !events.reportMessageDelivery.isEmpty {
+                                strongSelf.reportMessageDeliveryDisposable.add(_internal_reportMessageDelivery(postbox: strongSelf.postbox, network: strongSelf.network, messageIds: Array(events.reportMessageDelivery), fromPushNotification: false).start())
                             }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)

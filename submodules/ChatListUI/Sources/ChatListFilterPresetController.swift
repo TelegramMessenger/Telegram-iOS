@@ -35,6 +35,7 @@ private final class ChatListFilterPresetControllerArguments {
     let context: AccountContext
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void
     let updateName: (ChatFolderTitle) -> Void
+    let toggleNameInputMode: () -> Void
     let toggleNameAnimations: () -> Void
     let openAddIncludePeer: () -> Void
     let openAddExcludePeer: () -> Void
@@ -58,6 +59,7 @@ private final class ChatListFilterPresetControllerArguments {
         context: AccountContext,
         updateState: @escaping ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void,
         updateName: @escaping (ChatFolderTitle) -> Void,
+        toggleNameInputMode: @escaping () -> Void,
         toggleNameAnimations: @escaping () -> Void,
         openAddIncludePeer: @escaping () -> Void,
         openAddExcludePeer: @escaping () -> Void,
@@ -80,6 +82,7 @@ private final class ChatListFilterPresetControllerArguments {
         self.context = context
         self.updateState = updateState
         self.updateName = updateName
+        self.toggleNameInputMode = toggleNameInputMode
         self.toggleNameAnimations = toggleNameAnimations
         self.openAddIncludePeer = openAddIncludePeer
         self.openAddExcludePeer = openAddExcludePeer
@@ -228,7 +231,7 @@ private enum ChatListFilterRevealedItemId: Equatable {
 
 private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case screenHeader
-    case nameHeader(title: String, enableAnimations: Bool)
+    case nameHeader(title: String, enableAnimations: Bool?)
     case name(placeholder: String, value: NSAttributedString, inputMode: ListComposePollOptionComponent.InputMode?, enableAnimations: Bool)
     case includePeersHeader(String)
     case addIncludePeer(title: String)
@@ -376,7 +379,11 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: "", animation: .newFolder, sectionId: self.section)
         case let .nameHeader(title, enableAnimations):
             //TODO:localize
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: title, actionText: enableAnimations ? "Disable Animations" : "Enable Animations", action: {
+            var actionText: String?
+            if let enableAnimations {
+                actionText = enableAnimations ? "Disable Animations" : "Enable Animations"
+            }
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: title, actionText: actionText, action: {
                 arguments.toggleNameAnimations()
             }, sectionId: self.section)
         case let .name(placeholder, value, inputMode, enableAnimations):
@@ -393,15 +400,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                     arguments.updateName(ChatFolderTitle(attributedString: value, enableAnimations: true))
                 },
                 toggleInputMode: {
-                    arguments.updateState { current in
-                        var state = current
-                        if state.nameInputMode == .emoji {
-                            state.nameInputMode = .keyboard
-                        } else {
-                            state.nameInputMode = .emoji
-                        }
-                        return state
-                    }
+                    arguments.toggleNameInputMode()
                 }
             )
         case .includePeersHeader(let text), .excludePeersHeader(let text):
@@ -545,37 +544,6 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     }
 }
 
-extension ChatFolderTitle {
-    init(attributedString: NSAttributedString, enableAnimations: Bool) {
-        let inputStateText = ChatTextInputStateText(attributedText: attributedString)
-        self.init(text: inputStateText.text, entities: inputStateText.attributes.compactMap { attribute -> MessageTextEntity? in
-            if case let .customEmoji(_, fileId) = attribute.type {
-                return MessageTextEntity(range: attribute.range, type: .CustomEmoji(stickerPack: nil, fileId: fileId))
-            }
-            return nil
-        }, enableAnimations: enableAnimations)
-    }
-    
-    var rawAttributedString: NSAttributedString {
-        let inputStateText = ChatTextInputStateText(text: self.text, attributes: self.entities.compactMap { entity -> ChatTextInputStateTextAttribute? in
-            if case let .CustomEmoji(_, fileId) = entity.type {
-                return ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: fileId), range: entity.range)
-            }
-            return nil
-        })
-        return inputStateText.attributedText()
-    }
-    
-    func attributedString(font: UIFont, textColor: UIColor) -> NSAttributedString {
-        let result = NSMutableAttributedString(attributedString: self.rawAttributedString)
-        result.addAttributes([
-            .font: font,
-            .foregroundColor: textColor
-        ], range: NSRange(location: 0, length: result.length))
-        return result
-    }
-}
-
 private struct ChatListFilterPresetControllerState: Equatable {
     var name: ChatFolderTitle
     var changedName: Bool
@@ -624,7 +592,7 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         entries.append(.screenHeader)
     }
     
-    entries.append(.nameHeader(title: presentationData.strings.ChatListFolder_NameSectionHeader, enableAnimations: state.name.enableAnimations))
+    entries.append(.nameHeader(title: presentationData.strings.ChatListFolder_NameSectionHeader, enableAnimations: state.name.entities.isEmpty ? nil : state.name.enableAnimations))
     entries.append(.name(placeholder: presentationData.strings.ChatListFolder_NamePlaceholder, value: state.name.rawAttributedString, inputMode: state.nameInputMode, enableAnimations: state.name.enableAnimations))
     
     entries.append(.includePeersHeader(presentationData.strings.ChatListFolder_IncludedSectionHeader))
@@ -1584,6 +1552,18 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                 }
             }
         },
+        toggleNameInputMode: {
+            updateState { current in
+                var state = current
+                if state.nameInputMode == .emoji {
+                    state.nameInputMode = .keyboard
+                } else {
+                    state.nameInputMode = .emoji
+                }
+                return state
+            }
+            focusOnNameImpl?()
+        },
         toggleNameAnimations: {
             updateState { current in
                 var name = current.name
@@ -2145,7 +2125,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             return
         }
         controller.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+            if let itemNode = itemNode as? ItemListFilterTitleInputItemNode {
                 itemNode.focus()
             }
         }

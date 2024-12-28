@@ -476,17 +476,17 @@ public extension Api.channels {
 }
 public extension Api.chatlists {
     enum ChatlistInvite: TypeConstructorDescription {
-        case chatlistInvite(flags: Int32, title: String, emoticon: String?, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+        case chatlistInvite(flags: Int32, title: Api.TextWithEntities, emoticon: String?, peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
         case chatlistInviteAlready(filterId: Int32, missingPeers: [Api.Peer], alreadyPeers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .chatlistInvite(let flags, let title, let emoticon, let peers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(500007837)
+                        buffer.appendInt32(-250687953)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(title, buffer: buffer, boxed: false)
+                    title.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(emoticon!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(peers.count))
@@ -545,8 +545,10 @@ public extension Api.chatlists {
         public static func parse_chatlistInvite(_ reader: BufferReader) -> ChatlistInvite? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
+            var _2: Api.TextWithEntities?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.TextWithEntities
+            }
             var _3: String?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             var _4: [Api.Peer]?

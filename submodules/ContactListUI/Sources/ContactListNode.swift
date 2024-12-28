@@ -165,19 +165,19 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             if let _ = peer as? TelegramUser {
                                 status = .presence(presence ?? EnginePeer.Presence(status: .longTimeAgo, lastActivity: 0), dateTimeFormat)
                             } else if let group = peer as? TelegramGroup {
-                                status = .custom(string: strings.Conversation_StatusMembers(Int32(group.participantCount)), multiline: false, isActive: false, icon: nil)
+                                status = .custom(string: NSAttributedString(string: strings.Conversation_StatusMembers(Int32(group.participantCount))), multiline: false, isActive: false, icon: nil)
                             } else if let channel = peer as? TelegramChannel {
                                 if case .group = channel.info {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(string: strings.Conversation_StatusMembers(participantCount), multiline: false, isActive: false, icon: nil)
+                                        status = .custom(string: NSAttributedString(string: strings.Conversation_StatusMembers(participantCount)), multiline: false, isActive: false, icon: nil)
                                     } else {
-                                        status = .custom(string: strings.Group_Status, multiline: false, isActive: false, icon: nil)
+                                        status = .custom(string: NSAttributedString(string: strings.Group_Status), multiline: false, isActive: false, icon: nil)
                                     }
                                 } else {
                                     if let participantCount = participantCount, participantCount != 0 {
-                                        status = .custom(string: strings.Conversation_StatusSubscribers(participantCount), multiline: false, isActive: false, icon: nil)
+                                        status = .custom(string: NSAttributedString(string: strings.Conversation_StatusSubscribers(participantCount)), multiline: false, isActive: false, icon: nil)
                                     } else {
-                                        status = .custom(string: strings.Channel_Status, multiline: false, isActive: false, icon: nil)
+                                        status = .custom(string: NSAttributedString(string: strings.Channel_Status), multiline: false, isActive: false, icon: nil)
                                     }
                                 }
                             } else {
@@ -227,7 +227,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     
                     let text: String
                     text = presentationData.strings.ChatList_ArchiveStoryCount(Int32(storyData.count))
-                    status = .custom(string: text, multiline: false, isActive: false, icon: nil)
+                    status = .custom(string: NSAttributedString(string: text), multiline: false, isActive: false, icon: nil)
                 }
                 
             return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch(isSavedMessages: false) : .peer, peer: itemPeer, status: status, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in

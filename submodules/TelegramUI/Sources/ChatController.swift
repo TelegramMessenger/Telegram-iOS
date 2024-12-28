@@ -1228,8 +1228,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                         controller.videoCompletion = { [weak self] image, url, adjustments, commit in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                     commit()
                                                 }
                                             }
@@ -1263,8 +1263,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }, videoCompletion: { [weak self] image, url, adjustments in
                                             if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let _ = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    //settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                 }
                                             }
                                         })
@@ -5221,11 +5221,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let peerId = chatLocationPeerId
             if case let .peer(peerView) = self.chatLocationInfoData, let peerId = peerId {
                 peerView.set(context.account.viewTracker.peerView(peerId))
-                var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+                var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
                 var hasScheduledMessages: Signal<Bool, NoError> = .single(false)
                 
                 if peerId.namespace == Namespaces.Peer.CloudChannel {
-                    let recentOnlineSignal: Signal<Int32?, NoError> = peerView.get()
+                    let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView.get()
                     |> map { view -> Bool? in
                         if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
                             if case .broadcast = peer.info {
@@ -5240,17 +5240,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     |> distinctUntilChanged
-                    |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                    |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
                         if let isLarge = isLarge {
                             if isLarge {
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
-                                |> map(Optional.init)
+                                |> map { value -> (total: Int32?, recent: Int32?) in
+                                    return (nil, value)
+                                }
                             } else {
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
-                                |> map(Optional.init)
+                                |> map { value -> (total: Int32?, recent: Int32?) in
+                                    return (value.total, value.recent)
+                                }
                             }
                         } else {
-                            return .single(nil)
+                            return .single((nil, nil))
                         }
                     }
                     onlineMemberCount = recentOnlineSignal
@@ -6196,9 +6200,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+                var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
                 if peerId.namespace == Namespaces.Peer.CloudChannel {
-                    let recentOnlineSignal: Signal<Int32?, NoError> = peerView
+                    let recentOnlineSignal: Signal<(total: Int32?, recent: Int32?), NoError> = peerView
                     |> map { view -> Bool? in
                         if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
                             if case .broadcast = peer.info {
@@ -6213,17 +6217,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     |> distinctUntilChanged
-                    |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                    |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
                         if let isLarge = isLarge {
                             if isLarge {
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
-                                |> map(Optional.init)
+                                |> map { value -> (total: Int32?, recent: Int32?) in
+                                    return (nil, value)
+                                }
                             } else {
                                 return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
-                                |> map(Optional.init)
+                                |> map { value -> (total: Int32?, recent: Int32?) in
+                                    return (value.total, value.recent)
+                                }
                             }
                         } else {
-                            return .single(nil)
+                            return .single((nil, nil))
                         }
                     }
                     onlineMemberCount = recentOnlineSignal
@@ -6325,7 +6333,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 peerPresences: [:],
                                 cachedData: nil
                             )
-                            strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: nil, isScheduledMessages: false, isMuted: false, customMessageCount: savedMessagesPeer?.messageCount ?? 0, isEnabled: true)
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: mappedPeerData, customTitle: nil, onlineMemberCount: (nil, nil), isScheduledMessages: false, isMuted: false, customMessageCount: savedMessagesPeer?.messageCount ?? 0, isEnabled: true)
                             
                             strongSelf.peerView = peerView
                             
@@ -8555,7 +8563,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             statusText = self.presentationData.strings.Undo_ChatCleared
         }
         
-        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, action: { [weak self] value in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: statusText), text: nil), elevatedLayout: false, action: { [weak self] value in
             guard let strongSelf = self else {
                 return false
             }

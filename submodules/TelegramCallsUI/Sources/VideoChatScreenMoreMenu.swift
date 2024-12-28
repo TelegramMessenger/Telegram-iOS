@@ -152,16 +152,15 @@ extension VideoChatScreenComponent.View {
             }
         }
         
-        //TODO:localize
         let qualityList: [(Int, String)] = [
-            (0, "Audio Only"),
+            (0, environment.strings.VideoChat_IncomingVideoQuality_AudioOnly),
             (180, "180p"),
             (360, "360p"),
             (Int.max, "720p")
         ]
         
         let videoQualityTitle = qualityList.first(where: { $0.0 == self.maxVideoQuality })?.1 ?? ""
-        items.append(.action(ContextMenuActionItem(text: "Receive Video Quality", textColor: .primary, textLayout: .secondLineWithValue(videoQualityTitle), icon: { _ in
+        items.append(.action(ContextMenuActionItem(text: environment.strings.VideoChat_IncomingVideoQuality_Title, textColor: .primary, textLayout: .secondLineWithValue(videoQualityTitle), icon: { _ in
             return nil
         }, action: { [weak self] c, _ in
             guard let self else {

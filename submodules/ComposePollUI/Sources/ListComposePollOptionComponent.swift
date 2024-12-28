@@ -82,6 +82,7 @@ public final class ListComposePollOptionComponent: Component {
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
     public let inputMode: InputMode?
+    public let alwaysDisplayInputModeSelector: Bool
     public let toggleInputMode: (() -> Void)?
     public let tag: AnyObject?
     
@@ -100,6 +101,7 @@ public final class ListComposePollOptionComponent: Component {
         backspaceKeyAction: (() -> Void)?,
         selection: Selection?,
         inputMode: InputMode?,
+        alwaysDisplayInputModeSelector: Bool = false,
         toggleInputMode: (() -> Void)?,
         tag: AnyObject? = nil
     ) {
@@ -117,6 +119,7 @@ public final class ListComposePollOptionComponent: Component {
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
         self.inputMode = inputMode
+        self.alwaysDisplayInputModeSelector = alwaysDisplayInputModeSelector
         self.toggleInputMode = toggleInputMode
         self.tag = tag
     }
@@ -156,6 +159,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.inputMode != rhs.inputMode {
+            return false
+        }
+        if lhs.alwaysDisplayInputModeSelector != rhs.alwaysDisplayInputModeSelector {
             return false
         }
 
@@ -490,15 +496,17 @@ public final class ListComposePollOptionComponent: Component {
                         ComponentTransition.immediate.setScale(view: modeSelectorView, scale: 0.001)
                     }
                     
-                    if playAnimation, let animationView = modeSelectorView.contentView as? LottieComponent.View {
-                        animationView.playOnce()
+                    if let animationView = modeSelectorView.contentView as? LottieComponent.View {
+                        if playAnimation {
+                            animationView.playOnce()
+                        }
                     }
                     
                     modeSelectorTransition.setPosition(view: modeSelectorView, position: modeSelectorFrame.center)
                     modeSelectorTransition.setBounds(view: modeSelectorView, bounds: CGRect(origin: CGPoint(), size: modeSelectorFrame.size))
                     
                     if let externalState = component.externalState {
-                        let displaySelector = externalState.isEditing
+                        let displaySelector = externalState.isEditing || component.alwaysDisplayInputModeSelector
                         
                         alphaTransition.setAlpha(view: modeSelectorView, alpha: displaySelector ? 1.0 : 0.0)
                         alphaTransition.setScale(view: modeSelectorView, scale: displaySelector ? 1.0 : 0.001)

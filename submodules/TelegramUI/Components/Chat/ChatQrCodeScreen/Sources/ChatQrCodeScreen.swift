@@ -2286,7 +2286,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                             }
                         } else {
                             let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false, storeAfterDownload: nil)
-                            let videoNode = UniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
+                            let videoNode = UniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status
                             |> deliverOnMainQueue).startStrict(next: { [weak self] status in

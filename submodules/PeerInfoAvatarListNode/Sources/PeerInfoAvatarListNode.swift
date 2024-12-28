@@ -366,7 +366,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         }
         
         let mediaManager = self.context.sharedContext.mediaManager
-        let videoNode = UniversalVideoNode(accountId: self.context.account.id, postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
+        let videoNode = UniversalVideoNode(context: self.context, postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
         videoNode.isUserInteractionEnabled = false
         videoNode.canAttachContent = true
         videoNode.isHidden = true

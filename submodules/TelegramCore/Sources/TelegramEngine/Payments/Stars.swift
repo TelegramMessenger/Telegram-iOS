@@ -1418,12 +1418,13 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                     case .starsChatSubscription:
                         let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
                         if let first = chats.first {
-                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id, uniqueStarGift: nil)
                         }
                     default:
                         break
                     }
                     var receiptMessageId: MessageId?
+                    var resultGift: ProfileGiftsContext.State.StarGift?
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -1463,12 +1464,28 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                         case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer:
                                             receiptMessageId = nil
                                         }
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
+                                        resultGift = ProfileGiftsContext.State.StarGift(
+                                            gift: gift,
+                                            fromPeer: nil,
+                                            date: message.timestamp,
+                                            text: nil,
+                                            entities: nil,
+                                            messageId: messageId,
+                                            nameHidden: false,
+                                            savedToProfile: savedToProfile,
+                                            convertStars: nil,
+                                            canUpgrade: false,
+                                            canExportDate: canExportDate,
+                                            upgradeStars: nil,
+                                            transferStars: transferStars
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil, uniqueStarGift: resultGift)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

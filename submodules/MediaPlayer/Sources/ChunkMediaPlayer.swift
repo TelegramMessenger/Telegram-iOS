@@ -9,7 +9,7 @@ import TelegramAudio
 public final class ChunkMediaPlayerPart {
     public enum Id: Hashable {
         case tempFile(path: String)
-        case directFile(path: String, audio: DirectStream?, video: DirectStream?)
+        case directStream
     }
     
     public struct DirectStream: Hashable {
@@ -26,51 +26,29 @@ public final class ChunkMediaPlayerPart {
         }
     }
     
-    public enum Content {
-        public final class TempFile {
-            public let file: TempBoxFile
-            
-            public init(file: TempBoxFile) {
-                self.file = file
-            }
-            
-            deinit {
-                TempBox.shared.dispose(self.file)
-            }
+    public final class TempFile {
+        public let file: TempBoxFile
+        
+        public init(file: TempBoxFile) {
+            self.file = file
         }
         
-        public final class FFMpegDirectFile {
-            public let path: String
-            public let audio: DirectStream?
-            public let video: DirectStream?
-            
-            public init(path: String, audio: DirectStream?, video: DirectStream?) {
-                self.path = path
-                self.audio = audio
-                self.video = video
-            }
+        deinit {
+            TempBox.shared.dispose(self.file)
         }
-        
-        case tempFile(TempFile)
-        case directFile(FFMpegDirectFile)
     }
     
     public let startTime: Double
     public let endTime: Double
-    public let content: Content
+    public let content: TempFile
     public let clippedStartTime: Double?
     public let codecName: String?
     
     public var id: Id {
-        switch self.content {
-        case let .tempFile(tempFile):
-            return .tempFile(path: tempFile.file.path)
-        case let .directFile(directFile):
-            return .directFile(path: directFile.path, audio: directFile.audio, video: directFile.video)
-        }
+        return .tempFile(path: self.content.file.path)
     }
     
-    public init(startTime: Double, clippedStartTime: Double? = nil, endTime: Double, content: Content, codecName: String?) {
+    public init(startTime: Double, clippedStartTime: Double? = nil, endTime: Double, content: TempFile, codecName: String?) {
         self.startTime = startTime
         self.clippedStartTime = clippedStartTime
         self.endTime = endTime
@@ -80,12 +58,63 @@ public final class ChunkMediaPlayerPart {
 }
 
 public final class ChunkMediaPlayerPartsState {
-    public let duration: Double?
-    public let parts: [ChunkMediaPlayerPart]
+    public final class DirectReader {
+        public struct Stream {
+            public let mediaBox: MediaBox
+            public let resource: MediaResource
+            public let size: Int64
+            public let index: Int
+            public let seek: (streamIndex: Int, pts: Int64)
+            public let maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
+            public let codecName: String?
+            
+            public init(mediaBox: MediaBox, resource: MediaResource, size: Int64, index: Int, seek: (streamIndex: Int, pts: Int64), maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?, codecName: String?) {
+                self.mediaBox = mediaBox
+                self.resource = resource
+                self.size = size
+                self.index = index
+                self.seek = seek
+                self.maxReadablePts = maxReadablePts
+                self.codecName = codecName
+            }
+        }
+        
+        public final class Impl {
+            public let video: Stream?
+            public let audio: Stream?
+            
+            public init(video: Stream?, audio: Stream?) {
+                self.video = video
+                self.audio = audio
+            }
+        }
+        
+        public let id: Int
+        public let seekPosition: Double
+        public let availableUntilPosition: Double
+        public let bufferedUntilEnd: Bool
+        public let impl: Impl?
+        
+        public init(id: Int, seekPosition: Double, availableUntilPosition: Double, bufferedUntilEnd: Bool, impl: Impl?) {
+            self.id = id
+            self.seekPosition = seekPosition
+            self.availableUntilPosition = availableUntilPosition
+            self.bufferedUntilEnd = bufferedUntilEnd
+            self.impl = impl
+        }
+    }
     
-    public init(duration: Double?, parts: [ChunkMediaPlayerPart]) {
+    public enum Content {
+        case parts([ChunkMediaPlayerPart])
+        case directReader(DirectReader)
+    }
+    
+    public let duration: Double?
+    public let content: Content
+    
+    public init(duration: Double?, content: Content) {
         self.duration = duration
-        self.parts = parts
+        self.content = content
     }
 }
 

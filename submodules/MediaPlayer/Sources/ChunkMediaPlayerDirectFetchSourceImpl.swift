@@ -6,390 +6,454 @@ import TelegramCore
 import FFMpegBinding
 import RangeSet
 
-private final class FFMpegMediaFrameExtractContext {
-    let fd: Int32
-    var readPosition: Int = 0
-    let size: Int
+private func FFMpegLookaheadReader_readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
+    let context = Unmanaged<FFMpegLookaheadReader>.fromOpaque(userData!).takeUnretainedValue()
     
-    var accessedRanges = RangeSet<Int>()
-    var maskRanges: RangeSet<Int>?
-    var recordAccessedRanges = false
+    let readCount = min(256 * 1024, Int64(bufferSize))
+    let requestRange: Range<Int64> = context.readingOffset ..< (context.readingOffset + readCount)
     
-    init(fd: Int32, size: Int) {
-        self.fd = fd
-        self.size = size
+    var fetchedData: Data?
+    let fetchDisposable = MetaDisposable()
+    
+    let semaphore = DispatchSemaphore(value: 0)
+    let disposable = context.params.getDataInRange(requestRange, { data in
+        if let data {
+            fetchedData = data
+            semaphore.signal()
+        }
+    })
+    var isCancelled = false
+    let cancelDisposable = context.params.cancel.start(next: { _ in
+        isCancelled = true
+        semaphore.signal()
+    })
+    semaphore.wait()
+    
+    if isCancelled {
+        context.isCancelled = true
     }
-}
-
-private func FFMpegMediaFrameExtractContextReadPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
-    let context = Unmanaged<FFMpegMediaFrameExtractContext>.fromOpaque(userData!).takeUnretainedValue()
-    if context.recordAccessedRanges {
-        context.accessedRanges.insert(contentsOf: context.readPosition ..< (context.readPosition + Int(bufferSize)))
-    }
     
-    let result: Int
-    if let maskRanges = context.maskRanges {
-        let readRange = context.readPosition ..< (context.readPosition + Int(bufferSize))
-        let _ = maskRanges
-        let _ = readRange
-        result = read(context.fd, buffer, Int(bufferSize))
+    disposable.dispose()
+    cancelDisposable.dispose()
+    fetchDisposable.dispose()
+    
+    if let fetchedData = fetchedData {
+        fetchedData.withUnsafeBytes { byteBuffer -> Void in
+            guard let bytes = byteBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return
+            }
+            memcpy(buffer, bytes, fetchedData.count)
+        }
+        let fetchedCount = Int32(fetchedData.count)
+        context.setReadingOffset(offset: context.readingOffset + Int64(fetchedCount))
+        if fetchedCount == 0 {
+            return FFMPEG_CONSTANT_AVERROR_EOF
+        }
+        return fetchedCount
     } else {
-        result = read(context.fd, buffer, Int(bufferSize))
-    }
-    context.readPosition += Int(bufferSize)
-    if result == 0 {
         return FFMPEG_CONSTANT_AVERROR_EOF
     }
-    return Int32(result)
 }
 
-private func FFMpegMediaFrameExtractContextSeekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
-    let context = Unmanaged<FFMpegMediaFrameExtractContext>.fromOpaque(userData!).takeUnretainedValue()
+private func FFMpegLookaheadReader_seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
+    let context = Unmanaged<FFMpegLookaheadReader>.fromOpaque(userData!).takeUnretainedValue()
     if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
-        return Int64(context.size)
+        return context.params.size
     } else {
-        context.readPosition = Int(offset)
-        lseek(context.fd, off_t(offset), SEEK_SET)
+        context.setReadingOffset(offset: offset)
+        
         return offset
     }
 }
 
-private struct FFMpegFrameSegment {
-    struct Stream {
-        let index: Int
-        let startPts: CMTime
-        let startPosition: Int64
-        var endPts: CMTime
-        var endPosition: Int64
-        var duration: Double
-    }
-    
-    var audio: Stream?
-    var video: Stream?
-    
-    init() {
-    }
-    
-    mutating func addFrame(isVideo: Bool, index: Int, pts: CMTime, duration: Double, position: Int64, size: Int64) {
-        if var stream = isVideo ? self.video : self.audio {
-            stream.endPts = pts
-            stream.duration += duration
-            stream.endPosition = max(stream.endPosition, position + size)
-            if isVideo {
-                self.video = stream
-            } else {
-                self.audio = stream
-            }
-        } else {
-            let stream = Stream(index: index, startPts: pts, startPosition: position, endPts: pts, endPosition: position + size, duration: duration)
-            if isVideo {
-                self.video = stream
-            } else {
-                self.audio = stream
-            }
-        }
-    }
+private func range(_ outer: Range<Int64>, fullyContains inner: Range<Int64>) -> Bool {
+    return inner.lowerBound >= outer.lowerBound && inner.upperBound <= outer.upperBound
 }
 
-private final class FFMpegFrameSegmentInfo {
-    let headerAccessRanges: RangeSet<Int>
-    let segments: [FFMpegFrameSegment]
+private final class FFMpegLookaheadReader {
+    let params: FFMpegLookaheadThread.Params
     
-    init(headerAccessRanges: RangeSet<Int>, segments: [FFMpegFrameSegment]) {
-        self.headerAccessRanges = headerAccessRanges
-        self.segments = segments
-    }
-}
-
-private func extractFFMpegFrameSegmentInfo(path: String) -> FFMpegFrameSegmentInfo? {
-    let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+    var avIoContext: FFMpegAVIOContext?
+    var avFormatContext: FFMpegAVFormatContext?
     
-    var s = stat()
-    stat(path, &s)
-    let size = Int32(s.st_size)
+    var audioStream: FFMpegFileReader.StreamInfo?
+    var videoStream: FFMpegFileReader.StreamInfo?
     
-    let fd = open(path, O_RDONLY, S_IRUSR)
-    if fd < 0 {
-        return nil
-    }
-    defer {
-        close(fd)
-    }
+    var seekInfo: FFMpegLookaheadThread.State.Seek?
+    var maxReadPts: FFMpegLookaheadThread.State.Seek?
+    var audioStreamState: FFMpegLookaheadThread.StreamState?
+    var videoStreamState: FFMpegLookaheadThread.StreamState?
     
-    let avFormatContext = FFMpegAVFormatContext()
-    let ioBufferSize = 32 * 1024
+    var reportedState: FFMpegLookaheadThread.State?
     
-    let context = FFMpegMediaFrameExtractContext(fd: fd, size: Int(size))
-    context.recordAccessedRanges = true
+    var readingOffset: Int64 = 0
+    var isCancelled: Bool = false
+    var isEnded: Bool = false
     
-    guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(context).toOpaque(), readPacket: FFMpegMediaFrameExtractContextReadPacketCallback, writePacket: nil, seek: FFMpegMediaFrameExtractContextSeekCallback, isSeekable: true) else {
-        return nil
-    }
+    private var currentFetchRange: Range<Int64>?
+    private var currentFetchDisposable: Disposable?
     
-    avFormatContext.setIO(avIoContext)
+    var currentTimestamp: Double?
     
-    if !avFormatContext.openInput(withDirectFilePath: nil) {
-        return nil
-    }
-    
-    if !avFormatContext.findStreamInfo() {
-        return nil
-    }
-    
-    var audioStream: FFMpegMediaInfo.Info?
-    var videoStream: FFMpegMediaInfo.Info?
-    
-    for typeIndex in 0 ..< 2 {
-        let isVideo = typeIndex == 0
+    init?(params: FFMpegLookaheadThread.Params) {
+        self.params = params
         
-        for streamIndexNumber in avFormatContext.streamIndices(for: isVideo ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio) {
-            let streamIndex = streamIndexNumber.int32Value
-            if avFormatContext.isAttachedPic(atStreamIndex: streamIndex) {
-                continue
-            }
-            
-            let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
-            let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
-            
-            let startTime: CMTime
-            let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
-            if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
-                startTime = CMTime(value: 0, timescale: timebase.timescale)
-            } else {
-                startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
-            }
-            var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
-            duration = CMTimeMaximum(CMTime(value: 0, timescale: duration.timescale), CMTimeSubtract(duration, startTime))
-            
-            var codecName: String?
-            let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
-            if codecId == FFMpegCodecIdMPEG4 {
-                codecName = "mpeg4"
-            } else if codecId == FFMpegCodecIdH264 {
-                codecName = "h264"
-            } else if codecId == FFMpegCodecIdHEVC {
-                codecName = "hevc"
-            } else if codecId == FFMpegCodecIdAV1 {
-                codecName = "av1"
-            } else if codecId == FFMpegCodecIdVP9 {
-                codecName = "vp9"
-            } else if codecId == FFMpegCodecIdVP8 {
-                codecName = "vp8"
-            }
-            
-            let info = FFMpegMediaInfo.Info(
-                index: Int(streamIndex),
-                timescale: timebase.timescale,
-                startTime: startTime,
-                duration: duration,
-                fps: fps,
-                codecName: codecName
-            )
-            
-            if isVideo {
-                videoStream = info
-            } else {
-                audioStream = info
-            }
+        let ioBufferSize = 64 * 1024
+        
+        guard let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: FFMpegLookaheadReader_readPacketCallback, writePacket: nil, seek: FFMpegLookaheadReader_seekCallback, isSeekable: true) else {
+            return nil
         }
-    }
-    
-    var segments: [FFMpegFrameSegment] = []
-    let maxSegmentDuration: Double = 5.0
-    
-    if let videoStream {
-        let indexEntryCount = avFormatContext.numberOfIndexEntries(atStreamIndex: Int32(videoStream.index))
+        self.avIoContext = avIoContext
         
-        if indexEntryCount > 0 {
-            let frameDuration = 1.0 / videoStream.fps.seconds
-            
-            var indexEntry = FFMpegAVIndexEntry()
-            for i in 0 ..< indexEntryCount {
-                if !avFormatContext.fillIndexEntry(atStreamIndex: Int32(videoStream.index), entryIndex: Int32(i), outEntry: &indexEntry) {
+        let avFormatContext = FFMpegAVFormatContext()
+        avFormatContext.setIO(avIoContext)
+        
+        if !avFormatContext.openInput(withDirectFilePath: nil) {
+            return nil
+        }
+        if !avFormatContext.findStreamInfo() {
+            return nil
+        }
+        
+        self.avFormatContext = avFormatContext
+        
+        var audioStream: FFMpegFileReader.StreamInfo?
+        var videoStream: FFMpegFileReader.StreamInfo?
+        
+        for streamType in 0 ..< 2 {
+            let isVideo = streamType == 0
+            for streamIndexNumber in avFormatContext.streamIndices(for: isVideo ? FFMpegAVFormatStreamTypeVideo : FFMpegAVFormatStreamTypeAudio) {
+                let streamIndex = streamIndexNumber.int32Value
+                if avFormatContext.isAttachedPic(atStreamIndex: streamIndex) {
                     continue
                 }
                 
-                let packetPts = CMTime(value: indexEntry.timestamp, timescale: videoStream.timescale)
-                //print("index: \(packetPts.seconds), isKeyframe: \(indexEntry.isKeyframe), position: \(indexEntry.pos), size: \(indexEntry.size)")
+                let codecId = avFormatContext.codecId(atStreamIndex: streamIndex)
                 
-                var startNewSegment = segments.isEmpty
-                if indexEntry.isKeyframe {
-                    if segments.isEmpty {
-                        startNewSegment = true
-                    } else if let video = segments[segments.count - 1].video {
-                        if packetPts.seconds - video.startPts.seconds > maxSegmentDuration {
-                            startNewSegment = true
-                        }
-                    }
-                }
+                let fpsAndTimebase = avFormatContext.fpsAndTimebase(forStreamIndex: streamIndex, defaultTimeBase: CMTimeMake(value: 1, timescale: 40000))
+                let (fps, timebase) = (fpsAndTimebase.fps, fpsAndTimebase.timebase)
                 
-                if startNewSegment {
-                    segments.append(FFMpegFrameSegment())
+                let startTime: CMTime
+                let rawStartTime = avFormatContext.startTime(atStreamIndex: streamIndex)
+                if rawStartTime == Int64(bitPattern: 0x8000000000000000 as UInt64) {
+                    startTime = CMTime(value: 0, timescale: timebase.timescale)
+                } else {
+                    startTime = CMTimeMake(value: rawStartTime, timescale: timebase.timescale)
                 }
-                segments[segments.count - 1].addFrame(isVideo: true, index: videoStream.index, pts: packetPts, duration: frameDuration, position: indexEntry.pos, size: Int64(indexEntry.size))
-            }
-            if !segments.isEmpty, let video = segments[segments.count - 1].video {
-                if video.endPts.seconds + 1.0 / videoStream.fps.seconds + 0.001 < videoStream.duration.seconds {
-                    segments[segments.count - 1].video?.duration = videoStream.duration.seconds - video.startPts.seconds
-                    segments[segments.count - 1].video?.endPts = videoStream.duration
+                var duration = CMTimeMake(value: avFormatContext.duration(atStreamIndex: streamIndex), timescale: timebase.timescale)
+                duration = CMTimeMaximum(CMTime(value: 0, timescale: duration.timescale), CMTimeSubtract(duration, startTime))
+                
+                //let metrics = avFormatContext.metricsForStream(at: streamIndex)
+                //let rotationAngle: Double = metrics.rotationAngle
+                //let aspect = Double(metrics.width) / Double(metrics.height)
+                
+                let stream = FFMpegFileReader.StreamInfo(
+                    index: streamIndexNumber.intValue,
+                    codecId: codecId,
+                    startTime: startTime,
+                    duration: duration,
+                    timeBase: timebase.value,
+                    timeScale: timebase.timescale,
+                    fps: fps
+                )
+                
+                if isVideo {
+                    videoStream = stream
+                } else {
+                    audioStream = stream
                 }
             }
         }
+        
+        self.audioStream = audioStream
+        self.videoStream = videoStream
+        
+        if let preferredStream = self.videoStream ?? self.audioStream {
+            let pts = CMTimeMakeWithSeconds(params.seekToTimestamp, preferredTimescale: preferredStream.timeScale)
+            self.seekInfo = FFMpegLookaheadThread.State.Seek(streamIndex: preferredStream.index, pts: pts.value)
+            avFormatContext.seekFrame(forStreamIndex: Int32(preferredStream.index), pts: pts.value, positionOnKeyframe: true)
+        }
+        
+        self.updateCurrentTimestamp()
     }
-    if let audioStream {
-        let indexEntryCount = avFormatContext.numberOfIndexEntries(atStreamIndex: Int32(audioStream.index))
-        if indexEntryCount > 0 {
-            var minSegmentIndex = 0
-            var minSegmentStartTime: Double = -100000.0
-            
-            let frameDuration = 1.0 / audioStream.fps.seconds
-            
-            var indexEntry = FFMpegAVIndexEntry()
-            for i in 0 ..< indexEntryCount {
-                if !avFormatContext.fillIndexEntry(atStreamIndex: Int32(audioStream.index), entryIndex: Int32(i), outEntry: &indexEntry) {
-                    continue
-                }
-                
-                let packetPts = CMTime(value: indexEntry.timestamp, timescale: audioStream.timescale)
-                //print("index: \(packetPts.value), timestamp: \(packetPts.seconds), isKeyframe: \(indexEntry.isKeyframe), position: \(indexEntry.pos), size: \(indexEntry.size)")
-                
-                if videoStream != nil {
-                    for i in minSegmentIndex ..< segments.count {
-                        if let video = segments[i].video {
-                            if minSegmentStartTime <= packetPts.seconds && video.endPts.seconds >= packetPts.seconds {
-                                segments[i].addFrame(isVideo: false, index: audioStream.index, pts: packetPts, duration: frameDuration, position: indexEntry.pos, size: Int64(indexEntry.size))
-                                if minSegmentIndex != i {
-                                    minSegmentIndex = i
-                                    minSegmentStartTime = video.startPts.seconds
-                                }
-                                break
-                            }
-                        }
+    
+    deinit {
+        self.currentFetchDisposable?.dispose()
+    }
+    
+    func setReadingOffset(offset: Int64) {
+        self.readingOffset = offset
+        
+        let readRange: Range<Int64> = offset ..< (offset + 512 * 1024)
+        if !self.params.isDataCachedInRange(readRange) {
+            if let currentFetchRange = self.currentFetchRange {
+                if currentFetchRange.overlaps(readRange) {
+                    if !range(currentFetchRange, fullyContains: readRange) {
+                        self.setFetchRange(range: currentFetchRange.lowerBound ..< max(currentFetchRange.upperBound, readRange.upperBound + 2 * 1024 * 1024))
                     }
                 } else {
-                    if segments.isEmpty {
-                        segments.append(FFMpegFrameSegment())
-                    }
-                    segments[segments.count - 1].addFrame(isVideo: false, index: audioStream.index, pts: packetPts, duration: frameDuration, position: indexEntry.pos, size: Int64(indexEntry.size))
+                    self.setFetchRange(range: offset ..< (offset + 2 * 1024 * 1024))
                 }
-            }
-        }
-        if !segments.isEmpty, let audio = segments[segments.count - 1].audio {
-            if audio.endPts.seconds + 0.001 < audioStream.duration.seconds {
-                segments[segments.count - 1].audio?.duration = audioStream.duration.seconds - audio.startPts.seconds
-                segments[segments.count - 1].audio?.endPts = audioStream.duration
+            } else {
+                self.setFetchRange(range: offset ..< (offset + 2 * 1024 * 1024))
             }
         }
     }
     
-    let headerAccessRanges = context.accessedRanges
+    private func setFetchRange(range: Range<Int64>) {
+        if self.currentFetchRange != range {
+            self.currentFetchRange = range
+            
+            self.currentFetchDisposable?.dispose()
+            self.currentFetchDisposable = self.params.fetchInRange(range)
+        }
+    }
     
-    for i in 1 ..< segments.count {
-        let segment = segments[i]
+    func updateCurrentTimestamp() {
+        self.currentTimestamp = self.params.currentTimestamp.with({ $0 })
         
-        if let video = segment.video {
-            context.maskRanges = headerAccessRanges
-            context.maskRanges?.insert(contentsOf: Int(video.startPosition) ..< Int(video.endPosition))
+        self.updateReadIfNeeded()
+    }
+    
+    private func updateReadIfNeeded() {
+        guard let avFormatContext = self.avFormatContext else {
+            return
+        }
+        guard let currentTimestamp = self.currentTimestamp else {
+            return
+        }
+        
+        let maxPtsSeconds = max(self.params.seekToTimestamp, currentTimestamp) + 10.0
+        
+        var currentAudioPtsSecondsAdvanced: Double = 0.0
+        var currentVideoPtsSecondsAdvanced: Double = 0.0
+        
+        let packet = FFMpegPacket()
+        while !self.isCancelled && !self.isEnded {
+            var audioAlreadyRead: Bool = false
+            var videoAlreadyRead: Bool = false
             
-            context.accessedRanges = RangeSet()
-            context.recordAccessedRanges = true
-            
-            avFormatContext.seekFrame(forStreamIndex: Int32(video.index), byteOffset: video.startPosition)
-            
-            let packet = FFMpegPacket()
-            while true {
-                if !avFormatContext.readFrame(into: packet) {
-                    break
+            if let audioStreamState = self.audioStreamState {
+                if audioStreamState.readableToTime.seconds >= maxPtsSeconds {
+                    audioAlreadyRead = true
                 }
-                
-                if Int(packet.streamIndex) == video.index {
-                    let packetPts = CMTime(value: packet.pts, timescale: video.startPts.timescale)
-                    if packetPts.value >= video.endPts.value {
-                        break
-                    }
-                }
+            } else if self.audioStream == nil {
+                audioAlreadyRead = true
             }
             
-            print("Segment \(i): \(video.startPosition) ..< \(video.endPosition) accessed \(context.accessedRanges.ranges)")
+            if let videoStreamState = self.videoStreamState {
+                if videoStreamState.readableToTime.seconds >= maxPtsSeconds {
+                    videoAlreadyRead = true
+                }
+            } else if self.videoStream == nil {
+                videoAlreadyRead = true
+            }
+            
+            if audioAlreadyRead && videoAlreadyRead {
+                break
+            }
+            
+            if !avFormatContext.readFrame(into: packet) {
+                self.isEnded = true
+                break
+            }
+            
+            self.maxReadPts = FFMpegLookaheadThread.State.Seek(streamIndex: Int(packet.streamIndex), pts: packet.pts)
+            
+            if let audioStream = self.audioStream, Int(packet.streamIndex) == audioStream.index {
+                let pts = CMTimeMake(value: packet.pts, timescale: audioStream.timeScale)
+                if let audioStreamState = self.audioStreamState {
+                    currentAudioPtsSecondsAdvanced += pts.seconds - audioStreamState.readableToTime.seconds
+                }
+                self.audioStreamState = FFMpegLookaheadThread.StreamState(
+                    info: audioStream,
+                    readableToTime: pts
+                )
+            } else if let videoStream = self.videoStream, Int(packet.streamIndex) == videoStream.index {
+                let pts = CMTimeMake(value: packet.pts, timescale: videoStream.timeScale)
+                if let videoStreamState = self.videoStreamState {
+                    currentVideoPtsSecondsAdvanced += pts.seconds - videoStreamState.readableToTime.seconds
+                }
+                self.videoStreamState = FFMpegLookaheadThread.StreamState(
+                    info: videoStream,
+                    readableToTime: pts
+                )
+            }
+            
+            if min(currentAudioPtsSecondsAdvanced, currentVideoPtsSecondsAdvanced) >= 0.1 {
+                self.reportStateIfNeeded()
+            }
+        }
+        
+        self.reportStateIfNeeded()
+    }
+    
+    private func reportStateIfNeeded() {
+        guard let seekInfo = self.seekInfo else {
+            return
+        }
+        var stateIsFullyInitialised = true
+        if self.audioStream != nil && self.audioStreamState == nil {
+            stateIsFullyInitialised = false
+        }
+        if self.videoStream != nil && self.videoStreamState == nil {
+            stateIsFullyInitialised = false
+        }
+        
+        let state = FFMpegLookaheadThread.State(
+            seek: seekInfo,
+            maxReadablePts: self.maxReadPts,
+            audio: (stateIsFullyInitialised && self.maxReadPts != nil) ? self.audioStreamState : nil,
+            video: (stateIsFullyInitialised && self.maxReadPts != nil) ? self.videoStreamState : nil,
+            isEnded: self.isEnded
+        )
+        if self.reportedState != state {
+            self.reportedState = state
+            self.params.updateState(state)
+        }
+    }
+}
+
+private final class FFMpegLookaheadThread: NSObject {
+    struct StreamState: Equatable {
+        let info: FFMpegFileReader.StreamInfo
+        let readableToTime: CMTime
+        
+        init(info: FFMpegFileReader.StreamInfo, readableToTime: CMTime) {
+            self.info = info
+            self.readableToTime = readableToTime
         }
     }
     
-    /*{
-        if let videoStream {
-            avFormatContext.seekFrame(forStreamIndex: Int32(videoStream.index), pts: 0, positionOnKeyframe: true)
+    struct State: Equatable {
+        struct Seek: Equatable {
+            var streamIndex: Int
+            var pts: Int64
             
-            let packet = FFMpegPacket()
-            while true {
-                if !avFormatContext.readFrame(into: packet) {
-                    break
-                }
-                
-                if Int(packet.streamIndex) == videoStream.index {
-                    let packetPts = CMTime(value: packet.pts, timescale: videoStream.timescale)
-                    let packetDuration = CMTime(value: packet.duration, timescale: videoStream.timescale)
-                    
-                    var startNewSegment = segments.isEmpty
-                    if packet.isKeyframe {
-                        if segments.isEmpty {
-                            startNewSegment = true
-                        } else if let video = segments[segments.count - 1].video {
-                            if packetPts.seconds - video.startPts.seconds > maxSegmentDuration {
-                                startNewSegment = true
-                            }
-                        }
-                    }
-                    
-                    if startNewSegment {
-                        segments.append(FFMpegFrameSegment())
-                    }
-                    segments[segments.count - 1].addFrame(isVideo: true, index: Int(packet.streamIndex), pts: packetPts, duration: packetDuration.seconds)
-                }
+            init(streamIndex: Int, pts: Int64) {
+                self.streamIndex = streamIndex
+                self.pts = pts
             }
         }
-        if let audioStream {
-            avFormatContext.seekFrame(forStreamIndex: Int32(audioStream.index), pts: 0, positionOnKeyframe: true)
-            
-            var minSegmentIndex = 0
-            
-            let packet = FFMpegPacket()
-            while true {
-                if !avFormatContext.readFrame(into: packet) {
-                    break
-                }
-                
-                if Int(packet.streamIndex) == audioStream.index {
-                    let packetPts = CMTime(value: packet.pts, timescale: audioStream.timescale)
-                    let packetDuration = CMTime(value: packet.duration, timescale: audioStream.timescale)
-                    
-                    if videoStream != nil {
-                        for i in minSegmentIndex ..< segments.count {
-                            if let video = segments[i].video {
-                                if video.startPts.seconds <= packetPts.seconds && video.endPts.seconds >= packetPts.seconds {
-                                    segments[i].addFrame(isVideo: false, index: Int(audioStream.index), pts: packetPts, duration: packetDuration.seconds)
-                                    minSegmentIndex = i
-                                    break
-                                }
-                            }
-                        }
-                    } else {
-                        if segments.isEmpty {
-                            segments.append(FFMpegFrameSegment())
-                        }
-                        segments[segments.count - 1].addFrame(isVideo: false, index: Int(packet.streamIndex), pts: packetPts, duration: packetDuration.seconds)
-                    }
-                }
+        
+        let seek: Seek
+        let maxReadablePts: Seek?
+        let audio: StreamState?
+        let video: StreamState?
+        let isEnded: Bool
+        
+        init(seek: Seek, maxReadablePts: Seek?, audio: StreamState?, video: StreamState?, isEnded: Bool) {
+            self.seek = seek
+            self.maxReadablePts = maxReadablePts
+            self.audio = audio
+            self.video = video
+            self.isEnded = isEnded
+        }
+    }
+    
+    final class Params: NSObject {
+        let seekToTimestamp: Double
+        let updateState: (State) -> Void
+        let fetchInRange: (Range<Int64>) -> Disposable
+        let getDataInRange: (Range<Int64>, @escaping (Data?) -> Void) -> Disposable
+        let isDataCachedInRange: (Range<Int64>) -> Bool
+        let size: Int64
+        let cancel: Signal<Void, NoError>
+        let currentTimestamp: Atomic<Double?>
+        
+        init(
+            seekToTimestamp: Double,
+            updateState: @escaping (State) -> Void,
+            fetchInRange: @escaping (Range<Int64>) -> Disposable,
+            getDataInRange: @escaping (Range<Int64>, @escaping (Data?) -> Void) -> Disposable,
+            isDataCachedInRange: @escaping (Range<Int64>) -> Bool,
+            size: Int64,
+            cancel: Signal<Void, NoError>,
+            currentTimestamp: Atomic<Double?>
+        ) {
+            self.seekToTimestamp = seekToTimestamp
+            self.updateState = updateState
+            self.fetchInRange = fetchInRange
+            self.getDataInRange = getDataInRange
+            self.isDataCachedInRange = isDataCachedInRange
+            self.size = size
+            self.cancel = cancel
+            self.currentTimestamp = currentTimestamp
+        }
+    }
+    
+    @objc static func entryPoint(_ params: Params) {
+        let runLoop = RunLoop.current
+        
+        let timer = Timer(fireAt: .distantFuture, interval: 0.0, target: FFMpegLookaheadThread.self, selector: #selector(FFMpegLookaheadThread.none), userInfo: nil, repeats: false)
+        runLoop.add(timer, forMode: .common)
+        
+        Thread.current.threadDictionary["FFMpegLookaheadThread_reader"] = FFMpegLookaheadReader(params: params)
+        
+        while true {
+            runLoop.run(mode: .default, before: .distantFuture)
+            if Thread.current.threadDictionary["FFMpegLookaheadThread_stop"] != nil {
+                break
             }
         }
-    }*/
+        
+        Thread.current.threadDictionary.removeObject(forKey: "FFMpegLookaheadThread_params")
+    }
     
-    /*for i in 0 ..< segments.count {
-        print("Segment \(i):\n  video \(segments[i].video?.startPts.seconds ?? -1.0) ... \(segments[i].video?.endPts.seconds ?? -1.0)\n  audio \(segments[i].audio?.startPts.seconds ?? -1.0) ... \(segments[i].audio?.endPts.seconds ?? -1.0)")
-    }*/
+    @objc static func none() {
+    }
     
-    return FFMpegFrameSegmentInfo(
-        headerAccessRanges: context.accessedRanges,
-        segments: segments
-    )
+    @objc static func stop() {
+        Thread.current.threadDictionary["FFMpegLookaheadThread_stop"] = "true"
+    }
+    
+    @objc static func updateCurrentTimestamp() {
+        if let reader = Thread.current.threadDictionary["FFMpegLookaheadThread_reader"] as? FFMpegLookaheadReader {
+            reader.updateCurrentTimestamp()
+        }
+    }
+}
+
+private final class FFMpegLookahead {
+    private let cancel = Promise<Void>()
+    private let currentTimestamp = Atomic<Double?>(value: nil)
+    private let thread: Thread
+    
+    init(
+        seekToTimestamp: Double,
+        updateState: @escaping (FFMpegLookaheadThread.State) -> Void,
+        fetchInRange: @escaping (Range<Int64>) -> Disposable,
+        getDataInRange: @escaping (Range<Int64>, @escaping (Data?) -> Void) -> Disposable,
+        isDataCachedInRange: @escaping (Range<Int64>) -> Bool,
+        size: Int64
+    ) {
+        self.thread = Thread(
+            target: FFMpegLookaheadThread.self,
+            selector: #selector(FFMpegLookaheadThread.entryPoint(_:)),
+            object: FFMpegLookaheadThread.Params(
+                seekToTimestamp: seekToTimestamp,
+                updateState: updateState,
+                fetchInRange: fetchInRange,
+                getDataInRange: getDataInRange,
+                isDataCachedInRange: isDataCachedInRange,
+                size: size,
+                cancel: self.cancel.get(),
+                currentTimestamp: self.currentTimestamp
+            )
+        )
+        self.thread.name = "FFMpegLookahead"
+        self.thread.start()
+    }
+    
+    deinit {
+        self.cancel.set(.single(Void()))
+        FFMpegLookaheadThread.self.perform(#selector(FFMpegLookaheadThread.stop), on: self.thread, with: nil, waitUntilDone: false)
+    }
+    
+    func updateCurrentTimestamp(timestamp: Double) {
+        let _ = self.currentTimestamp.swap(timestamp)
+        FFMpegLookaheadThread.self.perform(#selector(FFMpegLookaheadThread.updateCurrentTimestamp), on: self.thread, with: timestamp as NSNumber, waitUntilDone: false)
+    }
 }
 
 final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
@@ -401,7 +465,10 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
     }
     
     private var completeFetchDisposable: Disposable?
-    private var dataDisposable: Disposable?
+    
+    private var seekTimestamp: Double?
+    private var currentLookaheadId: Int = 0
+    private var lookahead: FFMpegLookahead?
     
     init(resource: ChunkMediaPlayerV2.SourceDescription.ResourceDescription) {
         self.resource = resource
@@ -416,71 +483,134 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
                 preferBackgroundReferenceRevalidation: true
             ).startStrict()
         }
-        
-        self.dataDisposable = (resource.postbox.mediaBox.resourceData(resource.reference.resource)
-        |> deliverOnMainQueue).startStrict(next: { [weak self] data in
-            guard let self else {
-                return
-            }
-            if data.complete {
-                if let mediaInfo = extractFFMpegMediaInfo(path: data.path), let mainTrack = mediaInfo.audio ?? mediaInfo.video, let segmentInfo = extractFFMpegFrameSegmentInfo(path: data.path) {
-                    var parts: [ChunkMediaPlayerPart] = []
-                    for segment in segmentInfo.segments {
-                        guard let mainStream = segment.video ?? segment.audio else {
-                            assertionFailure()
-                            continue
-                        }
-                        parts.append(ChunkMediaPlayerPart(
-                            startTime: mainStream.startPts.seconds,
-                            endTime: mainStream.startPts.seconds + mainStream.duration,
-                            content: .directFile(ChunkMediaPlayerPart.Content.FFMpegDirectFile(
-                                path: data.path,
-                                audio: segment.audio.flatMap { stream in
-                                    return ChunkMediaPlayerPart.DirectStream(
-                                        index: stream.index,
-                                        startPts: stream.startPts,
-                                        endPts: stream.endPts,
-                                        duration: stream.duration
-                                    )
-                                },
-                                video: segment.video.flatMap { stream in
-                                    return ChunkMediaPlayerPart.DirectStream(
-                                        index: stream.index,
-                                        startPts: stream.startPts,
-                                        endPts: stream.endPts,
-                                        duration: stream.duration
-                                    )
-                                }
-                            )),
-                            codecName: mediaInfo.video?.codecName
-                        ))
-                    }
-                    
-                    self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
-                        duration: mainTrack.duration.seconds,
-                        parts: parts
-                    )))
-                } else {
-                    self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
-                        duration: nil,
-                        parts: []
-                    )))
-                }
-            } else {
-                self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
-                    duration: nil,
-                    parts: []
-                )))
-            }
-        })
     }
     
     deinit {
         self.completeFetchDisposable?.dispose()
-        self.dataDisposable?.dispose()
     }
     
-    func updatePlaybackState(position: Double, isPlaying: Bool) {
+    func seek(id: Int, position: Double) {
+        self.seekTimestamp = position
         
+        self.currentLookaheadId += 1
+        let lookaheadId = self.currentLookaheadId
+        
+        let resource = self.resource
+        let updateState: (FFMpegLookaheadThread.State) -> Void = { [weak self] state in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                if self.currentLookaheadId != lookaheadId {
+                    return
+                }
+                guard let mainTrack = state.video ?? state.audio else {
+                    self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
+                        duration: nil,
+                        content: .directReader(ChunkMediaPlayerPartsState.DirectReader(
+                            id: id,
+                            seekPosition: position,
+                            availableUntilPosition: position,
+                            bufferedUntilEnd: true,
+                            impl: nil
+                        ))
+                    )))
+                    
+                    return
+                }
+                
+                var minAvailableUntilPosition: Double?
+                if let audio = state.audio {
+                    if let minAvailableUntilPositionValue = minAvailableUntilPosition {
+                        minAvailableUntilPosition = min(minAvailableUntilPositionValue, audio.readableToTime.seconds)
+                    } else {
+                        minAvailableUntilPosition = audio.readableToTime.seconds
+                    }
+                }
+                if let video = state.video {
+                    if let minAvailableUntilPositionValue = minAvailableUntilPosition {
+                        minAvailableUntilPosition = min(minAvailableUntilPositionValue, video.readableToTime.seconds)
+                    } else {
+                        minAvailableUntilPosition = video.readableToTime.seconds
+                    }
+                }
+                
+                self.partsStateValue.set(.single(ChunkMediaPlayerPartsState(
+                    duration: mainTrack.info.duration.seconds,
+                    content: .directReader(ChunkMediaPlayerPartsState.DirectReader(
+                        id: id,
+                        seekPosition: position,
+                        availableUntilPosition: minAvailableUntilPosition ?? position,
+                        bufferedUntilEnd: state.isEnded,
+                        impl: ChunkMediaPlayerPartsState.DirectReader.Impl(
+                            video: state.video.flatMap { media -> ChunkMediaPlayerPartsState.DirectReader.Stream? in
+                                guard let maxReadablePts = state.maxReadablePts else {
+                                    return nil
+                                }
+                                
+                                return ChunkMediaPlayerPartsState.DirectReader.Stream(
+                                    mediaBox: resource.postbox.mediaBox,
+                                    resource: resource.reference.resource,
+                                    size: resource.size,
+                                    index: media.info.index,
+                                    seek: (streamIndex: state.seek.streamIndex, pts: state.seek.pts),
+                                    maxReadablePts: (streamIndex: maxReadablePts.streamIndex, pts: maxReadablePts.pts, isEnded: state.isEnded),
+                                    codecName: resolveFFMpegCodecName(id: media.info.codecId)
+                                )
+                            },
+                            audio: state.audio.flatMap { media -> ChunkMediaPlayerPartsState.DirectReader.Stream? in
+                                guard let maxReadablePts = state.maxReadablePts else {
+                                    return nil
+                                }
+                                return ChunkMediaPlayerPartsState.DirectReader.Stream(
+                                    mediaBox: resource.postbox.mediaBox,
+                                    resource: resource.reference.resource,
+                                    size: resource.size,
+                                    index: media.info.index,
+                                    seek: (streamIndex: state.seek.streamIndex, pts: state.seek.pts),
+                                    maxReadablePts: (streamIndex: maxReadablePts.streamIndex, pts: maxReadablePts.pts, isEnded: state.isEnded),
+                                    codecName: resolveFFMpegCodecName(id: media.info.codecId)
+                                )
+                            }
+                        )
+                    ))
+                )))
+            }
+        }
+        
+        self.lookahead = FFMpegLookahead(
+            seekToTimestamp: position,
+            updateState: updateState,
+            fetchInRange: { range in
+                return fetchedMediaResource(
+                    mediaBox: resource.postbox.mediaBox,
+                    userLocation: resource.userLocation,
+                    userContentType: resource.userContentType,
+                    reference: resource.reference,
+                    range: (range, .elevated),
+                    statsCategory: resource.statsCategory,
+                    preferBackgroundReferenceRevalidation: true
+                ).startStrict()
+            },
+            getDataInRange: { range, completion in
+                return resource.postbox.mediaBox.resourceData(resource.reference.resource, size: resource.size, in: range, mode: .complete).start(next: { result, isComplete in
+                    completion(isComplete ? result : nil)
+                })
+            },
+            isDataCachedInRange: { range in
+                return resource.postbox.mediaBox.internal_resourceDataIsCached(
+                    id: resource.reference.resource.id,
+                    size: resource.size,
+                    in: range
+                )
+            },
+            size: self.resource.size
+        )
+    }
+    
+    func updatePlaybackState(seekTimestamp: Double, position: Double, isPlaying: Bool) {
+        if self.seekTimestamp == seekTimestamp {
+            self.lookahead?.updateCurrentTimestamp(timestamp: position)
+        }
     }
 }

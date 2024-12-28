@@ -18,15 +18,26 @@ public final class StarsAvatarComponent: Component {
     let peer: StarsContext.State.Transaction.Peer?
     let photo: TelegramMediaWebFile?
     let media: [Media]
+    let uniqueGift: StarGift.UniqueGift?
     let backgroundColor: UIColor
     let size: CGSize?
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer?, photo: TelegramMediaWebFile?, media: [Media], backgroundColor: UIColor, size: CGSize? = nil) {
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        peer: StarsContext.State.Transaction.Peer?,
+        photo: TelegramMediaWebFile?,
+        media: [Media],
+        uniqueGift: StarGift.UniqueGift?,
+        backgroundColor: UIColor,
+        size: CGSize? = nil
+    ) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.photo = photo
         self.media = media
+        self.uniqueGift = uniqueGift
         self.backgroundColor = backgroundColor
         self.size = size
     }
@@ -45,6 +56,9 @@ public final class StarsAvatarComponent: Component {
             return false
         }
         if !areMediaArraysEqual(lhs.media, rhs.media) {
+            return false
+        }
+        if lhs.uniqueGift != rhs.uniqueGift {
             return false
         }
         if lhs.backgroundColor != rhs.backgroundColor {

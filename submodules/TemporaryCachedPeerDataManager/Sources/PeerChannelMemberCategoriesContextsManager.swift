@@ -550,7 +550,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
         |> runOn(Queue.mainQueue())
     }
     
-    public func recentOnlineSmall(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<Int32, NoError> {
+    public func recentOnlineSmall(engine: TelegramEngine, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<(total: Int32, recent: Int32), NoError> {
         return Signal { [weak self] subscriber in
             var previousIds: Set<PeerId>?
             let statusesDisposable = MetaDisposable()
@@ -587,7 +587,7 @@ public final class PeerChannelMemberCategoriesContextsManager {
                     }
                     |> distinctUntilChanged
                     |> deliverOnMainQueue).start(next: { count in
-                        subscriber.putNext(count)
+                        subscriber.putNext((Int32(updatedIds.count), count))
                     }))
                 }
             })

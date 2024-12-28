@@ -4276,33 +4276,32 @@ public final class ChatListNode: ListView {
     }
 }
 
-private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: PresentationStrings, peer: EnginePeer, isMuted: Bool, isUnread: Bool, isContact: Bool, hasUnseenMentions: Bool, chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool, autoremoveTimeout: Int32?) -> (String, Bool, Bool, ContactsPeerItemStatus.Icon?)? {
+private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: PresentationStrings, peer: EnginePeer, isMuted: Bool, isUnread: Bool, isContact: Bool, hasUnseenMentions: Bool, chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool, autoremoveTimeout: Int32?) -> (NSAttributedString, Bool, Bool, ContactsPeerItemStatus.Icon?)? {
     if accountPeerId == peer.id {
         return nil
     }
     
     if displayAutoremoveTimeout {
         if let autoremoveTimeout = autoremoveTimeout {
-            return (strings.ChatList_LabelAutodeleteAfter(timeIntervalString(strings: strings, value: autoremoveTimeout, usage: .afterTime)).string, false, true, .autoremove)
+            return (NSAttributedString(string: strings.ChatList_LabelAutodeleteAfter(timeIntervalString(strings: strings, value: autoremoveTimeout, usage: .afterTime)).string), false, true, .autoremove)
         } else {
-            return (strings.ChatList_LabelAutodeleteDisabled, false, false, .autoremove)
+            return (NSAttributedString(string: strings.ChatList_LabelAutodeleteDisabled), false, false, .autoremove)
         }
     }
     
     if let chatListFilters = chatListFilters {
-        var result = ""
+        let result = NSMutableAttributedString(string: "")
         for case let .filter(_, title, _, data) in chatListFilters {
             let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
             if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
-                if !result.isEmpty {
-                    result.append(", ")
+                if result.length != 0 {
+                    result.append(NSAttributedString(string: ", "))
                 }
-                //TODO:release
-                result.append(title.text)
+                result.append(title.rawAttributedString)
             }
         }
         
-        if result.isEmpty {
+        if result.length == 0 {
             return nil
         } else {
             return (result, true, false, nil)
@@ -4313,30 +4312,30 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
         return nil
     } else if case let .user(user) = peer {
         if user.botInfo != nil || user.flags.contains(.isSupport) {
-            return (strings.ChatList_PeerTypeBot, false, false, nil)
+            return (NSAttributedString(string: strings.ChatList_PeerTypeBot), false, false, nil)
         } else {
             if isContact {
-                return (strings.ChatList_PeerTypeContact, false, false, nil)
+                return (NSAttributedString(string: strings.ChatList_PeerTypeContact), false, false, nil)
             } else {
-                return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
+                return (NSAttributedString(string: strings.ChatList_PeerTypeNonContactUser), false, false, nil)
             }
         }
     } else if case .secretChat = peer {
         if isContact {
-            return (strings.ChatList_PeerTypeContact, false, false, nil)
+            return (NSAttributedString(string: strings.ChatList_PeerTypeContact), false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
+            return (NSAttributedString(string: strings.ChatList_PeerTypeNonContactUser), false, false, nil)
         }
     } else if case .legacyGroup = peer {
-        return (strings.ChatList_PeerTypeGroup, false, false, nil)
+        return (NSAttributedString(string: strings.ChatList_PeerTypeGroup), false, false, nil)
     } else if case let .channel(channel) = peer {
         if case .group = channel.info {
-            return (strings.ChatList_PeerTypeGroup, false, false, nil)
+            return (NSAttributedString(string: strings.ChatList_PeerTypeGroup), false, false, nil)
         } else {
-            return (strings.ChatList_PeerTypeChannel, false, false, nil)
+            return (NSAttributedString(string: strings.ChatList_PeerTypeChannel), false, false, nil)
         }
     }
-    return (strings.ChatList_PeerTypeNonContactUser, false, false, nil)
+    return (NSAttributedString(string: strings.ChatList_PeerTypeNonContactUser), false, false, nil)
 }
 
 public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
@@ -4425,10 +4424,9 @@ func chatListItemTags(location: ChatListControllerLocation, accountPeerId: Engin
         if data.color != nil {
             let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
             if predicate.pinnedPeerIds.contains(peer.id) || predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
-                //TODO:release
                 result.append(ChatListItemContent.Tag(
                     id: id,
-                    title: title.text,
+                    title: title,
                     colorId: data.color?.rawValue ?? PeerNameColor.blue.rawValue
                 ))
             }

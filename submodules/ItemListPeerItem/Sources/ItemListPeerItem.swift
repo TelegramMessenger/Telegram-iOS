@@ -1436,6 +1436,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     var titleFrame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: verticalInset + verticalOffset), size: titleLayout.size)
                     
                     var titleLeftOffset: CGFloat = 0.0
+                    var nextIconX: CGFloat = titleFrame.maxX
                     if let verifiedIcon = verifiedIcon {
                         let animationCache = item.context.animationCache
                         let animationRenderer = item.context.animationRenderer
@@ -1461,6 +1462,15 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             emojiFileUpdated: nil
                         )
                         strongSelf.verifiedIconComponent = verifiedIconComponent
+                        
+                        let iconOrigin: CGFloat
+                        if case .animation = verifiedIcon {
+                            iconOrigin = titleFrame.minX
+                        } else {
+                            nextIconX += 4.0
+                            iconOrigin = nextIconX
+                        }
+                        
                         let iconSize = verifiedIconView.update(
                             transition: .immediate,
                             component: AnyComponent(verifiedIconComponent),
@@ -1468,9 +1478,13 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             containerSize: CGSize(width: 20.0, height: 20.0)
                         )
                         
-                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
-                        
-                        titleLeftOffset += iconSize.width + 4.0
+                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                      
+                        if case .animation = verifiedIcon {
+                            titleLeftOffset += iconSize.width + 4.0
+                        } else {
+                            nextIconX += iconSize.width
+                        }
                     } else if let verifiedIconView = strongSelf.verifiedIconView {
                         strongSelf.verifiedIconView = nil
                         verifiedIconView.removeFromSuperview()
@@ -1512,7 +1526,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             containerSize: CGSize(width: 20.0, height: 20.0)
                         )
                         
-                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                        nextIconX += 4.0
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: nextIconX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                     } else if let credibilityIconView = strongSelf.credibilityIconView {
                         strongSelf.credibilityIconView = nil
                         credibilityIconView.removeFromSuperview()

@@ -18,7 +18,26 @@
     return self;
 }
 
-+ (FFMpegAVCodec * _Nullable)findForId:(int)codecId {
++ (FFMpegAVCodec * _Nullable)findForId:(int)codecId preferHardwareAccelerationCapable:(_Bool)preferHardwareAccelerationCapable {
+    if (preferHardwareAccelerationCapable && codecId == AV_CODEC_ID_AV1) {
+        void *codecIterationState = nil;
+        while (true) {
+            AVCodec const *codec = av_codec_iterate(&codecIterationState);
+            if (!codec) {
+                break;
+            }
+            if (!av_codec_is_decoder(codec)) {
+                continue;
+            }
+            if (codec->id != codecId) {
+                continue;
+            }
+            if (strncmp(codec->name, "av1", 2) == 0) {
+                return [[FFMpegAVCodec alloc] initWithImpl:codec];
+            }
+        }
+    }
+    
     AVCodec const *codec = avcodec_find_decoder(codecId);
     if (codec) {
         return [[FFMpegAVCodec alloc] initWithImpl:codec];

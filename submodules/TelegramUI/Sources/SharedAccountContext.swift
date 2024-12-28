@@ -2472,12 +2472,31 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentTransferAlertImpl = { [weak controller] peer in
-            guard let controller, case let .starGiftTransfer(_, messageId, gift, transferStars, _) = source else {
+            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _) = source else {
                 return
             }
             let alertController = giftTransferAlertController(context: context, gift: gift, peer: peer, transferStars: transferStars, commit: { [weak controller] in
-                controller?.dismiss()
-                let _ = context.engine.payments.transferStarGift(prepaid: transferStars == 0, messageId: messageId, peerId: peer.id).start()
+                completion?([peer.id])
+                
+                guard let controller, let navigationController = controller.navigationController as? NavigationController else {
+                    return
+                }
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { !($0 is ContactSelectionController) }
+                var foundController = false
+                for controller in controllers.reversed() {
+                    if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                        chatController.hintPlayNextOutgoingGift()
+                        foundController = true
+                        break
+                    }
+                }
+                if !foundController {
+                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                    chatController.hintPlayNextOutgoingGift()
+                    controllers.append(chatController)
+                }
+                navigationController.setViewControllers(controllers, animated: true)
             })
             controller.present(alertController, in: .window(.root))
         }

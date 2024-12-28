@@ -2323,6 +2323,12 @@ isConference:(bool)isConference {
     }
 }
 
+- (void)addRemoteConnectedEvent:(bool)isRemoteConnected {
+    if (_instance) {
+        _instance->internal_addCustomNetworkEvent(isRemoteConnected);
+    }
+}
+
 @end
 
 @implementation OngoingGroupCallMediaChannelDescription

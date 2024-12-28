@@ -126,7 +126,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         }
         
         let attributedString = NSMutableAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center)
-        if let range = attributedString.string.range(of: "⭐️") {
+        if let range = attributedString.string.range(of: "$") {
             attributedString.addAttribute(.attachment, value: UIImage(bundleImageName: "Item List/PremiumIcon")!, range: NSRange(range, in: attributedString.string))
             attributedString.addAttribute(.foregroundColor, value: color, range: NSRange(range, in: attributedString.string))
             attributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedString.string))

@@ -12,6 +12,11 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFramePixelFormat) {
     FFMpegAVFramePixelFormatYUVA
 };
 
+typedef NS_ENUM(NSUInteger, FFMpegAVFrameNativePixelFormat) {
+    FFMpegAVFrameNativePixelFormatUnknown,
+    FFMpegAVFrameNativePixelFormatVideoToolbox
+};
+
 @interface FFMpegAVFrame : NSObject
 
 @property (nonatomic, readonly) int32_t width;
@@ -27,6 +32,7 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFramePixelFormat) {
 - (instancetype)initWithPixelFormat:(FFMpegAVFramePixelFormat)pixelFormat width:(int32_t)width height:(int32_t)height;
 
 - (void *)impl;
+- (FFMpegAVFrameNativePixelFormat)nativePixelFormat;
 
 @end
 

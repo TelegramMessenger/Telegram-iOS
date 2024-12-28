@@ -3986,8 +3986,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.controller?.updateProfilePhoto(image, mode: .generic)
             }
             galleryController.avatarVideoEditCompletion = { [weak self] image, asset, adjustments in
-                let _ = self
-                //self?.controller?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: .generic)
+                self?.controller?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: .generic)
             }
             galleryController.removedEntry = { [weak self] entry in
                 if let item = PeerInfoAvatarListItem(entry: entry) {
@@ -9605,7 +9604,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    fileprivate func oldOpenAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
+    func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
         guard let peer = self.data?.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: self.data?.threadData) else {
             return
         }
@@ -9694,21 +9693,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings || strongSelf.isMyProfile, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: [.custom, .suggest].contains(mode))!
             mixin.stickersContext = LegacyPaintStickersContext(context: strongSelf.context)
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
-//            mixin.requestSearchController = { [weak self, weak parentController] assetsController in
-//                guard let strongSelf = self else {
-//                    return
-//                }
-//                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData,  peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: (strongSelf.isSettings || strongSelf.isMyProfile) ? nil : peer.compactDisplayTitle, completion: { [weak self] result in
-//                    assetsController?.dismiss()
-//                    self?.updateProfilePhoto(result, mode: mode)
-//                }))
-//                controller.navigationPresentation = .modal
-//                parentController?.push(controller)
-//                
-//                if fromGallery {
-//                    completion(nil)
-//                }
-//            }
             var isFromEditor = false
             mixin.requestAvatarEditor = { [weak self, weak parentController] imageCompletion, videoCompletion in
                 guard let strongSelf = self, let imageCompletion, let videoCompletion else {
@@ -9755,18 +9739,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 }
             }
-//            mixin.didFinishWithImage = { [weak self] image in
-//                if let image = image {
-//                    completion(image)
-//                    self?.updateProfilePhoto(image, mode: mode)
-//                }
-//            }
-//            mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
-//                if let image = image, let asset = asset {
-//                    completion(image)
-//                    self?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
-//                }
-//            }
+            mixin.didFinishWithImage = { [weak self] image in
+                if let image = image {
+                    completion(image)
+                    self?.controller?.updateProfilePhoto(image, mode: mode)
+                }
+            }
+            mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
+                if let image = image, let asset = asset {
+                    completion(image)
+                    self?.controller?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
+                }
+            }
             mixin.didFinishWithDelete = {
                 guard let strongSelf = self else {
                     return
@@ -12765,6 +12749,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         } else {
             proceed()
         }
+    }
+    
+    func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
+        self.controllerNode.openAvatarForEditing(mode: mode, fromGallery: fromGallery, completion: completion)
     }
         
     static func openPeer(context: AccountContext, peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {

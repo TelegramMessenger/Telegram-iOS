@@ -133,7 +133,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let itemsInRow = min(starsProducts.count, 3)
             let optionWidth = (params.size.width - sideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
             
-            let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
+            let starsOptionSize = CGSize(width: optionWidth, height: optionWidth)
             
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
             
@@ -212,7 +212,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                         peer: peer,
                                         subject: subject,
                                         ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: ribbonColor) },
-                                        isHidden: !product.savedToProfile
+                                        isHidden: !product.savedToProfile,
+                                        mode: .profile
                                     )
                                 ),
                                 effectAlignment: .center,
@@ -234,6 +235,18 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return
                                             }
                                             self.profileGifts.convertStarGift(messageId: messageId)
+                                        },
+                                        transferGift: { [weak self] prepaid, peerId in
+                                            guard let self, let messageId = product.messageId else {
+                                                return
+                                            }
+                                            self.profileGifts.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+                                        },
+                                        upgradeGift: { [weak self] formId, keepOriginalInfo in
+                                            guard let self, let messageId = product.messageId else {
+                                                return .never()
+                                            }
+                                            return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
                                         }
                                     )
                                     self.parentController?.push(controller)

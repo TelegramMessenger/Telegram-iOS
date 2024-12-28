@@ -13,7 +13,7 @@ import PeerInfoCoverComponent
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 
-final class GiftCompositionComponent: Component {
+public final class GiftCompositionComponent: Component {
     public class ExternalState {
         public fileprivate(set) var previewPatternColor: UIColor?
         public init() {
@@ -21,7 +21,7 @@ final class GiftCompositionComponent: Component {
         }
     }
     
-    enum Subject: Equatable {
+    public enum Subject: Equatable {
         case generic(TelegramMediaFile)
         case unique(StarGift.UniqueGift)
         case preview([StarGift.UniqueGift.Attribute])
@@ -30,15 +30,15 @@ final class GiftCompositionComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let subject: Subject
-    let externalState: ExternalState
+    let externalState: ExternalState?
     let requestUpdate: () -> Void
     
-    init(
+    public init(
         context: AccountContext,
         theme: PresentationTheme,
         subject: Subject,
-        externalState: ExternalState,
-        requestUpdate: @escaping () -> Void
+        externalState: ExternalState? = nil,
+        requestUpdate: @escaping () -> Void = {}
     ) {
         self.context = context
         self.theme = theme
@@ -47,7 +47,7 @@ final class GiftCompositionComponent: Component {
         self.requestUpdate = requestUpdate
     }
 
-    static func ==(lhs: GiftCompositionComponent, rhs: GiftCompositionComponent) -> Bool {
+    public static func ==(lhs: GiftCompositionComponent, rhs: GiftCompositionComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
@@ -60,7 +60,7 @@ final class GiftCompositionComponent: Component {
         return true
     }
 
-    final class View: UIView {
+    public final class View: UIView {
         private var component: GiftCompositionComponent?
         private weak var componentState: EmptyComponentState?
         
@@ -84,6 +84,8 @@ final class GiftCompositionComponent: Component {
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap)))
         }
         
         required init?(coder: NSCoder) {
@@ -94,7 +96,16 @@ final class GiftCompositionComponent: Component {
             self.disposables.dispose()
         }
         
-        func update(component: GiftCompositionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        @objc private func handleTap() {
+            guard let animationNode = animationNode as? DefaultAnimatedStickerNodeImpl else {
+                return
+            }
+            if case .once = animationNode.playbackMode, !animationNode.isPlaying {
+                animationNode.playOnce()
+            }
+        }
+        
+        public func update(component: GiftCompositionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let previousComponent = self.component
             
             self.component = component
@@ -107,6 +118,7 @@ final class GiftCompositionComponent: Component {
             var patternFile: TelegramMediaFile?
             var files: [Int64: TelegramMediaFile] = [:]
                         
+            var loop = false
             switch component.subject {
             case let .generic(file):
                 animationFile = file
@@ -142,6 +154,8 @@ final class GiftCompositionComponent: Component {
                     self.previewTimer = nil
                 }
             case let .preview(sampleAttributes):
+                loop = true
+                
                 if self.previewModels.isEmpty {
                     var models: [StarGift.UniqueGift.Attribute] = []
                     var patterns: [StarGift.UniqueGift.Attribute] = []
@@ -198,8 +212,21 @@ final class GiftCompositionComponent: Component {
                             return
                         }
                         self.previewModelIndex = (self.previewModelIndex + 1) % Int32(self.previewModels.count)
-                        self.previewPatternIndex = (self.previewPatternIndex + 1) % Int32(self.previewPatterns.count)
-                        self.previewBackdropIndex = (self.previewBackdropIndex + 1) % Int32(self.previewBackdrops.count)
+                        
+                        let previousPatternIndex = self.previewPatternIndex
+                        var randomPatternIndex = previousPatternIndex
+                        while randomPatternIndex == previousPatternIndex {
+                            randomPatternIndex = Int32.random(in: 0 ..< Int32(self.previewPatterns.count))
+                        }
+                        self.previewPatternIndex = randomPatternIndex
+                        
+                        let previousBackdropIndex = self.previewBackdropIndex
+                        var randomBackdropIndex = previousBackdropIndex
+                        while randomBackdropIndex == previousBackdropIndex {
+                            randomBackdropIndex = Int32.random(in: 0 ..< Int32(self.previewBackdrops.count))
+                        }
+                        self.previewBackdropIndex = randomBackdropIndex
+                        
                         self.animatePreviewTransition = true
                         self.componentState?.updated(transition: .easeInOut(duration: 0.25))
                     }, queue: Queue.mainQueue())
@@ -207,7 +234,7 @@ final class GiftCompositionComponent: Component {
                 }
             }
             
-            component.externalState.previewPatternColor = secondBackgroundColor
+            component.externalState?.previewPatternColor = secondBackgroundColor
                                     
             var animateTransition = false
             if self.animatePreviewTransition {
@@ -247,6 +274,7 @@ final class GiftCompositionComponent: Component {
                     if backgroundView.superview == nil {
                         backgroundTransition = .immediate
                         backgroundView.clipsToBounds = true
+                        backgroundView.isUserInteractionEnabled = false
                         self.insertSubview(backgroundView, at: 0)
                         
                         backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
@@ -259,7 +287,7 @@ final class GiftCompositionComponent: Component {
                 })
             }
               
-            let iconSize = CGSize(width: 128.0, height: 128.0)
+            let iconSize = CGSize(width: 136.0, height: 136.0)
             
             var startFromIndex: Int?
             if animateTransition, let disappearingAnimationNode = self.animationNode {
@@ -274,17 +302,25 @@ final class GiftCompositionComponent: Component {
                 let animationNode: AnimatedStickerNode
                 if self.animationNode == nil {
                     animationNode = DefaultAnimatedStickerNodeImpl()
+                    animationNode.isUserInteractionEnabled = false
                     self.animationNode = animationNode
 
                     self.addSubview(animationNode.view)
                     
                     let pathPrefix = component.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                     animationNode.setup(source: AnimatedStickerResourceSource(account: component.context.account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(iconSize.width * 1.6), height: Int(iconSize.height * 1.6), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
-                                        
+                                     
                     if let startFromIndex {
+                        if let animationNode = animationNode as? DefaultAnimatedStickerNodeImpl {
+                            animationNode.playbackMode = loop ? .loop : .once
+                        }
                         animationNode.play(firstFrame: false, fromIndex: startFromIndex)
                     } else {
-                        animationNode.playLoop()
+                        if loop {
+                            animationNode.playLoop()
+                        } else {
+                            animationNode.playOnce()
+                        }
                     }
                     animationNode.visibility = true
                     animationNode.updateLayout(size: iconSize)
@@ -295,7 +331,7 @@ final class GiftCompositionComponent: Component {
                 }
             }
             if let animationNode = self.animationNode {
-                transition.setFrame(layer: animationNode.layer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: 25.0), size: iconSize))
+                transition.setFrame(layer: animationNode.layer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: 20.0), size: iconSize))
             }
             
             return availableSize

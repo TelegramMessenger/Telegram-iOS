@@ -46,7 +46,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private var stickerSourceSize: CGSize?
     private var stickerOffset: CGPoint?
     private var emojiStatus: ComponentView<Empty>?
-    private let titleNode: ImmediateTextNode
+    private let titleNode: ImmediateTextNodeWithEntities
     private let textNode: ImmediateTextNodeWithEntities
     private var textComponent: ComponentView<Empty>?
     private var animatedTextItems: [AnimatedTextComponent.Item]?
@@ -92,7 +92,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.timerTextNode = ImmediateTextNode()
         self.timerTextNode.displaysAsynchronously = false
         
-        self.titleNode = ImmediateTextNode()
+        self.titleNode = ImmediateTextNodeWithEntities()
         self.titleNode.layer.anchorPoint = CGPoint()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 0
@@ -115,22 +115,51 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         
         var isUserInteractionEnabled = false
         switch content {
-            case let .removedChat(title, text):
+            case let .removedChat(context, title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
+            
+                let attributedTitle = NSMutableAttributedString(string: title.string)
+                attributedTitle.addAttribute(.font, value: Font.semibold(14.0), range: NSRange(location: 0, length: title.length))
+                attributedTitle.addAttribute(.foregroundColor, value: UIColor.white, range: NSRange(location: 0, length: title.length))
+                title.enumerateAttributes(in: NSRange(location: 0, length: title.length), using: { attributes, range, _ in
+                    for (key, value) in attributes {
+                        attributedTitle.addAttribute(key, value: value, range: range)
+                    }
+                })
+            
                 if let text {
-                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    self.titleNode.attributedText = attributedTitle
                     
                     let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                     let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
                     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
                     self.textNode.attributedText = attributedText
                 } else {
-                    self.textNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                    self.textNode.attributedText = attributedTitle
                 }
+            
+                self.titleNode.visibility = true
+                self.titleNode.arguments = TextNodeWithEntities.Arguments(
+                    context: context,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    attemptSynchronous: false
+                )
+                
+                self.textNode.visibility = true
+                self.textNode.arguments = TextNodeWithEntities.Arguments(
+                    context: context,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    attemptSynchronous: false
+                )
+            
                 displayUndo = true
                 self.originalRemainingSeconds = 5
                 self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
@@ -343,38 +372,67 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = false
                 self.originalRemainingSeconds = 5
-            case let .chatAddedToFolder(chatTitle, folderTitle):
+            case let .chatAddedToFolder(context, chatTitle, folderTitle), let .chatRemovedFromFolder(context, chatTitle, folderTitle):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+            
+                let baseString: String
+                if case .chatAddedToFolder = content {
+                    baseString = presentationData.strings.ChatList_AddedToFolderTooltipV2
+                    self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                } else {
+                    baseString = presentationData.strings.ChatList_RemovedFromFolderTooltipV2
+                    self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                }
                 self.animatedStickerNode = nil
                 
-                let formattedString = presentationData.strings.ChatList_AddedToFolderTooltip(chatTitle, folderTitle)
-                
-                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
-                for range in formattedString.ranges {
-                    string.addAttribute(.font, value: Font.regular(14.0), range: range.range)
+                let string = NSMutableAttributedString(string: baseString)
+                string.addAttributes([
+                    .font: Font.regular(14.0),
+                    .foregroundColor: UIColor.white
+                ], range: NSRange(location: 0, length: string.length))
+            
+                let folderRange = (string.string as NSString).range(of: "{folder}")
+                if folderRange.location != NSNotFound {
+                    string.replaceCharacters(in: folderRange, with: "")
+                    let processedFolderTitle = NSMutableAttributedString(string: folderTitle.string)
+                    processedFolderTitle.addAttributes([
+                        .font: Font.semibold(14.0),
+                        .foregroundColor: UIColor.white
+                    ], range: NSRange(location: 0, length: processedFolderTitle.length))
+                    folderTitle.enumerateAttributes(in: NSRange(location: 0, length: folderTitle.length), using: { attributes, range, _ in
+                        for (key, value) in attributes {
+                            if key == ChatTextInputAttributes.bold {
+                                processedFolderTitle.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.italic {
+                                processedFolderTitle.addAttribute(.font, value: Font.italic(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.monospace {
+                                processedFolderTitle.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                            } else {
+                                processedFolderTitle.addAttribute(key, value: value, range: range)
+                            }
+                        }
+                    })
+                    string.insert(processedFolderTitle, at: folderRange.location)
+                }
+            
+                let chatRange = (string.string as NSString).range(of: "{chat}")
+                if chatRange.location != NSNotFound {
+                    string.replaceCharacters(in: chatRange, with: "")
+                    string.insert(NSAttributedString(string: chatTitle, font: Font.semibold(14.0), textColor: .white), at: chatRange.location)
                 }
                 
                 self.textNode.attributedText = string
-                displayUndo = false
-                self.originalRemainingSeconds = 5
-            case let .chatRemovedFromFolder(chatTitle, folderTitle):
-                self.avatarNode = nil
-                self.iconNode = nil
-                self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
-                self.animatedStickerNode = nil
-
-                let formattedString = presentationData.strings.ChatList_RemovedFromFolderTooltip(chatTitle, folderTitle)
-                
-                let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
-                for range in formattedString.ranges {
-                    string.addAttribute(.font, value: Font.regular(14.0), range: range.range)
-                }
-                
-                self.textNode.attributedText = string
+                self.textNode.visibility = true
+                self.textNode.arguments = TextNodeWithEntities.Arguments(
+                    context: context,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    attemptSynchronous: false
+                )
+            
                 displayUndo = false
                 self.originalRemainingSeconds = 5
             case let .paymentSent(currencyValue, itemTitle):
@@ -1078,6 +1136,86 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
+            case let .universalWithEntities(context, animation, scale, colors, title, text, animateEntities, customUndoText, timeout):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
+                self.animatedStickerNode = nil
+            
+                var attributedTitle: NSAttributedString?
+                if let title {
+                    let attributedTitleValue = NSMutableAttributedString(string: title.string)
+                    attributedTitleValue.addAttribute(.font, value: Font.semibold(14.0), range: NSRange(location: 0, length: title.length))
+                    attributedTitleValue.addAttribute(.foregroundColor, value: UIColor.white, range: NSRange(location: 0, length: title.length))
+                    title.enumerateAttributes(in: NSRange(location: 0, length: title.length), using: { attributes, range, _ in
+                        for (key, value) in attributes {
+                            attributedTitleValue.addAttribute(key, value: value, range: range)
+                        }
+                    })
+                    attributedTitle = attributedTitleValue
+                }
+            
+                if let attributedTitle, text.length == 0 {
+                    self.titleNode.attributedText = nil
+                    self.textNode.attributedText = attributedTitle
+                } else {
+                    if let attributedTitle {
+                        self.titleNode.attributedText = attributedTitle
+                    } else {
+                        self.titleNode.attributedText = nil
+                    }
+                    
+                    let attributedText = NSMutableAttributedString(string: text.string)
+                    attributedText.addAttribute(.font, value: Font.regular(14.0), range: NSRange(location: 0, length: text.length))
+                    attributedText.addAttribute(.foregroundColor, value: UIColor.white, range: NSRange(location: 0, length: text.length))
+                    text.enumerateAttributes(in: NSRange(location: 0, length: text.length), using: { attributes, range, _ in
+                        for (key, value) in attributes {
+                            if key == ChatTextInputAttributes.bold {
+                                attributedText.addAttribute(.font, value: Font.semibold(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.italic {
+                                attributedText.addAttribute(.font, value: Font.italic(14.0), range: range)
+                            } else if key == ChatTextInputAttributes.monospace {
+                                attributedText.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                            } else {
+                                attributedText.addAttribute(key, value: value, range: range)
+                            }
+                        }
+                    })
+                    
+                    self.textNode.attributedText = attributedText
+                }
+            
+                if text.string.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+                self.originalRemainingSeconds = timeout ?? (isUserInteractionEnabled ? 5 : 3)
+            
+                self.titleNode.visibility = animateEntities
+                self.titleNode.arguments = TextNodeWithEntities.Arguments(
+                    context: context,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    attemptSynchronous: false
+                )
+                
+                self.textNode.maximumNumberOfLines = 5
+                self.textNode.visibility = animateEntities
+                self.textNode.arguments = TextNodeWithEntities.Arguments(
+                    context: context,
+                    cache: context.animationCache,
+                    renderer: context.animationRenderer,
+                    placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                    attemptSynchronous: false
+                )
+                
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
             case let .universalImage(image, size, title, text, customUndoText, timeout):
                 self.iconNode = ASImageNode()
                 self.iconNode?.displayWithoutProcessing = true
@@ -1431,7 +1569,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             } else {
                 self.isUserInteractionEnabled = false
             }
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal,. universalImage, .premiumPaywall, .peers, .messageTagged:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal, .universalWithEntities, .universalImage, .premiumPaywall, .peers, .messageTagged:
             if self.textNode.tapAttributeAction != nil || displayUndo {
                 self.isUserInteractionEnabled = true
             } else {

@@ -64,6 +64,17 @@
     return _impl->pts;
 }
 
+- (FFMpegAVFrameNativePixelFormat)nativePixelFormat {
+    switch (_impl->format) {
+        case AV_PIX_FMT_VIDEOTOOLBOX: {
+            return FFMpegAVFrameNativePixelFormatVideoToolbox;
+        }
+        default: {
+            return FFMpegAVFrameNativePixelFormatUnknown;
+        }
+    }
+}
+
 - (int64_t)duration {
 #if LIBAVFORMAT_VERSION_MAJOR >= 59
     return _impl->duration;

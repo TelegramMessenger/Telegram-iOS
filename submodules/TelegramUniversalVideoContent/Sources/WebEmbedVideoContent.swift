@@ -36,7 +36,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
         self.openUrl = openUrl
     }
     
-    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+    public func makeContentNode(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
         return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp, openUrl: self.openUrl)
     }
 }
