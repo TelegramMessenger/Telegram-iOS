@@ -466,7 +466,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             if case let .generic(gift) = gift {
                                 isStarGift = true
                                 let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
-                                title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                
+                                let isSelfGift = item.message.id.peerId == item.context.account.peerId
+                                if isSelfGift {
+                                    title = item.presentationData.strings.Notification_StarGift_Self_Title
+                                } else {
+                                    title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                }
                                 if let giftText, !giftText.isEmpty {
                                     text = giftText
                                     entities = giftEntities ?? []
@@ -480,6 +486,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
                                         } else if upgradeStars != nil {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Upgrade
+                                        } else if isSelfGift {
+                                            text = item.presentationData.strings.Notification_StarsGift_Subtitle_Self
                                         } else if savedToProfile {
                                             if let convertStars {
                                                 text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string

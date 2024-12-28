@@ -2501,7 +2501,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 Queue.mainQueue().after(0.3) {
                     let tooltipController = UndoOverlayController(
                         presentationData: presentationData,
-                        content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift) #\(gift.number)", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
+                        content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift.title) #\(gift.number)", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
                         elevatedLayout: false,
                         action: { _ in return true }
                     )

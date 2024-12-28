@@ -263,6 +263,8 @@
 "PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new wallpaper for the chat with you";
 "PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same wallpaper for the chat with you";
 
+"PUSH_MESSAGE_UNIQUE_STARGIFT" = "%1$@ sent you a Gift";
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -13532,7 +13534,7 @@ Sorry for the inconvenience.";
 "Gift.Transfer.Confirmation.Transfer" = "Transfer for";
 "Gift.Transfer.Confirmation.TransferFree" = "Transfer";
 
-"Gift.Transfer.Success" = "You have successfully gifter **%1$@** to **%2$@**.";
+"Gift.Transfer.Success" = "You have successfully gifted **%1$@** to **%2$@**.";
 
 "Gift.View.UpgradeForFree" = "Upgrade for Free";
 "Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
@@ -13571,6 +13573,7 @@ Sorry for the inconvenience.";
 
 "Notification.StarsGift.Upgrade" = "%@ turned the gift from you to a unique collectible";
 "Notification.StarsGift.UpgradeYou" = "You turned the gift from %@ to a unique collectible";
+"Notification.StarsGift.UpgradeSelf" = "You turned the gift to a unique collectible";
 
 "Notification.StarsGift.Transfer" = "%@ transferred you a unique collectible";
 "Notification.StarsGift.TransferYou" = "You transferred a unique collectible";
@@ -13605,8 +13608,8 @@ Sorry for the inconvenience.";
 "Gift.SendSelf.HideMyName.Info" = "Hide my name and message from visitors to my profile.";
 
 "Notification.StarGift.Self.Title" = "Saved Gift";
-"Notification.StarGift.Self.Bought" = "You bought a gift for %@";
-"Notification.StarGift.Self.Bought" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
+"Notification.StarsGift.Self.Bought" = "You bought a gift for %@";
+"Notification.StarsGift.Subtitle.Self" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
 
 "Gift.View.Self.Title" = "Saved Gift";
 "Gift.View.Self.Description" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
@@ -13637,3 +13640,6 @@ Sorry for the inconvenience.";
 
 "Premium.Gift.ContactSelection.ThisIsYou" = "THIS IS YOU";
 "Premium.Gift.ContactSelection.BuySelf" = "buy yourself a gift";
+
+"Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
+"Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";

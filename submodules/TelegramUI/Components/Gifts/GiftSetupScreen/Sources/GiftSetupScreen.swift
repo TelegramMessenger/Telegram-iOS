@@ -819,6 +819,7 @@ final class GiftSetupScreenComponent: Component {
                                 nameDisplayOrder: presentationData.nameDisplayOrder,
                                 accountPeer: accountPeer,
                                 subject: subject,
+                                isSelf: component.peerId == component.context.account.peerId,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text),
                                 includeUpgrade: self.includeUpgrade

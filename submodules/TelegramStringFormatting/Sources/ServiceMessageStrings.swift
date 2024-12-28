@@ -1086,7 +1086,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         authorName = strings.Notification_StarsGift_UnknownUser
                         peerIds = []
                     }
-                    if message.author?.id == accountPeerId {
+                    if message.id.peerId == accountPeerId {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Self_Bought(starsPrice)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else if message.author?.id == accountPeerId {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(starsPrice)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     } else {
                         var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
@@ -1102,7 +1104,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         let peerName = EnginePeer(messagePeer).compactDisplayTitle
                         let peerIds: [(Int, EnginePeer.Id?)] = [(0, messagePeer.id)]
                         if isUpgrade {
-                            if message.author?.id == accountPeerId {
+                            if message.id.peerId == accountPeerId {
+                                attributedString = NSAttributedString(string: strings.Notification_StarsGift_UpgradeSelf, font: titleFont, textColor: primaryTextColor)
+                            } else if message.author?.id == accountPeerId {
                                 let attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
                                 attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_UpgradeYou(peerName)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                             } else {

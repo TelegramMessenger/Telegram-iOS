@@ -31,6 +31,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     
     let accountPeer: EnginePeer?
     let subject: ChatGiftPreviewItem.Subject
+    let isSelf: Bool
     let text: String
     let entities: [MessageTextEntity]
     let includeUpgrade: Bool
@@ -48,6 +49,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         nameDisplayOrder: PresentationPersonNameOrder,
         accountPeer: EnginePeer?,
         subject: ChatGiftPreviewItem.Subject,
+        isSelf: Bool,
         text: String,
         entities: [MessageTextEntity],
         includeUpgrade: Bool
@@ -64,6 +66,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.nameDisplayOrder = nameDisplayOrder
         self.accountPeer = accountPeer
         self.subject = subject
+        self.isSelf = isSelf
         self.text = text
         self.entities = entities
         self.includeUpgrade = includeUpgrade
@@ -206,6 +209,10 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
             let separatorHeight = UIScreenPixel
             
             let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1))
+            var chatPeerId = peerId
+            if item.isSelf {
+                chatPeerId = item.accountPeer?.id ?? chatPeerId
+            }
             
             var items: [ListViewItem] = []
             for _ in 0 ..< 1 {
@@ -232,7 +239,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                     ]
                 }
                 
-                let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: peers[authorPeerId], text: "", attributes: [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, accountPeer: nil, isCentered: false, isPreview: true, isStandalone: false))
             }
             

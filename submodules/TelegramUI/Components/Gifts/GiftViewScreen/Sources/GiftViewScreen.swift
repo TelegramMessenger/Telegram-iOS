@@ -382,6 +382,8 @@ private final class GiftViewSheetContent: CombinedComponent {
             var canUpgrade = false
             var upgradeStars: Int64?
             var uniqueGift: StarGift.UniqueGift?
+            var isSelfGift = false
+            
             if case let .soldOutGift(gift) = subject {
                 animationFile = gift.file
                 stars = gift.price
@@ -417,7 +419,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                 savedToProfile = arguments.savedToProfile
                 incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
                 nameHidden = arguments.nameHidden
-                titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
+                
+                isSelfGift = arguments.messageId?.peerId == component.context.account.peerId
+                
+                if isSelfGift {
+                    titleString = strings.Gift_View_Self_Title
+                } else {
+                    titleString = incoming ? strings.Gift_View_ReceivedTitle : strings.Gift_View_Title
+                }
             } else {
                 animationFile = nil
                 stars = 0
@@ -839,13 +848,22 @@ private final class GiftViewSheetContent: CombinedComponent {
                     originY += 21.0
                 }
                 
-                if nameHidden && incoming && uniqueGift == nil {
+                if nameHidden && uniqueGift == nil {
                     let textFont = Font.regular(13.0)
                     let textColor = theme.list.itemSecondaryTextColor
                     
+                    let hiddenDescription: String
+                    if incoming {
+                        hiddenDescription = text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden
+                    } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId] {
+                        hiddenDescription = text != nil ? strings.Gift_View_Outgoing_NameAndMessageHidden(peer.compactDisplayTitle).string : strings.Gift_View_Outgoing_NameHidden(peer.compactDisplayTitle).string
+                    } else {
+                        hiddenDescription = ""
+                    }
+                    
                     let hiddenText = hiddenText.update(
                         component: MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden, font: textFont, textColor: textColor)),
+                            text: .plain(NSAttributedString(string: hiddenDescription, font: textFont, textColor: textColor)),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 2,
                             lineSpacing: 0.2
@@ -1003,24 +1021,28 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 }
                             ))
                         }
-                        tableItems.append(.init(
-                            id: "from",
-                            title: strings.Gift_View_From,
-                            component: fromComponent
-                        ))
+                        if !isSelfGift {
+                            tableItems.append(.init(
+                                id: "from",
+                                title: strings.Gift_View_From,
+                                component: fromComponent
+                            ))
+                        }
                     } else {
-                        tableItems.append(.init(
-                            id: "from_anon",
-                            title: strings.Gift_View_From,
-                            component: AnyComponent(
-                                PeerCellComponent(
-                                    context: component.context,
-                                    theme: theme,
-                                    strings: strings,
-                                    peer: nil
+                        if !isSelfGift {
+                            tableItems.append(.init(
+                                id: "from_anon",
+                                title: strings.Gift_View_From,
+                                component: AnyComponent(
+                                    PeerCellComponent(
+                                        context: component.context,
+                                        theme: theme,
+                                        strings: strings,
+                                        peer: nil
+                                    )
                                 )
-                            )
-                        ))
+                            ))
+                        }
                     }
                 }
                 

@@ -795,12 +795,12 @@ private final class NotificationServiceHandler {
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
             
-            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
-                automaticMediaDownloadSettings = value
-            } else {
-                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
-            }
+//            var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+//            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
+//                automaticMediaDownloadSettings = value
+//            } else {
+//                automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
+//            }
             let shouldSynchronizeState = true//automaticMediaDownloadSettings.energyUsageSettings.synchronizeInBackground
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
@@ -1186,7 +1186,7 @@ private final class NotificationServiceHandler {
                                 action = .pollStories(peerId: peerId, content: content, storyId: storyId, isReaction: isReaction)
                             } else {
                                 var reportDelivery = false
-                                if let reportDeliveryUntilDate = aps["report_delivery_until_date"] as? Int32, let messageId = messageIdValue {
+                                if let reportDeliveryUntilDate = aps["report_delivery_until_date"] as? Int32 {
                                     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                                     if reportDeliveryUntilDate > currentTime {
                                         reportDelivery = true
@@ -1696,9 +1696,6 @@ private final class NotificationServiceHandler {
                                 let reportDeliverySignal: Signal<Bool, NoError>
                                 if reportDelivery, let messageId {
                                     reportDeliverySignal = _internal_reportMessageDelivery(postbox: stateManager.postbox, network: stateManager.network, messageIds: [messageId], fromPushNotification: true)
-                                    |> mapToSignal { _ -> Signal<Bool, NoError> in
-                                        return .single(true)
-                                    }
                                     |> then(.single(true))
                                 } else {
                                     reportDeliverySignal = .single(true)

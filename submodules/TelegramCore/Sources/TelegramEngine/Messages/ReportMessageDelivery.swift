@@ -3,13 +3,15 @@ import Postbox
 import SwiftSignalKit
 import TelegramApi
 
-public func _internal_reportMessageDelivery(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], fromPushNotification: Bool) -> Signal<Never, NoError> {
+public func _internal_reportMessageDelivery(postbox: Postbox, network: Network, messageIds: [EngineMessage.Id], fromPushNotification: Bool) -> Signal<Bool, NoError> {
     var signals: [Signal<Void, NoError>] = []
     for (peerId, messageIds) in messagesIdsGroupedByPeerId(messageIds) {
         signals.append(_internal_reportMessageDeliveryByPeerId(postbox: postbox, network: network, peerId: peerId, messageIds: messageIds, fromPushNotification: fromPushNotification))
     }
     return combineLatest(signals)
-    |> ignoreValues
+    |> mapToSignal { _ in
+        return .single(true)
+    }
 }
 
 private func _internal_reportMessageDeliveryByPeerId(postbox: Postbox, network: Network, peerId: EnginePeer.Id, messageIds: [EngineMessage.Id], fromPushNotification: Bool) -> Signal<Void, NoError> {
