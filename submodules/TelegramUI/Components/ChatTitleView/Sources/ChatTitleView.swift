@@ -950,12 +950,13 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition = .immediate
         }
         
+        let iconSpacing: CGFloat = 2.0
         let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
             var titleInsets: UIEdgeInsets = .zero
             if case .emojiStatus = self.titleVerifiedIcon, verifiedIconWidth > 0.0 {
-                titleInsets.left = verifiedIconWidth + 2.0
+                titleInsets.left = verifiedIconWidth + iconSpacing
             }
             
             var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - verifiedIconWidth - statusIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), insets: titleInsets, animated: titleTransition.isAnimated)

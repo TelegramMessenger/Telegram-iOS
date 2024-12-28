@@ -264,6 +264,7 @@
 "PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same wallpaper for the chat with you";
 
 "PUSH_MESSAGE_UNIQUE_STARGIFT" = "%1$@ sent you a Gift";
+"PUSH_MESSAGE_STARGIFT_UPGRADE" = "%1$@ upgraded your Gift";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
