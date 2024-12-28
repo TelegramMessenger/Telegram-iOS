@@ -8818,9 +8818,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let controller = self.context.sharedContext.makePeerSelectionController(
             PeerSelectionControllerParams(
                 context: self.context,
-                filter: [.excludeSecretChats, .excludeRecent, .excludeSavedMessages],
+                filter: [.excludeSecretChats, .excludeRecent, .excludeSavedMessages, .includeSelf, .doNotSearchMessages],
                 hasContactSelector: false,
-                title: "Choose Chat to Verify"
+                title: self.presentationData.strings.BotVerification_ChooseChat
             )
         )
         controller.peerSelected = { [weak self, weak controller] peer, _ in
@@ -8849,7 +8849,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 let undoController = UndoOverlayController(
                                     presentationData: self.presentationData,
-                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: "You have removed **\(peer.compactDisplayTitle)'s** verification.", action: nil, duration: 5.0),
+                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: self.presentationData.strings.BotVerification_Removed(peer.compactDisplayTitle).string, action: nil, duration: 5.0),
                                     elevatedLayout: false,
                                     action: { _ in return true }
                                 )
@@ -8878,7 +8878,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 let undoController = UndoOverlayController(
                                     presentationData: self.presentationData,
-                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: "**\(peer.compactDisplayTitle)** has been notified and will receive your verification mark and description upon accepting.", action: nil, duration: 5.0),
+                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: self.presentationData.strings.BotVerification_Added(peer.compactDisplayTitle).string, action: nil, duration: 5.0),
                                     elevatedLayout: false,
                                     action: { _ in return true }
                                 )

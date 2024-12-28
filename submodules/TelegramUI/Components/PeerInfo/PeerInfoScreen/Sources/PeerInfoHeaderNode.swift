@@ -521,7 +521,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.presentationData = presentationData
         
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-        let credibilityIcon: CredibilityIcon
+        var credibilityIcon: CredibilityIcon
         var verifiedIcon: CredibilityIcon = .none
         if let peer = peer {
             if peer.id == self.context.account.peerId && !self.isSettings && !self.isMyProfile {
@@ -538,8 +538,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .none
             }
             if peer.isVerified {
-                verifiedIcon = .verified
-            } else if let verificationIconFileId = peer.verificationIconFileId {
+                credibilityIcon = .verified
+            }
+            if let verificationIconFileId = peer.verificationIconFileId {
                 verifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verificationIconFileId, expirationDate: nil))
             }
         } else {

@@ -1115,6 +1115,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             text: .plain(value),
                                             horizontalAlignment: .center,
                                             maximumNumberOfLines: 0,
+                                            insets: id == "originalInfo" ? UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0) : .zero,
                                             handleSpoilers: true
                                         )
                                     )
@@ -1306,6 +1307,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     placeholderColor: theme.list.mediaPlaceholderColor,
                                     text: .plain(attributedText),
                                     maximumNumberOfLines: 0,
+                                    insets: UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0),
                                     handleSpoilers: true
                                 )
                             )

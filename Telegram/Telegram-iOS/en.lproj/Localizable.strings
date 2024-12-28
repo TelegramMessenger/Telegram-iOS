@@ -13601,3 +13601,7 @@ Sorry for the inconvenience.";
 
 "Gift.View.Self.Title" = "Saved Gift";
 "Gift.View.Self.Description" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
+
+"BotVerification.ChooseChat" = "Choose Chat to Verify";
+"BotVerification.Added" = "**%@** has been notified and will receive your verification mark and description upon accepting.";
+"BotVerification.Removed" = "You have removed **%@'s** verification.";

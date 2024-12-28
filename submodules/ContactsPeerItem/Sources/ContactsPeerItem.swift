@@ -73,6 +73,11 @@ public enum ContactsPeerItemPeerMode: Equatable {
     case app(isPopular: Bool)
 }
 
+public enum ContactsPeerItemAliasHandling {
+    case standard
+    case treatSelfAsSaved
+}
+
 public enum ContactsPeerItemBadgeType {
     case active
     case inactive
@@ -176,6 +181,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let displayOrder: PresentationPersonNameOrder
     let context: AccountContext
     let peerMode: ContactsPeerItemPeerMode
+    let aliasHandling: ContactsPeerItemAliasHandling
     public let peer: ContactsPeerItemPeer
     let status: ContactsPeerItemStatus
     let badge: ContactsPeerItemBadge?
@@ -217,6 +223,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         displayOrder: PresentationPersonNameOrder,
         context: AccountContext,
         peerMode: ContactsPeerItemPeerMode,
+        aliasHandling: ContactsPeerItemAliasHandling = .treatSelfAsSaved,
         peer: ContactsPeerItemPeer,
         status: ContactsPeerItemStatus,
         badge: ContactsPeerItemBadge? = nil,
@@ -252,6 +259,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.displayOrder = displayOrder
         self.context = context
         self.peerMode = peerMode
+        self.aliasHandling = aliasHandling
         self.peer = peer
         self.status = status
         self.badge = badge
@@ -786,7 +794,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var verifiedIcon: EmojiStatusComponent.Content?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList) {
+                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList || item.aliasHandling == .treatSelfAsSaved) {
                     if peer.isScam {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {
@@ -798,8 +806,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if peer.isVerified {
-                        verifiedIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                    } else if let verificationIconFileId = peer.verificationIconFileId {
+                        credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+                    }
+                    if let verificationIconFileId = peer.verificationIconFileId {
                         verifiedIcon = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
@@ -865,7 +874,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         textColor = item.presentationData.theme.list.itemPrimaryTextColor
                     }
                     if case let .user(user) = peer {
-                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode {
+                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode, case .treatSelfAsSaved = item.aliasHandling {
                             if isSavedMessages {
                                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_MyNotes, font: titleBoldFont, textColor: textColor)
                             } else {
@@ -1171,7 +1180,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 case let .peer(peer, _):
                                     if let peer = peer {
                                         var overrideImage: AvatarNodeImageOverride?
-                                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode {
+                                        if peer.id == item.context.account.peerId, case let .generalSearch(isSavedMessages) = item.peerMode, case .treatSelfAsSaved = item.aliasHandling {
                                             if isSavedMessages {
                                                 overrideImage = .myNotesIcon
                                             } else {
@@ -1433,6 +1442,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 
                                 if case .animation = verifiedIcon {
                                     titleLeftOffset += iconSize.width + 4.0
+                                    nextIconX += iconSize.width
                                 } else {
                                     nextIconX += iconSize.width
                                 }
