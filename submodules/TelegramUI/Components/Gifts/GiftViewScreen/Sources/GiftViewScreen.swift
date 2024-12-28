@@ -28,6 +28,7 @@ import PlainButtonComponent
 import CheckComponent
 import TooltipUI
 import GiftAnimationComponent
+import LottieComponent
 
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
@@ -48,6 +49,7 @@ private final class GiftViewSheetContent: CombinedComponent {
     let transferGift: () -> Void
     let upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)
     let showAttributeInfo: (Any, Float) -> Void
+    let viewUpgraded: (EngineMessage.Id) -> Void
     let getController: () -> ViewController?
     
     init(
@@ -63,6 +65,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         transferGift: @escaping () -> Void,
         upgradeGift: @escaping ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>),
         showAttributeInfo: @escaping (Any, Float) -> Void,
+        viewUpgraded: @escaping (EngineMessage.Id) -> Void,
         getController: @escaping () -> ViewController?
     ) {
         self.context = context
@@ -77,6 +80,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.transferGift = transferGift
         self.upgradeGift = upgradeGift
         self.showAttributeInfo = showAttributeInfo
+        self.viewUpgraded = viewUpgraded
         self.getController = getController
     }
     
@@ -701,6 +705,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     descriptionText = "\(strings.Gift_Unique_Collectible) #\(uniqueGift.number)"
                 } else if soldOut {
                     descriptionText = strings.Gift_View_UnavailableDescription
+                } else if upgraded {
+                    descriptionText = strings.Gift_View_UpgradedDescription
                 } else if incoming {
                     if let convertStars, !upgraded {
                         if !converted {
@@ -1426,6 +1432,29 @@ private final class GiftViewSheetContent: CombinedComponent {
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                     transition: context.transition
                 )
+            } else if upgraded, let upgradeMessageIdId = subject.arguments?.upgradeMessageId, let originalMessageId = subject.arguments?.messageId {
+                let upgradeMessageId = MessageId(peerId: originalMessageId.peerId, namespace: originalMessageId.namespace, id: upgradeMessageIdId)
+                let buttonTitle = strings.Gift_View_ViewUpgraded
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
+                            cornerRadius: 10.0
+                        ),
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable("button"),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: false,
+                        action: {
+                            component.viewUpgraded(upgradeMessageId)
+                        }),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    transition: context.transition
+                )
             } else if incoming && !converted && !upgraded, let upgradeStars, upgradeStars > 0 {
                 let buttonTitle = strings.Gift_View_UpgradeForFree
                 buttonChild = button.update(
@@ -1443,8 +1472,16 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 AnyComponentWithIdentity(id: 0, component: AnyComponent(
                                     MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))
                                 ))),
-                                AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Premium/GiftUpgrade", tintColor: theme.list.itemCheckColors.foregroundColor)))
-                            ], spacing: 6.0))
+                                AnyComponentWithIdentity(id: 1, component: AnyComponent(
+                                    LottieComponent(
+                                        content: LottieComponent.AppBundleContent(
+                                            name: "GiftUpgrade"
+                                        ),
+                                        size: CGSize(width: 30.0, height: 30.0),
+                                        loop: true
+                                    )
+                                ))
+                            ], spacing: 5.0))
                         ),
                         isEnabled: true,
                         displaysProgress: state.inProgress,
@@ -1531,6 +1568,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let openMyGifts: () -> Void
     let transferGift: () -> Void
     let upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)
+    let viewUpgraded: (EngineMessage.Id) -> Void
     let showAttributeInfo: (Any, Float) -> Void
     
     init(
@@ -1544,6 +1582,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         openMyGifts: @escaping () -> Void,
         transferGift: @escaping () -> Void,
         upgradeGift: @escaping ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>),
+        viewUpgraded: @escaping (EngineMessage.Id) -> Void,
         showAttributeInfo: @escaping (Any, Float) -> Void
     ) {
         self.context = context
@@ -1556,6 +1595,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.openMyGifts = openMyGifts
         self.transferGift = transferGift
         self.upgradeGift = upgradeGift
+        self.viewUpgraded = viewUpgraded
         self.showAttributeInfo = showAttributeInfo
     }
     
@@ -1605,6 +1645,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
                         transferGift: context.component.transferGift,
                         upgradeGift: context.component.upgradeGift,
                         showAttributeInfo: context.component.showAttributeInfo,
+                        viewUpgraded: context.component.viewUpgraded,
                         getController: controller
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
@@ -1678,25 +1719,25 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case soldOutGift(StarGift.Gift)
         case upgradePreview([StarGift.UniqueGift.Attribute], String)
         
-        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?)? {
+        var arguments: (peerId: EnginePeer.Id, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?, upgradeMessageId: Int32?)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction {
                     switch action.action {
-                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _, _):
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil)
+                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _, upgradeMessageId):
+                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
                     case let .starGiftUnique(gift, isUpgrade, _, savedToProfile, canExportDate, transferStars, _):
                         var incoming = message.flags.contains(.Incoming)
                         if isUpgrade && message.author?.id != message.id.peerId {
                             incoming = true
                         }
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate)
+                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate, nil)
                     default:
                         return nil
                     }
                 }
             case let .profileGift(peerId, gift):
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, false, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, gift.messageId, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, false, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate, nil)
             case .soldOutGift:
                 return nil
             case .upgradePreview:
@@ -1733,6 +1774,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         var transferGiftImpl: (() -> Void)?
         var showAttributeInfoImpl: ((Any, Float) -> Void)?
         var upgradeGiftImpl: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)?
+        var viewUpgradedImpl: ((EngineMessage.Id) -> Void)?
         
         super.init(
             context: context,
@@ -1762,6 +1804,9 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 },
                 upgradeGift: { formId, keepOriginalInfo in
                     return upgradeGiftImpl?(formId, keepOriginalInfo) ?? .complete()
+                },
+                viewUpgraded: { messageId in
+                    viewUpgradedImpl?(messageId)
                 },
                 showAttributeInfo: { tag, rarity in
                     showAttributeInfoImpl?(tag, rarity)
@@ -2016,6 +2061,21 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     }
                 }
             }
+        }
+        
+        viewUpgradedImpl = { [weak self] messageId in
+            guard let self else {
+                return
+            }
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer, let navigationController = self.navigationController as? NavigationController else {
+                    return
+                }
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+            })
         }
         
         showAttributeInfoImpl = { [weak self] tag, rarity in

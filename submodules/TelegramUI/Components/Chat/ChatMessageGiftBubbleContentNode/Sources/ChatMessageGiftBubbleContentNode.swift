@@ -60,7 +60,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
-    private let buttonIconNode: ASImageNode
+    private var buttonIconNode: DefaultAnimatedStickerNodeImpl?
     
     private let moreTextNode: TextNode
     
@@ -165,11 +165,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonTitleNode = TextNode()
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
-        
-        self.buttonIconNode = ASImageNode()
-        self.buttonIconNode.displaysAsynchronously = false
-        self.buttonIconNode.isUserInteractionEnabled = false
-        
+                
         self.ribbonBackgroundNode = ASImageNode()
         self.ribbonBackgroundNode.displaysAsynchronously = false
         
@@ -195,7 +191,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
         self.buttonNode.addSubnode(self.buttonTitleNode)
-        self.buttonNode.addSubnode(self.buttonIconNode)
         
         self.addSubnode(self.ribbonBackgroundNode)
         self.addSubnode(self.ribbonTextNode)
@@ -478,6 +473,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     if isRefunded {
                                         text = item.presentationData.strings.Notification_StarGift_Subtitle_Refunded
+                                    } else if upgraded {
+                                        text = item.presentationData.strings.Notification_StarGift_Subtitle_Upgraded
                                     } else if incoming {
                                         if converted {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
@@ -530,7 +527,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 if incoming || item.presentationData.isPreview, let upgradeStars, upgradeStars > 0, !upgraded {
                                     buttonTitle = item.presentationData.strings.Notification_StarGift_Unpack
-                                    buttonIcon = "Premium/GiftUnpack"
+                                    buttonIcon = "GiftUnpack"
                                 } else {
                                     buttonTitle = item.presentationData.strings.Notification_StarGift_View
                                 }
@@ -754,7 +751,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.buttonNode.isHidden = buttonTitle.isEmpty
                             strongSelf.buttonTitleNode.isHidden = buttonTitle.isEmpty
-                            strongSelf.buttonIconNode.isHidden = buttonIcon == nil
                         
                             if strongSelf.item == nil {
                                 strongSelf.animationNode.started = { [weak self] in
@@ -930,15 +926,28 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             if modelTitleLayoutAndApply != nil {
                                 buttonOriginY = clippingTextFrame.maxY + 80.0
                             }
+                            strongSelf.buttonTitleNode.frame = CGRect(origin: CGPoint(x: 19.0, y: 8.0), size: buttonTitleLayout.size)
+                            
                             if let buttonIcon {
                                 buttonSize.width += 15.0
-                                if strongSelf.buttonIconNode.image == nil {
-                                    strongSelf.buttonIconNode.image = generateTintedImage(image: UIImage(bundleImageName: buttonIcon), color: .white)
+                                
+                                let buttonIconNode: DefaultAnimatedStickerNodeImpl
+                                if let current = strongSelf.buttonIconNode {
+                                    buttonIconNode = current
+                                } else {
+                                    buttonIconNode = DefaultAnimatedStickerNodeImpl()
+                                    buttonIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: buttonIcon), width: 60, height: 60, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                                    strongSelf.buttonNode.addSubnode(buttonIconNode)
+                                    strongSelf.buttonIconNode = buttonIconNode
+                                    buttonIconNode.playLoop()
                                 }
+                                let iconSize = CGSize(width: 20.0, height: 20.0)
+                                buttonIconNode.frame = CGRect(origin: CGPoint(x: buttonSize.width - iconSize.width - 13.0, y: 7.0), size: iconSize)
+                                buttonIconNode.updateLayout(size: iconSize)
+                                buttonIconNode.visibility = strongSelf.visibilityStatus == true
+                                buttonIconNode.dynamicColor = primaryTextColor
                             }
-                            strongSelf.buttonTitleNode.frame = CGRect(origin: CGPoint(x: 19.0, y: 8.0), size: buttonTitleLayout.size)
-                            strongSelf.buttonIconNode.frame = CGRect(origin: CGPoint(x: buttonSize.width - 30.0, y: 9.0), size: CGSize(width: 14.0, height: 14.0))
-                            
+                                                        
                             animation.animator.updateFrame(layer: strongSelf.buttonNode.layer, frame: CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: buttonOriginY), size: buttonSize), completion: nil)
                             strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
                             
@@ -1236,6 +1245,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             self.isPlaying = isPlaying
             self.animationNode.visibility = isPlaying
         }
+        self.buttonIconNode?.visibility = isPlaying
         
         if isPlaying && self.setupTimestamp == nil {
             self.setupTimestamp = CACurrentMediaTime()

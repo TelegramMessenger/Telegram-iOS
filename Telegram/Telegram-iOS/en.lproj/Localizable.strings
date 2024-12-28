@@ -13578,10 +13578,14 @@ Sorry for the inconvenience.";
 
 "Notification.StarGift.Subtitle.Other" = "%1$@ can turn this gift to a unique collectible.";
 
+"Notification.StarGift.Subtitle.Upgraded" = "This gift was upgraded.";
+
 "Stars.Transaction.GiftFrom" = "Gift From";
 "Stars.Transaction.GiftUpgrade" = "Gift Upgrade";
 
 "Gift.View.KeepOrUpgradeDescription" = "Tap \"Unpack\" to turn this gift to a unique collectible.";
+"Gift.View.UpgradedDescription" = "This gift was turned to a unique collectible.";
+"Gift.View.ViewUpgraded" = "View Upgraded Gift";
 
 "VideoChat.IncomingVideoQuality.AudioOnly" = "Audio Only";
 "VideoChat.IncomingVideoQuality.Title" = "Receive Video Quality";

@@ -781,8 +781,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .premium(color: navigationContentsAccentColor)
                 emojiExpandedStatusContent = .premium(color: navigationContentsAccentColor)
             case .verified:
-                emojiRegularStatusContent = .none
-                emojiExpandedStatusContent = .none
+                emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
+                emojiExpandedStatusContent = .verified(fillColor: navigationContentsAccentColor, foregroundColor: .clear, sizeType: .large)
             case .fake:
                 emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
                 emojiExpandedStatusContent = emojiRegularStatusContent
