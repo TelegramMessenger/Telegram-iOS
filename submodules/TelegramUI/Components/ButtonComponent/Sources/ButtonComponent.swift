@@ -559,7 +559,7 @@ public final class ButtonComponent: Component {
                     shimmeringView = ButtonShimmeringView(frame: .zero)
                     self.insertSubview(shimmeringView, at: 0)
                 }
-                shimmeringView.update(size: availableSize, color: component.background.color, cornerRadius: component.background.cornerRadius, transition: shimmeringTransition)
+                shimmeringView.update(size: availableSize, background: component.background, cornerRadius: component.background.cornerRadius, transition: shimmeringTransition)
                 shimmeringTransition.setFrame(view: shimmeringView, frame: CGRect(origin: .zero, size: availableSize))
             } else if let shimmeringView = self.shimmeringView {
                 self.shimmeringView = nil
@@ -598,6 +598,8 @@ private class ButtonShimmeringView: UIView {
         
         super.init(frame: frame)
         
+        self.isUserInteractionEnabled = false
+        
         self.addSubview(self.shimmerView)
         self.addSubview(self.borderView)
     }
@@ -606,7 +608,9 @@ private class ButtonShimmeringView: UIView {
         preconditionFailure()
     }
     
-    func update(size: CGSize, color: UIColor, cornerRadius: CGFloat, transition: ComponentTransition) {
+    func update(size: CGSize, background: ButtonComponent.Background, cornerRadius: CGFloat, transition: ComponentTransition) {
+        let color = background.foreground
+        
         let alpha: CGFloat
         let borderAlpha: CGFloat
         let compositingFilter: String?
@@ -620,13 +624,15 @@ private class ButtonShimmeringView: UIView {
             compositingFilter = nil
         }
         
+        self.backgroundColor = background.color
+        self.layer.cornerRadius = cornerRadius
+        self.borderMaskView.layer.cornerRadius = cornerRadius
+        
         self.shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
         self.shimmerView.layer.compositingFilter = compositingFilter
         
         self.borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, globalTimeOffset: false, duration: 4.0, horizontal: true)
         self.borderShimmerView.layer.compositingFilter = compositingFilter
-        
-        self.borderMaskView.layer.cornerRadius = cornerRadius
         
         let bounds = CGRect(origin: .zero, size: size)
         transition.setFrame(view: self.shimmerView, frame: bounds)

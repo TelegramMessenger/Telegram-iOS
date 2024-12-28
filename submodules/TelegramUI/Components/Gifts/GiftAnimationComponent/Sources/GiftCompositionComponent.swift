@@ -191,24 +191,26 @@ public final class GiftCompositionComponent: Component {
                     }
                 }
                 
-                if case let .model(_, file, _) = self.previewModels[Int(self.previewModelIndex)] {
-                    animationFile = file
-                }
-                
-                if case let .pattern(_, file, _) = self.previewPatterns[Int(self.previewPatternIndex)] {
-                    patternFile = file
-                    files[file.fileId.id] = file
-                }
-                
-                if case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _) = self.previewBackdrops[Int(self.previewBackdropIndex)] {
-                    backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
-                    secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
-                    patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                if !self.previewModels.isEmpty {
+                    if case let .model(_, file, _) = self.previewModels[Int(self.previewModelIndex)] {
+                        animationFile = file
+                    }
+                    
+                    if case let .pattern(_, file, _) = self.previewPatterns[Int(self.previewPatternIndex)] {
+                        patternFile = file
+                        files[file.fileId.id] = file
+                    }
+                    
+                    if case let .backdrop(_, innerColorValue, outerColorValue, patternColorValue, _, _) = self.previewBackdrops[Int(self.previewBackdropIndex)] {
+                        backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
+                        secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
+                        patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                    }
                 }
                     
                 if self.previewTimer == nil {
                     self.previewTimer = SwiftSignalKit.Timer(timeout: 2.0, repeat: true, completion: { [weak self] in
-                        guard let self else {
+                        guard let self, !self.previewModels.isEmpty else {
                             return
                         }
                         self.previewModelIndex = (self.previewModelIndex + 1) % Int32(self.previewModels.count)

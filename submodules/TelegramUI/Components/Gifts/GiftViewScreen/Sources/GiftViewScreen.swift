@@ -1450,6 +1450,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         isEnabled: true,
                         displaysProgress: false,
                         action: {
+                            component.cancel(true)
                             component.viewUpgraded(upgradeMessageId)
                         }),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -2064,17 +2065,17 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         viewUpgradedImpl = { [weak self] messageId in
-            guard let self else {
+            guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             let _ = (context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)
             )
-            |> deliverOnMainQueue).start(next: { peer in
-                guard let peer, let navigationController = self.navigationController as? NavigationController else {
+            |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
+                guard let peer, let navigationController else {
                     return
                 }
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false), keepStack: .always, useExisting: true, purposefulAction: {}, peekData: nil, forceAnimatedScroll: true))
             })
         }
         
