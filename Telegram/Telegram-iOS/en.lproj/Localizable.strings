@@ -13611,6 +13611,29 @@ Sorry for the inconvenience.";
 "Gift.View.Self.Title" = "Saved Gift";
 "Gift.View.Self.Description" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
 
+"BotVerification.Verify.Placeholder" = "This page is verified by %@";
+
+"BotVerification.Verify.Channel.Title" = "Verify Channel";
+"BotVerification.Verify.Channel.Text" = "Do you want to verify this channel with your verification mark and description?";
+"BotVerification.Verify.Group.Title" = "Verify Group";
+"BotVerification.Verify.Group.Text" = "Do you want to verify this group with your verification mark and description?";
+"BotVerification.Verify.User.Title" = "Verify Bot";
+"BotVerification.Verify.User.Text" = "Do you want to verify this user with your verification mark and description?";
+"BotVerification.Verify.Bot.Title" = "Verify Bot";
+"BotVerification.Verify.Bot.Text" = "Do you want to verify this bot with your verification mark and description?";
+
+"BotVerification.Verify.Verify" = "Verify";
+
+"BotVerification.Remove.Title" = "Remove Verification";
+"BotVerification.Remove.Channel.Text" = "This channel is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Group.Text" = "This group is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.User.Text" = "This user is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Bot.Text" = "This bot is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Remove" = "Remove";
+
 "BotVerification.ChooseChat" = "Choose Chat to Verify";
 "BotVerification.Added" = "**%@** has been notified and will receive your verification mark and description upon accepting.";
 "BotVerification.Removed" = "You have removed **%@'s** verification.";
+
+"Premium.Gift.ContactSelection.ThisIsYou" = "THIS IS YOU";
+"Premium.Gift.ContactSelection.BuySelf" = "buy yourself a gift";

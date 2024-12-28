@@ -1729,10 +1729,18 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     switch action.action {
                     case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _, upgradeMessageId):
                         return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
-                    case let .starGiftUnique(gift, isUpgrade, _, savedToProfile, canExportDate, transferStars, _):
-                        var incoming = message.flags.contains(.Incoming)
-                        if isUpgrade && message.author?.id != message.id.peerId {
-                            incoming = true
+                    case let .starGiftUnique(gift, isUpgrade, isTransferred, savedToProfile, canExportDate, transferStars, _):
+                        var incoming = false
+                        if isUpgrade {
+                            if message.author?.id != message.id.peerId {
+                                incoming = true
+                            }
+                        } else if isTransferred {
+                            if message.author?.id != message.id.peerId {
+                                incoming = true
+                            }
+                        } else {
+                            incoming = message.flags.contains(.Incoming)
                         }
                         return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate, nil)
                     default:

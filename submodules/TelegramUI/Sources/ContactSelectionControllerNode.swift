@@ -96,7 +96,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                     sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
                 }
                 
-                displayTopPeers = .custom(sections)
+                displayTopPeers = .custom(showSelf: showSelf, sections: sections)
             } else {
                 displayTopPeers = .recent
             }
