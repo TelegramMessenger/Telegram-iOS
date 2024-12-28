@@ -1790,7 +1790,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         context: AccountContext,
         subject: GiftViewScreen.Subject,
         forceDark: Bool = false,
-        updateSavedToProfile: ((Bool) -> Void)? = nil,
+        updateSavedToProfile: ((EngineMessage.Id, Bool) -> Void)? = nil,
         convertToStars: (() -> Void)? = nil,
         transferGift: ((Bool, EnginePeer.Id) -> Void)? = nil,
         upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)? = nil
@@ -1890,7 +1890,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
             
             if let updateSavedToProfile {
-                updateSavedToProfile(added)
+                updateSavedToProfile(messageId, added)
             } else {
                 let _ = (context.engine.payments.updateStarGiftAddedToProfile(messageId: messageId, added: added)
                 |> deliverOnMainQueue).startStandalone()

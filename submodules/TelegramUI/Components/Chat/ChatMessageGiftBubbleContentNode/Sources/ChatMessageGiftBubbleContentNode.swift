@@ -462,7 +462,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
-                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, _, upgradeStars, isRefunded, _):
+                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, isRefunded, _):
                             if case let .generic(gift) = gift {
                                 isStarGift = true
                                 let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
@@ -486,7 +486,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
                                         } else if upgradeStars != nil {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Upgrade
-                                        } else if isSelfGift {
+                                        } else if isSelfGift && canUpgrade {
                                             text = item.presentationData.strings.Notification_StarsGift_Subtitle_Self
                                         } else if savedToProfile {
                                             if let convertStars {

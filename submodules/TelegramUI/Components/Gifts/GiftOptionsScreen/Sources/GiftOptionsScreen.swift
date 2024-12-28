@@ -476,6 +476,7 @@ final class GiftOptionsScreenComponent: Component {
             let bottomContentInset: CGFloat = 24.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let sectionSpacing: CGFloat = 24.0
+            let headerSideInset: CGFloat = 24.0 + environment.safeInsets.left
             
             let _ = bottomContentInset
             let _ = sectionSpacing
@@ -620,7 +621,7 @@ final class GiftOptionsScreenComponent: Component {
                     horizontalAlignment: .center
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 100.0)
+                containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
             )
             if let premiumTitleView = self.premiumTitle.view {
                 if premiumTitleView.superview == nil {
@@ -676,7 +677,7 @@ final class GiftOptionsScreenComponent: Component {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 1000.0)
             )
             let premiumDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - premiumDescriptionSize.width) / 2.0), y: contentHeight), size: premiumDescriptionSize)
             if let premiumDescriptionView = self.premiumDescription.view {
@@ -818,7 +819,7 @@ final class GiftOptionsScreenComponent: Component {
                         horizontalAlignment: .center
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 100.0)
+                    containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 100.0)
                 )
                 if let starsTitleView = self.starsTitle.view {
                     if starsTitleView.superview == nil {
@@ -864,7 +865,7 @@ final class GiftOptionsScreenComponent: Component {
                         }
                     )),
                     environment: {},
-                    containerSize: CGSize(width: availableSize.width, height: 1000.0)
+                    containerSize: CGSize(width: availableSize.width - headerSideInset * 2.0, height: 1000.0)
                 )
                 let starsDescriptionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - starsDescriptionSize.width) / 2.0), y: contentHeight), size: starsDescriptionSize)
                 if let starsDescriptionView = self.starsDescription.view {

@@ -224,8 +224,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     let controller = GiftViewScreen(
                                         context: self.context,
                                         subject: .profileGift(self.peerId, product),
-                                        updateSavedToProfile: { [weak self] added in
-                                            guard let self, let messageId = product.messageId else {
+                                        updateSavedToProfile: { [weak self] messageId, added in
+                                            guard let self else {
                                                 return
                                             }
                                             self.profileGifts.updateStarGiftAddedToProfile(messageId: messageId, added: added)

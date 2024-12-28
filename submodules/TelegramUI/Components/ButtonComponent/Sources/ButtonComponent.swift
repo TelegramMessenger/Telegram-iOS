@@ -557,6 +557,7 @@ public final class ButtonComponent: Component {
                 } else {
                     shimmeringTransition = .immediate
                     shimmeringView = ButtonShimmeringView(frame: .zero)
+                    self.shimmeringView = shimmeringView
                     self.insertSubview(shimmeringView, at: 0)
                 }
                 shimmeringView.update(size: availableSize, background: component.background, cornerRadius: component.background.cornerRadius, transition: shimmeringTransition)

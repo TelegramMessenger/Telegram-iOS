@@ -1641,17 +1641,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
                     }))
-                } else if user.isVerified {
-                    let description = presentationData.strings.PeerInfo_VerificationInfo_Bot
-                    
-                    let attributedPrefix = NSMutableAttributedString(string: "  ")
-                    attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .verification), range: NSMakeRange(0, 1))
-                    
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
-                        if case .tap = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                        }
-                    }))
                 } else if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
                     items[currentPeerInfoSection]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
                         interaction.openAddBotToGroup()
@@ -1819,22 +1808,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
                         if case let .tap(url) = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
                             context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                        }
-                    }))
-                } else if channel.isVerified {
-                    let description: String
-                    if case .group = channel.info {
-                        description = presentationData.strings.PeerInfo_VerificationInfo_Group
-                    } else {
-                        description = presentationData.strings.PeerInfo_VerificationInfo_Channel
-                    }
-                    
-                    let attributedPrefix = NSMutableAttributedString(string: "  ")
-                    attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .verification), range: NSMakeRange(0, 1))
-                    
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
-                        if case .tap = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                         }
                     }))
                 }
