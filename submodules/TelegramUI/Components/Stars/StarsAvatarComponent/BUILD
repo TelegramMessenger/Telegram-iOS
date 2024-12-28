@@ -23,6 +23,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
+        "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
     ],
     visibility = [
         "//visibility:public",

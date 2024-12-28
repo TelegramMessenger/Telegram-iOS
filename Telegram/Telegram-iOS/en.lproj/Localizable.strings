@@ -13532,6 +13532,8 @@ Sorry for the inconvenience.";
 "Gift.Transfer.Confirmation.Transfer" = "Transfer for";
 "Gift.Transfer.Confirmation.TransferFree" = "Transfer";
 
+"Gift.Transfer.Success" = "You have successfully gifter **%1$@** to **%2$@**.";
+
 "Gift.View.UpgradeForFree" = "Upgrade for Free";
 "Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
 
@@ -13576,14 +13578,17 @@ Sorry for the inconvenience.";
 "Notification.StarGift.Subtitle.Refunded" = "This gift cannot be converted to Stars because the payment related to it was refunded.";
 "Notification.StarGift.Subtitle.Downgraded" = "This gift was downgraded because a request to refund the payment related to this gift was made, and the money was returned.";
 
-"Notification.StarGift.Subtitle.Other" = "%1$@ can turn this gift to a unique collectible.";
+"Notification.StarGift.Subtitle.Upgrade" = "Tap \"Unpack\" to turn this gift to a unique collectible.";
+"Notification.StarGift.Subtitle.Upgrade.Other" = "%1$@ can turn this gift to a unique collectible.";
 
 "Notification.StarGift.Subtitle.Upgraded" = "This gift was upgraded.";
 
 "Stars.Transaction.GiftFrom" = "Gift From";
 "Stars.Transaction.GiftUpgrade" = "Gift Upgrade";
 
-"Gift.View.KeepOrUpgradeDescription" = "Tap \"Unpack\" to turn this gift to a unique collectible.";
+"Gift.View.FreeUpgradeDescription" = "Upgrade this gift for free to turn it to a unique collectible.";
+"Gift.View.FreeUpgradeOtherDescription" = "%1$@ can turn this gift to a unique collectible.";
+
 "Gift.View.UpgradedDescription" = "This gift was turned to a unique collectible.";
 "Gift.View.ViewUpgraded" = "View Upgraded Gift";
 

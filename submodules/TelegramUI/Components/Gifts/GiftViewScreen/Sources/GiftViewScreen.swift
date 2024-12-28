@@ -708,7 +708,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                 } else if upgraded {
                     descriptionText = strings.Gift_View_UpgradedDescription
                 } else if incoming {
-                    if let convertStars, !upgraded {
+                    if let _ = upgradeStars {
+                        descriptionText = strings.Gift_View_FreeUpgradeDescription
+                    } else if let convertStars, !upgraded {
                         if !converted {
                             if canUpgrade || upgradeStars != nil {
                                 descriptionText = strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
@@ -718,13 +720,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                         } else {
                             descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
                         }
-                    } else if (canUpgrade || upgradeStars != nil) && !upgraded {
-                        descriptionText = strings.Gift_View_KeepOrUpgradeDescription
                     } else {
                         descriptionText = strings.Gift_View_BotDescription
                     }
                 } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId] {
-                    if case .message = subject, let convertStars {
+                    if let _ = upgradeStars {
+                        descriptionText = strings.Gift_View_FreeUpgradeOtherDescription(peer.compactDisplayTitle).string
+                    } else if case .message = subject, let convertStars {
                         descriptionText = strings.Gift_View_OtherDescription(peer.compactDisplayTitle, strings.Gift_View_OtherDescription_Stars(Int32(convertStars))).string
                     } else {
                         descriptionText = ""

@@ -478,6 +478,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                     } else if incoming {
                                         if converted {
                                             text = item.presentationData.strings.Notification_StarGift_Subtitle_Converted(item.presentationData.strings.Notification_StarGift_Subtitle_Converted_Stars(Int32(convertStars ?? 0))).string
+                                        } else if upgradeStars != nil {
+                                            text = item.presentationData.strings.Notification_StarGift_Subtitle_Upgrade
                                         } else if savedToProfile {
                                             if let convertStars {
                                                 text =  item.presentationData.strings.Notification_StarGift_Subtitle_Displaying(item.presentationData.strings.Notification_StarGift_Subtitle_Displaying_Stars(Int32(convertStars))).string
@@ -503,14 +505,14 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                                 text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
                                             }
                                         } else {
-                                            if let convertStars, convertStars > 0 {
+                                            if upgradeStars != nil {
+                                                text =  item.presentationData.strings.Notification_StarGift_Subtitle_Upgrade_Other(peerName).string
+                                            } else if let convertStars, convertStars > 0 {
                                                 let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars)))
                                                 text = formattedString.string
                                                 if let starsRange = formattedString.ranges.last {
                                                     entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
                                                 }
-                                            } else {
-                                                
                                             }
                                         }
                                     }

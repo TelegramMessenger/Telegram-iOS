@@ -224,9 +224,9 @@ public final class GiftItemComponent: Component {
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .thumbnail:
-                size = CGSize(width: 60.0, height: 60.0)
-                iconSize = CGSize(width: 42.0, height: 42.0)
-                cornerRadius = 12.0
+                size = CGSize(width: availableSize.width, height: availableSize.width)
+                iconSize = CGSize(width: floor(size.width * 0.7), height: floor(size.width * 0.7))
+                cornerRadius = floor(availableSize.width * 0.2)
             }
             
             self.backgroundLayer.cornerRadius = cornerRadius
