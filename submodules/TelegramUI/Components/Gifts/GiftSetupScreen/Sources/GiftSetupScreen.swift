@@ -616,10 +616,12 @@ final class GiftSetupScreenComponent: Component {
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                         
+            let isSelfGift = component.peerId == component.context.account.peerId
+            
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: environment.strings.Gift_Send_TitleTo(peerName).string, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: isSelfGift ? environment.strings.Gift_SendSelf_Title : environment.strings.Gift_Send_TitleTo(peerName).string, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -946,7 +948,7 @@ final class GiftSetupScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
+                                string: isSelfGift ? environment.strings.Gift_SendSelf_HideMyName_Info : environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),
@@ -958,7 +960,7 @@ final class GiftSetupScreenComponent: Component {
                                 title: AnyComponent(VStack([
                                     AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(
                                         text: .plain(NSAttributedString(
-                                            string: environment.strings.Gift_Send_HideMyName,
+                                            string: isSelfGift ? environment.strings.Gift_SendSelf_HideMyName : environment.strings.Gift_Send_HideMyName,
                                             font: Font.regular(presentationData.listsFontSize.baseDisplaySize),
                                             textColor: environment.theme.list.itemPrimaryTextColor
                                         )),

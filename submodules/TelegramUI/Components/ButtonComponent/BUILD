@@ -14,6 +14,7 @@ swift_library(
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/ActivityIndicator",
+        "//submodules/ShimmerEffect",
         "//submodules/Components/BundleIconComponent",
     ],
     visibility = [

@@ -1887,6 +1887,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             var query: String?
         }
         let previousRecentlySearchedPeersState = Atomic<SearchedPeersState?>(value: nil)
+        let hadAnySearchMessages = Atomic<Bool>(value: false)
         
         let foundItems: Signal<([ChatListSearchEntry], Bool)?, NoError> = combineLatest(queue: .mainQueue(), searchQuery, searchOptions, self.searchScopePromise.get(), downloadItems)
         |> mapToSignal { [weak self] query, options, searchScope, downloadItems -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
@@ -2992,9 +2993,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     }
                     
+                    let hadAnySearchMessagesBefore = hadAnySearchMessages.with { $0 }
                     var existingMessageIds = Set<MessageId>()
-                    if foundRemoteMessages.1 && searchScope != .everywhere {
-                        for i in 0 ..< 5 {
+                    if foundRemoteMessages.1 && (searchScope != .everywhere || hadAnySearchMessagesBefore) {
+                        for i in 0 ..< 6 {
                             entries.append(.messagePlaceholder(Int32(i), presentationData, searchScope))
                             index += 1
                         }
@@ -3029,7 +3031,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 index += 1
                             }
                         }
-                        if !hasAnyMessages {
+                        
+                        if hasAnyMessages {
+                            let _ = hadAnySearchMessages.swap(true)
+                        } else {
                             switch searchScope {
                             case .everywhere:
                                 break

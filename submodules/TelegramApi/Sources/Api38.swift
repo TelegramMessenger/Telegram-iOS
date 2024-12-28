@@ -2383,6 +2383,22 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func getBotRecommendations(flags: Int32, bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.Users>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(676707937)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    bot.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.getBotRecommendations", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.users.Users? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.users.Users?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.users.Users
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func getPopularAppBots(offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.bots.PopularAppBots>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1034878574)

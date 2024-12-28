@@ -1432,7 +1432,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                             color: theme.list.itemCheckColors.fillColor,
                             foreground: theme.list.itemCheckColors.foregroundColor,
                             pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0
+                            cornerRadius: 10.0,
+                            isShimmering: true
                         ),
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("freeUpgrade"),

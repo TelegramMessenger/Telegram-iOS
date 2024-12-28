@@ -13587,3 +13587,17 @@ Sorry for the inconvenience.";
 "VideoChat.IncomingVideoQuality.Title" = "Receive Video Quality";
 
 "ChatList.EmptyResult.SearchInAll" = "Search in All Messages";
+
+"Gift.Options.GiftSelf.Title" = "Buy a Gift";
+"Gift.Options.GiftSelf.Text" = "Buy yourself a gift to display on your page or reserve for later.\n\nLimited-edition gifts upgraded to collectibles can be gifted to others later.";
+
+"Gift.SendSelf.Title" = "Gift to Myself";
+"Gift.SendSelf.HideMyName" = "Hide My Name";
+"Gift.SendSelf.HideMyName.Info" = "Hide my name and message from visitors to my profile.";
+
+"Notification.StarGift.Self.Title" = "Saved Gift";
+"Notification.StarGift.Self.Bought" = "You bought a gift for %@";
+"Notification.StarGift.Self.Bought" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
+
+"Gift.View.Self.Title" = "Saved Gift";
+"Gift.View.Self.Description" = "You can display this gift on your page or turn it into a unique collectible and send to others.";

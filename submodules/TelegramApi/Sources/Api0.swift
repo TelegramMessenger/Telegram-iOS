@@ -1441,6 +1441,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-242427324] = { return Api.upload.File.parse_fileCdnRedirect($0) }
     dict[568808380] = { return Api.upload.WebFile.parse_webFile($0) }
     dict[997004590] = { return Api.users.UserFull.parse_userFull($0) }
+    dict[1658259128] = { return Api.users.Users.parse_users($0) }
+    dict[828000628] = { return Api.users.Users.parse_usersSlice($0) }
     return dict
 }()
 
@@ -2549,6 +2551,8 @@ public extension Api {
             case let _1 as Api.upload.WebFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.users.UserFull:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.users.Users:
                 _1.serialize(buffer, boxed)
             default:
                 break

@@ -4721,7 +4721,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let dateFrame = strongSelf.dateNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: dateFrame.maxX - dateLineWidth, y: dateFrame.minY + 3.0), width: dateLineWidth, diameter: lineDiameter))
                         
-                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.plainBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
                     } else if let shimmerNode = strongSelf.placeholderNode {
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()
