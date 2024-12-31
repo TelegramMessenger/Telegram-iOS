@@ -342,6 +342,177 @@ public final class ExternalMediaStreamingContext: SharedHLSServerSource {
     }
 }
 
+public final class DirectMediaStreamingContext {
+    public struct Playlist: Equatable {
+        public struct Part: Equatable {
+            public let index: Int
+            public let timestamp: Double
+            public let duration: Double
+            
+            public init(index: Int, timestamp: Double, duration: Double) {
+                self.index = index
+                self.timestamp = timestamp
+                self.duration = duration
+            }
+        }
+        
+        public var parts: [Part]
+        
+        public init(parts: [Part]) {
+            self.parts = parts
+        }
+    }
+    
+    private final class Impl {
+        let queue: Queue
+        
+        private var broadcastPartsSource: BroadcastPartSource?
+        
+        private let resetPlaylistDisposable = MetaDisposable()
+        private let updatePlaylistDisposable = MetaDisposable()
+        
+        let playlistData = Promise<Playlist>()
+        
+        init(queue: Queue, rejoinNeeded: @escaping () -> Void) {
+            self.queue = queue
+        }
+        
+        deinit {
+            self.updatePlaylistDisposable.dispose()
+        }
+        
+        func setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData?) {
+            if let audioStreamData {
+                let broadcastPartsSource = NetworkBroadcastPartSource(queue: self.queue, engine: audioStreamData.engine, callId: audioStreamData.callId, accessHash: audioStreamData.accessHash, isExternalStream: audioStreamData.isExternalStream)
+                self.broadcastPartsSource = broadcastPartsSource
+                
+                self.updatePlaylistDisposable.set(nil)
+                
+                let queue = self.queue
+                self.resetPlaylistDisposable.set(broadcastPartsSource.requestTime(completion: { [weak self] timestamp in
+                    queue.async {
+                        guard let self else {
+                            return
+                        }
+                        
+                        let segmentDuration: Int64 = 1000
+                        
+                        var adjustedTimestamp: Int64 = 0
+                        if timestamp > 0 {
+                            adjustedTimestamp = timestamp / segmentDuration * segmentDuration - 4 * segmentDuration
+                        }
+                        
+                        if adjustedTimestamp > 0 {
+                            self.beginUpdatingPlaylist(initialHeadTimestamp: adjustedTimestamp)
+                        }
+                    }
+                }))
+            }
+        }
+        
+        private func beginUpdatingPlaylist(initialHeadTimestamp: Int64) {
+            let segmentDuration: Int64 = 1000
+            
+            var timestamp = initialHeadTimestamp
+            self.updatePlaylist(headTimestamp: timestamp)
+            
+            self.updatePlaylistDisposable.set((
+                Signal<Void, NoError>.single(Void())
+                |> delay(1.0, queue: self.queue)
+                |> restart
+                |> deliverOn(self.queue)
+            ).start(next: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                
+                timestamp += segmentDuration
+                self.updatePlaylist(headTimestamp: timestamp)
+            }))
+        }
+        
+        private func updatePlaylist(headTimestamp: Int64) {
+            let segmentDuration: Int64 = 1000
+            let headIndex = headTimestamp / segmentDuration
+            let minIndex = headIndex - 20
+            
+            var parts: [Playlist.Part] = []
+            for index in minIndex ... headIndex {
+                parts.append(DirectMediaStreamingContext.Playlist.Part(
+                    index: Int(index),
+                    timestamp: Double(index),
+                    duration: 1.0
+                ))
+            }
+            
+            self.playlistData.set(.single(Playlist(parts: parts)))
+        }
+        
+        func partData(index: Int) -> Signal<Data?, NoError> {
+            let segmentDuration: Int64 = 1000
+            let timestamp = Int64(index) * segmentDuration
+            
+            //print("Player: request part(q: \(quality)) \(index) -> \(timestamp)")
+            
+            guard let broadcastPartsSource = self.broadcastPartsSource else {
+                return .single(nil)
+            }
+            
+            return Signal { subscriber in
+                return broadcastPartsSource.requestPart(
+                    timestampMilliseconds: timestamp,
+                    durationMilliseconds: segmentDuration,
+                    subject: .video(channelId: 1, quality: .full),
+                    completion: { part in
+                        var data = part.oggData
+                        if data.count > 32 {
+                            data = data.subdata(in: 32 ..< data.count)
+                        }
+                        subscriber.putNext(data)
+                    },
+                    rejoinNeeded: {
+                        //TODO
+                    }
+                )
+            }
+        }
+    }
+    
+    private let queue = Queue()
+    let internalId: CallSessionInternalId
+    private let impl: QueueLocalObject<Impl>
+    private var hlsServerDisposable: Disposable?
+    
+    public init(id: CallSessionInternalId, rejoinNeeded: @escaping () -> Void) {
+        self.internalId = id
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return Impl(queue: queue, rejoinNeeded: rejoinNeeded)
+        })
+    }
+    
+    deinit {
+    }
+    
+    public func setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData?) {
+        self.impl.with { impl in
+            impl.setAudioStreamData(audioStreamData: audioStreamData)
+        }
+    }
+    
+    public func playlistData() -> Signal<Playlist, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            impl.playlistData.get().start(next: subscriber.putNext)
+        }
+    }
+    
+    public func partData(index: Int) -> Signal<Data?, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            impl.partData(index: index).start(next: subscriber.putNext)
+        }
+    }
+}
+
 public protocol SharedHLSServerSource: AnyObject {
     var id: String { get }
     
