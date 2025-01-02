@@ -794,7 +794,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var verifiedIcon: EmojiStatusComponent.Content?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList || item.aliasHandling == .treatSelfAsSaved) {
+                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList || item.aliasHandling == .standard) {
                     if peer.isScam {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {

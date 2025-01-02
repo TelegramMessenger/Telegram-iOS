@@ -154,7 +154,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             super.init()
             
             if let arguments = subject.arguments {
-                if let upgradeStars = arguments.upgradeStars, upgradeStars > 0 {
+                if let upgradeStars = arguments.upgradeStars, upgradeStars > 0, !arguments.nameHidden {
                     self.keepOriginalInfo = true
                 }
                 
@@ -777,11 +777,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                     .disappear(.default(alpha: true))
                 )
                 
-//                originY += 32.0
-//                if soldOut {
-//                    originY -= 12.0
-//                }
-                
                 if !descriptionText.isEmpty {
                     let linkColor = theme.actionSheet.controlAccentColor
                     if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
@@ -845,7 +840,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                     }
                 } else {
-                    originY += 21.0
+                    originY += 9.0
                 }
                 
                 if nameHidden && uniqueGift == nil {
@@ -855,28 +850,30 @@ private final class GiftViewSheetContent: CombinedComponent {
                     let hiddenDescription: String
                     if incoming {
                         hiddenDescription = text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden
-                    } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId] {
+                    } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId], subject.arguments?.fromPeerId != nil {
                         hiddenDescription = text != nil ? strings.Gift_View_Outgoing_NameAndMessageHidden(peer.compactDisplayTitle).string : strings.Gift_View_Outgoing_NameHidden(peer.compactDisplayTitle).string
                     } else {
                         hiddenDescription = ""
                     }
-                    
-                    let hiddenText = hiddenText.update(
-                        component: MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: hiddenDescription, font: textFont, textColor: textColor)),
-                            horizontalAlignment: .center,
-                            maximumNumberOfLines: 2,
-                            lineSpacing: 0.2
-                        ),
-                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
-                        transition: .immediate
-                    )
-                    context.add(hiddenText
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
-                    )
-                    
-                    originY += hiddenText.size.height
-                    originY += 11.0
+
+                    if !hiddenDescription.isEmpty {
+                        let hiddenText = hiddenText.update(
+                            component: MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: hiddenDescription, font: textFont, textColor: textColor)),
+                                horizontalAlignment: .center,
+                                maximumNumberOfLines: 2,
+                                lineSpacing: 0.2
+                            ),
+                            availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                            transition: .immediate
+                        )
+                        context.add(hiddenText
+                            .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                        )
+                        
+                        originY += hiddenText.size.height
+                        originY += 11.0
+                    }
                 }
                 
                 let tableFont = Font.regular(15.0)
@@ -1108,21 +1105,27 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     let format = senderName != nil ? strings.Gift_Unique_OriginalInfoSenderWithText(senderName!, recipientName, dateString, "") : strings.Gift_Unique_OriginalInfoWithText(recipientName, dateString, "")
                                     let string = NSMutableAttributedString(string: format.string, font: tableFont, textColor: tableTextColor)
                                     string.replaceCharacters(in: format.ranges[format.ranges.count - 1].range, with: attributedText)
-                                    if let _ = senderName {
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[1].range)
+                                    if let senderPeerId {
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: senderPeerId, mention: ""), range: format.ranges[0].range)
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[1].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: recipientPeerId, mention: ""), range: format.ranges[1].range)
                                     } else {
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: recipientPeerId, mention: ""), range: format.ranges[0].range)
                                     }
                                     value = string
                                 } else {
                                     let format = senderName != nil ? strings.Gift_Unique_OriginalInfoSender(senderName!, recipientName, dateString) : strings.Gift_Unique_OriginalInfo(recipientName, dateString)
                                     let string = NSMutableAttributedString(string: format.string, font: tableFont, textColor: tableTextColor)
-                                    if let _ = senderName {
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[1].range)
+                                    if let senderPeerId {
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: senderPeerId, mention: ""), range: format.ranges[0].range)
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[1].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: recipientPeerId, mention: ""), range: format.ranges[1].range)
                                     } else {
-                                        string.addAttribute(NSAttributedString.Key.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(.foregroundColor, value: tableLinkColor, range: format.ranges[0].range)
+                                        string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention), value: TelegramPeerMention(peerId: recipientPeerId, mention: ""), range: format.ranges[0].range)
                                     }
                                     
                                     value = string
@@ -1146,7 +1149,26 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             horizontalAlignment: .center,
                                             maximumNumberOfLines: 0,
                                             insets: id == "originalInfo" ? UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0) : .zero,
-                                            handleSpoilers: true
+                                            highlightColor: tableLinkColor.withAlphaComponent(0.1),
+                                            handleSpoilers: true,
+                                            highlightAction: { attributes in
+                                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] {
+                                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)
+                                                } else {
+                                                    return nil
+                                                }
+                                            },
+                                            tapAction: { [weak state] attributes, _ in
+                                                guard let state else {
+                                                    return
+                                                }
+                                                if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention, let peer = state.peerMap[mention.peerId] {
+                                                    component.openPeer(peer)
+                                                    Queue.mainQueue().after(1.0, {
+                                                        component.cancel(false)
+                                                    })
+                                                }
+                                            }
                                         )
                                     )
                                 )
@@ -1178,11 +1200,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                     }
                     
+                    let issuedString = presentationStringsFormattedNumber(uniqueGift.availability.issued, environment.dateTimeFormat.groupingSeparator)
+                    let totalString = presentationStringsFormattedNumber(uniqueGift.availability.total, environment.dateTimeFormat.groupingSeparator)
                     tableItems.insert(.init(
                         id: "availability",
                         title: strings.Gift_Unique_Availability,
                         component: AnyComponent(
-                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unique_Issued("\(uniqueGift.availability.issued)/\(uniqueGift.availability.total)").string, font: tableFont, textColor: tableTextColor)))
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unique_Issued("\(issuedString)/\(totalString)").string, font: tableFont, textColor: tableTextColor)))
                         )
                     ), at: hasOriginalInfo ? tableItems.count - 1 : tableItems.count)
                 } else {

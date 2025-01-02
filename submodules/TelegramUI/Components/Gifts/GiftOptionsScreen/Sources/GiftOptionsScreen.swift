@@ -79,6 +79,7 @@ final class GiftOptionsScreenComponent: Component {
     public enum StarsFilter: Equatable {
         case all
         case limited
+        case inStock
         case stars(Int64)
         
         init(rawValue: Int64) {
@@ -87,6 +88,8 @@ final class GiftOptionsScreenComponent: Component {
                 self = .all
             case -1:
                 self = .limited
+            case -2:
+                self = .inStock
             default:
                 self = .stars(rawValue)
             }
@@ -98,6 +101,8 @@ final class GiftOptionsScreenComponent: Component {
                 return 0
             case .limited:
                 return -1
+            case .inStock:
+                return -2
             case let .stars(stars):
                 return stars
             }
@@ -157,6 +162,10 @@ final class GiftOptionsScreenComponent: Component {
                             return true
                         case .limited:
                             if $0.availability != nil {
+                                return true
+                            }
+                        case .inStock:
+                            if $0.availability == nil || $0.availability!.remains > 0 {
                                 return true
                             }
                         case let .stars(stars):
@@ -901,6 +910,11 @@ final class GiftOptionsScreenComponent: Component {
                     title: strings.Gift_Options_Gift_Filter_Limited
                 ))
             }
+            
+            tabSelectorItems.append(TabSelectorComponent.Item(
+                id: AnyHashable(StarsFilter.inStock.rawValue),
+                title: strings.Gift_Options_Gift_Filter_InStock
+            ))
 
             let starsAmounts = Array(starsAmountsSet).sorted()
             for amount in starsAmounts {

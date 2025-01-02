@@ -59,6 +59,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var shimmerEffectNode: ShimmerEffectForegroundNode?
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
+    private let buttonContentNode: ASDisplayNode
     private let buttonTitleNode: TextNode
     private var buttonIconNode: DefaultAnimatedStickerNodeImpl?
     
@@ -162,8 +163,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
 
         self.buttonStarsNode = PremiumStarsNode()
         
+        self.buttonContentNode = ASDisplayNode()
+        self.buttonContentNode.isUserInteractionEnabled = false
+        
         self.buttonTitleNode = TextNode()
-        self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
                 
         self.ribbonBackgroundNode = ASImageNode()
@@ -190,7 +193,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
-        self.buttonNode.addSubnode(self.buttonTitleNode)
+        self.buttonNode.addSubnode(self.buttonContentNode)
+        
+        self.buttonContentNode.addSubnode(self.buttonTitleNode)
         
         self.addSubnode(self.ribbonBackgroundNode)
         self.addSubnode(self.ribbonTextNode)
@@ -546,8 +551,12 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             if case let .unique(uniqueGift) = gift {
                                 isStarGift = true
                                 let authorName: String
-                                if isUpgrade && item.message.author?.id == item.context.account.peerId {
-                                    authorName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                if isUpgrade {
+                                    if item.message.author?.id == item.context.account.peerId {
+                                        authorName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
+                                    } else {
+                                        authorName = item.associatedData.accountPeer?.compactDisplayTitle ?? ""
+                                    }
                                 } else {
                                     authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 }
@@ -747,7 +756,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let overlayColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 16.0 : 0.0), size: giftSize)
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 12.0 : 0.0), size: giftSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             
                             var iconSize = CGSize(width: 160.0, height: 160.0)
@@ -945,9 +954,21 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.buttonIconNode {
                                     buttonIconNode = current
                                 } else {
+                                    if animation.isAnimated {
+                                        if let snapshotView = strongSelf.buttonContentNode.view.snapshotView(afterScreenUpdates: false) {
+                                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                                snapshotView.removeFromSuperview()
+                                            })
+                                            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                                            strongSelf.buttonNode.view.addSubview(snapshotView)
+                                        }
+                                        strongSelf.buttonContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                        strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                    }
+                                    
                                     buttonIconNode = DefaultAnimatedStickerNodeImpl()
                                     buttonIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: buttonIcon), width: 60, height: 60, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                                    strongSelf.buttonNode.addSubnode(buttonIconNode)
+                                    strongSelf.buttonContentNode.addSubnode(buttonIconNode)
                                     strongSelf.buttonIconNode = buttonIconNode
                                     buttonIconNode.playLoop()
                                 }
@@ -956,10 +977,26 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonIconNode.updateLayout(size: iconSize)
                                 buttonIconNode.visibility = strongSelf.visibilityStatus == true
                                 buttonIconNode.dynamicColor = primaryTextColor
+                            } else if let buttonIconNode = strongSelf.buttonIconNode {
+                                if animation.isAnimated {
+                                    if let snapshotView = strongSelf.buttonContentNode.view.snapshotView(afterScreenUpdates: false) {
+                                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                            snapshotView.removeFromSuperview()
+                                        })
+                                        snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                                        strongSelf.buttonNode.view.addSubview(snapshotView)
+                                    }
+                                    strongSelf.buttonContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                }
+                                
+                                strongSelf.buttonIconNode = nil
+                                buttonIconNode.removeFromSupernode()
                             }
                                                         
                             animation.animator.updateFrame(layer: strongSelf.buttonNode.layer, frame: CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: buttonOriginY), size: buttonSize), completion: nil)
                             strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
+                            strongSelf.buttonContentNode.frame = CGRect(origin: .zero, size: buttonSize)
                             
                             if ribbonTextLayout.size.width > 0.0 {
                                 if strongSelf.ribbonBackgroundNode.image == nil {

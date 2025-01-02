@@ -3149,7 +3149,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
                 if titleLeftOffset.isZero, case .animation = currentVerifiedIconContent {
-                    titleLeftOffset += 20.0
+                    titleLeftOffset += 19.0
                 }
                 
                 if titleIconsWidth.isZero {
@@ -4590,7 +4590,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         
                         let iconOrigin: CGFloat = nextTitleIconOrigin
-                        let containerSize = CGSize(width: 20.0, height: 20.0)
+                        let containerSize: CGSize
+                        if case .verified = currentCredibilityIconContent {
+                            containerSize = CGSize(width: 16.0, height: 16.0)
+                        } else {
+                            containerSize = CGSize(width: 20.0, height: 20.0)
+                        }
                         let iconSize = credibilityIconView.update(
                             transition: .immediate,
                             component: AnyComponent(credibilityIconComponent),

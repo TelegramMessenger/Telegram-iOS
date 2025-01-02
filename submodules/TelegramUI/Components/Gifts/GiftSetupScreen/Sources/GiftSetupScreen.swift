@@ -416,11 +416,27 @@ final class GiftSetupScreenComponent: Component {
                         starsContext: starsContext,
                         options: options ?? [],
                         purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
-                        completion: { [weak starsContext] stars in
-                            starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
-                            Queue.mainQueue().after(2.0) {
-                                proceed()
+                        completion: { [weak self, weak starsContext] stars in
+                            guard let self, let starsContext else {
+                                return
                             }
+                            self.inProgress = true
+                            self.state?.updated()
+                            
+                            starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                            
+                            let _ = (starsContext.state
+                            |> take(until: { value in
+                                if let value {
+                                    if !value.flags.contains(.isPendingBalance) {
+                                        return SignalTakeAction(passthrough: true, complete: true)
+                                    }
+                                }
+                                return SignalTakeAction(passthrough: false, complete: false)
+                            })
+                            |> deliverOnMainQueue).start(next: { _ in
+                                proceed()
+                            })
                         }
                     )
                     controller.push(purchaseController)
@@ -464,8 +480,13 @@ final class GiftSetupScreenComponent: Component {
             }
             
             let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
+            let isSelfGift = component.peerId == component.context.account.peerId
             
             if self.component == nil {
+                if isSelfGift {
+                    self.hideName = true
+                }
+                
                 let _ = (component.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId),
                     TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
@@ -615,9 +636,7 @@ final class GiftSetupScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        
-            let isSelfGift = component.peerId == component.context.account.peerId
-            
+                                    
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
@@ -793,6 +812,7 @@ final class GiftSetupScreenComponent: Component {
                          
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             if let accountPeer = self.peerMap[component.context.account.peerId] {
+                var upgradeStars: Int64?
                 let subject: ChatGiftPreviewItem.Subject
                 switch component.subject {
                 case let .premium(product):
@@ -800,6 +820,7 @@ final class GiftSetupScreenComponent: Component {
                     subject = .premium(months: product.months, amount: amount, currency: currency)
                 case let .starGift(gift):
                     subject = .starGift(gift: gift)
+                    upgradeStars = gift.upgradeStars
                 }
                 
                 let introContentSize = self.introContent.update(
@@ -822,7 +843,7 @@ final class GiftSetupScreenComponent: Component {
                                 isSelf: component.peerId == component.context.account.peerId,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text),
-                                includeUpgrade: self.includeUpgrade
+                                upgradeStars: self.includeUpgrade ? upgradeStars : nil
                             ),
                             params: listItemParams
                         )
@@ -1037,7 +1058,8 @@ final class GiftSetupScreenComponent: Component {
                     finalPrice += upgradePrice
                 }
                 let amountString = presentationStringsFormattedNumber(Int32(finalPrice), presentationData.dateTimeFormat.groupingSeparator)
-                buttonString = "\(environment.strings.Gift_Send_Send)  #  \(amountString)"
+                let buttonTitle = isSelfGift ? environment.strings.Gift_Send_Buy : environment.strings.Gift_Send_Send
+                buttonString = "\(buttonTitle)  #  \(amountString)"
                 if let availability = starGift.availability, availability.remains == 0 {
                     buttonIsEnabled = false
                 }

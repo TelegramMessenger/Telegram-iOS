@@ -176,12 +176,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     switch product.gift {
                     case let .generic(gift):
                         if let availability = gift.availability {
-                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
                         } else {
                             ribbonText = nil
                         }
                     case let .unique(gift):
-                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total))).string
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
                         for attribute in gift.attributes {
                             if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
                                 ribbonColor = .custom(outerColor, innerColor)
