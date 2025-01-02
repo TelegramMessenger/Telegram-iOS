@@ -416,10 +416,13 @@ final class GiftSetupScreenComponent: Component {
                         starsContext: starsContext,
                         options: options ?? [],
                         purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
-                        completion: { [weak starsContext] stars in
-                            guard let starsContext else {
+                        completion: { [weak self, weak starsContext] stars in
+                            guard let self, let starsContext else {
                                 return
                             }
+                            self.inProgress = true
+                            self.state?.updated()
+                            
                             starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
                             
                             let _ = (starsContext.state
@@ -809,6 +812,7 @@ final class GiftSetupScreenComponent: Component {
                          
             let listItemParams = ListViewItemLayoutParams(width: availableSize.width - sideInset * 2.0, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
             if let accountPeer = self.peerMap[component.context.account.peerId] {
+                var upgradeStars: Int64?
                 let subject: ChatGiftPreviewItem.Subject
                 switch component.subject {
                 case let .premium(product):
@@ -816,6 +820,7 @@ final class GiftSetupScreenComponent: Component {
                     subject = .premium(months: product.months, amount: amount, currency: currency)
                 case let .starGift(gift):
                     subject = .starGift(gift: gift)
+                    upgradeStars = gift.upgradeStars
                 }
                 
                 let introContentSize = self.introContent.update(
@@ -838,7 +843,7 @@ final class GiftSetupScreenComponent: Component {
                                 isSelf: component.peerId == component.context.account.peerId,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text),
-                                includeUpgrade: self.includeUpgrade
+                                upgradeStars: self.includeUpgrade ? upgradeStars : nil
                             ),
                             params: listItemParams
                         )

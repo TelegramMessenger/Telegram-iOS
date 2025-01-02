@@ -777,11 +777,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                     .disappear(.default(alpha: true))
                 )
                 
-//                originY += 32.0
-//                if soldOut {
-//                    originY -= 12.0
-//                }
-                
                 if !descriptionText.isEmpty {
                     let linkColor = theme.actionSheet.controlAccentColor
                     if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
@@ -845,7 +840,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                     }
                 } else {
-                    originY += 21.0
+                    originY += 9.0
                 }
                 
                 if nameHidden && uniqueGift == nil {
@@ -855,28 +850,30 @@ private final class GiftViewSheetContent: CombinedComponent {
                     let hiddenDescription: String
                     if incoming {
                         hiddenDescription = text != nil ? strings.Gift_View_NameAndMessageHidden : strings.Gift_View_NameHidden
-                    } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId] {
+                    } else if let peerId = subject.arguments?.peerId, let peer = state.peerMap[peerId], subject.arguments?.fromPeerId != nil {
                         hiddenDescription = text != nil ? strings.Gift_View_Outgoing_NameAndMessageHidden(peer.compactDisplayTitle).string : strings.Gift_View_Outgoing_NameHidden(peer.compactDisplayTitle).string
                     } else {
                         hiddenDescription = ""
                     }
-                    
-                    let hiddenText = hiddenText.update(
-                        component: MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: hiddenDescription, font: textFont, textColor: textColor)),
-                            horizontalAlignment: .center,
-                            maximumNumberOfLines: 2,
-                            lineSpacing: 0.2
-                        ),
-                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
-                        transition: .immediate
-                    )
-                    context.add(hiddenText
-                        .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
-                    )
-                    
-                    originY += hiddenText.size.height
-                    originY += 11.0
+
+                    if !hiddenDescription.isEmpty {
+                        let hiddenText = hiddenText.update(
+                            component: MultilineTextComponent(
+                                text: .plain(NSAttributedString(string: hiddenDescription, font: textFont, textColor: textColor)),
+                                horizontalAlignment: .center,
+                                maximumNumberOfLines: 2,
+                                lineSpacing: 0.2
+                            ),
+                            availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                            transition: .immediate
+                        )
+                        context.add(hiddenText
+                            .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
+                        )
+                        
+                        originY += hiddenText.size.height
+                        originY += 11.0
+                    }
                 }
                 
                 let tableFont = Font.regular(15.0)

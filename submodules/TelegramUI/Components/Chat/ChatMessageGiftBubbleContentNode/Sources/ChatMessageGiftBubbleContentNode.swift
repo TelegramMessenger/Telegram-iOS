@@ -954,6 +954,18 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 if let current = strongSelf.buttonIconNode {
                                     buttonIconNode = current
                                 } else {
+                                    if animation.isAnimated {
+                                        if let snapshotView = strongSelf.buttonContentNode.view.snapshotView(afterScreenUpdates: false) {
+                                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                                snapshotView.removeFromSuperview()
+                                            })
+                                            snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                                            strongSelf.buttonNode.view.addSubview(snapshotView)
+                                        }
+                                        strongSelf.buttonContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                        strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                    }
+                                    
                                     buttonIconNode = DefaultAnimatedStickerNodeImpl()
                                     buttonIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: buttonIcon), width: 60, height: 60, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                                     strongSelf.buttonContentNode.addSubnode(buttonIconNode)
@@ -965,11 +977,26 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonIconNode.updateLayout(size: iconSize)
                                 buttonIconNode.visibility = strongSelf.visibilityStatus == true
                                 buttonIconNode.dynamicColor = primaryTextColor
+                            } else if let buttonIconNode = strongSelf.buttonIconNode {
+                                if animation.isAnimated {
+                                    if let snapshotView = strongSelf.buttonContentNode.view.snapshotView(afterScreenUpdates: false) {
+                                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                            snapshotView.removeFromSuperview()
+                                        })
+                                        snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                                        strongSelf.buttonNode.view.addSubview(snapshotView)
+                                    }
+                                    strongSelf.buttonContentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    strongSelf.buttonContentNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                }
+                                
+                                strongSelf.buttonIconNode = nil
+                                buttonIconNode.removeFromSupernode()
                             }
                                                         
                             animation.animator.updateFrame(layer: strongSelf.buttonNode.layer, frame: CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: buttonOriginY), size: buttonSize), completion: nil)
                             strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
-                            animation.animator.updateFrame(layer: strongSelf.buttonContentNode.layer, frame: CGRect(origin: .zero, size: buttonSize), completion: nil)
+                            strongSelf.buttonContentNode.frame = CGRect(origin: .zero, size: buttonSize)
                             
                             if ribbonTextLayout.size.width > 0.0 {
                                 if strongSelf.ribbonBackgroundNode.image == nil {

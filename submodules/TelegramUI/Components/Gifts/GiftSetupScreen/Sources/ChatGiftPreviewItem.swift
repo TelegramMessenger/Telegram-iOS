@@ -34,7 +34,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let isSelf: Bool
     let text: String
     let entities: [MessageTextEntity]
-    let includeUpgrade: Bool
+    let upgradeStars: Int64?
     
     init(
         context: AccountContext,
@@ -52,7 +52,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         isSelf: Bool,
         text: String,
         entities: [MessageTextEntity],
-        includeUpgrade: Bool
+        upgradeStars: Int64?
     ) {
         self.context = context
         self.theme = theme
@@ -69,7 +69,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.isSelf = isSelf
         self.text = text
         self.entities = entities
-        self.includeUpgrade = includeUpgrade
+        self.upgradeStars = upgradeStars
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -146,7 +146,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         if lhs.entities != rhs.entities {
             return false
         }
-        if lhs.includeUpgrade != rhs.includeUpgrade {
+        if lhs.upgradeStars != rhs.upgradeStars {
             return false
         }
         return true
@@ -234,7 +234,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.includeUpgrade ? 1 : nil, isRefunded: false, upgradeMessageId: nil)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.upgradeStars, isRefunded: false, upgradeMessageId: nil)
                         )
                     ]
                 }
