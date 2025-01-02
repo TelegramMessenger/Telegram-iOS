@@ -2865,6 +2865,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     for renderedPeer in foundLocalPeers.peers {
                         if renderedPeer.peerId == context.account.peerId, let peer = renderedPeer.peers[renderedPeer.peerId], filteredPeer(peer, EnginePeer(accountPeer)) {
                             if !existingPeerIds.contains(peer.id) {
+                                existingPeerIds.insert(peer.id)
                                 entries.append(.localPeer(peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType, nil, false, true))
                             }
                             break
