@@ -154,7 +154,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             super.init()
             
             if let arguments = subject.arguments {
-                if let upgradeStars = arguments.upgradeStars, upgradeStars > 0 {
+                if let upgradeStars = arguments.upgradeStars, upgradeStars > 0, !arguments.nameHidden {
                     self.keepOriginalInfo = true
                 }
                 
