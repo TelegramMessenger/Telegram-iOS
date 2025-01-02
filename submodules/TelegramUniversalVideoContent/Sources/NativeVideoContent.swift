@@ -277,7 +277,7 @@ private enum PlayerImpl {
     }
 }
 
-extension ChunkMediaPlayerV2.MediaDataReaderParams {
+public extension ChunkMediaPlayerV2.MediaDataReaderParams {
     init(context: AccountContext) {
         var useV2Reader = true
         if let data = context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_video_v2_reader"] as? Double {

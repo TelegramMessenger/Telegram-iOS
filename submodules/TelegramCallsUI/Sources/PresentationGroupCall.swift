@@ -261,7 +261,7 @@ private extension PresentationGroupCallState {
 private enum CurrentImpl {
     case call(OngoingGroupCallContext)
     case mediaStream(WrappedMediaStreamingContext)
-    case externalMediaStream(ExternalMediaStreamingContext)
+    case externalMediaStream(DirectMediaStreamingContext)
 }
 
 private extension CurrentImpl {
@@ -627,7 +627,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
     private var didInitializeConnectionMode: Bool = false
     
-    let externalMediaStream = Promise<ExternalMediaStreamingContext>()
+    let externalMediaStream = Promise<DirectMediaStreamingContext>()
 
     private var screencastCallContext: OngoingGroupCallContext?
     private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
@@ -922,7 +922,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.encryptionKey = encryptionKey
         self.sharedAudioDevice = sharedAudioDevice
         
-        if self.sharedAudioDevice == nil {
+        if self.sharedAudioDevice == nil && !accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
             var didReceiveAudioOutputs = false
             
             if !audioSession.getIsHeadsetPluggedIn() {
@@ -1639,7 +1639,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.internalState = internalState
         self.internalStatePromise.set(.single(internalState))
         
-        if let audioSessionControl = audioSessionControl, previousControl == nil {
+        if !self.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2, let audioSessionControl = audioSessionControl, previousControl == nil {
             if self.isStream {
                 audioSessionControl.setOutputMode(.system)
             } else {
@@ -1693,7 +1693,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 genericCallContext = current
             } else {
                 if self.isStream, self.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
-                    let externalMediaStream = ExternalMediaStreamingContext(id: self.internalId, rejoinNeeded: { [weak self] in
+                    let externalMediaStream = DirectMediaStreamingContext(id: self.internalId, rejoinNeeded: { [weak self] in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
                                 return
