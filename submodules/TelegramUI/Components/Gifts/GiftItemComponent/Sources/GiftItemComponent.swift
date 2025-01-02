@@ -220,7 +220,7 @@ public final class GiftItemComponent: Component {
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .profile:
-                size = CGSize(width: availableSize.width, height: min(117 - UIScreenPixel, availableSize.width))
+                size = availableSize
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .thumbnail:
