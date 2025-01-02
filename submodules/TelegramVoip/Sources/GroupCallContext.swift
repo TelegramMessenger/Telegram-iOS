@@ -1275,6 +1275,12 @@ public final class OngoingGroupCallContext {
             impl.stop(account: account, reportCallId: reportCallId)
         }
     }
+    
+    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+        self.impl.with { impl in
+            impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
+        }
+    }
 
     public func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
         return Signal { subscriber in
