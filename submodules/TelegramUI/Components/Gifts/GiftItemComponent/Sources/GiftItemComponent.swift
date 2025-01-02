@@ -220,7 +220,7 @@ public final class GiftItemComponent: Component {
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .profile:
-                size = CGSize(width: availableSize.width, height: availableSize.width)
+                size = CGSize(width: availableSize.width, height: min(117 - UIScreenPixel, availableSize.width))
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .thumbnail:
@@ -460,11 +460,17 @@ public final class GiftItemComponent: Component {
             }
             
             if let ribbon = component.ribbon {
+                let ribbonFontSize: CGFloat
+                if case .profile = component.mode {
+                    ribbonFontSize = 9.0
+                } else {
+                    ribbonFontSize = 10.0
+                }
                 let ribbonTextSize = self.ribbonText.update(
                     transition: transition,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: ribbon.text, font: Font.semibold(10.0), textColor: .white)),
+                            text: .plain(NSAttributedString(string: ribbon.text, font: Font.semibold(ribbonFontSize), textColor: .white)),
                             horizontalAlignment: .center
                         )
                     ),

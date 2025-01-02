@@ -471,7 +471,7 @@ extension ChatControllerImpl {
                                     }
                                     
                                     if isBecomingTop {
-                                        self.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                        self.chatDisplayNode.playConfettiAnimation()
                                     }
                                     
                                     if let itemNode, let targetView = itemNode.targetReactionView(value: .stars), self.context.sharedContext.energyUsageSettings.fullTranslucency {

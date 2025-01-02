@@ -1438,7 +1438,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     var titleLeftOffset: CGFloat = 0.0
                     var nextIconX: CGFloat = titleFrame.maxX
-                    if let verifiedIcon = verifiedIcon {
+                    if let verifiedIcon {
                         let animationCache = item.context.animationCache
                         let animationRenderer = item.context.animationRenderer
                         
@@ -1463,15 +1463,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             emojiFileUpdated: nil
                         )
                         strongSelf.verifiedIconComponent = verifiedIconComponent
-                        
-                        let iconOrigin: CGFloat
-                        if case .animation = verifiedIcon {
-                            iconOrigin = titleFrame.minX
-                        } else {
-                            nextIconX += 4.0
-                            iconOrigin = nextIconX
-                        }
-                        
+                                                
                         let iconSize = verifiedIconView.update(
                             transition: .immediate,
                             component: AnyComponent(verifiedIconComponent),
@@ -1479,13 +1471,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             containerSize: CGSize(width: 20.0, height: 20.0)
                         )
                         
-                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                        transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                       
-                        if case .animation = verifiedIcon {
-                            titleLeftOffset += iconSize.width + 4.0
-                        } else {
-                            nextIconX += iconSize.width
-                        }
+                        titleLeftOffset += iconSize.width + 4.0
+                        nextIconX += iconSize.width + 4.0
                     } else if let verifiedIconView = strongSelf.verifiedIconView {
                         strongSelf.verifiedIconView = nil
                         verifiedIconView.removeFromSuperview()

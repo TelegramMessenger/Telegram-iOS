@@ -3206,7 +3206,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                         strongSelf.selectPollOptionFeedback?.success()
                                         
-                                        strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+                                        strongSelf.chatDisplayNode.playConfettiAnimation()
                                     } else {
                                         var found = false
                                         strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
@@ -3608,7 +3608,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, displayDiceTooltip: { [weak self] dice in
             self?.displayDiceTooltip(dice: dice)
         }, animateDiceSuccess: { [weak self] haptic, confetti in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
             if strongSelf.selectPollOptionFeedback == nil {
@@ -3618,7 +3618,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.selectPollOptionFeedback?.success()
             }
             if confetti {
-                strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
+                strongSelf.chatDisplayNode.playConfettiAnimation()
             }
         }, displayPremiumStickerTooltip: { [weak self] file, message in
             self?.displayPremiumStickerTooltip(file: file, message: message)
