@@ -213,6 +213,8 @@ public extension Api {
         case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
         case inputInvoiceSlug(slug: String)
         case inputInvoiceStarGift(flags: Int32, userId: Api.InputUser, giftId: Int64, message: Api.TextWithEntities?)
+        case inputInvoiceStarGiftTransfer(msgId: Int32, toId: Api.InputUser)
+        case inputInvoiceStarGiftUpgrade(flags: Int32, msgId: Int32)
         case inputInvoiceStars(purpose: Api.InputStorePaymentPurpose)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -252,6 +254,20 @@ public extension Api {
                     serializeInt64(giftId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
                     break
+                case .inputInvoiceStarGiftTransfer(let msgId, let toId):
+                    if boxed {
+                        buffer.appendInt32(-1371821587)
+                    }
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    toId.serialize(buffer, true)
+                    break
+                case .inputInvoiceStarGiftUpgrade(let flags, let msgId):
+                    if boxed {
+                        buffer.appendInt32(1589539426)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
                 case .inputInvoiceStars(let purpose):
                     if boxed {
                         buffer.appendInt32(1710230755)
@@ -273,6 +289,10 @@ public extension Api {
                 return ("inputInvoiceSlug", [("slug", slug as Any)])
                 case .inputInvoiceStarGift(let flags, let userId, let giftId, let message):
                 return ("inputInvoiceStarGift", [("flags", flags as Any), ("userId", userId as Any), ("giftId", giftId as Any), ("message", message as Any)])
+                case .inputInvoiceStarGiftTransfer(let msgId, let toId):
+                return ("inputInvoiceStarGiftTransfer", [("msgId", msgId as Any), ("toId", toId as Any)])
+                case .inputInvoiceStarGiftUpgrade(let flags, let msgId):
+                return ("inputInvoiceStarGiftUpgrade", [("flags", flags as Any), ("msgId", msgId as Any)])
                 case .inputInvoiceStars(let purpose):
                 return ("inputInvoiceStars", [("purpose", purpose as Any)])
     }
@@ -353,6 +373,36 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.InputInvoice.inputInvoiceStarGift(flags: _1!, userId: _2!, giftId: _3!, message: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceStarGiftTransfer(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.InputUser?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.InputUser
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceStarGiftTransfer(msgId: _1!, toId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceStarGiftUpgrade(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceStarGiftUpgrade(flags: _1!, msgId: _2!)
             }
             else {
                 return nil
@@ -992,98 +1042,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputMedia.inputMediaWebPage(flags: _1!, url: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum InputMessage: TypeConstructorDescription {
-        case inputMessageCallbackQuery(id: Int32, queryId: Int64)
-        case inputMessageID(id: Int32)
-        case inputMessagePinned
-        case inputMessageReplyTo(id: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .inputMessageCallbackQuery(let id, let queryId):
-                    if boxed {
-                        buffer.appendInt32(-1392895362)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    serializeInt64(queryId, buffer: buffer, boxed: false)
-                    break
-                case .inputMessageID(let id):
-                    if boxed {
-                        buffer.appendInt32(-1502174430)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
-                case .inputMessagePinned:
-                    if boxed {
-                        buffer.appendInt32(-2037963464)
-                    }
-                    
-                    break
-                case .inputMessageReplyTo(let id):
-                    if boxed {
-                        buffer.appendInt32(-1160215659)
-                    }
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .inputMessageCallbackQuery(let id, let queryId):
-                return ("inputMessageCallbackQuery", [("id", id as Any), ("queryId", queryId as Any)])
-                case .inputMessageID(let id):
-                return ("inputMessageID", [("id", id as Any)])
-                case .inputMessagePinned:
-                return ("inputMessagePinned", [])
-                case .inputMessageReplyTo(let id):
-                return ("inputMessageReplyTo", [("id", id as Any)])
-    }
-    }
-    
-        public static func parse_inputMessageCallbackQuery(_ reader: BufferReader) -> InputMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.InputMessage.inputMessageCallbackQuery(id: _1!, queryId: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputMessageID(_ reader: BufferReader) -> InputMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMessage.inputMessageID(id: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_inputMessagePinned(_ reader: BufferReader) -> InputMessage? {
-            return Api.InputMessage.inputMessagePinned
-        }
-        public static func parse_inputMessageReplyTo(_ reader: BufferReader) -> InputMessage? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.InputMessage.inputMessageReplyTo(id: _1!)
             }
             else {
                 return nil

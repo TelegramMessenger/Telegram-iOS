@@ -332,7 +332,7 @@ private func notificationsPeerCategoryEntries(peerId: EnginePeer.Id, notificatio
             }
         }
         existingThreadIds.insert(value.threadId)
-        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, .channel(TelegramChannel(id: peerId, accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [.isForum], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil)), value.threadId, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
+        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, .channel(TelegramChannel(id: peerId, accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [.isForum], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, emojiStatus: nil, approximateBoostLevel: nil, subscriptionUntilDate: nil, verificationIconFileId: nil)), value.threadId, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
         index += 1
     }
     

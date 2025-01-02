@@ -146,7 +146,6 @@ private final class UniversalSoftwareVideoSourceImpl {
             self.size = sizeValue
         }
         
-        
         self.mediaBox = mediaBox
         self.source = source
         self.automaticallyFetchHeader = automaticallyFetchHeader
@@ -210,7 +209,7 @@ private final class UniversalSoftwareVideoSourceImpl {
             let rotationAngle: Double = metrics.rotationAngle
             let aspect = Double(metrics.width) / Double(metrics.height)
             
-            if let codec = FFMpegAVCodec.find(forId: codecId) {
+            if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false) {
                 let codecContext = FFMpegAVCodecContext(codec: codec)
                 if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                     if codecContext.open() {

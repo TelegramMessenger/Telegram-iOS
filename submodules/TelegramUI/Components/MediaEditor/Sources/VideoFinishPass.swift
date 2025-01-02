@@ -10,12 +10,13 @@ private func verticesData(
     position: CGPoint,
     size: CGSize,
     rotation: CGFloat,
+    mirror: Bool = false,
     z: Float = 0.0
 ) -> [VertexData] {
-    let topLeft: simd_float2
-    let topRight: simd_float2
-    let bottomLeft: simd_float2
-    let bottomRight: simd_float2
+    var topLeft: simd_float2
+    var topRight: simd_float2
+    var bottomLeft: simd_float2
+    var bottomRight: simd_float2
     
     switch textureRotation {
     case .rotate0Degrees:
@@ -48,6 +49,13 @@ private func verticesData(
         topRight = simd_float2(0.0, 1.0)
         bottomLeft = simd_float2(1.0, 0.0)
         bottomRight = simd_float2(1.0, 1.0)
+    }
+    
+    if mirror {
+        topLeft = simd_float2(1.0 - topLeft.x, topLeft.y)
+        topRight = simd_float2(1.0 - topRight.x, topRight.y)
+        bottomLeft = simd_float2(1.0 - bottomLeft.x, bottomLeft.y)
+        bottomRight = simd_float2(1.0 - bottomRight.x, bottomRight.y)
     }
     
     let containerSize = CGSize(width: containerSize.width, height: containerSize.height)
@@ -111,6 +119,8 @@ private func verticesData(
     textureRotation: TextureRotation,
     containerSize: CGSize,
     textureRect: CGRect,
+    scale: simd_float1,
+    offset: simd_float2,
     z: Float = 0.0
 ) -> [VertexData] {
     let textureRect = CGRect(origin: CGPoint(x: textureRect.origin.x, y: containerSize.height - textureRect.maxY ), size: textureRect.size)
@@ -118,17 +128,24 @@ private func verticesData(
     let containerAspect = textureRect.width / textureRect.height
     let imageAspect = size.width / size.height
     
-    let texCoordScale: simd_float2
+    var texCoordScale: simd_float2
     if imageAspect > containerAspect {
         texCoordScale = simd_float2(Float(containerAspect / imageAspect), 1.0)
     } else {
         texCoordScale = simd_float2(1.0, Float(imageAspect / containerAspect))
     }
     
-    let scaledTopLeft = simd_float2(0.5 - texCoordScale.x * 0.5, 0.5 + texCoordScale.y * 0.5)
-    let scaledTopRight = simd_float2(0.5 + texCoordScale.x * 0.5, 0.5 + texCoordScale.y * 0.5)
-    let scaledBottomLeft = simd_float2(0.5 - texCoordScale.x * 0.5, 0.5 - texCoordScale.y * 0.5)
-    let scaledBottomRight = simd_float2(0.5 + texCoordScale.x * 0.5, 0.5 - texCoordScale.y * 0.5)
+    let adjustedOffset = simd_float2(
+        offset.x / texCoordScale.x,
+        offset.y / texCoordScale.y
+    )
+    
+    texCoordScale *= 1.0 / scale
+    
+    let scaledTopLeft = simd_float2(0.5 - texCoordScale.x * 0.5, 0.5 + texCoordScale.y * 0.5) - adjustedOffset
+    let scaledTopRight = simd_float2(0.5 + texCoordScale.x * 0.5, 0.5 + texCoordScale.y * 0.5) - adjustedOffset
+    let scaledBottomLeft = simd_float2(0.5 - texCoordScale.x * 0.5, 0.5 - texCoordScale.y * 0.5) - adjustedOffset
+    let scaledBottomRight = simd_float2(0.5 + texCoordScale.x * 0.5, 0.5 - texCoordScale.y * 0.5) - adjustedOffset
     
     let topLeft: simd_float2
     let topRight: simd_float2
@@ -322,6 +339,8 @@ final class VideoFinishPass: RenderPass {
         texture: MTLTexture,
         textureRotation: TextureRotation,
         rect: CGRect,
+        scale: CGFloat,
+        offset: CGPoint,
         zPosition: Float,
         device: MTLDevice
     ) {
@@ -333,6 +352,8 @@ final class VideoFinishPass: RenderPass {
             textureRotation: textureRotation,
             containerSize: containerSize,
             textureRect: rect,
+            scale: simd_float1(scale),
+            offset: simd_float2(Float(offset.x / scale), Float(-offset.y / scale)),
             z: zPosition
         )
         let buffer = device.makeBuffer(
@@ -387,6 +408,7 @@ final class VideoFinishPass: RenderPass {
             position: center,
             size: size,
             rotation: position.rotation,
+            mirror: position.mirroring,
             z: zPosition
         )
         let buffer = device.makeBuffer(
@@ -415,10 +437,10 @@ final class VideoFinishPass: RenderPass {
         
         self.isStory = values.isStory || values.isSticker
         self.isSticker = values.gradientColors?.first?.alpha == 0.0
-        self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, baseScale: self.mainPosition.baseScale)
+        self.mainPosition = VideoFinishPass.VideoPosition(position: position, size: self.mainPosition.size, scale: values.cropScale, rotation: values.cropRotation, mirroring: values.cropMirroring, baseScale: self.mainPosition.baseScale)
             
         if let position = values.additionalVideoPosition, let scale = values.additionalVideoScale, let rotation = values.additionalVideoRotation {
-            self.additionalPosition = VideoFinishPass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1440.0 / 4.0), scale: scale, rotation: rotation, baseScale: self.additionalPosition.baseScale)
+            self.additionalPosition = VideoFinishPass.VideoPosition(position: position, size: CGSize(width: 1080.0 / 4.0, height: 1440.0 / 4.0), scale: scale, rotation: rotation, mirroring: false, baseScale: self.additionalPosition.baseScale)
         }
         if !values.additionalVideoPositionChanges.isEmpty {
             self.videoPositionChanges = values.additionalVideoPositionChanges
@@ -451,6 +473,7 @@ final class VideoFinishPass: RenderPass {
         size: CGSize(width: 1080.0, height: 1920.0),
         scale: 1.0,
         rotation: 0.0,
+        mirroring: false,
         baseScale: 1.0
     )
     
@@ -459,6 +482,7 @@ final class VideoFinishPass: RenderPass {
         size: CGSize(width: 1440.0, height: 1920.0),
         scale: 0.5,
         rotation: 0.0,
+        mirroring: false,
         baseScale: 1.0
     )
     
@@ -482,10 +506,11 @@ final class VideoFinishPass: RenderPass {
         let size: CGSize
         let scale: CGFloat
         let rotation: CGFloat
+        let mirroring: Bool
         let baseScale: CGFloat
         
         func with(size: CGSize, baseScale: CGFloat) -> VideoPosition {
-            return VideoPosition(position: self.position, size: size, scale: self.scale, rotation: self.rotation, baseScale: baseScale)
+            return VideoPosition(position: self.position, size: size, scale: self.scale, rotation: self.rotation, mirroring: self.mirroring, baseScale: baseScale)
         }
         
         func mixed(with other: VideoPosition, fraction: CGFloat) -> VideoPosition {
@@ -505,6 +530,7 @@ final class VideoFinishPass: RenderPass {
                 size: size,
                 scale: scale,
                 rotation: rotation,
+                mirroring: self.mirroring,
                 baseScale: self.baseScale
             )
         }
@@ -558,13 +584,13 @@ final class VideoFinishPass: RenderPass {
                     backgroundTexture = additionalInput
                     backgroundTextureRotation = self.additionalTextureRotation
                     
-                    mainPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, baseScale: mainPosition.baseScale)
-                    additionalPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, baseScale: additionalPosition.baseScale)
+                    mainPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, mirroring: mainPosition.mirroring, baseScale: mainPosition.baseScale)
+                    additionalPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: 1080.0 / 4.0, height: 1920.0 / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, mirroring: additionalPosition.mirroring, baseScale: additionalPosition.baseScale)
                     
                     foregroundTexture = mainInput
                     foregroundTextureRotation = self.mainTextureRotation
                 } else {
-                    disappearingPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, baseScale: mainPosition.baseScale)
+                    disappearingPosition = VideoPosition(position: mainPosition.position, size: CGSize(width: 1440.0, height: 1920.0), scale: mainPosition.scale, rotation: mainPosition.rotation, mirroring: mainPosition.mirroring, baseScale: mainPosition.baseScale)
                 }
                 if previousChange.timestamp > 0.0 && timestamp < previousChange.timestamp + transitionDuration {
                     transitionFraction = (timestamp - previousChange.timestamp) / transitionDuration
@@ -582,8 +608,8 @@ final class VideoFinishPass: RenderPass {
             if transitionFraction < 1.0 {
                 let springFraction = lookupSpringValue(transitionFraction)
                 
-                let appearingPosition = VideoPosition(position: additionalPosition.position, size: additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation, baseScale: self.additionalPosition.baseScale)
-                let backgroundInitialPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: mainPosition.size.width / 4.0, height: mainPosition.size.height / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, baseScale: additionalPosition.baseScale)
+                let appearingPosition = VideoPosition(position: additionalPosition.position, size: additionalPosition.size, scale: 0.01, rotation: self.additionalPosition.rotation, mirroring: self.additionalPosition.mirroring, baseScale: self.additionalPosition.baseScale)
+                let backgroundInitialPosition = VideoPosition(position: additionalPosition.position, size: CGSize(width: mainPosition.size.width / 4.0, height: mainPosition.size.height / 4.0), scale: additionalPosition.scale, rotation: additionalPosition.rotation, mirroring: additionalPosition.mirroring, baseScale: additionalPosition.baseScale)
                 
                 foregroundPosition = appearingPosition.mixed(with: additionalPosition, fraction: springFraction)
                 
@@ -612,7 +638,7 @@ final class VideoFinishPass: RenderPass {
             }
             
             if (trimRangeLowerBound != nil || trimRangeUpperBound != nil), let _ = self.videoDuration {
-                let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
+                let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, mirroring: foregroundPosition.mirroring, baseScale: foregroundPosition.baseScale)
                 
                 let mainLowerBound = self.videoRange?.lowerBound ?? 0.0
                 
@@ -635,7 +661,7 @@ final class VideoFinishPass: RenderPass {
             
             if isVisible {
                 if let additionalVideoRemovalStartTimestamp {
-                    let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, baseScale: foregroundPosition.baseScale)
+                    let disappearingPosition = VideoPosition(position: foregroundPosition.position, size: foregroundPosition.size, scale: 0.01, rotation: foregroundPosition.rotation, mirroring: foregroundPosition.mirroring, baseScale: foregroundPosition.baseScale)
                     
                     let visibilityFraction = max(0.0, min(1.0, 1.0 - (CACurrentMediaTime() - additionalVideoRemovalStartTimestamp) / videoRemovalDuration))
                     if visibilityFraction.isZero {
@@ -655,6 +681,8 @@ final class VideoFinishPass: RenderPass {
         let texture: MTLTexture
         let hasTransparency: Bool
         let rect: CGRect?
+        let scale: CGFloat
+        let offset: CGPoint
     }
     
     func process(
@@ -739,6 +767,8 @@ final class VideoFinishPass: RenderPass {
                 texture: input.texture,
                 textureRotation: self.mainTextureRotation,
                 rect: rect,
+                scale: input.scale,
+                offset: input.offset,
                 zPosition: 0.0,
                 device: device
             )
@@ -751,6 +781,8 @@ final class VideoFinishPass: RenderPass {
                         texture: input.texture,
                         textureRotation: self.mainTextureRotation,
                         rect: rect,
+                        scale: input.scale,
+                        offset: input.offset,
                         zPosition: 0.0,
                         device: device
                     )

@@ -16,9 +16,9 @@ import SwiftSignalKit
 
 public final class ListComposePollOptionComponent: Component {
     public final class ResetText: Equatable {
-        public let value: String
+        public let value: NSAttributedString
         
-        public init(value: String) {
+        public init(value: NSAttributedString) {
             self.value = value
         }
         
@@ -72,14 +72,17 @@ public final class ListComposePollOptionComponent: Component {
     public let context: AccountContext
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let placeholder: NSAttributedString?
     public let resetText: ResetText?
     public let assumeIsEditing: Bool
     public let characterLimit: Int?
+    public let enableInlineAnimations: Bool
     public let emptyLineHandling: TextFieldComponent.EmptyLineHandling
     public let returnKeyAction: (() -> Void)?
     public let backspaceKeyAction: (() -> Void)?
     public let selection: Selection?
     public let inputMode: InputMode?
+    public let alwaysDisplayInputModeSelector: Bool
     public let toggleInputMode: (() -> Void)?
     public let tag: AnyObject?
     
@@ -88,14 +91,17 @@ public final class ListComposePollOptionComponent: Component {
         context: AccountContext,
         theme: PresentationTheme,
         strings: PresentationStrings,
+        placeholder: NSAttributedString? = nil,
         resetText: ResetText? = nil,
         assumeIsEditing: Bool = false,
         characterLimit: Int,
+        enableInlineAnimations: Bool = true,
         emptyLineHandling: TextFieldComponent.EmptyLineHandling,
         returnKeyAction: (() -> Void)?,
         backspaceKeyAction: (() -> Void)?,
         selection: Selection?,
         inputMode: InputMode?,
+        alwaysDisplayInputModeSelector: Bool = false,
         toggleInputMode: (() -> Void)?,
         tag: AnyObject? = nil
     ) {
@@ -103,14 +109,17 @@ public final class ListComposePollOptionComponent: Component {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.placeholder = placeholder
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.characterLimit = characterLimit
+        self.enableInlineAnimations = enableInlineAnimations
         self.emptyLineHandling = emptyLineHandling
         self.returnKeyAction = returnKeyAction
         self.backspaceKeyAction = backspaceKeyAction
         self.selection = selection
         self.inputMode = inputMode
+        self.alwaysDisplayInputModeSelector = alwaysDisplayInputModeSelector
         self.toggleInputMode = toggleInputMode
         self.tag = tag
     }
@@ -128,6 +137,9 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
         if lhs.resetText != rhs.resetText {
             return false
         }
@@ -137,6 +149,9 @@ public final class ListComposePollOptionComponent: Component {
         if lhs.characterLimit != rhs.characterLimit {
             return false
         }
+        if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
+            return false
+        }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
             return false
         }
@@ -144,6 +159,9 @@ public final class ListComposePollOptionComponent: Component {
             return false
         }
         if lhs.inputMode != rhs.inputMode {
+            return false
+        }
+        if lhs.alwaysDisplayInputModeSelector != rhs.alwaysDisplayInputModeSelector {
             return false
         }
 
@@ -244,6 +262,14 @@ public final class ListComposePollOptionComponent: Component {
             }
         }
         
+        public var currentAttributedText: NSAttributedString {
+            if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                return textFieldView.inputState.inputText
+            } else {
+                return NSAttributedString(string: "")
+            }
+        }
+        
         public var textFieldView: TextFieldComponent.View? {
             return self.textField.view as? TextFieldComponent.View
         }
@@ -327,11 +353,18 @@ public final class ListComposePollOptionComponent: Component {
                     insets: UIEdgeInsets(top: verticalInset, left: 8.0, bottom: verticalInset, right: 8.0),
                     hideKeyboard: component.inputMode == .emoji,
                     customInputView: nil,
+                    placeholder: component.placeholder,
                     resetText: component.resetText.flatMap { resetText in
-                        return NSAttributedString(string: resetText.value, font: Font.regular(17.0), textColor: component.theme.list.itemPrimaryTextColor)
+                        let result = NSMutableAttributedString(attributedString: resetText.value)
+                        result.addAttributes([
+                            .font: Font.regular(17.0),
+                            .foregroundColor: component.theme.list.itemPrimaryTextColor
+                        ], range: NSRange(location: 0, length: result.length))
+                        return result
                     },
                     isOneLineWhenUnfocused: false,
                     characterLimit: component.characterLimit,
+                    enableInlineAnimations: component.enableInlineAnimations,
                     emptyLineHandling: component.emptyLineHandling,
                     formatMenuAvailability: .none,
                     returnKeyType: .next,
@@ -463,15 +496,17 @@ public final class ListComposePollOptionComponent: Component {
                         ComponentTransition.immediate.setScale(view: modeSelectorView, scale: 0.001)
                     }
                     
-                    if playAnimation, let animationView = modeSelectorView.contentView as? LottieComponent.View {
-                        animationView.playOnce()
+                    if let animationView = modeSelectorView.contentView as? LottieComponent.View {
+                        if playAnimation {
+                            animationView.playOnce()
+                        }
                     }
                     
                     modeSelectorTransition.setPosition(view: modeSelectorView, position: modeSelectorFrame.center)
                     modeSelectorTransition.setBounds(view: modeSelectorView, bounds: CGRect(origin: CGPoint(), size: modeSelectorFrame.size))
                     
                     if let externalState = component.externalState {
-                        let displaySelector = externalState.isEditing
+                        let displaySelector = externalState.isEditing || component.alwaysDisplayInputModeSelector
                         
                         alphaTransition.setAlpha(view: modeSelectorView, alpha: displaySelector ? 1.0 : 0.0)
                         alphaTransition.setScale(view: modeSelectorView, scale: displaySelector ? 1.0 : 0.001)

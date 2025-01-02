@@ -674,7 +674,7 @@ public class ContactsController: ViewController {
             
             let text = self.presentationData.strings.ContactList_DeletedContacts(Int32(peerIds.count))
             
-            self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: text, text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+            self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: self.context, title: NSAttributedString(string: text), text: nil), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                 guard let self else {
                     return false
                 }

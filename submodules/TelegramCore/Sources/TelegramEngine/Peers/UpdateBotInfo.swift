@@ -100,7 +100,7 @@ func _internal_updateBotDescription(account: Account, peerId: PeerId, descriptio
                                 if let botInfo = current.botInfo {
                                     var updatedBotInfo = botInfo
                                     if botInfo.description == editableBotInfo.description {
-                                        updatedBotInfo = BotInfo(description: description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl, appSettings: botInfo.appSettings)
+                                        updatedBotInfo = BotInfo(description: description, photo: botInfo.photo, video: botInfo.video, commands: botInfo.commands, menuButton: botInfo.menuButton, privacyPolicyUrl: botInfo.privacyPolicyUrl, appSettings: botInfo.appSettings, verifierSettings: botInfo.verifierSettings)
                                     }
                                     return current.withUpdatedEditableBotInfo(editableBotInfo.withUpdatedDescription(description)).withUpdatedBotInfo(updatedBotInfo)
                                 } else {
@@ -158,6 +158,44 @@ func _internal_toggleBotEmojiStatusAccess(account: Account, peerId: PeerId, enab
         }
     }
     |> mapError { _ -> ToggleBotEmojiStatusAccessError in }
+    |> switchToLatest
+    |> ignoreValues
+}
+
+public enum UpdateCustomVerificationError {
+    case generic
+}
+
+public enum UpdateCustomVerificationValue {
+    case enabled(description: String?)
+    case disabled
+}
+
+func _internal_updateCustomVerification(account: Account, botId: PeerId, peerId: PeerId, value: UpdateCustomVerificationValue) -> Signal<Never, UpdateCustomVerificationError> {
+    return account.postbox.transaction { transaction -> Signal<Api.Bool, UpdateCustomVerificationError> in
+        if let bot = transaction.getPeer(botId), let inputBot = apiInputUser(bot), let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            var flags: Int32 = (1 << 0)
+            var customDescription: String?
+            switch value {
+            case let .enabled(description):
+                flags |= (1 << 1)
+                if let description, !description.isEmpty {
+                    flags |= (1 << 2)
+                    customDescription = description
+                }
+            case .disabled:
+                break
+            }
+            
+            return account.network.request(Api.functions.bots.setCustomVerification(flags: flags, bot: inputBot, peer: inputPeer, customDescription: customDescription))
+            |> mapError { _ -> UpdateCustomVerificationError in
+                return .generic
+            }
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> mapError { _ -> UpdateCustomVerificationError in }
     |> switchToLatest
     |> ignoreValues
 }

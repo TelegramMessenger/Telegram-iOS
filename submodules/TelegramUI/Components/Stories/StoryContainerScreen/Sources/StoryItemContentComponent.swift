@@ -200,7 +200,7 @@ final class StoryItemContentComponent: Component {
             if case let .file(file) = currentMessageMedia, let peerReference = PeerReference(component.peer._asPeer()) {
                 if self.videoNode == nil {
                     let videoNode = UniversalVideoNode(
-                        accountId: component.context.account.id,
+                        context: component.context,
                         postbox: component.context.account.postbox,
                         audioSession: component.context.sharedContext.mediaManager.audioSession,
                         manager: component.context.sharedContext.mediaManager.universalVideoManager,

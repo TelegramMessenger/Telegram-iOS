@@ -2,6 +2,37 @@ The last version increases of all libraries were on 2024-03-07
 
 API changes, most recent first:
 
+2024-10-xx - xxxxxxxxxx - lavu 59.41.100 - log.h
+  Add AVClass.state_flags_offset and AV_CLASS_STATE_INITIALIZED.
+
+2024-09-30 - xxxxxxxxxx - lavf 61.9.100 - avformat.h
+  Add {nb_}coded_side_data to AVStreamGroupTileGrid.
+
+2024-09-xx - xxxxxxxxxx - lavu 59
+  Deprecate av_int_list_length_for_size(), av_int_list_length(), and
+  av_opt_set_int_list() without replacement. All AVOptions using these
+  should be replaced with AV_OPT_TYPE_FLAG_ARRAY.
+
+2024-09-xx - xxxxxxxxxx - lavfi 10.6.100
+  Buffersink now has array-type options
+    - pixel_formats
+    - colorspaces
+    - colorranges
+  replacing the int-list options
+    - pix_fmts
+    - color_spaces
+    - color_ranges
+  abuffersink now has array-type options
+    - sample_formats
+    - samplerates
+    - channel_layouts
+  replacing the int-list/string options
+    - sample_fmts
+    - sample_rates
+    - ch_layouts
+
+-------- 8< --------- FFmpeg 7.1 was cut here -------- 8< ---------
+
 2024-09-23 - 6940a6de2f0 - lavu 59.38.100 - frame.h
   Add AV_FRAME_DATA_VIEW_ID.
 

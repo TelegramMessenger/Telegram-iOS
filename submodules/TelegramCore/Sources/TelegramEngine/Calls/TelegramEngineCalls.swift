@@ -57,12 +57,12 @@ public extension TelegramEngine {
             return _internal_getGroupCallParticipants(account: self.account, callId: callId, accessHash: accessHash, offset: offset, ssrcs: ssrcs, limit: limit, sortAscending: sortAscending)
         }
 
-        public func joinGroupCall(peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
-            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, accessHash: accessHash, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash)
+        public func joinGroupCall(peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, keyFingerprint: Int64?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+            return _internal_joinGroupCall(account: self.account, peerId: peerId, joinAs: joinAs, callId: callId, accessHash: accessHash, preferMuted: preferMuted, joinPayload: joinPayload, peerAdminIds: peerAdminIds, inviteHash: inviteHash, keyFingerprint: keyFingerprint)
         }
 
-        public func joinGroupCallAsScreencast(peerId: PeerId, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
-            return _internal_joinGroupCallAsScreencast(account: self.account, peerId: peerId, callId: callId, accessHash: accessHash, joinPayload: joinPayload)
+        public func joinGroupCallAsScreencast(callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
+            return _internal_joinGroupCallAsScreencast(account: self.account, callId: callId, accessHash: accessHash, joinPayload: joinPayload)
         }
 
         public func leaveGroupCallAsScreencast(callId: Int64, accessHash: Int64) -> Signal<Never, LeaveGroupCallAsScreencastError> {
@@ -73,7 +73,7 @@ public extension TelegramEngine {
             return _internal_leaveGroupCall(account: self.account, callId: callId, accessHash: accessHash, source: source)
         }
 
-        public func stopGroupCall(peerId: PeerId, callId: Int64, accessHash: Int64) -> Signal<Never, StopGroupCallError> {
+        public func stopGroupCall(peerId: PeerId?, callId: Int64, accessHash: Int64) -> Signal<Never, StopGroupCallError> {
             return _internal_stopGroupCall(account: self.account, peerId: peerId, callId: callId, accessHash: accessHash)
         }
 
@@ -106,7 +106,7 @@ public extension TelegramEngine {
         }
 
         public func updatedCurrentPeerGroupCall(peerId: PeerId) -> Signal<EngineGroupCallDescription?, NoError> {
-            return _internal_updatedCurrentPeerGroupCall(account: self.account, peerId: peerId)
+            return _internal_updatedCurrentPeerGroupCall(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId)
             |> map { activeCall -> EngineGroupCallDescription? in
                 return activeCall.flatMap(EngineGroupCallDescription.init)
             }
@@ -124,7 +124,7 @@ public extension TelegramEngine {
             return _internal_getVideoBroadcastPart(dataSource: dataSource, callId: callId, accessHash: accessHash, timestampIdMilliseconds: timestampIdMilliseconds, durationMilliseconds: durationMilliseconds, channelId: channelId, quality: quality)
         }
 
-        public func groupCall(peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
+        public func groupCall(peerId: PeerId?, myPeerId: PeerId, id: Int64, accessHash: Int64, state: GroupCallParticipantsContext.State, previousServiceState: GroupCallParticipantsContext.ServiceState?) -> GroupCallParticipantsContext {
             return GroupCallParticipantsContext(account: self.account, peerId: peerId, myPeerId: myPeerId, id: id, accessHash: accessHash, state: state, previousServiceState: previousServiceState)
         }
 

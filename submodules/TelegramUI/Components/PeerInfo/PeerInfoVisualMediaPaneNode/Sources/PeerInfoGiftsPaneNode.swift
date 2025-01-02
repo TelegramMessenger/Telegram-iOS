@@ -130,10 +130,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let sideInset = params.sideInset + 16.0
             
-            let itemsInRow = min(starsProducts.count, 3)
+            let itemsInRow = max(1, min(starsProducts.count, 3))
             let optionWidth = (params.size.width - sideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
             
-            let starsOptionSize = CGSize(width: optionWidth, height: 154.0)
+            let starsOptionSize = CGSize(width: optionWidth, height: optionWidth)
             
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
             
@@ -150,7 +150,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 if isVisible {
-                    let itemId = AnyHashable(index)
+                    let info: String
+                    switch product.gift {
+                    case let .generic(gift):
+                        info = "g_\(gift.id)"
+                    case let .unique(gift):
+                        info = "u_\(gift.id)"
+                    }
+                    let id = "\(index)_\(info)"
+                    let itemId = AnyHashable(id)
                     validIds.append(itemId)
                     
                     var itemTransition = transition
@@ -164,11 +172,35 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     }
                     
                     let ribbonText: String?
-                    if let availability = product.gift.availability {
-                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
-                    } else {
-                        ribbonText = nil
+                    var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
+                    switch product.gift {
+                    case let .generic(gift):
+                        if let availability = gift.availability {
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
+                        } else {
+                            ribbonText = nil
+                        }
+                    case let .unique(gift):
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total))).string
+                        for attribute in gift.attributes {
+                            if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
+                                ribbonColor = .custom(outerColor, innerColor)
+                                break
+                            }
+                        }
                     }
+                    
+                    let peer: GiftItemComponent.Peer?
+                    let subject: GiftItemComponent.Subject
+                    switch product.gift {
+                    case let .generic(gift):
+                        subject = .starGift(gift: gift, price: "⭐️ \(gift.price)")
+                        peer = product.fromPeer.flatMap { .peer($0) } ?? .anonymous
+                    case let .unique(gift):
+                        subject = .uniqueGift(gift: gift)
+                        peer = nil
+                    }
+                    
                     let _ = visibleItem.update(
                         transition: itemTransition,
                         component: AnyComponent(
@@ -177,11 +209,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     GiftItemComponent(
                                         context: self.context,
                                         theme: params.presentationData.theme,
-                                        peer: product.fromPeer.flatMap { .peer($0) } ?? .anonymous,
-                                        subject: .starGift(product.gift.id, product.gift.file),
-                                        price: "⭐️ \(product.gift.price)",
-                                        ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: .blue) },
-                                        isHidden: !product.savedToProfile
+                                        peer: peer,
+                                        subject: subject,
+                                        ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: ribbonColor) },
+                                        isHidden: !product.savedToProfile,
+                                        mode: .profile
                                     )
                                 ),
                                 effectAlignment: .center,
@@ -192,8 +224,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     let controller = GiftViewScreen(
                                         context: self.context,
                                         subject: .profileGift(self.peerId, product),
-                                        updateSavedToProfile: { [weak self] added in
-                                            guard let self, let messageId = product.messageId else {
+                                        updateSavedToProfile: { [weak self] messageId, added in
+                                            guard let self else {
                                                 return
                                             }
                                             self.profileGifts.updateStarGiftAddedToProfile(messageId: messageId, added: added)
@@ -203,6 +235,18 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return
                                             }
                                             self.profileGifts.convertStarGift(messageId: messageId)
+                                        },
+                                        transferGift: { [weak self] prepaid, peerId in
+                                            guard let self, let messageId = product.messageId else {
+                                                return
+                                            }
+                                            self.profileGifts.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+                                        },
+                                        upgradeGift: { [weak self] formId, keepOriginalInfo in
+                                            guard let self, let messageId = product.messageId else {
+                                                return .never()
+                                            }
+                                            return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
                                         }
                                     )
                                     self.parentController?.push(controller)
@@ -428,10 +472,4 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     public func updateSelectedMessages(animated: Bool) {
     }
-}
-
-private struct StarsGiftProduct: Equatable {
-    let emoji: String
-    let price: Int64
-    let isLimited: Bool
 }

@@ -413,7 +413,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case monospace
     case textMention(EnginePeer.Id)
     case textUrl(String)
-    case customEmoji(stickerPack: StickerPackReference?, fileId: Int64)
+    case customEmoji(stickerPack: StickerPackReference?, fileId: Int64, enableAnimation: Bool)
     case strikethrough
     case underline
     case spoiler
@@ -440,7 +440,8 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case 5:
             let stickerPack = try container.decodeIfPresent(StickerPackReference.self, forKey: "s")
             let fileId = try container.decode(Int64.self, forKey: "f")
-            self = .customEmoji(stickerPack: stickerPack, fileId: fileId)
+            let enableAnimation = try container.decodeIfPresent(Bool.self, forKey: "ea") ?? true
+            self = .customEmoji(stickerPack: stickerPack, fileId: fileId, enableAnimation: enableAnimation)
         case 6:
             self = .strikethrough
         case 7:
@@ -474,10 +475,11 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case let .textUrl(url):
             try container.encode(4 as Int32, forKey: "t")
             try container.encode(url, forKey: "url")
-        case let .customEmoji(stickerPack, fileId):
+        case let .customEmoji(stickerPack, fileId, enableAnimation):
             try container.encode(5 as Int32, forKey: "t")
             try container.encodeIfPresent(stickerPack, forKey: "s")
             try container.encode(fileId, forKey: "f")
+            try container.encode(enableAnimation, forKey: "ea")
         case .strikethrough:
             try container.encode(6 as Int32, forKey: "t")
         case .underline:
@@ -560,7 +562,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textUrl(value.url), range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: value.fileId), range: range.location ..< (range.location + range.length)))
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: value.fileId, enableAnimation: value.enableAnimation), range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.strikethrough {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .strikethrough, range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.underline {
@@ -618,8 +620,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: id), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .textUrl(url):
                 result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
-            case let .customEmoji(_, fileId):
-                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .customEmoji(_, fileId, enableAnimation):
+                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil, enableAnimation: enableAnimation), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .strikethrough:
                 result.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .underline:
@@ -959,6 +961,7 @@ public protocol PeerInfoScreen: ViewController {
     func toggleStorySelection(ids: [Int32], isSelected: Bool)
     func togglePaneIsReordering(isReordering: Bool)
     func cancelItemSelection()
+    func openAvatarSetup()
 }
 
 public extension Peer {
@@ -1202,4 +1205,41 @@ public protocol ChatHistoryListNode: ListView {
     func messageInCurrentHistoryView(_ id: MessageId) -> Message?
     
     var contentPositionChanged: (ListViewVisibleContentOffset) -> Void { get set }
+}
+
+public extension ChatFolderTitle {
+    init(attributedString: NSAttributedString, enableAnimations: Bool) {
+        let inputStateText = ChatTextInputStateText(attributedText: attributedString)
+        self.init(text: inputStateText.text, entities: inputStateText.attributes.compactMap { attribute -> MessageTextEntity? in
+            if case let .customEmoji(_, fileId, _) = attribute.type {
+                return MessageTextEntity(range: attribute.range, type: .CustomEmoji(stickerPack: nil, fileId: fileId))
+            }
+            return nil
+        }, enableAnimations: enableAnimations)
+    }
+    
+    var rawAttributedString: NSAttributedString {
+        let inputStateText = ChatTextInputStateText(text: self.text, attributes: self.entities.compactMap { entity -> ChatTextInputStateTextAttribute? in
+            if case let .CustomEmoji(_, fileId) = entity.type {
+                return ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: fileId, enableAnimation: self.enableAnimations), range: entity.range)
+            }
+            return nil
+        })
+        return inputStateText.attributedText()
+    }
+    
+    func attributedString(attributes: [NSAttributedString.Key: Any]) -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: self.rawAttributedString)
+        result.addAttributes(attributes, range: NSRange(location: 0, length: result.length))
+        return result
+    }
+    
+    func attributedString(font: UIFont, textColor: UIColor) -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: self.rawAttributedString)
+        result.addAttributes([
+            .font: font,
+            .foregroundColor: textColor
+        ], range: NSRange(location: 0, length: result.length))
+        return result
+    }
 }

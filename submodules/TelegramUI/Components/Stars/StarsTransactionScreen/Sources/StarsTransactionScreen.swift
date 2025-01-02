@@ -39,6 +39,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
     let updateSubscription: () -> Void
+    let sendGift: (EnginePeer.Id) -> Void
     
     init(
         context: AccountContext,
@@ -49,7 +50,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
-        updateSubscription: @escaping () -> Void
+        updateSubscription: @escaping () -> Void,
+        sendGift: @escaping (EnginePeer.Id) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -60,6 +62,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
         self.updateSubscription = updateSubscription
+        self.sendGift = sendGift
     }
     
     static func ==(lhs: StarsTransactionSheetContent, rhs: StarsTransactionSheetContent) -> Bool {
@@ -80,6 +83,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         var peerMap: [EnginePeer.Id: EnginePeer] = [:]
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
+        var cachedOverlayCloseImage: UIImage?
         var cachedChevronImage: (UIImage, PresentationTheme)?
         
         var inProgress = false
@@ -149,7 +153,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let star = Child(StarsImageComponent.self)
         let activeStar = Child(PremiumStarComponent.self)
-        let gift = Child(GiftAnimationComponent.self)
+        let gift = Child(GiftCompositionComponent.self)
         let amountBackground = Child(RoundedRectangle.self)
         let amount = Child(BalancedTextComponent.self)
         let amountStar = Child(BundleIconComponent.self)
@@ -188,17 +192,14 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 state.cachedCloseImage = (closeImage, theme)
             }
             
-            let closeButton = closeButton.update(
-                component: Button(
-                    content: AnyComponent(Image(image: closeImage)),
-                    action: { [weak component] in
-                        component?.cancel(true)
-                    }
-                ),
-                availableSize: CGSize(width: 30.0, height: 30.0),
-                transition: .immediate
-            )
-            
+            let closeOverlayImage: UIImage
+            if let image = state.cachedOverlayCloseImage {
+                closeOverlayImage = image
+            } else {
+                closeOverlayImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1), foregroundColor: .white)!
+                state.cachedOverlayCloseImage = closeOverlayImage
+            }
+                        
             let titleText: String
             let amountText: String
             var descriptionText: String
@@ -219,7 +220,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var via: String?
             var messageId: EngineMessage.Id?
             var toPeer: EnginePeer?
-//            var toString: String?
             var transactionPeer: StarsContext.State.Transaction.Peer?
             var media: [AnyMediaReference] = []
             var photo: TelegramMediaWebFile?
@@ -234,7 +234,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isReaction = false
             var giveawayMessageId: MessageId?
             var isBoost = false
-            var giftAnimation: TelegramMediaFile?
+            var giftAnimationSubject: GiftCompositionComponent.Subject?
+            var isGiftUpgrade = false
+            var giftAvailability: StarGift.Gift.Availability?
             var isRefProgram = false
             
             var delayedCloseOnOpenPeer = true
@@ -250,7 +252,6 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 count = StarsAmount(value: stars, nanos: 0)
                 date = boost.date
                 toPeer = state.peerMap[peerId]
-//                toString = strings.Stars_Transaction_Giveaway_Boost_Subscribers(boost.quantity)
                 giveawayMessageId = boost.giveawayMessageId
                 isBoost = true
             case let .importer(peer, pricing, importer, usdRate):
@@ -368,7 +369,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         toPeer = peer
                     }
                     transactionPeer = transaction.peer
-                    giftAnimation = starGift.file
+                    
+                    switch starGift {
+                    case let .generic(gift):
+                        giftAnimationSubject = .generic(gift.file)
+                        giftAvailability = gift.availability
+                    case let .unique(gift):
+                        giftAnimationSubject = .unique(gift)
+                    }
+                    isGiftUpgrade = transaction.flags.contains(.isStarGiftUpgrade)
                 } else if let giveawayMessageIdValue = transaction.giveawayMessageId {
                     titleText = strings.Stars_Transaction_Giveaway_Title
                     descriptionText = ""
@@ -581,6 +590,28 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 descriptionText = modifiedString
             }
             
+            var closeButtonImage = closeImage
+            if case .unique = giftAnimationSubject {
+                closeButtonImage = closeOverlayImage
+            }
+            let closeButton = closeButton.update(
+                component: Button(
+                    content: AnyComponent(Image(image: closeButtonImage)),
+                    action: { [weak component] in
+                        component?.cancel(true)
+                    }
+                ),
+                availableSize: CGSize(width: 30.0, height: 30.0),
+                transition: .immediate
+            )
+            
+            let headerTextColor: UIColor
+            if case .unique = giftAnimationSubject {
+                headerTextColor = .white
+            } else {
+                headerTextColor = theme.actionSheet.primaryTextColor
+            }
+            
             let absCount = StarsAmount(value: abs(count.value), nanos: abs(count.nanos))
             let formattedAmount = presentationStringsFormattedNumber(absCount, dateTimeFormat.groupingSeparator)
             let countColor: UIColor
@@ -599,18 +630,22 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 countColor = theme.list.itemPrimaryTextColor
             } else if count < StarsAmount.zero {
                 amountText = "- \(formattedAmount)"
-                countColor = theme.list.itemDestructiveColor
+                if case .unique = giftAnimationSubject {
+                    countColor = .white
+                } else {
+                    countColor = theme.list.itemDestructiveColor
+                }
             } else {
                 amountText = "+ \(formattedAmount)"
                 countColor = theme.list.itemDisclosureActions.constructive.fillColor
             }
-            
+                        
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
                         string: titleText,
                         font: Font.bold(25.0),
-                        textColor: theme.actionSheet.primaryTextColor,
+                        textColor: headerTextColor,
                         paragraphAlignment: .center
                     )),
                     horizontalAlignment: .center,
@@ -645,17 +680,25 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 imageIcon = nil
             }
             
+            var starOriginY: CGFloat = 81.0
             var starChild: _UpdatedChildComponent
-            if let giftAnimation {
+            if let giftAnimationSubject {
+                let animationHeight: CGFloat
+                if case .unique = giftAnimationSubject {
+                    animationHeight = 240.0
+                } else {
+                    animationHeight = 210.0
+                }
                 starChild = gift.update(
-                    component: GiftAnimationComponent(
+                    component: GiftCompositionComponent(
                         context: component.context,
                         theme: theme,
-                        file: giftAnimation
+                        subject: giftAnimationSubject
                     ),
-                    availableSize: CGSize(width: 128.0, height: 128.0),
+                    availableSize: CGSize(width: context.availableSize.width, height: animationHeight),
                     transition: .immediate
                 )
+                starOriginY = animationHeight / 2.0
             } else if isBoost {
                 starChild = activeStar.update(
                     component: PremiumStarComponent(
@@ -719,6 +762,16 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
                         
+            if isGiftUpgrade {
+                tableItems.append(.init(
+                    id: "reason",
+                    title: strings.Stars_Transaction_Giveaway_Reason,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Stars_Transaction_GiftUpgrade, font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
+            
             if isGift, toPeer == nil {
                 tableItems.append(.init(
                     id: "from",
@@ -744,7 +797,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 ))
             } else if let toPeer, !isRefProgram {
                 let title: String
-                if isSubscription {
+                if isGiftUpgrade {
+                    title = strings.Stars_Transaction_GiftFrom
+                } else if isSubscription {
                     if isBotSubscription {
                         title = strings.Stars_Transaction_Subscription_Bot
                     } else if isBusinessSubscription {
@@ -757,10 +812,56 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     title = count < StarsAmount.zero || countIsGeneric ? strings.Stars_Transaction_To : strings.Stars_Transaction_From
                 }
-                tableItems.append(.init(
-                    id: "to",
-                    title: title,
-                    component: AnyComponent(
+                
+                let toComponent: AnyComponent<Empty>
+                if let _ = giftAnimationSubject, !toPeer.isDeleted && !isGiftUpgrade {
+                    toComponent = AnyComponent(
+                        HStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(0),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(
+                                        PeerCellComponent(
+                                            context: component.context,
+                                            theme: theme,
+                                            peer: toPeer
+                                        )
+                                    ),
+                                    action: {
+                                        if delayedCloseOnOpenPeer {
+                                            component.openPeer(toPeer, false)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        } else {
+                                            if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                                chatController.playShakeAnimation()
+                                            }
+                                            component.cancel(true)
+                                        }
+                                    }
+                                ))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(1),
+                                component: AnyComponent(Button(
+                                    content: AnyComponent(ButtonContentComponent(
+                                        context: component.context,
+                                        text: strings.Gift_View_Send,
+                                        color: theme.list.itemAccentColor
+                                    )),
+                                    action: {
+                                        component.sendGift(toPeer.id)
+                                        Queue.mainQueue().after(1.0, {
+                                            component.cancel(false)
+                                        })
+                                    }
+                                ))
+                            )
+                        ], spacing: 4.0)
+                    )
+                } else {
+                    toComponent = AnyComponent(
                         Button(
                             content: AnyComponent(
                                 PeerCellComponent(
@@ -784,6 +885,11 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                             }
                         )
                     )
+                }
+                tableItems.append(.init(
+                    id: "to",
+                    title: title,
+                    component: toComponent
                 ))
                 if case let .subscription(subscription) = component.subject, let title = subscription.title {
                     tableItems.append(.init(
@@ -999,6 +1105,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         Button(
                             content: AnyComponent(
                                 TransactionCellComponent(
+                                    backgroundColor: theme.actionSheet.opaqueItemBackgroundColor,
                                     textColor: tableTextColor,
                                     accentColor: tableLinkColor,
                                     transactionId: transactionId
@@ -1046,6 +1153,17 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
             ))
+            if let giftAvailability {
+                let remainsString = presentationStringsFormattedNumber(giftAvailability.remains, environment.dateTimeFormat.groupingSeparator)
+                let totalString = presentationStringsFormattedNumber(giftAvailability.total, environment.dateTimeFormat.groupingSeparator)
+                tableItems.append(.init(
+                    id: "availability",
+                    title: strings.Gift_View_Availability,
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_View_Availability_NewOf("\(remainsString)", "\(totalString)").string, font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
+            }
             
             if isSubscriber, let additionalDate {
                 tableItems.append(.init(
@@ -1101,15 +1219,17 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
                     
             context.add(starChild
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 200.0 / 2.0 - 19.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: starOriginY))
             )
         
+            var originY: CGFloat = 156.0
+            if let _ = giftAnimationSubject {
+                originY += 18.0
+            }
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 31.0 + 125.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: originY))
             )
-            
-            var originY: CGFloat = 0.0
-            originY += 200.0 - 23.0
+            originY += 21.0
             
             var descriptionSize: CGSize = .zero
             if !descriptionText.isEmpty {
@@ -1235,6 +1355,10 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             context.add(amountStar
                 .position(CGPoint(x: amountStarOriginX, y: amountOrigin + amountStar.size.height / 2.0 - UIScreenPixel + amountStarOffsetY))
             )
+            
+            if case .unique = giftAnimationSubject {
+                originY += 21.0
+            }
                
             context.add(table
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -1351,6 +1475,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openAppExamples: () -> Void
     let copyTransactionId: (String) -> Void
     let updateSubscription: () -> Void
+    let sendGift: (EnginePeer.Id) -> Void
     
     init(
         context: AccountContext,
@@ -1360,7 +1485,8 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
-        updateSubscription: @escaping () -> Void
+        updateSubscription: @escaping () -> Void,
+        sendGift: @escaping (EnginePeer.Id) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -1370,6 +1496,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         self.openAppExamples = openAppExamples
         self.copyTransactionId = copyTransactionId
         self.updateSubscription = updateSubscription
+        self.sendGift = sendGift
     }
     
     static func ==(lhs: StarsTransactionSheetComponent, rhs: StarsTransactionSheetComponent) -> Bool {
@@ -1414,7 +1541,8 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         openMedia: context.component.openMedia,
                         openAppExamples: context.component.openAppExamples,
                         copyTransactionId: context.component.copyTransactionId,
-                        updateSubscription: context.component.updateSubscription
+                        updateSubscription: context.component.updateSubscription,
+                        sendGift: context.component.sendGift
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
@@ -1514,6 +1642,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openAppExamplesImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
         var updateSubscriptionImpl: (() -> Void)?
+        var sendGiftImpl: ((EnginePeer.Id) -> Void)?
         
         super.init(
             context: context,
@@ -1537,6 +1666,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 },
                 updateSubscription: {
                     updateSubscriptionImpl?()
+                },
+                sendGift: { peerId in
+                    sendGiftImpl?(peerId)
                 }
             ),
             navigationBarAppearance: .none,
@@ -1687,6 +1819,19 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                     navigationController.presentOverlay(controller: controller)
                 }
             }
+        }
+        
+        sendGiftImpl = { [weak self] peerId in
+            guard let self else {
+                return
+            }
+            let _ = (context.engine.payments.premiumGiftCodeOptions(peerId: nil, onlyCached: true)
+            |> filter { !$0.isEmpty }
+            |> deliverOnMainQueue).start(next: { giftOptions in
+                let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                let controller = context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false)
+                self.push(controller)
+            })
         }
     }
     
@@ -2009,7 +2154,7 @@ private final class PeerCellComponent: Component {
             let avatarNaturalSize = self.avatar.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    StarsAvatarComponent(context: component.context, theme: component.theme, peer: peer, photo: nil, media: [], backgroundColor: .clear)
+                    StarsAvatarComponent(context: component.context, theme: component.theme, peer: peer, photo: nil, media: [], uniqueGift: nil, backgroundColor: .clear)
                 ),
                 environment: {},
                 containerSize: CGSize(width: 40.0, height: 40.0)
@@ -2061,18 +2206,23 @@ private final class PeerCellComponent: Component {
 }
 
 private final class TransactionCellComponent: Component {
+    let backgroundColor: UIColor
     let textColor: UIColor
     let accentColor: UIColor
     let transactionId: String
     
-    init(textColor: UIColor, accentColor: UIColor, transactionId: String) {
+    init(backgroundColor: UIColor, textColor: UIColor, accentColor: UIColor, transactionId: String) {
+        self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.accentColor = accentColor
         self.transactionId = transactionId
     }
 
     static func ==(lhs: TransactionCellComponent, rhs: TransactionCellComponent) -> Bool {
-        if lhs.textColor !== rhs.textColor {
+        if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.textColor != rhs.textColor {
             return false
         }
         if lhs.accentColor != rhs.accentColor {
@@ -2087,12 +2237,17 @@ private final class TransactionCellComponent: Component {
     final class View: UIView {
         private let text = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
+        private let gradientView = UIImageView()
         
         private var component: TransactionCellComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+            
+            self.layer.allowsGroupOpacity = true
+            
+            self.gradientView.image = generateGradientImage(size: CGSize(width: 40.0, height: 1.0), colors: [UIColor.white.withAlphaComponent(0.0), UIColor.white, UIColor.white], locations: [0.0, 0.65, 1.0], direction: .horizontal)?.withRenderingMode(.alwaysTemplate)
         }
         
         required init?(coder: NSCoder) {
@@ -2102,54 +2257,48 @@ private final class TransactionCellComponent: Component {
         func update(component: TransactionCellComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             self.state = state
-                                    
-            let spacing: CGFloat = 6.0
+                                                
+            self.gradientView.tintColor = component.backgroundColor
             
             let buttonSize = self.button.update(
                 transition: .immediate,
                 component: AnyComponent(
-                    BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.accentColor)
+                    BundleIconComponent(
+                        name: "Chat/Context Menu/Copy",
+                        tintColor: component.accentColor
+                    )
                 ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: availableSize.height)
             )
-            
-            func brokenLine(_ string: String) -> String {
-                if string.count > 30 {
-                    return string
-                }
-                let middleIndex = string.index(string.startIndex, offsetBy: string.count / 2)
-                var newString = string
-                newString.insert("\n", at: middleIndex)
-                return newString
-            }
-            
-            let text: String
-            if availableSize.width > 230.0 {
-                text = component.transactionId
-            } else {
-                text = brokenLine(component.transactionId)
-            }
-            
+                        
             let textSize = self.text.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: text,
+                            string: component.transactionId,
                             font: Font.monospace(15.0),
                             textColor: component.textColor,
                             paragraphAlignment: .left
                         )),
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.2
+                        maximumNumberOfLines: 1
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - buttonSize.width - spacing, height: availableSize.height)
+                containerSize: CGSize(width: availableSize.width - buttonSize.width + 10.0, height: availableSize.height)
             )
             
             let size = CGSize(width: availableSize.width, height: textSize.height)
+            
+            let textFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0) + 1.0), size: textSize)
+            if let textView = self.text.view {
+                if textView.superview == nil {
+                    self.addSubview(textView)
+                    self.addSubview(self.gradientView)
+                }
+                transition.setFrame(view: textView, frame: textFrame)
+            }
             
             let buttonFrame = CGRect(origin: CGPoint(x: availableSize.width - buttonSize.width - 2.0, y: floorToScreenPixels((size.height - buttonSize.height) / 2.0)), size: buttonSize)
             if let buttonView = self.button.view {
@@ -2159,13 +2308,7 @@ private final class TransactionCellComponent: Component {
                 transition.setFrame(view: buttonView, frame: buttonFrame)
             }
             
-            let textFrame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0) + 1.0), size: textSize)
-            if let textView = self.text.view {
-                if textView.superview == nil {
-                    self.addSubview(textView)
-                }
-                transition.setFrame(view: textView, frame: textFrame)
-            }
+            self.gradientView.frame = CGRect(x: size.width - buttonSize.width - 32.0, y: 0.0, width: 40.0, height: size.height)
             
             return size
         }
@@ -2199,4 +2342,93 @@ private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor:
         context.addLine(to: CGPoint(x: 10.0, y: 20.0))
         context.strokePath()
     })
+}
+
+private final class ButtonContentComponent: Component {
+    let context: AccountContext
+    let text: String
+    let color: UIColor
+    
+    public init(
+        context: AccountContext,
+        text: String,
+        color: UIColor
+    ) {
+        self.context = context
+        self.text = text
+        self.color = color
+    }
+
+    public static func ==(lhs: ButtonContentComponent, rhs: ButtonContentComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.color != rhs.color {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private var component: ButtonContentComponent?
+        private weak var componentState: EmptyComponentState?
+        
+        private let backgroundLayer = SimpleLayer()
+        private let title = ComponentView<Empty>()
+                
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.layer.addSublayer(self.backgroundLayer)
+            self.backgroundLayer.masksToBounds = true
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: ButtonContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.componentState = state
+                        
+            let attributedText = NSAttributedString(string: component.text, font: Font.regular(11.0), textColor: component.color)
+            let titleSize = self.title.update(
+                transition: transition,
+                component: AnyComponent(
+                    MultilineTextComponent(text: .plain(attributedText))
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let padding: CGFloat = 6.0
+            let size = CGSize(width: titleSize.width + padding * 2.0, height: 18.0)
+                        
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
+            if let titleView = self.title.view {
+                if titleView.superview == nil {
+                    self.addSubview(titleView)
+                }
+                transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            
+            let backgroundColor = component.color.withAlphaComponent(0.1)
+            self.backgroundLayer.backgroundColor = backgroundColor.cgColor
+            transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: .zero, size: size))
+            self.backgroundLayer.cornerRadius = size.height / 2.0
+                        
+            return size
+        }
+    }
+
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
 }

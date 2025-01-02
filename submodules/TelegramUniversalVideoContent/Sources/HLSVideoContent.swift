@@ -27,7 +27,7 @@ public struct HLSCodecConfiguration {
 
 public extension HLSCodecConfiguration {
     init(context: AccountContext) {
-        /*var isSoftwareAv1Supported = false
+        var isSoftwareAv1Supported = false
         var isHardwareAv1Supported = false
         
         var length: Int = 4
@@ -44,9 +44,7 @@ public extension HLSCodecConfiguration {
             isSoftwareAv1Supported = value != 0.0
         }
         
-        self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)*/
-        
-        self.init(isHardwareAv1Supported: false, isSoftwareAv1Supported: false)
+        self.init(isHardwareAv1Supported: isHardwareAv1Supported, isSoftwareAv1Supported: isSoftwareAv1Supported)
     }
 }
 
@@ -264,8 +262,8 @@ public final class HLSVideoContent: UniversalVideoContent {
         self.codecConfiguration = codecConfiguration
     }
     
-    public func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return HLSVideoJSNativeContentNode(accountId: accountId, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, codecConfiguration: self.codecConfiguration)
+    public func makeContentNode(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
+        return HLSVideoJSNativeContentNode(context: context, postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, fileReference: self.fileReference, streamVideo: self.streamVideo, loopVideo: self.loopVideo, enableSound: self.enableSound, baseRate: self.baseRate, fetchAutomatically: self.fetchAutomatically, onlyFullSizeThumbnail: self.onlyFullSizeThumbnail, useLargeThumbnail: self.useLargeThumbnail, autoFetchFullSizeThumbnail: self.autoFetchFullSizeThumbnail, codecConfiguration: self.codecConfiguration)
     }
     
     public func isEqual(to other: UniversalVideoContent) -> Bool {

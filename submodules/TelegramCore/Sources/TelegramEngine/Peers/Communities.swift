@@ -244,14 +244,14 @@ public enum CheckChatFolderLinkError {
 
 public final class ChatFolderLinkContents {
     public let localFilterId: Int32?
-    public let title: String?
+    public let title: ChatFolderTitle?
     public let peers: [EnginePeer]
     public let alreadyMemberPeerIds: Set<EnginePeer.Id>
     public let memberCounts: [EnginePeer.Id: Int]
     
     public init(
         localFilterId: Int32?,
-        title: String?,
+        title: ChatFolderTitle?,
         peers: [EnginePeer],
         alreadyMemberPeerIds: Set<EnginePeer.Id>,
         memberCounts: [EnginePeer.Id: Int]
@@ -273,14 +273,16 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
     |> mapToSignal { result -> Signal<ChatFolderLinkContents, CheckChatFolderLinkError> in
         return account.postbox.transaction { transaction -> ChatFolderLinkContents in
             switch result {
-            case let .chatlistInvite(_, title, emoticon, peers, chats, users):
+            case let .chatlistInvite(flags, title, emoticon, peers, chats, users):
                 let _ = emoticon
+                
+                let disableTitleAnimation = (flags & (1 << 1)) != 0
                 
                 let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]
                 
                 for chat in chats {
-                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
                         }
@@ -301,13 +303,21 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                     }
                 }
                 
-                return ChatFolderLinkContents(localFilterId: nil, title: title, peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
+                let titleText: String
+                let titleEntities: [MessageTextEntity]
+                switch title {
+                case let .textWithEntities(text, entities):
+                    titleText = text
+                    titleEntities = messageTextEntitiesFromApiEntities(entities)
+                }
+                
+                return ChatFolderLinkContents(localFilterId: nil, title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimation), peers: resultPeers, alreadyMemberPeerIds: alreadyMemberPeerIds, memberCounts: memberCounts)
             case let .chatlistInviteAlready(filterId, missingPeers, alreadyPeers, chats, users):
                 let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                 var memberCounts: [PeerId: Int] = [:]
                 
                 for chat in chats {
-                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
+                    if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _) = chat {
                         if let participantsCount = participantsCount {
                             memberCounts[chat.peerId] = Int(participantsCount)
                         }
@@ -317,7 +327,7 @@ func _internal_checkChatFolderLink(account: Account, slug: String) -> Signal<Cha
                 updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                 
                 let currentFilters = _internal_currentChatListFilters(transaction: transaction)
-                var currentFilterTitle: String?
+                var currentFilterTitle: ChatFolderTitle?
                 if let index = currentFilters.firstIndex(where: { $0.id == filterId }) {
                     switch currentFilters[index] {
                     case let .filter(_, title, _, _):
@@ -367,10 +377,10 @@ public enum JoinChatFolderLinkError {
 
 public final class JoinChatFolderResult {
     public let folderId: Int32
-    public let title: String
+    public let title: ChatFolderTitle
     public let newChatCount: Int
     
-    public init(folderId: Int32, title: String, newChatCount: Int) {
+    public init(folderId: Int32, title: ChatFolderTitle, newChatCount: Int) {
         self.folderId = folderId
         self.title = title
         self.newChatCount = newChatCount
@@ -378,25 +388,6 @@ public final class JoinChatFolderResult {
 }
 
 func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [EnginePeer.Id]) -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> {
-    /*#if DEBUG
-    if "".isEmpty {
-        return account.postbox.transaction { transaction -> (AppConfiguration, Bool) in
-            return (currentAppConfiguration(transaction: transaction), transaction.getPeer(account.peerId)?.isPremium ?? false)
-        }
-        |> castError(JoinChatFolderLinkError.self)
-        |> mapToSignal { appConfiguration, isPremium -> Signal<JoinChatFolderResult, JoinChatFolderLinkError> in
-            let userDefaultLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
-            let userPremiumLimits = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
-            
-            if isPremium {
-                return .fail(.tooManyChannelsInAccount(limit: userPremiumLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
-            } else {
-                return .fail(.tooManyChannelsInAccount(limit: userDefaultLimits.maxFolderChatsCount, premiumLimit: userPremiumLimits.maxFolderChatsCount))
-            }
-        }
-    }
-    #endif*/
-    
     return account.postbox.transaction { transaction -> ([Api.InputPeer], Int) in
         var newChatCount = 0
         for peerId in peerIds {
@@ -522,7 +513,7 @@ func _internal_joinChatFolderLink(account: Account, slug: String, peerIds: [Engi
 
 public final class ChatFolderUpdates: Equatable {
     public let folderId: Int32
-    fileprivate let title: String
+    fileprivate let title: ChatFolderTitle
     fileprivate let missingPeers: [EnginePeer]
     fileprivate let memberCounts: [EnginePeer.Id: Int]
     
@@ -536,7 +527,7 @@ public final class ChatFolderUpdates: Equatable {
     
     fileprivate init(
         folderId: Int32,
-        title: String,
+        title: ChatFolderTitle,
         missingPeers: [EnginePeer],
         memberCounts: [EnginePeer.Id: Int]
     ) {
@@ -621,7 +612,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
                     var memberCounts: [ChatListFiltersState.ChatListFilterUpdates.MemberCount] = []
                     
                     for chat in chats {
-                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _) = chat {
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _) = chat {
                             if let participantsCount = participantsCount {
                                 memberCounts.append(ChatListFiltersState.ChatListFilterUpdates.MemberCount(id: chat.peerId, count: participantsCount))
                             }
@@ -647,7 +638,7 @@ func _internal_pollChatFolderUpdatesOnce(account: Account, folderId: Int32) -> S
 
 func _internal_subscribedChatFolderUpdates(account: Account, folderId: Int32) -> Signal<ChatFolderUpdates?, NoError> {
     struct InternalData: Equatable {
-        var title: String
+        var title: ChatFolderTitle
         var peerIds: [EnginePeer.Id]
         var memberCounts: [EnginePeer.Id: Int]
     }

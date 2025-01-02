@@ -263,6 +263,9 @@
 "PUSH_MESSAGE_WALLPAPER" = "%1$@ set a new wallpaper for the chat with you";
 "PUSH_MESSAGE_SAME_WALLPAPER" = "%1$@ set the same wallpaper for the chat with you";
 
+"PUSH_MESSAGE_UNIQUE_STARGIFT" = "%1$@ sent you a Gift";
+"PUSH_MESSAGE_STARGIFT_UPGRADE" = "%1$@ upgraded your Gift";
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -282,6 +285,9 @@
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
 "LOCAL_CHAT_MESSAGE_FWDS" = "%1$@ forwarded %2$d messages";
+
+"PUSH_STORY_HIDDEN_AUTHOR" = "New story was posted";
+"PUSH_MESSAGE_STARGIFT" = "%1$@|sent you a Gift worth of %2$@ stars";
 
 // Common
 "Common.OK" = "OK";
@@ -12296,6 +12302,7 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.ConvertedGift" = "Converted Gift";
 "Stars.Intro.Transaction.Unsupported.Title" = "Unsupported";
 "Stars.Intro.Transaction.Refund" = "Refund";
+"Stars.Intro.Transaction.GiftUpgrade" = "Gift Upgrade";
 
 "Stars.Intro.PurchasedTitle" = "Stars Acquired";
 "Stars.Intro.PurchasedText" = "**%@** added to your balance.";
@@ -13083,6 +13090,8 @@ Sorry for the inconvenience.";
 "Gift.Send.Limited" = "Limited";
 "Gift.Send.Remains_1" = "%@ left";
 "Gift.Send.Remains_any" = "%@ left";
+"Gift.Send.Sold_1" = "%@ sold";
+"Gift.Send.Sold_any" = "%@ sold";
 
 "Gift.Send.ErrorUnknown" = "An error occurred. Please try again.";
 "Gift.Send.ErrorOutOfStock" = "Sorry, this gift is sold out. Please choose another gift.";
@@ -13444,3 +13453,189 @@ Sorry for the inconvenience.";
 "StarsTransaction.StarRefReason.Referred" = "Referred User";
 
 "Gallery.SaveToGallery.cached" = "cached";
+
+"ChatList.Search.Messages.AllChats" = "From All Chats";
+"ChatList.Search.Messages.PrivateChats" = "From Private Chats";
+"ChatList.Search.Messages.GroupChats" = "From Group Chats";
+"ChatList.Search.Messages.Channels" = "From Channels";
+
+"ChatList.Search.Messages.Menu.AllChats" = "All Chats";
+"ChatList.Search.Messages.Menu.PrivateChats" = "Private Chats";
+"ChatList.Search.Messages.Menu.GroupChats" = "Group Chats";
+"ChatList.Search.Messages.Menu.Channels" = "Channels";
+
+"MediaEditor.Timeline" = "Timeline";
+
+"Conversation.ContextMenuSendGiftTo" = "Send Gift to %@";
+"Conversation.ContextMenuSendAnotherGift" = "Send Another Gift";
+
+"Gift.View.Status" = "Status";
+"Gift.View.Status.NonUnique" = "Non-Unique";
+"Gift.View.Status.Upgrade" = "upgrade";
+"Gift.View.DisplayedInfoHide" = "The gift is visible on your Page. [Hide >]()";
+"Gift.View.HiddenInfoShow" = "This gift is hidden. Only you can see it. [Show >]()";
+
+"Gift.Upgrade.Title" = "Upgrade Gift";
+"Gift.Upgrade.IncludeTitle" = "Make Unique";
+"Gift.Upgrade.Description" = "Turn your gift into a unique collectible that you can transfer or auction.";
+"Gift.Upgrade.IncludeDescription" = "Let %@ turn your gift into a unique collectible.";
+"Gift.Upgrade.Unique.Title" = "Unique";
+"Gift.Upgrade.Unique.Description" = "Get a unique number, model, backdrop, and symbol for your gift.";
+"Gift.Upgrade.Unique.IncludeDescription" = "The recipient will get a unique number, model, backdrop, and symbol for the gift.";
+"Gift.Upgrade.Transferable.Title" = "Transferable";
+"Gift.Upgrade.Transferable.Description" = "Send your upgraded gift to any of your friends on Telegram.";
+"Gift.Upgrade.Transferable.IncludeDescription" = "The recipient will be able to send the gift to anyone Telegram.";
+"Gift.Upgrade.Tradable.Title" = "Tradable";
+"Gift.Upgrade.Tradable.Description" = "Sell or auction your gift on third-party NFT marketplaces.";
+"Gift.Upgrade.Tradable.IncludeDescription" = "The recipient will be able to auction the gift on third-party NFT marketplaces.";
+"Gift.Upgrade.Soon" = "SOON";
+"Gift.Upgrade.AddName" = "Add sender's name";
+"Gift.Upgrade.AddNameAndComment" = "Add sender's name and comment";
+"Gift.Upgrade.AddMyName" = "Add my name to the gift";
+"Gift.Upgrade.Upgrade" = "Upgrade";
+"Gift.Upgrade.Confirm" = "Confirm";
+
+"Gift.Upgrade.Succeed.Title" = "The gift is now collectible";
+"Gift.Upgrade.Succeed.Text" = "You have received a unique number, model, backdrop and symbol for your gift.";
+
+"Gift.Unique.Collectible" = "Collectible";
+"Gift.Unique.Owner" = "Owner";
+"Gift.Unique.Transfer" = "change";
+"Gift.Unique.Model" = "Model";
+"Gift.Unique.Backdrop" = "Backdrop";
+"Gift.Unique.Symbol" = "Symbol";
+"Gift.Unique.Availability" = "Availability";
+"Gift.Unique.Issued" = "%@ issued";
+"Gift.Unique.OriginalInfo" = "Gifted to %1$@ on %2$@.";
+"Gift.Unique.OriginalInfoWithText" = "Gifted to %1$@ on %2$@ with comment \"%3$@\".";
+"Gift.Unique.OriginalInfoSender" = "Gifted by %1$@ to %2$@ on %3$@.";
+"Gift.Unique.OriginalInfoSenderWithText" = "Gifted by %1$@ to %2$@ on %3$@ with comment \"%4$@\".";
+
+"Gift.Unique.AttributeDescription" = "Only %@ of such collectibles have this attribute.";
+
+"Gift.Transfer.Title" = "Transfer";
+"Gift.Transfer.SendViaBlockchain" = "Send via Blockchain";
+"Gift.Transfer.SendUnlocks" = "unlocks in %@";
+"Gift.Transfer.SendUnlocks.Days_1" = "%@ day";
+"Gift.Transfer.SendUnlocks.Days_any" = "%@ days";
+
+"Gift.Transfer.UnlockPending.Title" = "Unlocking In Progress";
+"Gift.Transfer.UnlockPending.Text" = "In %@, you'll be able to send this collectible to any TON blockchain address outside Telegram for sale or auction.";
+"Gift.Transfer.UnlockPending.Text.Days_1" = "%@ day";
+"Gift.Transfer.UnlockPending.Text.Days_any" = "%@ days";
+
+"Gift.Transfer.UpdateRequired.Title" = "Update Required";
+"Gift.Transfer.UpdateRequired.Text" = "Please update your Telegram application to the latest version.";
+
+"Gift.Transfer.Confirmation.Title" = "Confirm Transfer";
+"Gift.Transfer.Confirmation.TextFree" = "Dou you want to transfer ownership of **%1$@** to **%2$@**?";
+"Gift.Transfer.Confirmation.Text" = "Dou you want to transfer ownership of **%1$@** to **%2$@** for **%3$@**?";
+"Gift.Transfer.Confirmation.Text.Stars_1" = "%@ Star";
+"Gift.Transfer.Confirmation.Text.Stars_any" = "%@ Stars";
+"Gift.Transfer.Confirmation.Transfer" = "Transfer for";
+"Gift.Transfer.Confirmation.TransferFree" = "Transfer";
+
+"Gift.Transfer.Success" = "You have successfully gifted **%1$@** to **%2$@**.";
+
+"Gift.View.UpgradeForFree" = "Upgrade for Free";
+"Gift.View.KeepUpgradeOrConvertDescription" = "You can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
+
+"ChatList.ToastFolderMutedV2" = "All chats in {folder} are now muted";
+"ChatList.ToastFolderUnmutedV2" = "All chats in {folder} are now unmuted";
+"ChatList.AddedToFolderTooltipV2" = "{chat} has been added to folder {folder}";
+"ChatList.RemovedFromFolderTooltipV2" = "{chat} has been removed from folder {folder}";
+
+"FolderLinkScreen.TitleDescriptionDeselectedV2" = "Anyone with this link can add {folder} folder and the chats selected below.";
+"FolderLinkScreen.TitleDescriptionSelectedV2" = "Anyone with this link can add {folder} folder and {chats} selected below.";
+"Chat.NextChannelFolderSwipeProgressV2" = "Swipe up to go to the {folder} folder";
+"Chat.NextChannelFolderSwipeActionV2" = "Release to go to the {folder} folder";
+"FolderLinkPreview.TextAddChatsV2" = "Do you want to add {chats} to the\nfolder {folder}?";
+"FolderLinkPreview.ToastLeftTitleV2" = "Folder {folder} deleted";
+"FolderLinkPreview.ToastChatsAddedTitleV2" = "Folder {folder} Updated";
+"FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
+
+"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade yort gift into a unique collectible.";
+
+"Gift.Send.Upgrade" = "Make Unique for %@";
+"Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";
+
+"Notification.StarGift.Unpack" = "Unpack";
+
+"Notification.StarGift.Model" = "Model";
+"Notification.StarGift.Backdrop" = "Backdrop";
+"Notification.StarGift.Symbol" = "Symbol";
+
+"Notification.StarGift.Gift" = "gift";
+
+"Notification.StarsGift.Upgrade" = "%@ turned the gift from you to a unique collectible";
+"Notification.StarsGift.UpgradeYou" = "You turned the gift from %@ to a unique collectible";
+"Notification.StarsGift.UpgradeSelf" = "You turned the gift to a unique collectible";
+
+"Notification.StarsGift.Transfer" = "%@ transferred you a unique collectible";
+"Notification.StarsGift.TransferYou" = "You transferred a unique collectible";
+
+"Notification.StarGift.Subtitle.Refunded" = "This gift cannot be converted to Stars because the payment related to it was refunded.";
+"Notification.StarGift.Subtitle.Downgraded" = "This gift was downgraded because a request to refund the payment related to this gift was made, and the money was returned.";
+
+"Notification.StarGift.Subtitle.Upgrade" = "Tap \"Unpack\" to turn this gift to a unique collectible.";
+"Notification.StarGift.Subtitle.Upgrade.Other" = "%1$@ can turn this gift to a unique collectible.";
+
+"Notification.StarGift.Subtitle.Upgraded" = "This gift was upgraded.";
+
+"Stars.Transaction.GiftFrom" = "Gift From";
+"Stars.Transaction.GiftUpgrade" = "Gift Upgrade";
+
+"Gift.View.FreeUpgradeDescription" = "Upgrade this gift for free to turn it to a unique collectible.";
+"Gift.View.FreeUpgradeOtherDescription" = "%1$@ can turn this gift to a unique collectible.";
+
+"Gift.View.UpgradedDescription" = "This gift was turned to a unique collectible.";
+"Gift.View.ViewUpgraded" = "View Upgraded Gift";
+
+"VideoChat.IncomingVideoQuality.AudioOnly" = "Audio Only";
+"VideoChat.IncomingVideoQuality.Title" = "Receive Video Quality";
+
+"ChatList.EmptyResult.SearchInAll" = "Search in All Messages";
+
+"Gift.Options.GiftSelf.Title" = "Buy a Gift";
+"Gift.Options.GiftSelf.Text" = "Buy yourself a gift to display on your page or reserve for later.\n\nLimited-edition gifts upgraded to collectibles can be gifted to others later.";
+
+"Gift.SendSelf.Title" = "Gift to Myself";
+"Gift.SendSelf.HideMyName" = "Hide My Name";
+"Gift.SendSelf.HideMyName.Info" = "Hide my name and message from visitors to my profile.";
+
+"Notification.StarGift.Self.Title" = "Saved Gift";
+"Notification.StarsGift.Self.Bought" = "You bought a gift for %@";
+"Notification.StarsGift.Subtitle.Self" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
+
+"Gift.View.Self.Title" = "Saved Gift";
+"Gift.View.Self.Description" = "You can display this gift on your page or turn it into a unique collectible and send to others.";
+
+"BotVerification.Verify.Placeholder" = "This page is verified by %@";
+
+"BotVerification.Verify.Channel.Title" = "Verify Channel";
+"BotVerification.Verify.Channel.Text" = "Do you want to verify this channel with your verification mark and description?";
+"BotVerification.Verify.Group.Title" = "Verify Group";
+"BotVerification.Verify.Group.Text" = "Do you want to verify this group with your verification mark and description?";
+"BotVerification.Verify.User.Title" = "Verify Bot";
+"BotVerification.Verify.User.Text" = "Do you want to verify this user with your verification mark and description?";
+"BotVerification.Verify.Bot.Title" = "Verify Bot";
+"BotVerification.Verify.Bot.Text" = "Do you want to verify this bot with your verification mark and description?";
+
+"BotVerification.Verify.Verify" = "Verify";
+
+"BotVerification.Remove.Title" = "Remove Verification";
+"BotVerification.Remove.Channel.Text" = "This channel is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Group.Text" = "This group is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.User.Text" = "This user is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Bot.Text" = "This bot is already verified by you. Do you want to remove verification?";
+"BotVerification.Remove.Remove" = "Remove";
+
+"BotVerification.ChooseChat" = "Choose Chat to Verify";
+"BotVerification.Added" = "**%@** has been notified and will receive your verification mark and description upon accepting.";
+"BotVerification.Removed" = "You have removed **%@'s** verification.";
+
+"Premium.Gift.ContactSelection.ThisIsYou" = "THIS IS YOU";
+"Premium.Gift.ContactSelection.BuySelf" = "buy yourself a gift";
+
+"Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
+"Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";

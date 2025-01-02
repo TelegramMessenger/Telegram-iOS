@@ -134,19 +134,22 @@ public final class AccountStateManager {
         public let timestamp: Int32
         public let peer: EnginePeer
         public let isVideo: Bool
+        public let isConference: Bool
         
         init(
             callId: Int64,
             callAccessHash: Int64,
             timestamp: Int32,
             peer: EnginePeer,
-            isVideo: Bool
+            isVideo: Bool,
+            isConference: Bool
         ) {
             self.callId = callId
             self.callAccessHash = callAccessHash
             self.timestamp = timestamp
             self.peer = peer
             self.isVideo = isVideo
+            self.isConference = isConference
         }
     }
     
@@ -349,6 +352,7 @@ public final class AccountStateManager {
         private let appliedMaxMessageIdDisposable = MetaDisposable()
         private let appliedQtsPromise = Promise<Int32?>(nil)
         private let appliedQtsDisposable = MetaDisposable()
+        private let reportMessageDeliveryDisposable = DisposableSet()
         
         let updateConfigRequested: (() -> Void)?
         let isPremiumUpdated: (() -> Void)?
@@ -388,6 +392,7 @@ public final class AccountStateManager {
             self.operationDisposable.dispose()
             self.appliedMaxMessageIdDisposable.dispose()
             self.appliedQtsDisposable.dispose()
+            self.reportMessageDeliveryDisposable.dispose()
         }
         
         public func reset() {
@@ -1127,6 +1132,9 @@ public final class AccountStateManager {
                             if !events.sentScheduledMessageIds.isEmpty {
                                 strongSelf.sentScheduledMessageIdsPipe.putNext(events.sentScheduledMessageIds)
                             }
+                            if !events.reportMessageDelivery.isEmpty {
+                                strongSelf.reportMessageDeliveryDisposable.add(_internal_reportMessageDelivery(postbox: strongSelf.postbox, network: strongSelf.network, messageIds: Array(events.reportMessageDelivery), fromPushNotification: false).start())
+                            }
                             if !events.isContactUpdates.isEmpty {
                                 strongSelf.addIsContactUpdates(events.isContactUpdates)
                             }
@@ -1763,7 +1771,7 @@ public final class AccountStateManager {
                 subscriber(updatedStarsRevenueStatus)
             }
         }
-        
+                
         func notifyDeletedMessages(messageIds: [MessageId]) {
             self.deletedMessagesPipe.putNext(messageIds.map { .messageId($0) })
         }
@@ -2160,7 +2168,7 @@ public final class AccountStateManager {
                 switch update {
                 case let .updatePhoneCall(phoneCall):
                     switch phoneCall {
-                    case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, _, _):
+                    case let .phoneCallRequested(flags, id, accessHash, date, adminId, _, _, _, conferenceCall):
                         guard let peer = peers.first(where: { $0.id == PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(adminId)) }) else {
                             return nil
                         }
@@ -2169,7 +2177,8 @@ public final class AccountStateManager {
                             callAccessHash: accessHash,
                             timestamp: date,
                             peer: EnginePeer(peer),
-                            isVideo: (flags & (1 << 6)) != 0
+                            isVideo: (flags & (1 << 6)) != 0,
+                            isConference: conferenceCall != nil
                         )
                     default:
                         break

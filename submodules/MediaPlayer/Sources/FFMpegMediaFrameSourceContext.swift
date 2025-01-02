@@ -490,7 +490,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             let aspect = Double(metrics.width) / Double(metrics.height)
             
             if self.preferSoftwareDecoding {
-                if let codec = FFMpegAVCodec.find(forId: codecId) {
+                if let codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false) {
                     let codecContext = FFMpegAVCodecContext(codec: codec)
                     if avFormatContext.codecParams(atStreamIndex: streamIndex, to: codecContext) {
                         if codecContext.open() {
@@ -523,7 +523,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
             var codec: FFMpegAVCodec?
             
             if codec == nil {
-                codec = FFMpegAVCodec.find(forId: codecId)
+                codec = FFMpegAVCodec.find(forId: codecId, preferHardwareAccelerationCapable: false)
             }
             
             if let codec = codec {

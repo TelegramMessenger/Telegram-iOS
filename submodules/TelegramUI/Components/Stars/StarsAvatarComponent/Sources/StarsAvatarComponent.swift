@@ -11,6 +11,7 @@ import AvatarNode
 import AccountContext
 import BundleIconComponent
 import MultilineTextComponent
+import GiftItemComponent
 
 public final class StarsAvatarComponent: Component {
     let context: AccountContext
@@ -18,15 +19,26 @@ public final class StarsAvatarComponent: Component {
     let peer: StarsContext.State.Transaction.Peer?
     let photo: TelegramMediaWebFile?
     let media: [Media]
+    let uniqueGift: StarGift.UniqueGift?
     let backgroundColor: UIColor
     let size: CGSize?
 
-    public init(context: AccountContext, theme: PresentationTheme, peer: StarsContext.State.Transaction.Peer?, photo: TelegramMediaWebFile?, media: [Media], backgroundColor: UIColor, size: CGSize? = nil) {
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        peer: StarsContext.State.Transaction.Peer?,
+        photo: TelegramMediaWebFile?,
+        media: [Media],
+        uniqueGift: StarGift.UniqueGift?,
+        backgroundColor: UIColor,
+        size: CGSize? = nil
+    ) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.photo = photo
         self.media = media
+        self.uniqueGift = uniqueGift
         self.backgroundColor = backgroundColor
         self.size = size
     }
@@ -47,6 +59,9 @@ public final class StarsAvatarComponent: Component {
         if !areMediaArraysEqual(lhs.media, rhs.media) {
             return false
         }
+        if lhs.uniqueGift != rhs.uniqueGift {
+            return false
+        }
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
@@ -63,6 +78,7 @@ public final class StarsAvatarComponent: Component {
         private var imageNode: TransformImageNode?
         private var imageFrameNode: UIView?
         private var secondImageNode: TransformImageNode?
+        private let giftView = ComponentView<Empty>()
         
         private let fetchDisposable = DisposableSet()
         
@@ -100,7 +116,29 @@ public final class StarsAvatarComponent: Component {
             var dimensions = size
             
             var didSetup = false
-            if !component.media.isEmpty {
+            if let gift = component.uniqueGift {
+                let giftFrame = CGRect(origin: .zero, size: size)
+                let _ = self.giftView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        GiftItemComponent(
+                            context: component.context,
+                            theme: component.theme,
+                            peer: nil,
+                            subject: .uniqueGift(gift: gift),
+                            mode: .thumbnail
+                        )
+                    ),
+                    environment: {},
+                    containerSize: giftFrame.size
+                )
+                if let view = self.giftView.view {
+                    if view.superview == nil {
+                        self.addSubview(view)
+                    }
+                    view.frame = giftFrame
+                }
+            } else if !component.media.isEmpty {
                 let imageNode: TransformImageNode
                 var isFirstTime = false
                 if let current = self.imageNode {

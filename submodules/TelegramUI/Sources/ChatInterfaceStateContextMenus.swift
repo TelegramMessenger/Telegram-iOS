@@ -1121,6 +1121,22 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        if data.messageActions.options.contains(.sendGift) {
+            let sendGiftTitle: String
+            if message.effectivelyIncoming(context.account.peerId) {
+                let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
+                sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendGiftTo(peerName).string
+            } else {
+                sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendAnotherGift
+            }
+            actions.append(.action(ContextMenuActionItem(text: sendGiftTitle, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                let _ = controllerInteraction.sendGift(message.id.peerId)
+                f(.dismissWithoutContent)
+            })))
+        }
+        
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
@@ -2221,8 +2237,15 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                             }
                             break
                         }
-                    } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
-                        optionsMap[id]!.insert(.rateCall)
+                    } else if let action = media as? TelegramMediaAction {
+                        switch action.action {
+                        case .phoneCall:
+                            optionsMap[id]!.insert(.rateCall)
+                        case .starGift, .starGiftUnique:
+                            optionsMap[id]!.insert(.sendGift)
+                        default:
+                            break
+                        }
                     } else if let story = media as? TelegramMediaStory {
                         if let story = message.associatedStories[story.storyId], story.data.isEmpty {
                             isShareProtected = true

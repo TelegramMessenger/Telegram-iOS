@@ -221,9 +221,9 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                         }
                                         return filters
                                     }
-                                             |> deliverOnMainQueue).startStandalone(completed: {
+                                    |> deliverOnMainQueue).startStandalone(completed: {
                                         c?.dismiss(completion: {
-                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                            chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatRemovedFromFolder(context: context, chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title.rawAttributedString), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                                 return false
                                             }), in: .current)
                                         })
@@ -273,7 +273,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                             }
                                             
                                             let filterType = chatListFilterType(data)
-                                            updatedItems.append(.action(ContextMenuActionItem(text: title, icon: { theme in
+                                            updatedItems.append(.action(ContextMenuActionItem(text: title.text, entities: title.entities, enableEntityAnimations: title.enableAnimations, icon: { theme in
                                                 let imageName: String
                                                 switch filterType {
                                                 case .generic:
@@ -337,8 +337,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                                         }
                                                         return filters
                                                     }).startStandalone()
-                                                    
-                                                    chatListController?.present(UndoOverlayController(presentationData: presentationData, content: .chatAddedToFolder(chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                                                    chatListController?.present(UndoOverlayController( presentationData: presentationData, content: .chatAddedToFolder(context: context, chatTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), folderTitle: title.rawAttributedString), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                                                         return false
                                                     }), in: .current)
                                                 })
@@ -346,7 +345,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                         }
                                     }
                                                                         
-                                    c?.setItems(.single(ContextController.Items(content: .list(updatedItems))), minHeight: nil, animated: true)
+                                    c?.setItems(.single(ContextController.Items(content: .list(updatedItems), context: context)), minHeight: nil, animated: true)
                                 })))
                                 items.append(.separator)
                             }

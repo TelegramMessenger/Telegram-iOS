@@ -1539,59 +1539,43 @@ public extension Api.payments {
     }
 }
 public extension Api.payments {
-    enum StarGifts: TypeConstructorDescription {
-        case starGifts(hash: Int32, gifts: [Api.StarGift])
-        case starGiftsNotModified
+    enum StarGiftUpgradePreview: TypeConstructorDescription {
+        case starGiftUpgradePreview(sampleAttributes: [Api.StarGiftAttribute])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .starGifts(let hash, let gifts):
+                case .starGiftUpgradePreview(let sampleAttributes):
                     if boxed {
-                        buffer.appendInt32(-1877571094)
+                        buffer.appendInt32(377215243)
                     }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(gifts.count))
-                    for item in gifts {
+                    buffer.appendInt32(Int32(sampleAttributes.count))
+                    for item in sampleAttributes {
                         item.serialize(buffer, true)
                     }
-                    break
-                case .starGiftsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1551326360)
-                    }
-                    
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .starGifts(let hash, let gifts):
-                return ("starGifts", [("hash", hash as Any), ("gifts", gifts as Any)])
-                case .starGiftsNotModified:
-                return ("starGiftsNotModified", [])
+                case .starGiftUpgradePreview(let sampleAttributes):
+                return ("starGiftUpgradePreview", [("sampleAttributes", sampleAttributes as Any)])
     }
     }
     
-        public static func parse_starGifts(_ reader: BufferReader) -> StarGifts? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.StarGift]?
+        public static func parse_starGiftUpgradePreview(_ reader: BufferReader) -> StarGiftUpgradePreview? {
+            var _1: [Api.StarGiftAttribute]?
             if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGift.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
             }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.StarGifts.starGifts(hash: _1!, gifts: _2!)
+            if _c1 {
+                return Api.payments.StarGiftUpgradePreview.starGiftUpgradePreview(sampleAttributes: _1!)
             }
             else {
                 return nil
             }
-        }
-        public static func parse_starGiftsNotModified(_ reader: BufferReader) -> StarGifts? {
-            return Api.payments.StarGifts.starGiftsNotModified
         }
     
     }

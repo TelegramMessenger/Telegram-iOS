@@ -62,17 +62,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        var filters: [ContactListFilter] = [.excludeSelf]
-        if requirePhoneNumbers {
-            filters.append(.excludeWithoutPhoneNumbers)
-        }
-        if case .starsGifting = mode {
-            filters.append(.excludeBots)
-        }
-        self.filters = filters
+        var excludeSelf = true
         
         let displayTopPeers: ContactListPresentation.TopPeers
-        if case let .starsGifting(birthdays, hasActions) = mode {
+        if case let .starsGifting(birthdays, hasActions, showSelf) = mode {
+            if showSelf {
+                excludeSelf = false
+            }
             if let birthdays {
                 let today = Calendar(identifier: .gregorian).component(.day, from: Date())
                 var sections: [(String, [EnginePeer.Id], Bool)] = []
@@ -100,13 +96,25 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                     sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
                 }
                 
-                displayTopPeers = .custom(sections)
+                displayTopPeers = .custom(showSelf: showSelf, sections: sections)
             } else {
                 displayTopPeers = .recent
             }
         } else {
             displayTopPeers = .none
         }
+        
+        var filters: [ContactListFilter] = []
+        if excludeSelf {
+            filters.append(.excludeSelf)
+        }
+        if requirePhoneNumbers {
+            filters.append(.excludeWithoutPhoneNumbers)
+        }
+        if case .starsGifting = mode {
+            filters.append(.excludeBots)
+        }
+        self.filters = filters
         
         let presentation: Signal<ContactListPresentation, NoError> = options
         |> map { options in

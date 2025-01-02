@@ -13,7 +13,9 @@ public enum BotPaymentInvoiceSource {
     case starsGift(peerId: EnginePeer.Id, count: Int64, currency: String, amount: Int64)
     case starsChatSubscription(hash: String)
     case starsGiveaway(stars: Int64, boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32)
-    case starGift(hideName: Bool, peerId: EnginePeer.Id, giftId: Int64, text: String?, entities: [MessageTextEntity]?)
+    case starGift(hideName: Bool, includeUpgrade: Bool, peerId: EnginePeer.Id, giftId: Int64, text: String?, entities: [MessageTextEntity]?)
+    case starGiftUpgrade(keepOriginalInfo: Bool, messageId: EngineMessage.Id)
+    case starGiftTransfer(messageId: EngineMessage.Id, toPeerId: EnginePeer.Id)
 }
 
 public struct BotPaymentInvoiceFields: OptionSet {
@@ -173,6 +175,7 @@ extension BotPaymentMethod {
 public enum BotPaymentFormRequestError {
     case generic
     case alreadyActive
+    case noPaymentNeeded
 }
 
 extension BotPaymentInvoice {
@@ -356,7 +359,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
             flags |= (1 << 4)
         }
         return .inputInvoiceStars(purpose: .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount, users: users))
-    case let .starGift(hideName, peerId, giftId, text, entities):
+    case let .starGift(hideName, includeUpgrade, peerId, giftId, text, entities):
         guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
             return nil
         }
@@ -364,12 +367,26 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         if hideName {
             flags |= (1 << 0)
         }
+        if includeUpgrade {
+            flags |= (1 << 2)
+        }
         var message: Api.TextWithEntities?
         if let text, !text.isEmpty {
             flags |= (1 << 1)
             message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
         return .inputInvoiceStarGift(flags: flags, userId: inputUser, giftId: giftId, message: message)
+    case let .starGiftUpgrade(keepOriginalInfo, messageId):
+        var flags: Int32 = 0
+        if keepOriginalInfo {
+            flags |= (1 << 0)
+        }
+        return .inputInvoiceStarGiftUpgrade(flags: flags, msgId: messageId.id)
+    case let .starGiftTransfer(messageId, toPeerId):
+        guard let peer = transaction.getPeer(toPeerId), let inputUser = apiInputUser(peer) else {
+            return nil
+        }
+        return .inputInvoiceStarGiftTransfer(msgId: messageId.id, toId: inputUser)
     }
 }
 
@@ -441,7 +458,10 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
         }
 
         return network.request(Api.functions.payments.getPaymentForm(flags: flags, invoice: invoice, themeParams: serializedThemeParams))
-        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+        |> `catch` { error -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+            if error.errorDescription == "NO_PAYMENT_NEEDED" {
+                return .fail(.noPaymentNeeded)
+            }
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
@@ -606,7 +626,7 @@ public enum SendBotPaymentFormError {
 }
 
 public enum SendBotPaymentResult {
-    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?)
+    case done(receiptMessageId: MessageId?, subscriptionPeerId: PeerId?, uniqueStarGift: ProfileGiftsContext.State.StarGift?)
     case externalVerificationRequired(url: String)
 }
 
@@ -655,12 +675,12 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                     case .starsChatSubscription:
                         let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
                         if let first = chats.first {
-                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id, uniqueStarGift: nil)
                         }
                     default:
                         break
                     }
-                
+                                
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -697,7 +717,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift:
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer:
                                             receiptMessageId = nil
                                         }
                                     }
@@ -705,7 +725,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                             }
                         }
                     }
-                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil, uniqueStarGift: nil)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

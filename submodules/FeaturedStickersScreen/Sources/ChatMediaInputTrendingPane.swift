@@ -9,9 +9,9 @@ import TelegramPresentationData
 import MergeLists
 import OverlayStatusController
 import AccountContext
-import StickerPackPreviewUI
 import PresentationDataUtils
 import UndoUI
+import StickerResources
 
 public final class TrendingPaneInteraction {
     public let installPack: (ItemCollectionInfo) -> Void
@@ -355,13 +355,26 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: forceTheme)
                     updatedPresentationData = (presentationData, .single(presentationData))
                 }
-                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: strongSelf.stickerActionTitle, parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
-                    if let strongSelf = self {
-                        return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
-                    } else {
-                        return false
-                    }
-                })
+                
+                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(
+                    context: strongSelf.context,
+                    updatedPresentationData: updatedPresentationData,
+                    mainStickerPack: packReference,
+                    stickerPacks: [packReference],
+                    loadedStickerPacks: [],
+                    actionTitle: strongSelf.stickerActionTitle,
+                    isEditing: false,
+                    expandIfNeeded: false,
+                    parentNavigationController: strongSelf.interaction.getNavigationController(),
+                    sendSticker: { fileReference, sourceNode, sourceRect in
+                        if let strongSelf = self {
+                            return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
+                        } else {
+                            return false
+                        }
+                    },
+                    actionPerformed: nil
+                )
                 strongSelf.interaction.presentController(controller, nil)
             }
         }, getItemIsPreviewed: self.getItemIsPreviewed,

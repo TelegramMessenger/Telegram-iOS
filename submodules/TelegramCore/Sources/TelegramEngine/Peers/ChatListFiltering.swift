@@ -230,9 +230,37 @@ public struct ChatListFilterData: Equatable, Hashable {
     }
 }
 
+public struct ChatFolderTitle: Codable, Equatable {
+    public let text: String
+    public let entities: [MessageTextEntity]
+    public var enableAnimations: Bool
+    
+    public init(text: String, entities: [MessageTextEntity], enableAnimations: Bool) {
+        self.text = text
+        self.entities = entities
+        self.enableAnimations = enableAnimations
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.text = try container.decode(String.self, forKey: "text")
+        self.entities = try container.decode([MessageTextEntity].self, forKey: "entities")
+        self.enableAnimations = try container.decodeIfPresent(Bool.self, forKey: "enableAnimations") ?? true
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        try container.encode(self.text, forKey: "text")
+        try container.encode(self.entities, forKey: "entities")
+        try container.encode(self.enableAnimations, forKey: "enableAnimations")
+    }
+}
+
 public enum ChatListFilter: Codable, Equatable {
     case allChats
-    case filter(id: Int32, title: String, emoticon: String?, data: ChatListFilterData)
+    case filter(id: Int32, title: ChatFolderTitle, emoticon: String?, data: ChatListFilterData)
     
     public var id: Int32 {
         switch self {
@@ -251,7 +279,14 @@ public enum ChatListFilter: Codable, Equatable {
             self = .allChats
         } else {
             let id = try container.decode(Int32.self, forKey: "id")
-            let title = try container.decode(String.self, forKey: "title")
+            
+            let title: ChatFolderTitle
+            if let titleWithEntities = try container.decodeIfPresent(ChatFolderTitle.self, forKey: "titleWithEntities") {
+                title = titleWithEntities
+            } else {
+                title = ChatFolderTitle(text: try container.decode(String.self, forKey: "title"), entities: [], enableAnimations: true)
+            }
+            
             let emoticon = try container.decodeIfPresent(String.self, forKey: "emoticon")
             
             let data = ChatListFilterData(
@@ -284,7 +319,7 @@ public enum ChatListFilter: Codable, Equatable {
                 try container.encode(type, forKey: "t")
                
                 try container.encode(id, forKey: "id")
-                try container.encode(title, forKey: "title")
+                try container.encode(title, forKey: "titleWithEntities")
                 try container.encodeIfPresent(emoticon, forKey: "emoticon")
             
                 try container.encode(data.isShared, forKey: "isShared")
@@ -307,9 +342,17 @@ extension ChatListFilter {
         case .dialogFilterDefault:
             self = .allChats
         case let .dialogFilter(flags, id, title, emoticon, color, pinnedPeers, includePeers, excludePeers):
+            let titleText: String
+            let titleEntities: [MessageTextEntity]
+            switch title {
+            case let .textWithEntities(text, entities):
+                titleText = text
+                titleEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            let disableTitleAnimations = (flags & (1 << 28)) != 0
             self = .filter(
                 id: id,
-                title: title,
+                title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimations),
                 emoticon: emoticon,
                 data: ChatListFilterData(
                     isShared: false,
@@ -357,9 +400,18 @@ extension ChatListFilter {
                 )
             )
         case let .dialogFilterChatlist(flags, id, title, emoticon, color, pinnedPeers, includePeers):
+            let titleText: String
+            let titleEntities: [MessageTextEntity]
+            switch title {
+            case let .textWithEntities(text, entities):
+                titleText = text
+                titleEntities = messageTextEntitiesFromApiEntities(entities)
+            }
+            let disableTitleAnimations = (flags & (1 << 28)) != 0
+            
             self = .filter(
                 id: id,
-                title: title,
+                title: ChatFolderTitle(text: titleText, entities: titleEntities, enableAnimations: !disableTitleAnimations),
                 emoticon: emoticon,
                 data: ChatListFilterData(
                     isShared: true,
@@ -400,9 +452,9 @@ extension ChatListFilter {
     
     func apiFilter(transaction: Transaction) -> Api.DialogFilter? {
         switch self {
-            case .allChats:
-                return nil
-            case let .filter(id, title, emoticon, data):
+        case .allChats:
+            return nil
+        case let .filter(id, title, emoticon, data):
             if data.isShared {
                 var flags: Int32 = 0
                 if emoticon != nil {
@@ -411,7 +463,10 @@ extension ChatListFilter {
                 if data.color != nil {
                     flags |= 1 << 27
                 }
-                return .dialogFilterChatlist(flags: flags, id: id, title: title, emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                if !title.enableAnimations {
+                    flags |= 1 << 28
+                }
+                return .dialogFilterChatlist(flags: flags, id: id, title: .textWithEntities(text: title.text, entities: apiEntitiesFromMessageTextEntities(title.entities, associatedPeers: SimpleDictionary())), emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
                     if data.includePeers.pinnedPeers.contains(peerId) {
@@ -437,7 +492,10 @@ extension ChatListFilter {
                 if data.color != nil {
                     flags |= 1 << 27
                 }
-                return .dialogFilter(flags: flags, id: id, title: title, emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
+                if !title.enableAnimations {
+                    flags |= 1 << 28
+                }
+                return .dialogFilter(flags: flags, id: id, title: .textWithEntities(text: title.text, entities: apiEntitiesFromMessageTextEntities(title.entities, associatedPeers: SimpleDictionary())), emoticon: emoticon, color: data.color?.rawValue, pinnedPeers: data.includePeers.pinnedPeers.compactMap { peerId -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }, includePeers: data.includePeers.peers.compactMap { peerId -> Api.InputPeer? in
                     if data.includePeers.pinnedPeers.contains(peerId) {
@@ -1099,12 +1157,12 @@ func updateChatListFiltersState(transaction: Transaction, _ f: (ChatListFiltersS
 }
 
 public struct ChatListFeaturedFilter: Codable, Equatable {
-    public var title: String
+    public var title: ChatFolderTitle
     public var description: String
     public var data: ChatListFilterData
     
     fileprivate init(
-        title: String,
+        title: ChatFolderTitle,
         description: String,
         data: ChatListFilterData
     ) {
@@ -1116,7 +1174,11 @@ public struct ChatListFeaturedFilter: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.title = try container.decode(String.self, forKey: "title")
+        if let title = try container.decodeIfPresent(ChatFolderTitle.self, forKey: "titleWithEntities") {
+            self.title = title
+        } else {
+            self.title = ChatFolderTitle(text: try container.decode(String.self, forKey: "title"), entities: [], enableAnimations: true)
+        }
         self.description = try container.decode(String.self, forKey: "description")
         self.data = ChatListFilterData(
             isShared: false,
@@ -1137,7 +1199,7 @@ public struct ChatListFeaturedFilter: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(self.title, forKey: "title")
+        try container.encode(self.title, forKey: "titleWithEntities")
         try container.encode(self.description, forKey: "description")
         try container.encode(self.data.categories.rawValue, forKey: "categories")
         try container.encode((self.data.excludeMuted ? 1 : 0) as Int32, forKey: "excludeMuted")

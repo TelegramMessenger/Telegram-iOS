@@ -277,6 +277,43 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     }
     
     private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime, forceARGB: Bool = false, unpremultiplyAlpha: Bool = true, displayImmediately: Bool = true) -> MediaTrackFrame? {
+        if frame.nativePixelFormat() == FFMpegAVFrameNativePixelFormat.videoToolbox {
+            guard let pixelBufferRef = frame.data[3] else {
+                return nil
+            }
+            let unmanagedPixelBuffer = Unmanaged<CVPixelBuffer>.fromOpaque(UnsafeRawPointer(pixelBufferRef))
+            let pixelBuffer = unmanagedPixelBuffer.takeUnretainedValue()
+            
+            var formatRef: CMVideoFormatDescription?
+            let formatStatus = CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &formatRef)
+            
+            guard let format = formatRef, formatStatus == 0 else {
+                return nil
+            }
+            
+            var timingInfo = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: pts)
+            var sampleBuffer: CMSampleBuffer?
+            
+            guard CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: format, sampleTiming: &timingInfo, sampleBufferOut: &sampleBuffer) == noErr else {
+                return nil
+            }
+            
+            let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer!, createIfNecessary: true)! as NSArray
+            let dict = attachments[0] as! NSMutableDictionary
+            
+            let resetDecoder = self.resetDecoderOnNextFrame
+            if self.resetDecoderOnNextFrame {
+                self.resetDecoderOnNextFrame = false
+                //dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleBufferAttachmentKey_ResetDecoderBeforeDecoding as NSString as String)
+            }
+            
+            if displayImmediately {
+                dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+            }
+            
+            return MediaTrackFrame(type: .video, sampleBuffer: sampleBuffer!, resetDecoder: resetDecoder, decoded: true)
+        }
+        
         if frame.data[0] == nil {
             return nil
         }

@@ -1255,7 +1255,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     canViewStarsRevenue = true
                 }
                 #if DEBUG
-                canViewStarsRevenue = "".isEmpty
+                canViewStarsRevenue = peerId != context.account.peerId
                 #endif
                 
                 guard canViewStarsRevenue else {
@@ -1280,7 +1280,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     canViewRevenue = true
                 }
                 #if DEBUG
-                canViewRevenue = "".isEmpty
+                canViewRevenue = peerId != context.account.peerId
                 #endif
                 guard canViewRevenue else {
                     return .single((nil, nil))
@@ -1659,7 +1659,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 )
             }
         case let .group(groupId):
-            var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+            var onlineMemberCount: Signal<(total: Int32?, recent: Int32?), NoError> = .single((nil, nil))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 onlineMemberCount = context.account.viewTracker.peerView(groupId, updateData: false)
                 |> map { view -> Bool? in
@@ -1676,17 +1676,21 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                 }
                 |> distinctUntilChanged
-                |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                |> mapToSignal { isLarge -> Signal<(total: Int32?, recent: Int32?), NoError> in
                     if let isLarge = isLarge {
                         if isLarge {
                             return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
-                            |> map(Optional.init)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (nil, value)
+                            }
                         } else {
                             return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
-                            |> map(Optional.init)
+                            |> map { value -> (total: Int32?, recent: Int32?) in
+                                return (value.total, value.recent)
+                            }
                         }
                     } else {
-                        return .single(nil)
+                        return .single((nil, nil))
                     }
                 }
             }
@@ -1695,9 +1699,11 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 context.account.viewTracker.peerView(groupId, updateData: false),
                 onlineMemberCount
             )
-            |> map { peerView, onlineMemberCount -> PeerInfoStatusData? in
-                if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
-                    if let onlineMemberCount = onlineMemberCount, onlineMemberCount > 1 {
+            |> map { peerView, memberCountData -> PeerInfoStatusData? in
+                let (preciseTotalMemberCount, onlineMemberCount) = memberCountData
+                
+                if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = preciseTotalMemberCount ?? cachedChannelData.participantsSummary.memberCount {
+                    if let onlineMemberCount, onlineMemberCount > 1 {
                         var string = ""
                         
                         string.append("\(strings.Conversation_StatusMembers(Int32(memberCount))), ")

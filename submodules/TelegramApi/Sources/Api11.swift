@@ -1,4 +1,96 @@
 public extension Api {
+    enum InputMessage: TypeConstructorDescription {
+        case inputMessageCallbackQuery(id: Int32, queryId: Int64)
+        case inputMessageID(id: Int32)
+        case inputMessagePinned
+        case inputMessageReplyTo(id: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputMessageCallbackQuery(let id, let queryId):
+                    if boxed {
+                        buffer.appendInt32(-1392895362)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    break
+                case .inputMessageID(let id):
+                    if boxed {
+                        buffer.appendInt32(-1502174430)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
+                case .inputMessagePinned:
+                    if boxed {
+                        buffer.appendInt32(-2037963464)
+                    }
+                    
+                    break
+                case .inputMessageReplyTo(let id):
+                    if boxed {
+                        buffer.appendInt32(-1160215659)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputMessageCallbackQuery(let id, let queryId):
+                return ("inputMessageCallbackQuery", [("id", id as Any), ("queryId", queryId as Any)])
+                case .inputMessageID(let id):
+                return ("inputMessageID", [("id", id as Any)])
+                case .inputMessagePinned:
+                return ("inputMessagePinned", [])
+                case .inputMessageReplyTo(let id):
+                return ("inputMessageReplyTo", [("id", id as Any)])
+    }
+    }
+    
+        public static func parse_inputMessageCallbackQuery(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputMessage.inputMessageCallbackQuery(id: _1!, queryId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMessageID(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMessage.inputMessageID(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputMessagePinned(_ reader: BufferReader) -> InputMessage? {
+            return Api.InputMessage.inputMessagePinned
+        }
+        public static func parse_inputMessageReplyTo(_ reader: BufferReader) -> InputMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputMessage.inputMessageReplyTo(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum InputNotifyPeer: TypeConstructorDescription {
         case inputNotifyBroadcasts
         case inputNotifyChats

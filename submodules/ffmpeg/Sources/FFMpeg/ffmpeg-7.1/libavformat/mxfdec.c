@@ -262,6 +262,7 @@ typedef struct MXFIndexTableSegment {
     int *flag_entries;
     uint64_t *stream_offset_entries;
     int nb_index_entries;
+    int64_t offset;
 } MXFIndexTableSegment;
 
 typedef struct MXFPackage {
@@ -428,7 +429,7 @@ static void mxf_free_metadataset(MXFMetadataSet **ctx, enum MXFMetadataSetType t
     av_freep(ctx);
 }
 
-static int64_t klv_decode_ber_length(AVIOContext *pb)
+static int64_t klv_decode_ber_length(AVIOContext *pb, int *llen)
 {
     uint64_t size = avio_r8(pb);
     if (size & 0x80) { /* long form */
@@ -436,9 +437,13 @@ static int64_t klv_decode_ber_length(AVIOContext *pb)
         /* SMPTE 379M 5.3.4 guarantee that bytes_num must not exceed 8 bytes */
         if (bytes_num > 8)
             return AVERROR_INVALIDDATA;
+        if (llen)
+            *llen = bytes_num + 1;
         size = 0;
         while (bytes_num--)
             size = size << 8 | avio_r8(pb);
+    } else if (llen) {
+        *llen = 1;
     }
     if (size > INT64_MAX)
         return AVERROR_INVALIDDATA;
@@ -458,10 +463,28 @@ static int mxf_read_sync(AVIOContext *pb, const uint8_t *key, unsigned size)
     return i == size;
 }
 
+// special case of mxf_read_sync for mxf_klv_key
+static int mxf_read_sync_klv(AVIOContext *pb)
+{
+    uint32_t key = avio_rb32(pb);
+    // key will never match mxf_klv_key on EOF
+    if (key == AV_RB32(mxf_klv_key))
+        return 1;
+
+    while (!avio_feof(pb)) {
+        key = (key << 8) | avio_r8(pb);
+        if (key == AV_RB32(mxf_klv_key))
+            return 1;
+    }
+    return 0;
+}
+
 static int klv_read_packet(MXFContext *mxf, KLVPacket *klv, AVIOContext *pb)
 {
     int64_t length, pos;
-    if (!mxf_read_sync(pb, mxf_klv_key, 4))
+    int llen;
+
+    if (!mxf_read_sync_klv(pb))
         return AVERROR_INVALIDDATA;
     klv->offset = avio_tell(pb) - 4;
     if (klv->offset < mxf->run_in)
@@ -469,11 +492,11 @@ static int klv_read_packet(MXFContext *mxf, KLVPacket *klv, AVIOContext *pb)
 
     memcpy(klv->key, mxf_klv_key, 4);
     avio_read(pb, klv->key + 4, 12);
-    length = klv_decode_ber_length(pb);
+    length = klv_decode_ber_length(pb, &llen);
     if (length < 0)
         return length;
     klv->length = length;
-    pos = avio_tell(pb);
+    pos = klv->offset + 16 + llen;
     if (pos > INT64_MAX - length)
         return AVERROR_INVALIDDATA;
     klv->next_klv = pos + length;
@@ -644,15 +667,15 @@ static int mxf_decrypt_triplet(AVFormatContext *s, AVPacket *pkt, KLVPacket *klv
         av_aes_init(mxf->aesc, s->key, 128, 1);
     }
     // crypto context
-    size = klv_decode_ber_length(pb);
+    size = klv_decode_ber_length(pb, NULL);
     if (size < 0)
         return size;
     avio_skip(pb, size);
     // plaintext offset
-    klv_decode_ber_length(pb);
+    klv_decode_ber_length(pb ,NULL);
     plaintext_size = avio_rb64(pb);
     // source klv key
-    klv_decode_ber_length(pb);
+    klv_decode_ber_length(pb, NULL);
     avio_read(pb, klv->key, 16);
     if (!IS_KLV_KEY(klv, mxf_essence_element_key))
         return AVERROR_INVALIDDATA;
@@ -662,12 +685,12 @@ static int mxf_decrypt_triplet(AVFormatContext *s, AVPacket *pkt, KLVPacket *klv
     if (index < 0)
         return AVERROR_INVALIDDATA;
     // source size
-    klv_decode_ber_length(pb);
+    klv_decode_ber_length(pb, NULL);
     orig_size = avio_rb64(pb);
     if (orig_size < plaintext_size)
         return AVERROR_INVALIDDATA;
     // enc. code
-    size = klv_decode_ber_length(pb);
+    size = klv_decode_ber_length(pb, NULL);
     if (size < 32 || size - 32 < orig_size || (int)orig_size != orig_size)
         return AVERROR_INVALIDDATA;
     avio_read(pb, ivec, 16);
@@ -1883,18 +1906,44 @@ static int64_t mxf_essence_container_end(MXFContext *mxf, int body_sid)
 /* EditUnit -> absolute offset */
 static int mxf_edit_unit_absolute_offset(MXFContext *mxf, MXFIndexTable *index_table, int64_t edit_unit, AVRational edit_rate, int64_t *edit_unit_out, int64_t *offset_out, MXFPartition **partition_out, int nag)
 {
-    int i;
-    int64_t offset_temp = 0;
+    int i = 0;
+    int64_t index_duration, index_end;
+    MXFIndexTableSegment *first_segment, *last_segment;
+
+    if (!index_table->nb_segments) {
+        av_log(mxf->fc, AV_LOG_ERROR, "no index table segments\n");
+        return AVERROR_INVALIDDATA;
+    }
 
     edit_unit = av_rescale_q(edit_unit, index_table->segments[0]->index_edit_rate, edit_rate);
 
-    for (i = 0; i < index_table->nb_segments; i++) {
+    first_segment = index_table->segments[0];
+    last_segment  = index_table->segments[index_table->nb_segments - 1];
+
+    // clamp to actual range of index
+    index_end = av_sat_add64(last_segment->index_start_position, last_segment->index_duration);
+    edit_unit = FFMAX(FFMIN(edit_unit, index_end), first_segment->index_start_position);
+
+    // guess which table segment this edit unit is in
+    // saturation is fine since it's just a guess
+    // if the guess is wrong we revert to a linear search
+    index_duration = av_sat_sub64(index_end, first_segment->index_start_position);
+
+    // compute the guess, taking care not to cause overflow or division by zero
+    if (index_duration > 0 && edit_unit <= INT64_MAX / index_table->nb_segments) {
+        // a simple linear guesstimate
+        // this is accurate to within +-1 when partitions are generated at a constant rate like mxfenc does
+        int64_t i64 = index_table->nb_segments * edit_unit / index_duration;
+        // clamp and downcast to 32-bit
+        i = FFMAX(0, FFMIN(index_table->nb_segments - 1, i64));
+    }
+
+    for (; i >= 0 && i < index_table->nb_segments;) {
         MXFIndexTableSegment *s = index_table->segments[i];
 
-        edit_unit = FFMAX(edit_unit, s->index_start_position);  /* clamp if trying to seek before start */
-
-        if (edit_unit < s->index_start_position + s->index_duration) {
+        if (s->index_start_position <= edit_unit && edit_unit < s->index_start_position + s->index_duration) {
             int64_t index = edit_unit - s->index_start_position;
+            int64_t offset_temp = s->offset;
 
             if (s->edit_unit_byte_count) {
                 if (index > INT64_MAX / s->edit_unit_byte_count ||
@@ -1919,14 +1968,12 @@ static int mxf_edit_unit_absolute_offset(MXFContext *mxf, MXFIndexTable *index_t
                 *edit_unit_out = av_rescale_q(edit_unit, edit_rate, s->index_edit_rate);
 
             return mxf_absolute_bodysid_offset(mxf, index_table->body_sid, offset_temp, offset_out, partition_out);
+        } else if (edit_unit < s->index_start_position) {
+            // the segments are sorted by IndexStartPosition, so this is guaranteed to terminate
+            i--;
         } else {
-            /* EditUnitByteCount == 0 for VBR indexes, which is fine since they use explicit StreamOffsets */
-            if (s->edit_unit_byte_count && (s->index_duration > INT64_MAX / s->edit_unit_byte_count ||
-                s->edit_unit_byte_count * s->index_duration > INT64_MAX - offset_temp)
-            )
-                return AVERROR_INVALIDDATA;
-
-            offset_temp += s->edit_unit_byte_count * s->index_duration;
+            // edit_unit >= s->index_start_position + s->index_duration
+            i++;
         }
     }
 
@@ -2111,6 +2158,7 @@ static int mxf_compute_index_tables(MXFContext *mxf)
     for (int i = 0, j = 0; j < mxf->nb_index_tables; i += mxf->index_tables[j++].nb_segments) {
         MXFIndexTable *t = &mxf->index_tables[j];
         MXFTrack *mxf_track = NULL;
+        int64_t offset_temp = 0;
 
         t->segments = av_calloc(t->nb_segments, sizeof(*t->segments));
         if (!t->segments) {
@@ -2139,14 +2187,27 @@ static int mxf_compute_index_tables(MXFContext *mxf)
             }
         }
 
-        /* fix zero IndexDurations */
+        /* fix zero IndexDurations and compute segment offsets */
         for (int k = 0; k < t->nb_segments; k++) {
+            MXFIndexTableSegment *s = t->segments[k];
+
             if (!t->segments[k]->index_edit_rate.num || !t->segments[k]->index_edit_rate.den) {
                 av_log(mxf->fc, AV_LOG_WARNING, "IndexSID %i segment %i has invalid IndexEditRate\n",
                        t->index_sid, k);
                 if (mxf_track)
                     t->segments[k]->index_edit_rate = mxf_track->edit_rate;
             }
+
+            s->offset = offset_temp;
+
+            /* EditUnitByteCount == 0 for VBR indexes, which is fine since they use explicit StreamOffsets */
+            if (s->edit_unit_byte_count && (s->index_duration > INT64_MAX / s->edit_unit_byte_count ||
+                s->edit_unit_byte_count * s->index_duration > INT64_MAX - offset_temp)) {
+                ret = AVERROR_INVALIDDATA;
+                goto finish_decoding_index;
+            }
+
+            offset_temp += t->segments[k]->edit_unit_byte_count * t->segments[k]->index_duration;
 
             if (t->segments[k]->index_duration)
                 continue;
@@ -3982,6 +4043,7 @@ static int mxf_read_packet(AVFormatContext *s, AVPacket *pkt)
             ret = klv_read_packet(mxf, &klv, s->pb);
             if (ret < 0)
                 break;
+            // klv.key[0..3] == mxf_klv_key from here forward
             max_data_size = klv.length;
             pos = klv.next_klv - klv.length;
             PRINT_KEY(s, "read packet", klv.key);

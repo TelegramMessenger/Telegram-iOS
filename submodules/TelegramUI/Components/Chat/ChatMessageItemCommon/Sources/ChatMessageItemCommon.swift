@@ -284,8 +284,17 @@ public func canAddMessageReactions(message: Message) -> Bool {
         return false
     }
     for media in message.media {
-        if let _ = media as? TelegramMediaAction {
-            return false
+        if let action = media as? TelegramMediaAction {
+            if message.flags.contains(.ReactionsArePossible) {
+                return true
+            } else {
+                switch action.action {
+                case .unknown, .groupCreated, .channelMigratedFromGroup, .groupMigratedToChannel, .historyCleared, .customText, .botDomainAccessGranted, .botAppAccessGranted, .botSentSecureValues, .phoneNumberRequest, .webViewData, .topicCreated, .attachMenuBotAllowed, .requestedPeer, .giveawayLaunched:
+                    return false
+                default:
+                    return true
+                }
+            }
         } else if let story = media as? TelegramMediaStory {
             if story.isMention {
                 return false

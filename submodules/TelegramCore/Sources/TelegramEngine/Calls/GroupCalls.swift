@@ -17,6 +17,7 @@ public struct GroupCallInfo: Equatable {
     public var isVideoEnabled: Bool
     public var unmutedVideoLimit: Int
     public var isStream: Bool
+    public var upgradedPrivateCallId: Int64?
     
     public init(
         id: Int64,
@@ -31,7 +32,8 @@ public struct GroupCallInfo: Equatable {
         defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?,
         isVideoEnabled: Bool,
         unmutedVideoLimit: Int,
-        isStream: Bool
+        isStream: Bool,
+        upgradedPrivateCallId: Int64?
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -46,6 +48,7 @@ public struct GroupCallInfo: Equatable {
         self.isVideoEnabled = isVideoEnabled
         self.unmutedVideoLimit = unmutedVideoLimit
         self.isStream = isStream
+        self.upgradedPrivateCallId = upgradedPrivateCallId
     }
 }
 
@@ -57,7 +60,7 @@ public struct GroupCallSummary: Equatable {
 extension GroupCallInfo {
     init?(_ call: Api.GroupCall) {
         switch call {
-        case let .groupCall(flags, id, accessHash, participantsCount, title, streamDcId, recordStartDate, scheduleDate, _, unmutedVideoLimit, _):
+        case let .groupCall(flags, id, accessHash, participantsCount, title, streamDcId, recordStartDate, scheduleDate, _, unmutedVideoLimit, _, conferenceFromCall):
             self.init(
                 id: id,
                 accessHash: accessHash,
@@ -71,7 +74,8 @@ extension GroupCallInfo {
                 defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: (flags & (1 << 1)) != 0, canChange: (flags & (1 << 2)) != 0),
                 isVideoEnabled: (flags & (1 << 9)) != 0,
                 unmutedVideoLimit: Int(unmutedVideoLimit),
-                isStream: (flags & (1 << 12)) != 0
+                isStream: (flags & (1 << 12)) != 0,
+                upgradedPrivateCallId: conferenceFromCall
             )
         case .groupCallDiscarded:
             return nil
@@ -163,7 +167,7 @@ func _internal_createGroupCall(account: Account, peerId: PeerId, title: String?,
             var parsedCall: GroupCallInfo?
             loop: for update in result.allUpdates {
                 switch update {
-                case let .updateGroupCall(_, call):
+                case let .updateGroupCall(_, _, call):
                     parsedCall = GroupCallInfo(call)
                     break loop
                 default:
@@ -208,7 +212,7 @@ func _internal_startScheduledGroupCall(account: Account, peerId: PeerId, callId:
         var parsedCall: GroupCallInfo?
         loop: for update in result.allUpdates {
             switch update {
-            case let .updateGroupCall(_, call):
+            case let .updateGroupCall(_, _, call):
                 parsedCall = GroupCallInfo(call)
                 break loop
             default:
@@ -265,7 +269,7 @@ func _internal_toggleScheduledGroupCallSubscription(account: Account, peerId: Pe
             var parsedCall: GroupCallInfo?
             loop: for update in result.allUpdates {
                 switch update {
-                case let .updateGroupCall(_, call):
+                case let .updateGroupCall(_, _, call):
                     parsedCall = GroupCallInfo(call)
                     break loop
                 default:
@@ -341,17 +345,17 @@ public enum GetGroupCallParticipantsError {
 func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
     let accountPeerId = account.peerId
     
-    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError>
+    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool, Int64?), GetGroupCallParticipantsError>
     
     sortAscendingValue = _internal_getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
     |> mapError { _ -> GetGroupCallParticipantsError in
         return .generic
     }
-    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError> in
+    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool, Int64?), GetGroupCallParticipantsError> in
         guard let result = result else {
             return .fail(.generic)
         }
-        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit, result.info.isStream))
+        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit, result.info.isStream, result.info.upgradedPrivateCallId))
     }
 
     return combineLatest(
@@ -368,7 +372,7 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
             let version: Int32
             let nextParticipantsFetchOffset: String?
             
-            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit, isStream) = sortAscendingAndScheduleTimestamp
+            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit, isStream, upgradedPrivateCallId) = sortAscendingAndScheduleTimestamp
             
             switch result {
             case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
@@ -404,6 +408,7 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
                 isVideoEnabled: isVideoEnabled,
                 unmutedVideoLimit: unmutedVideoLimit,
                 isStream: isStream,
+                upgradedPrivateCallId: upgradedPrivateCallId,
                 version: version
             )
         }
@@ -430,7 +435,7 @@ public struct JoinGroupCallResult {
     public var jsonParams: String
 }
 
-func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
+func _internal_joinGroupCall(account: Account, peerId: PeerId?, joinAs: PeerId?, callId: Int64, accessHash: Int64, preferMuted: Bool, joinPayload: String, peerAdminIds: Signal<[PeerId], NoError>, inviteHash: String? = nil, keyFingerprint: Int64?) -> Signal<JoinGroupCallResult, JoinGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         if let joinAs = joinAs {
             return transaction.getPeer(joinAs).flatMap(apiInputPeer)
@@ -452,41 +457,48 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
         if let _ = inviteHash {
             flags |= (1 << 1)
         }
-
-        let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, params: .dataJSON(data: joinPayload)))
+        if keyFingerprint != nil {
+            flags |= (1 << 3)
+        }
+        
+        let joinRequest = account.network.request(Api.functions.phone.joinGroupCall(flags: flags, call: .inputGroupCall(id: callId, accessHash: accessHash), joinAs: inputJoinAs, inviteHash: inviteHash, keyFingerprint: keyFingerprint, params: .dataJSON(data: joinPayload)))
             |> `catch` { error -> Signal<Api.Updates, JoinGroupCallError> in
             if error.errorDescription == "GROUPCALL_ANONYMOUS_FORBIDDEN" {
                 return .fail(.anonymousNotAllowed)
             } else if error.errorDescription == "GROUPCALL_PARTICIPANTS_TOO_MUCH" {
                 return .fail(.tooManyParticipants)
             } else if error.errorDescription == "JOIN_AS_PEER_INVALID" {
-                let _ = (account.postbox.transaction { transaction -> Void in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        if let current = current as? CachedChannelData {
-                            return current.withUpdatedCallJoinPeerId(nil)
-                        } else if let current = current as? CachedGroupData {
-                            return current.withUpdatedCallJoinPeerId(nil)
-                        } else {
-                            return current
-                        }
-                    })
-                }).start()
+                if let peerId {
+                    let _ = (account.postbox.transaction { transaction -> Void in
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedChannelData {
+                                return current.withUpdatedCallJoinPeerId(nil)
+                            } else if let current = current as? CachedGroupData {
+                                return current.withUpdatedCallJoinPeerId(nil)
+                            } else {
+                                return current
+                            }
+                        })
+                    }).start()
+                }
                 
                 return .fail(.invalidJoinAsPeer)
             } else if error.errorDescription == "GROUPCALL_INVALID" {
                 return account.postbox.transaction { transaction -> Signal<Api.Updates, JoinGroupCallError> in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                        if let current = current as? CachedGroupData {
-                            if current.activeCall?.id == callId {
-                                return current.withUpdatedActiveCall(nil)
+                    if let peerId {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if let current = current as? CachedGroupData {
+                                if current.activeCall?.id == callId {
+                                    return current.withUpdatedActiveCall(nil)
+                                }
+                            } else if let current = current as? CachedChannelData {
+                                if current.activeCall?.id == callId {
+                                    return current.withUpdatedActiveCall(nil)
+                                }
                             }
-                        } else if let current = current as? CachedChannelData {
-                            if current.activeCall?.id == callId {
-                                return current.withUpdatedActiveCall(nil)
-                            }
-                        }
-                        return current
-                    })
+                            return current
+                        })
+                    }
 
                     return .fail(.generic)
                 }
@@ -508,7 +520,7 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
         )
         |> mapToSignal { updates, participantsState -> Signal<JoinGroupCallResult, JoinGroupCallError> in
             let peer = account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peerId)
+                return peerId.flatMap(transaction.getPeer)
             }
             |> castError(JoinGroupCallError.self)
             
@@ -517,18 +529,16 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 peer
             )
             |> mapToSignal { peerAdminIds, peer -> Signal<JoinGroupCallResult, JoinGroupCallError> in
-                guard let peer = peer else {
-                    return .fail(.generic)
-                }
-                
                 var state = participantsState
-                if let channel = peer as? TelegramChannel {
-                    state.isCreator = channel.flags.contains(.isCreator)
-                } else if let group = peer as? TelegramGroup {
-                    if case .creator = group.role {
-                        state.isCreator = true
-                    } else {
-                        state.isCreator = false
+                if let peer {
+                    if let channel = peer as? TelegramChannel {
+                        state.isCreator = channel.flags.contains(.isCreator)
+                    } else if let group = peer as? TelegramGroup {
+                        if case .creator = group.role {
+                            state.isCreator = true
+                        } else {
+                            state.isCreator = false
+                        }
                     }
                 }
                 
@@ -538,11 +548,11 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 var maybeParsedClientParams: String?
                 loop: for update in updates.allUpdates {
                     switch update {
-                    case let .updateGroupCall(_, call):
+                    case let .updateGroupCall(_, _, call):
                         maybeParsedCall = GroupCallInfo(call)
                         
                         switch call {
-                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, unmutedVideoLimit, _):
+                        case let .groupCall(flags, _, _, _, title, _, recordStartDate, scheduleDate, _, unmutedVideoLimit, _, _):
                             let isMuted = (flags & (1 << 1)) != 0
                             let canChange = (flags & (1 << 2)) != 0
                             let isVideoEnabled = (flags & (1 << 9)) != 0
@@ -589,15 +599,17 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 }
 
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
-                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                        if let cachedData = cachedData as? CachedChannelData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
-                        } else if let cachedData = cachedData as? CachedGroupData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
-                        } else {
-                            return cachedData
-                        }
-                    })
+                    if let peerId {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                            if let cachedData = cachedData as? CachedChannelData {
+                                return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
+                            } else if let cachedData = cachedData as? CachedGroupData {
+                                return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
+                            } else {
+                                return cachedData
+                            }
+                        })
+                    }
 
                     var state = state
 
@@ -672,7 +684,7 @@ public struct JoinGroupCallAsScreencastResult {
     public var endpointId: String
 }
 
-func _internal_joinGroupCallAsScreencast(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
+func _internal_joinGroupCallAsScreencast(account: Account, callId: Int64, accessHash: Int64, joinPayload: String) -> Signal<JoinGroupCallAsScreencastResult, JoinGroupCallError> {
     return account.network.request(Api.functions.phone.joinGroupCallPresentation(call: .inputGroupCall(id: callId, accessHash: accessHash), params: .dataJSON(data: joinPayload)))
     |> mapError { _ -> JoinGroupCallError in
         return .generic
@@ -752,39 +764,41 @@ public enum StopGroupCallError {
     case generic
 }
 
-func _internal_stopGroupCall(account: Account, peerId: PeerId, callId: Int64, accessHash: Int64) -> Signal<Never, StopGroupCallError> {
+func _internal_stopGroupCall(account: Account, peerId: PeerId?, callId: Int64, accessHash: Int64) -> Signal<Never, StopGroupCallError> {
     return account.network.request(Api.functions.phone.discardGroupCall(call: .inputGroupCall(id: callId, accessHash: accessHash)))
     |> mapError { _ -> StopGroupCallError in
         return .generic
     }
     |> mapToSignal { result -> Signal<Never, StopGroupCallError> in
         return account.postbox.transaction { transaction -> Void in
-            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
-                if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
-                } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
-                } else {
-                    return cachedData
+            if let peerId {
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
+                    if let cachedData = cachedData as? CachedChannelData {
+                        return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
+                    } else if let cachedData = cachedData as? CachedGroupData {
+                        return cachedData.withUpdatedActiveCall(nil).withUpdatedCallJoinPeerId(nil)
+                    } else {
+                        return cachedData
+                    }
+                })
+                if var peer = transaction.getPeer(peerId) as? TelegramChannel {
+                    var flags = peer.flags
+                    flags.remove(.hasVoiceChat)
+                    flags.remove(.hasActiveVoiceChat)
+                    peer = peer.withUpdatedFlags(flags)
+                    updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
+                        return updated
+                    })
                 }
-            })
-            if var peer = transaction.getPeer(peerId) as? TelegramChannel {
-                var flags = peer.flags
-                flags.remove(.hasVoiceChat)
-                flags.remove(.hasActiveVoiceChat)
-                peer = peer.withUpdatedFlags(flags)
-                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
-                    return updated
-                })
-            }
-            if var peer = transaction.getPeer(peerId) as? TelegramGroup {
-                var flags = peer.flags
-                flags.remove(.hasVoiceChat)
-                flags.remove(.hasActiveVoiceChat)
-                peer = peer.updateFlags(flags: flags, version: peer.version)
-                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
-                    return updated
-                })
+                if var peer = transaction.getPeer(peerId) as? TelegramGroup {
+                    var flags = peer.flags
+                    flags.remove(.hasVoiceChat)
+                    flags.remove(.hasActiveVoiceChat)
+                    peer = peer.updateFlags(flags: flags, version: peer.version)
+                    updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updated in
+                        return updated
+                    })
+                }
             }
             
             account.stateManager.addUpdates(result)
@@ -1023,6 +1037,7 @@ public final class GroupCallParticipantsContext {
         public var isVideoEnabled: Bool
         public var unmutedVideoLimit: Int
         public var isStream: Bool
+        public var upgradedPrivateCallId: Int64?
         public var version: Int32
         
         public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
@@ -1058,6 +1073,7 @@ public final class GroupCallParticipantsContext {
             isVideoEnabled: Bool,
             unmutedVideoLimit: Int,
             isStream: Bool,
+            upgradedPrivateCallId: Int64?,
             version: Int32
         ) {
             self.participants = participants
@@ -1074,6 +1090,7 @@ public final class GroupCallParticipantsContext {
             self.isVideoEnabled = isVideoEnabled
             self.unmutedVideoLimit = unmutedVideoLimit
             self.isStream = isStream
+            self.upgradedPrivateCallId = upgradedPrivateCallId
             self.version = version
         }
     }
@@ -1190,7 +1207,7 @@ public final class GroupCallParticipantsContext {
     }
     
     private let account: Account
-    private let peerId: PeerId
+    private let peerId: PeerId?
     public let myPeerId: PeerId
     public let id: Int64
     public let accessHash: Int64
@@ -1294,7 +1311,7 @@ public final class GroupCallParticipantsContext {
 
     public private(set) var serviceState: ServiceState
     
-    init(account: Account, peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: State, previousServiceState: ServiceState?) {
+    init(account: Account, peerId: PeerId?, myPeerId: PeerId, id: Int64, accessHash: Int64, state: State, previousServiceState: ServiceState?) {
         self.account = account
         self.peerId = peerId
         self.myPeerId = myPeerId
@@ -1320,70 +1337,73 @@ public final class GroupCallParticipantsContext {
             }
         }))
         
-        let activityCategory: PeerActivitySpace.Category = .voiceChat
-        self.activitiesDisposable = (self.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
-        |> deliverOnMainQueue).start(next: { [weak self] activities in
-            guard let strongSelf = self else {
-                return
-            }
-        
-            let peerIds = Set(activities.map { item -> PeerId in
-                item.0
-            })
-            strongSelf.activeSpeakersValue = peerIds
-            
-            if !strongSelf.hasReceivedSpeakingParticipantsReport {
-                var updatedParticipants = strongSelf.stateValue.state.participants
-                var indexMap: [PeerId: Int] = [:]
-                for i in 0 ..< updatedParticipants.count {
-                    indexMap[updatedParticipants[i].peer.id] = i
+        if let peerId {
+            let activityCategory: PeerActivitySpace.Category = .voiceChat
+            self.activitiesDisposable = (self.account.peerInputActivities(peerId: PeerActivitySpace(peerId: peerId, category: activityCategory))
+                                         |> deliverOnMainQueue).start(next: { [weak self] activities in
+                guard let strongSelf = self else {
+                    return
                 }
-                var updated = false
                 
-                for (activityPeerId, activity) in activities {
-                    if case let .speakingInGroupCall(intTimestamp) = activity {
-                        let timestamp = Double(intTimestamp)
-                        
-                        if let index = indexMap[activityPeerId] {
-                            if let activityTimestamp = updatedParticipants[index].activityTimestamp {
-                                if activityTimestamp < timestamp {
+                let peerIds = Set(activities.map { item -> PeerId in
+                    item.0
+                })
+                strongSelf.activeSpeakersValue = peerIds
+                
+                if !strongSelf.hasReceivedSpeakingParticipantsReport {
+                    var updatedParticipants = strongSelf.stateValue.state.participants
+                    var indexMap: [PeerId: Int] = [:]
+                    for i in 0 ..< updatedParticipants.count {
+                        indexMap[updatedParticipants[i].peer.id] = i
+                    }
+                    var updated = false
+                    
+                    for (activityPeerId, activity) in activities {
+                        if case let .speakingInGroupCall(intTimestamp) = activity {
+                            let timestamp = Double(intTimestamp)
+                            
+                            if let index = indexMap[activityPeerId] {
+                                if let activityTimestamp = updatedParticipants[index].activityTimestamp {
+                                    if activityTimestamp < timestamp {
+                                        updatedParticipants[index].activityTimestamp = timestamp
+                                        updated = true
+                                    }
+                                } else {
                                     updatedParticipants[index].activityTimestamp = timestamp
                                     updated = true
                                 }
-                            } else {
-                                updatedParticipants[index].activityTimestamp = timestamp
-                                updated = true
                             }
                         }
                     }
-                }
-                
-                if updated {
-                    updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
                     
-                    strongSelf.stateValue = InternalState(
-                        state: State(
-                            participants: updatedParticipants,
-                            nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
-                            adminIds: strongSelf.stateValue.state.adminIds,
-                            isCreator: strongSelf.stateValue.state.isCreator,
-                            defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
-                            sortAscending: strongSelf.stateValue.state.sortAscending,
-                            recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
-                            title: strongSelf.stateValue.state.title,
-                            scheduleTimestamp: strongSelf.stateValue.state.scheduleTimestamp,
-                            subscribedToScheduled: strongSelf.stateValue.state.subscribedToScheduled,
-                            totalCount: strongSelf.stateValue.state.totalCount,
-                            isVideoEnabled: strongSelf.stateValue.state.isVideoEnabled,
-                            unmutedVideoLimit: strongSelf.stateValue.state.unmutedVideoLimit,
-                            isStream: strongSelf.stateValue.state.isStream,
-                            version: strongSelf.stateValue.state.version
-                        ),
-                        overlayState: strongSelf.stateValue.overlayState
-                    )
+                    if updated {
+                        updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
+                        
+                        strongSelf.stateValue = InternalState(
+                            state: State(
+                                participants: updatedParticipants,
+                                nextParticipantsFetchOffset: strongSelf.stateValue.state.nextParticipantsFetchOffset,
+                                adminIds: strongSelf.stateValue.state.adminIds,
+                                isCreator: strongSelf.stateValue.state.isCreator,
+                                defaultParticipantsAreMuted: strongSelf.stateValue.state.defaultParticipantsAreMuted,
+                                sortAscending: strongSelf.stateValue.state.sortAscending,
+                                recordingStartTimestamp: strongSelf.stateValue.state.recordingStartTimestamp,
+                                title: strongSelf.stateValue.state.title,
+                                scheduleTimestamp: strongSelf.stateValue.state.scheduleTimestamp,
+                                subscribedToScheduled: strongSelf.stateValue.state.subscribedToScheduled,
+                                totalCount: strongSelf.stateValue.state.totalCount,
+                                isVideoEnabled: strongSelf.stateValue.state.isVideoEnabled,
+                                unmutedVideoLimit: strongSelf.stateValue.state.unmutedVideoLimit,
+                                isStream: strongSelf.stateValue.state.isStream,
+                                upgradedPrivateCallId: strongSelf.stateValue.state.upgradedPrivateCallId,
+                                version: strongSelf.stateValue.state.version
+                            ),
+                            overlayState: strongSelf.stateValue.overlayState
+                        )
+                    }
                 }
-            }
-        })
+            })
+        }
         
         self.activityRankResetTimer = SwiftSignalKit.Timer(timeout: 10.0, repeat: true, completion: { [weak self] in
             guard let strongSelf = self else {
@@ -1528,6 +1548,7 @@ public final class GroupCallParticipantsContext {
                     isVideoEnabled: strongSelf.stateValue.state.isVideoEnabled,
                     unmutedVideoLimit: strongSelf.stateValue.state.unmutedVideoLimit,
                     isStream: strongSelf.stateValue.state.isStream,
+                    upgradedPrivateCallId: strongSelf.stateValue.state.upgradedPrivateCallId,
                     version: strongSelf.stateValue.state.version
                 ),
                 overlayState: strongSelf.stateValue.overlayState
@@ -1751,6 +1772,7 @@ public final class GroupCallParticipantsContext {
             let isVideoEnabled = strongSelf.stateValue.state.isVideoEnabled
             let isStream = strongSelf.stateValue.state.isStream
             let unmutedVideoLimit = strongSelf.stateValue.state.unmutedVideoLimit
+            let upgradedPrivateCallId = strongSelf.stateValue.state.upgradedPrivateCallId
             
             updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
             
@@ -1770,6 +1792,7 @@ public final class GroupCallParticipantsContext {
                     isVideoEnabled: isVideoEnabled,
                     unmutedVideoLimit: unmutedVideoLimit,
                     isStream: isStream,
+                    upgradedPrivateCallId: upgradedPrivateCallId,
                     version: update.version
                 ),
                 overlayState: updatedOverlayState
@@ -2048,12 +2071,15 @@ public final class GroupCallParticipantsContext {
     }
     
     public func toggleScheduledSubscription(_ subscribe: Bool) {
+        guard let peerId = self.peerId else {
+            return
+        }
         if subscribe == self.stateValue.state.subscribedToScheduled {
             return
         }
         self.stateValue.state.subscribedToScheduled = subscribe
         
-        self.subscribeDisposable.set(_internal_toggleScheduledGroupCallSubscription(account: self.account, peerId: self.peerId, callId: self.id, accessHash: self.accessHash, subscribe: subscribe).start())
+        self.subscribeDisposable.set(_internal_toggleScheduledGroupCallSubscription(account: self.account, peerId: peerId, callId: self.id, accessHash: self.accessHash, subscribe: subscribe).start())
     }
     
     public func loadMore(token: String) {
@@ -2268,7 +2294,7 @@ func _internal_groupCallDisplayAsAvailablePeers(accountPeerId: PeerId, network: 
                     for chat in chats {
                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                             switch chat {
-                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _):
+                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _):
                                 if let participantsCount = participantsCount {
                                     subscribers[groupOrChannel.id] = participantsCount
                                 }
@@ -2370,10 +2396,10 @@ func _internal_cachedGroupCallDisplayAsAvailablePeers(account: Account, peerId: 
     }
 }
 
-func _internal_updatedCurrentPeerGroupCall(account: Account, peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
-    return _internal_fetchAndUpdateCachedPeerData(accountPeerId: account.peerId, peerId: peerId, network: account.network, postbox: account.postbox)
+func _internal_updatedCurrentPeerGroupCall(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId) -> Signal<CachedChannelData.ActiveCall?, NoError> {
+    return _internal_fetchAndUpdateCachedPeerData(accountPeerId: accountPeerId, peerId: peerId, network: network, postbox: postbox)
     |> mapToSignal { _ -> Signal<CachedChannelData.ActiveCall?, NoError> in
-        return account.postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
+        return postbox.transaction { transaction -> CachedChannelData.ActiveCall? in
             return (transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData)?.activeCall
         }
     }

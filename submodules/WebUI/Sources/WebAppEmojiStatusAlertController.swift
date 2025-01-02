@@ -61,6 +61,7 @@ private final class IconsNode: ASDisplayNode {
             if self.switchingToNext {
                 self.currentIndex = (self.currentIndex + 1) % self.files.count
                 disappearingAnimationLayer = self.animationLayer
+                self.switchingToNext = false
             }
             let file = self.files[self.currentIndex]
             let emoji = ChatTextInputTextCustomEmojiAttribute(

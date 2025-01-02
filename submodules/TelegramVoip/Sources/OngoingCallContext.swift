@@ -1,9 +1,8 @@
 import Foundation
-import UIKit
 import SwiftSignalKit
 import TelegramCore
-import TelegramUIPreferences
 import Network
+import TelegramUIPreferences
 
 import TgVoip
 import TgVoipWebrtc
@@ -794,6 +793,11 @@ public final class OngoingCallContext {
         return self.audioLevelPromise.get()
     }
     
+    private let signalingDataPipe = ValuePipe<[Data]>()
+    public var signalingData: Signal<[Data], NoError> {
+        return self.signalingDataPipe.signal()
+    }
+    
     private let audioSessionDisposable = MetaDisposable()
     private let audioSessionActiveDisposable = MetaDisposable()
     private var networkTypeDisposable: Disposable?
@@ -1122,7 +1126,13 @@ public final class OngoingCallContext {
 
                 strongSelf.signalingDataDisposable = callSessionManager.beginReceivingCallSignalingData(internalId: internalId, { [weak self] dataList in
                     queue.async {
-                        self?.withContext { context in
+                        guard let self else {
+                            return
+                        }
+                        
+                        self.signalingDataPipe.putNext(dataList)
+                        
+                        self.withContext { context in
                             if let context = context as? OngoingCallThreadLocalContextWebrtc {
                                 for data in dataList {
                                     context.addSignaling(data)
@@ -1295,58 +1305,25 @@ public final class OngoingCallContext {
             return disposable
         }
     }
-    
-    public func makeIncomingVideoView(completion: @escaping (OngoingCallContextPresentationCallVideoView?) -> Void) {
-        self.withContext { context in
-            if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                context.makeIncomingVideoView { view in
-                    if let view = view {
-                        completion(OngoingCallContextPresentationCallVideoView(
-                            view: view,
-                            setOnFirstFrameReceived: { [weak view] f in
-                                view?.setOnFirstFrameReceived(f)
-                            },
-                            getOrientation: { [weak view] in
-                                if let view = view {
-                                    return OngoingCallVideoOrientation(view.orientation)
-                                } else {
-                                    return .rotation0
-                                }
-                            },
-                            getAspect: { [weak view] in
-                                if let view = view {
-                                    return view.aspect
-                                } else {
-                                    return 0.0
-                                }
-                            },
-                            setOnOrientationUpdated: { [weak view] f in
-                                view?.setOnOrientationUpdated { value, aspect in
-                                    f?(OngoingCallVideoOrientation(value), aspect)
-                                }
-                            },
-                            setOnIsMirroredUpdated: { [weak view] f in
-                                view?.setOnIsMirroredUpdated { value in
-                                    f?(value)
-                                }
-                            },
-                            updateIsEnabled: { [weak view] value in
-                                view?.updateIsEnabled(value)
-                            }
-                        ))
-                    } else {
-                        completion(nil)
-                    }
-                }
-            } else {
-                completion(nil)
-            }
-        }
-    }
 
     public func addExternalAudioData(data: Data) {
         self.withContext { context in
             context.addExternalAudioData(data: data)
+        }
+    }
+    
+    public func sendSignalingData(data: Data) {
+        self.queue.async { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let signalingConnectionManager = strongSelf.signalingConnectionManager {
+                signalingConnectionManager.with { impl in
+                    impl.send(payloadData: data)
+                }
+            }
+            
+            strongSelf.callSessionManager.sendSignalingData(internalId: strongSelf.internalId, data: data)
         }
     }
 }

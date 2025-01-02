@@ -616,7 +616,8 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                     associatedData: item.associatedData,
                     accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
-                    constrainedWidth: maxReactionsWidth
+                    constrainedWidth: maxReactionsWidth,
+                    centerAligned: false
                 ))
                 maxContentWidth = max(maxContentWidth, minWidth)
                 reactionButtonsFinalize = buttonsLayout

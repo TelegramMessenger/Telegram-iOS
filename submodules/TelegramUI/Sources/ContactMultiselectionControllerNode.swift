@@ -133,7 +133,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             
             var chatListFilter: ChatListFilter?
             if chatSelection.onlyUsers {
-                chatListFilter = .filter(id: Int32.max, title: "", emoticon: nil, data: ChatListFilterData(
+                chatListFilter = .filter(id: Int32.max, title: ChatFolderTitle(text: "", entities: [], enableAnimations: true), emoticon: nil, data: ChatListFilterData(
                     isShared: false,
                     hasSharedLinks: false,
                     categories: [.contacts, .nonContacts],
@@ -153,7 +153,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                     categories.remove(.bots)
                 }
                 
-                chatListFilter = .filter(id: Int32.max, title: "", emoticon: nil, data: ChatListFilterData(
+                chatListFilter = .filter(id: Int32.max, title: ChatFolderTitle(text: "", entities: [], enableAnimations: true), emoticon: nil, data: ChatListFilterData(
                     isShared: false,
                     hasSharedLinks: false,
                     categories: categories,
@@ -226,7 +226,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                         sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
                     }
                     
-                    displayTopPeers = .custom(sections)
+                    displayTopPeers = .custom(showSelf: false, sections: sections)
                 } else {
                     displayTopPeers = .recent
                 }

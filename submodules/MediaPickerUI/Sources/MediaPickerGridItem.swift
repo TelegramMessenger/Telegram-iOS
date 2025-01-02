@@ -241,7 +241,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
-    func updateSelectionState(animated: Bool = false) {
+    func updateSelectionState(isFirstTime: Bool = false, animated: Bool = false) {
         if self.checkNode == nil, let _ = self.interaction?.selectionState, self.selectable, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
@@ -254,6 +254,11 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.addSubnode(checkNode)
             self.checkNode = checkNode
             self.setNeedsLayout()
+            
+            if !isFirstTime {
+                checkNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                checkNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            }
         }
 
         if let interaction = self.interaction, let selectionState = interaction.selectionState {
@@ -429,6 +434,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     }
         
     func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme, selectable: Bool, enableAnimations: Bool, stories: Bool) {
+        let isFirstTime = self.currentAssetState == nil
+        
         self.interaction = interaction
         self.theme = theme
         self.selectable = selectable
@@ -639,7 +646,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.setNeedsLayout()
         }
         
-        self.updateSelectionState()
+        self.updateSelectionState(isFirstTime: isFirstTime)
         self.updateHiddenMedia()
     }
     

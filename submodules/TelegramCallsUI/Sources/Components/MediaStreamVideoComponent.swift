@@ -199,7 +199,7 @@ final class MediaStreamVideoComponent: Component {
             if isStalled {
                 guard let component = self.component else { return }
                 
-                if let frameView = lastFrame[component.call.peerId.id.description] {
+                if let peerId = component.call.peerId, let frameView = lastFrame[peerId.id.description] {
                     frameView.removeFromSuperview()
                     placeholderView.subviews.forEach { $0.removeFromSuperview() }
                     placeholderView.addSubview(frameView)
@@ -469,11 +469,11 @@ final class MediaStreamVideoComponent: Component {
             }
             
             if let videoView = self.videoView {
-                if videoView.bounds.size.width > 0,
+                if let peerId = component.call.peerId, videoView.bounds.size.width > 0,
                     videoView.alpha > 0,
                     self.hadVideo,
                     let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
-                    lastFrame[component.call.peerId.id.description] = snapshot
+                    lastFrame[peerId.id.description] = snapshot
                 }
                 
                 var aspect = videoView.getAspect()
@@ -696,7 +696,7 @@ final class MediaStreamVideoComponent: Component {
                 presentationParent.addSubview(presentation)
                 presentation.frame = presentationParent.convert(videoView.frame, from: self)
                 
-                if let callId = self.component?.call.peerId.id.description {
+                if let callId = self.component?.call.peerId?.id.description {
                     lastFrame[callId] = presentation
                 }
                 

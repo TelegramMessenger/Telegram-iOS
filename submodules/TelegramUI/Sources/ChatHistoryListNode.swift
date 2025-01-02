@@ -35,6 +35,7 @@ import ChatMessageTransitionNode
 import ChatControllerInteraction
 import DustEffect
 import UrlHandling
+import TextFormat
 
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
@@ -2313,40 +2314,57 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             self.currentOverscrollExpandProgress = expandProgress
 
             if let nextChannelToRead = self.nextChannelToRead {
-                let swipeText: (String, [(Int, NSRange)])
-                let releaseText: (String, [(Int, NSRange)])
+                let swipeText: NSAttributedString
+                let releaseText: NSAttributedString
                 switch nextChannelToRead.location {
                 case .same:
                     if let controllerNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode, let chatController = controllerNode.interfaceInteraction?.chatController() as? ChatControllerImpl, chatController.customChatNavigationStack != nil {
-                        swipeText = (self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeProgress, [])
-                        releaseText = (self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeAction, [])
+                        swipeText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeProgress)
+                        releaseText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextSuggestedChannelSwipeAction)
                     } else if nextChannelToRead.threadData != nil {
-                        swipeText = (self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeProgress, [])
-                        releaseText = (self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeAction, [])
+                        swipeText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeProgress)
+                        releaseText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextUnreadTopicSwipeAction)
                     } else {
-                        swipeText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress, [])
-                        releaseText = (self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction, [])
+                        swipeText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeProgress)
+                        releaseText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelSameLocationSwipeAction)
                     }
                 case .archived:
-                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeProgress, [])
-                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeAction, [])
+                    swipeText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeProgress)
+                    releaseText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelArchivedSwipeAction)
                 case .unarchived:
-                    swipeText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeProgress, [])
-                    releaseText = (self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeAction, [])
+                    swipeText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeProgress)
+                    releaseText = NSAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelUnarchivedSwipeAction)
                 case let .folder(_, title):
-                    swipeText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeProgress(title)._tuple
-                    releaseText = self.currentPresentationData.strings.Chat_NextChannelFolderSwipeAction(title)._tuple
+                    let swipeTextValue = NSMutableAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelFolderSwipeProgressV2)
+                    let swipeFolderRange = (swipeTextValue.string as NSString).range(of: "{folder}")
+                    if swipeFolderRange.location != NSNotFound {
+                        swipeTextValue.replaceCharacters(in: swipeFolderRange, with: "")
+                        swipeTextValue.insert(title.attributedString(attributes: [
+                            ChatTextInputAttributes.bold: true
+                        ]), at: swipeFolderRange.location)
+                    }
+                    swipeText = swipeTextValue
+                    
+                    let releaseTextValue = NSMutableAttributedString(string: self.currentPresentationData.strings.Chat_NextChannelFolderSwipeActionV2)
+                    let releaseTextFolderRange = (releaseTextValue.string as NSString).range(of: "{folder}")
+                    if releaseTextFolderRange.location != NSNotFound {
+                        releaseTextValue.replaceCharacters(in: releaseTextFolderRange, with: "")
+                        releaseTextValue.insert(title.attributedString(attributes: [
+                            ChatTextInputAttributes.bold: true
+                        ]), at: releaseTextFolderRange.location)
+                    }
+                    releaseText = releaseTextValue
                 }
 
                 if expandProgress < 0.1 {
                     chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: nil)
                 } else if expandProgress >= 1.0 {
-                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != releaseText.0 {
-                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
+                    if chatControllerNode.inputPanelOverscrollNode?.text.string != releaseText.string {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(context: self.context, text: releaseText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 1))
                     }
                 } else {
-                    if chatControllerNode.inputPanelOverscrollNode?.text.0 != swipeText.0 {
-                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(text: swipeText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
+                    if chatControllerNode.inputPanelOverscrollNode?.text.string != swipeText.string {
+                        chatControllerNode.setChatInputPanelOverscrollNode(overscrollNode: ChatInputPanelOverscrollNode(context: self.context, text: swipeText, color: self.currentPresentationData.theme.theme.rootController.navigationBar.secondaryTextColor, priority: 2))
                     }
                 }
             } else {

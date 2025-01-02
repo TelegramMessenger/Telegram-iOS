@@ -153,7 +153,7 @@ extension ChatControllerImpl {
             
             strongSelf.chatDisplayNode.historyNode.ignoreMessagesInTimestampRange = range
             
-            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(title: statusText, text: nil), elevatedLayout: false, action: { value in
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(context: strongSelf.context, title: NSAttributedString(string: statusText), text: nil), elevatedLayout: false, action: { value in
                 guard let strongSelf = self else {
                     return false
                 }

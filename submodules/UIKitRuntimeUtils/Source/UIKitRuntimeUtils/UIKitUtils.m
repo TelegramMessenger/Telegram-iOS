@@ -234,6 +234,10 @@ NSObject * _Nullable makeLuminanceToAlphaFilter() {
     return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"luminanceToAlpha"];
 }
 
+NSObject * _Nullable makeColorInvertFilter() {
+    return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"colorInvert"];
+}
+
 NSObject * _Nullable makeMonochromeFilter() {
     return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"colorMonochrome"];
 }

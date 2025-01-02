@@ -226,6 +226,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     public var backAction: (() -> Void)?
     public var closeAction: (() -> Void)?
     public var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
+    public var conferenceAddParticipant: (() -> Void)?
     
     private let pipView: PrivateCallPictureInPictureView
     private var pipContentSource: AnyObject?

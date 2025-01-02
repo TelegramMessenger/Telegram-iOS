@@ -19,7 +19,6 @@ import PremiumUI
 import AudioToolbox
 import UndoUI
 import ContextUI
-import GalleryUI
 import TelegramPresentationData
 import TelegramNotices
 import StickerPeekUI
@@ -29,7 +28,6 @@ import MultiplexedVideoNode
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import Pasteboard
-import StickerPackPreviewUI
 import EntityKeyboardGifContent
 import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
@@ -647,25 +645,6 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                             parentInputInteraction: emojiInputInteraction
                                         ))
                                     }
-                                    
-                                    /*let controller = StickerPackScreen(
-                                        context: context,
-                                        updatedPresentationData: controllerInteraction.updatedPresentationData,
-                                        mode: .default,
-                                        mainStickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash),
-                                        stickerPacks: [.id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash)],
-                                        loadedStickerPacks: [.result(info: featuredStickerPack.info, items: featuredStickerPack.topItems, installed: false)],
-                                        parentNavigationController: controllerInteraction.navigationController(),
-                                        sendSticker: nil,
-                                        sendEmoji: { [weak interfaceInteraction] text, emojiAttribute in
-                                            guard let interfaceInteraction else {
-                                                return
-                                            }
-                                            interfaceInteraction.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute]))
-                                        }
-                                    )
-                                    controllerInteraction.presentController(controller, nil)*/
-                                    
                                     break
                                 }
                             }
@@ -1395,6 +1374,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         mainStickerPack: packReference,
                         stickerPacks: [packReference],
                         loadedStickerPacks: [],
+                        actionTitle: nil,
                         isEditing: true,
                         expandIfNeeded: true,
                         parentNavigationController: interaction.getNavigationController(),
@@ -2131,9 +2111,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
-            let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, replaceRootController: { _, _ in
-            }, baseNavigationController: nil)
-            gallery.setHintWillBePresentedInPreviewingContext(true)
+            let gallery = strongSelf.context.sharedContext.makeGalleryController(context: strongSelf.context, source: .standaloneMessage(message, nil), streamSingleVideo: true, isPreview: true)
             
             var items: [ContextMenuItem] = []
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Send, icon: { theme in
@@ -2282,7 +2260,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
     
     func animatedIn() {
-        if let controller = self.controller as? GalleryController {
+        if let controller = self.controller as? GalleryControllerProtocol {
             controller.viewDidAppear(false)
         }
     }
@@ -2883,7 +2861,7 @@ public final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                                                     return
                                                 }
                                                 
-                                                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], isEditing: false, expandIfNeeded: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                                let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], actionTitle: nil, isEditing: false, expandIfNeeded: false, parentNavigationController: interaction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                                     sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                                     return true
                                                 }, actionPerformed: nil)

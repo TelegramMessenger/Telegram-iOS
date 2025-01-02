@@ -12,7 +12,12 @@ CROSSFILE=""
 if [ "$ARCH" = "arm64" ]; then
     CROSSFILE="../package/crossfiles/arm64-iPhoneOS.meson"
 elif [ "$ARCH" = "sim_arm64" ]; then
-    CROSSFILE="../../arm64-iPhoneSimulator.meson"
+    rm -f "arm64-iPhoneSimulator-custom.meson"
+    TARGET_CROSSFILE="$BUILD_DIR/dav1d/package/crossfiles/arm64-iPhoneSimulator-custom.meson"
+    cp "$BUILD_DIR/arm64-iPhoneSimulator.meson" "$TARGET_CROSSFILE"
+    custom_xcode_path="$(xcode-select -p)/"
+    sed -i '' "s|/Applications/Xcode.app/Contents/Developer/|$custom_xcode_path|g" "$TARGET_CROSSFILE"
+    CROSSFILE="../package/crossfiles/arm64-iPhoneSimulator-custom.meson"
 else
     echo "Unsupported architecture $ARCH"
     exit 1

@@ -100,7 +100,7 @@ public extension TelegramEngine {
         case same
         case archived
         case unarchived
-        case folder(id: Int32, title: String)
+        case folder(id: Int32, title: ChatFolderTitle)
     }
 
     final class Peers {
@@ -813,6 +813,10 @@ public extension TelegramEngine {
         
         public func toggleBotEmojiStatusAccess(peerId: PeerId, enabled: Bool) -> Signal<Never, ToggleBotEmojiStatusAccessError> {
             return _internal_toggleBotEmojiStatusAccess(account: self.account, peerId: peerId, enabled: enabled)
+        }
+        
+        public func updateCustomVerification(botId: PeerId, peerId: PeerId, value: UpdateCustomVerificationValue) -> Signal<Never, UpdateCustomVerificationError> {
+            return _internal_updateCustomVerification(account: self.account, botId: botId, peerId: peerId, value: value)
         }
         
         public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {

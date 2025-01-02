@@ -28,7 +28,7 @@ public enum ItemListSectionHeaderActivityIndicator {
     case left
     case right
     
-    fileprivate var hasActivity: Bool {
+    public var hasActivity: Bool {
         switch self {
         case .left, .right:
             return true

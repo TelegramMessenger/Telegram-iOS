@@ -650,6 +650,7 @@ final class ChatSendMessageContextScreenComponent: Component {
                 ), animated: !transition.animation.isImmediate)
             } else {
                 actionsStackNode = ContextControllerActionsStackNode(
+                    context: component.context,
                     getController: {
                         return nil
                     },

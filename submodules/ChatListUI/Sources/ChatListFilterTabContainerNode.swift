@@ -4,6 +4,8 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import TextNodeWithEntities
+import AccountContext
 
 private final class ItemNodeDeleteButtonNode: HighlightableButtonNode {
     private let pressed: () -> Void
@@ -55,6 +57,7 @@ private final class ItemNodeDeleteButtonNode: HighlightableButtonNode {
 }
 
 private final class ItemNode: ASDisplayNode {
+    private let context: AccountContext
     private let pressed: (Bool) -> Void
     private let requestedDeletion: () -> Void
     
@@ -63,11 +66,11 @@ private final class ItemNode: ASDisplayNode {
     
     private let extractedBackgroundNode: ASImageNode
     private let titleContainer: ASDisplayNode
-    private let titleNode: ImmediateTextNode
-    private let titleActiveNode: ImmediateTextNode
+    private let titleNode: ImmediateTextNodeWithEntities
+    private let titleActiveNode: ImmediateTextNodeWithEntities
     private let shortTitleContainer: ASDisplayNode
-    private let shortTitleNode: ImmediateTextNode
-    private let shortTitleActiveNode: ImmediateTextNode
+    private let shortTitleNode: ImmediateTextNodeWithEntities
+    private let shortTitleActiveNode: ImmediateTextNodeWithEntities
     private let badgeContainerNode: ASDisplayNode
     private let badgeTextNode: ImmediateTextNode
     private let badgeBackgroundActiveNode: ASImageNode
@@ -84,11 +87,12 @@ private final class ItemNode: ASDisplayNode {
     private var isDisabled: Bool = false
     
     private var theme: PresentationTheme?
-    private var currentTitle: (String, String)?
+    private var currentTitle: (ChatFolderTitle, ChatFolderTitle)?
     
     private var pointerInteraction: PointerInteraction?
     
-    init(pressed: @escaping (Bool) -> Void, requestedDeletion: @escaping () -> Void, contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void) {
+    init(context: AccountContext, pressed: @escaping (Bool) -> Void, requestedDeletion: @escaping () -> Void, contextGesture: @escaping (ContextExtractedContentContainingNode, ContextGesture, Bool) -> Void) {
+        self.context = context
         self.pressed = pressed
         self.requestedDeletion = requestedDeletion
         
@@ -102,27 +106,31 @@ private final class ItemNode: ASDisplayNode {
         
         self.titleContainer = ASDisplayNode()
         
-        self.titleNode = ImmediateTextNode()
+        self.titleNode = ImmediateTextNodeWithEntities()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.titleNode.resetEmojiToFirstFrameAutomatically = true
         
-        self.titleActiveNode = ImmediateTextNode()
+        self.titleActiveNode = ImmediateTextNodeWithEntities()
         self.titleActiveNode.displaysAsynchronously = false
         self.titleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         self.titleActiveNode.alpha = 0.0
+        self.titleActiveNode.resetEmojiToFirstFrameAutomatically = true
         
         self.shortTitleContainer = ASDisplayNode()
         
-        self.shortTitleNode = ImmediateTextNode()
+        self.shortTitleNode = ImmediateTextNodeWithEntities()
         self.shortTitleNode.displaysAsynchronously = false
         self.shortTitleNode.alpha = 0.0
         self.shortTitleNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
+        self.shortTitleNode.resetEmojiToFirstFrameAutomatically = true
         
-        self.shortTitleActiveNode = ImmediateTextNode()
+        self.shortTitleActiveNode = ImmediateTextNodeWithEntities()
         self.shortTitleActiveNode.displaysAsynchronously = false
         self.shortTitleActiveNode.alpha = 0.0
         self.shortTitleActiveNode.insets = UIEdgeInsets(top: titleInset, left: 0.0, bottom: titleInset, right: 0.0)
         self.shortTitleActiveNode.alpha = 0.0
+        self.shortTitleActiveNode.resetEmojiToFirstFrameAutomatically = true
         
         self.badgeContainerNode = ASDisplayNode()
         
@@ -194,7 +202,7 @@ private final class ItemNode: ASDisplayNode {
         self.pressed(self.isDisabled)
     }
     
-    func updateText(strings: PresentationStrings, title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isReordering: Bool, canReorderAllChats: Bool, isDisabled: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(strings: PresentationStrings, title: ChatFolderTitle, shortTitle: ChatFolderTitle, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isReordering: Bool, canReorderAllChats: Bool, isDisabled: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         self.isEditing = isEditing
         self.isDisabled = isDisabled
         
@@ -221,7 +229,7 @@ private final class ItemNode: ASDisplayNode {
             self.unreadCount = unreadCount
         }
         
-        self.buttonNode.accessibilityLabel = title
+        self.buttonNode.accessibilityLabel = title.text
         if unreadCount > 0 {
             if self.buttonNode.accessibilityValue == nil || unreadCountUpdated {
                 self.buttonNode.accessibilityValue = strings.VoiceOver_Chat_UnreadMessages(Int32(unreadCount))
@@ -271,11 +279,31 @@ private final class ItemNode: ASDisplayNode {
         transition.updateAlpha(node: self.shortTitleNode, alpha: deselectionAlpha)
         transition.updateAlpha(node: self.shortTitleActiveNode, alpha: selectionAlpha)
         
+        let titleArguments = TextNodeWithEntities.Arguments(
+            context: self.context,
+            cache: self.context.animationCache,
+            renderer: self.context.animationRenderer,
+            placeholderColor: presentationData.theme.list.mediaPlaceholderColor,
+            attemptSynchronous: false
+        )
+        
+        self.titleNode.arguments = titleArguments
+        self.titleActiveNode.arguments = titleArguments
+        self.shortTitleNode.arguments = titleArguments
+        self.shortTitleActiveNode.arguments = titleArguments
+        
+        self.titleNode.visibility = title.enableAnimations
+        self.titleActiveNode.visibility = title.enableAnimations
+        self.shortTitleNode.visibility = title.enableAnimations
+        self.shortTitleActiveNode.visibility = title.enableAnimations
+        
         if themeUpdated || titleUpdated {
-            self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-            self.titleActiveNode.attributedText = NSAttributedString(string: title, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
-            self.shortTitleNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-            self.shortTitleActiveNode.attributedText = NSAttributedString(string: shortTitle, font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+            //TODO:release
+            self.titleNode.attributedText = title.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+            self.titleActiveNode.attributedText = title.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
+            
+            self.shortTitleNode.attributedText = shortTitle.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+            self.shortTitleActiveNode.attributedText = shortTitle.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
         }
         
         if unreadCount != 0 {
@@ -467,7 +495,7 @@ public struct ChatListFilterTabEntryUnreadCount: Equatable {
 
 public enum ChatListFilterTabEntry: Equatable {
     case all(unreadCount: Int)
-    case filter(id: Int32, text: String, unread: ChatListFilterTabEntryUnreadCount)
+    case filter(id: Int32, text: ChatFolderTitle, unread: ChatListFilterTabEntryUnreadCount)
     
     public var id: ChatListFilterTabEntryId {
         switch self {
@@ -478,19 +506,19 @@ public enum ChatListFilterTabEntry: Equatable {
         }
     }
     
-    func title(strings: PresentationStrings) -> String {
+    func title(strings: PresentationStrings) -> ChatFolderTitle {
         switch self {
         case .all:
-            return strings.ChatList_Tabs_AllChats
+            return ChatFolderTitle(text: strings.ChatList_Tabs_AllChats, entities: [], enableAnimations: true)
         case let .filter(_, text, _):
             return text
         }
     }
     
-    func shortTitle(strings: PresentationStrings) -> String {
+    func shortTitle(strings: PresentationStrings) -> ChatFolderTitle {
         switch self {
         case .all:
-            return strings.ChatList_Tabs_All
+            return ChatFolderTitle(text: strings.ChatList_Tabs_All, entities: [], enableAnimations: true)
         case let .filter(_, text, _):
             return text
         }
@@ -498,6 +526,7 @@ public enum ChatListFilterTabEntry: Equatable {
 }
 
 public final class ChatListFilterTabContainerNode: ASDisplayNode {
+    private let context: AccountContext
     private let scrollNode: ASScrollNode
     private let selectedLineNode: ASImageNode
     private var itemNodes: [ChatListFilterTabEntryId: ItemNode] = [:]
@@ -546,7 +575,8 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
         }
     }
     
-    public override init() {
+    public init(context: AccountContext) {
+        self.context = context
         self.scrollNode = ASScrollNode()
         
         self.selectedLineNode = ASImageNode()
@@ -778,7 +808,7 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
             } else {
                 itemNodeTransition = .immediate
                 wasAdded = true
-                itemNode = ItemNode(pressed: { [weak self] disabled in
+                itemNode = ItemNode(context: self.context, pressed: { [weak self] disabled in
                     self?.tabSelected?(filter.id, disabled)
                 }, requestedDeletion: { [weak self] in
                     self?.tabRequestedDeletion?(filter.id)
@@ -831,7 +861,7 @@ public final class ChatListFilterTabContainerNode: ASDisplayNode {
                 selectionFraction = 0.0
             }
             
-            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle:  i == 0 ? filter.shortTitle(strings: presentationData.strings) : filter.title(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isReordering: isReordering, canReorderAllChats: canReorderAllChats, isDisabled: isDisabled, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: i == 0 ? filter.shortTitle(strings: presentationData.strings) : filter.title(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isReordering: isReordering, canReorderAllChats: canReorderAllChats, isDisabled: isDisabled, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {

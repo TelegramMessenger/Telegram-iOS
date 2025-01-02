@@ -53,7 +53,7 @@ public protocol UniversalVideoContent {
     var dimensions: CGSize { get }
     var duration: Double { get }
     
-    func makeContentNode(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
+    func makeContentNode(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
     
     func isEqual(to other: UniversalVideoContent) -> Bool
 }
@@ -95,7 +95,7 @@ public enum UniversalVideoNodeFetchControl {
 }
 
 public final class UniversalVideoNode: ASDisplayNode {
-    private let accountId: AccountRecordId
+    private let context: AccountContext
     private let postbox: Postbox
     private let audioSession: ManagedAudioSession
     private let manager: UniversalVideoManager
@@ -146,12 +146,12 @@ public final class UniversalVideoNode: ASDisplayNode {
                 if self.canAttachContent {
                     assert(self.contentRequestIndex == nil)
                     
-                    let accountId = self.accountId
+                    let context = self.context
                     let content = self.content
                     let postbox = self.postbox
                     let audioSession = self.audioSession
                     self.contentRequestIndex = self.manager.attachUniversalVideoContent(content: self.content, priority: self.priority, create: {
-                        return content.makeContentNode(accountId: accountId, postbox: postbox, audioSession: audioSession)
+                        return content.makeContentNode(context: context, postbox: postbox, audioSession: audioSession)
                     }, update: { [weak self] contentNodeAndFlags in
                         if let strongSelf = self {
                             strongSelf.updateContentNode(contentNodeAndFlags)
@@ -172,8 +172,8 @@ public final class UniversalVideoNode: ASDisplayNode {
         return self.contentNode != nil
     }
     
-    public init(accountId: AccountRecordId, postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false) {
-        self.accountId = accountId
+    public init(context: AccountContext, postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false) {
+        self.context = context
         self.postbox = postbox
         self.audioSession = audioSession
         self.manager = manager

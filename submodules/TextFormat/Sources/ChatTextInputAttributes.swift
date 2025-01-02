@@ -402,6 +402,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         case file
         case topicId
         case topicInfo
+        case enableAnimation
     }
     
     public enum Custom: Codable {
@@ -410,18 +411,21 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         case stars(tinted: Bool)
         case ton
         case animation(name: String)
+        case verification
     }
     
     public let interactivelySelectedFromPackId: ItemCollectionId?
     public let fileId: Int64
     public let file: TelegramMediaFile?
     public let custom: Custom?
+    public let enableAnimation: Bool
     
-    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, custom: Custom? = nil) {
+    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, custom: Custom? = nil, enableAnimation: Bool = true) {
         self.interactivelySelectedFromPackId = interactivelySelectedFromPackId
         self.fileId = fileId
         self.file = file
         self.custom = custom
+        self.enableAnimation = enableAnimation
         
         super.init()
     }
@@ -432,6 +436,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         self.fileId = try container.decode(Int64.self, forKey: .fileId)
         self.file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file)
         self.custom = nil
+        self.enableAnimation = try container.decodeIfPresent(Bool.self, forKey: .enableAnimation) ?? true
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -439,6 +444,7 @@ public final class ChatTextInputTextCustomEmojiAttribute: NSObject, Codable {
         try container.encodeIfPresent(self.interactivelySelectedFromPackId, forKey: .interactivelySelectedFromPackId)
         try container.encode(self.fileId, forKey: .fileId)
         try container.encodeIfPresent(self.file, forKey: .file)
+        try container.encode(self.enableAnimation, forKey: .enableAnimation)
     }
     
     override public func isEqual(_ object: Any?) -> Bool {

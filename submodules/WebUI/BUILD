@@ -48,6 +48,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
+        "//submodules/TelegramUI/Components/PremiumPeerShortcutComponent",
         "//submodules/DeviceLocationManager",
         "//submodules/DeviceAccess",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",

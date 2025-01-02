@@ -11,6 +11,7 @@ import Markdown
 import WallpaperBackgroundNode
 import EmojiStatusComponent
 import TelegramPresentationData
+import TextNodeWithEntities
 
 final class BlurredRoundedRectangle: Component {
     let color: UIColor
@@ -1210,21 +1211,42 @@ public final class ChatOverscrollControl: CombinedComponent {
 }
 
 public final class ChatInputPanelOverscrollNode: ASDisplayNode {
-    public let text: (String, [(Int, NSRange)])
+    public let text: NSAttributedString
     public let priority: Int
-    private let titleNode: ImmediateTextNode
+    private let titleNode: ImmediateTextNodeWithEntities
 
-    public init(text: (String, [(Int, NSRange)]), color: UIColor, priority: Int) {
+    public init(context: AccountContext, text: NSAttributedString, color: UIColor, priority: Int) {
         self.text = text
         self.priority = priority
-        self.titleNode = ImmediateTextNode()
+        self.titleNode = ImmediateTextNodeWithEntities()
 
         super.init()
 
-        let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: color)
-        let bold = MarkdownAttributeSet(font: Font.bold(14.0), textColor: color)
-
-        self.titleNode.attributedText = addAttributesToStringWithRanges(text, body: body, argumentAttributes: [0: bold])
+        let attributedText = NSMutableAttributedString(string: text.string)
+        attributedText.addAttribute(.font, value: Font.regular(14.0), range: NSRange(location: 0, length: text.length))
+        attributedText.addAttribute(.foregroundColor, value: color, range: NSRange(location: 0, length: text.length))
+        text.enumerateAttributes(in: NSRange(location: 0, length: text.length), using: { attributes, range, _ in
+            for (key, value) in attributes {
+                if key == ChatTextInputAttributes.bold {
+                    attributedText.addAttribute(.font, value: Font.bold(14.0), range: range)
+                } else if key == ChatTextInputAttributes.italic {
+                    attributedText.addAttribute(.font, value: Font.italic(14.0), range: range)
+                } else if key == ChatTextInputAttributes.monospace {
+                    attributedText.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                } else {
+                    attributedText.addAttribute(key, value: value, range: range)
+                }
+            }
+        })
+        self.titleNode.attributedText = attributedText
+        self.titleNode.visibility = true
+        self.titleNode.arguments = TextNodeWithEntities.Arguments(
+            context: context,
+            cache: context.animationCache,
+            renderer: context.animationRenderer,
+            placeholderColor: color.withMultipliedAlpha(0.1),
+            attemptSynchronous: true
+        )
 
         self.addSubnode(self.titleNode)
     }

@@ -106,6 +106,17 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         }
     }
     
+    
+    if let _ = chatPresentationInterfaceState.peerVerification {
+        if let currentPanel = currentPanel as? ChatVerifiedPeerTitlePanelNode {
+            return currentPanel
+        } else if let controllerInteraction = controllerInteraction {
+            let panel = ChatVerifiedPeerTitlePanelNode(context: context, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
+            panel.interfaceInteraction = interfaceInteraction
+            return panel
+        }
+    }
+    
     if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
         if let threadData = chatPresentationInterfaceState.threadData {
             if threadData.isClosed {

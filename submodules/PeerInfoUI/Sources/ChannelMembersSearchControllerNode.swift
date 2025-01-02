@@ -129,7 +129,7 @@ private enum ChannelMembersSearchEntry: Comparable, Identifiable {
         case let .peer(_, participant, editing, label, enabled, isChannel, isContact):
             let status: ContactsPeerItemStatus
             if let label = label {
-                status = .custom(string: label, multiline: false, isActive: false, icon: nil)
+                status = .custom(string: NSAttributedString(string: label), multiline: false, isActive: false, icon: nil)
             } else if participant.peer.id != context.account.peerId {
                 let presence = participant.presences[participant.peer.id] ?? TelegramUserPresence(status: .none, lastActivity: 0)
                 status = .presence(EnginePeer.Presence(presence), presentationData.dateTimeFormat)

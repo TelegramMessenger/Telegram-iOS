@@ -254,7 +254,7 @@ class ChatListSectionHeaderNode: ListViewItemNode {
                 if item.hide != nil {
                     headerNode.action = item.strings.ChatList_EmptyListContactsHeaderHide
                     headerNode.actionType = .generic
-                    headerNode.activateAction = {
+                    headerNode.activateAction = { _ in
                         guard let self else {
                             return
                         }

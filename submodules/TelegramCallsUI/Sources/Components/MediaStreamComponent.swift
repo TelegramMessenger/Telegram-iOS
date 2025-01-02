@@ -112,7 +112,12 @@ public final class MediaStreamComponent: CombinedComponent {
                 strongSelf.updated(transition: .immediate)
             })
             
-            let callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))
+            let callPeer: Signal<EnginePeer?, NoError>
+            if let peerId = call.peerId {
+                callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            } else {
+                callPeer = .single(nil)
+            }
             
             self.infoDisposable = (combineLatest(queue: .mainQueue(), call.state, call.members, callPeer)
             |> deliverOnMainQueue).start(next: { [weak self] state, members, callPeer in
@@ -447,7 +452,7 @@ public final class MediaStreamComponent: CombinedComponent {
             }
             var topLeftButton: AnyComponent<Empty>?
             
-            if context.state.canManageCall {
+            if context.state.canManageCall, let peerId = context.component.call.peerId {
                 let whiteColor = UIColor(white: 1.0, alpha: 1.0)
                 topLeftButton = AnyComponent(Button(
                     content: AnyComponent(ZStack([
@@ -542,20 +547,6 @@ public final class MediaStreamComponent: CombinedComponent {
                                     
                                     let _ = text
                                     let _ = controller
-                                    
-                                    /*strongSelf.presentUndoOverlay(content: .forward(savedMessages: true, text: text), action: { [weak self] value in
-                                        if case .info = value, let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                            let context = strongSelf.context
-                                            strongSelf.controller?.dismiss(completion: {
-                                                Queue.mainQueue().justDispatch {
-                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
-                                                }
-                                            })
-                                            
-                                            return true
-                                        }
-                                        return false
-                                    })*/
                                 })])
                                 controller.present(alertController, in: .window(.root))
                                 
@@ -604,7 +595,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         }
                         
                         let credentialsPromise = Promise<GroupCallStreamCredentials>()
-                        credentialsPromise.set(call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false) |> `catch` { _ -> Signal<GroupCallStreamCredentials, NoError> in return .never() })
+                        credentialsPromise.set(call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: peerId, revokePreviousCredentials: false) |> `catch` { _ -> Signal<GroupCallStreamCredentials, NoError> in return .never() })
                         
                         items.append(.action(ContextMenuActionItem(id: nil, text: presentationData.strings.LiveStream_ViewCredentials, textColor: .primary, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor, backgroundColor: nil)
@@ -613,7 +604,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                 return
                             }
                             
-                            controller.push(CreateExternalMediaStreamScreen(context: call.accountContext, peerId: call.peerId, credentialsPromise: credentialsPromise, mode: .view))
+                            controller.push(CreateExternalMediaStreamScreen(context: call.accountContext, peerId: peerId, credentialsPromise: credentialsPromise, mode: .view))
                             
                             a(.default)
                         })))
@@ -663,38 +654,6 @@ public final class MediaStreamComponent: CombinedComponent {
                         }
                         
                         let contextController = ContextController(presentationData: presentationData.withUpdated(theme: defaultDarkPresentationTheme), source: .reference(ReferenceContentSource(sourceView: anchorView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
-                        /*contextController.passthroughTouchEvent = { sourceView, point in
-                            guard let strongSelf = self else {
-                                return .ignore
-                            }
-
-                            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
-                            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
-                                return .dismiss(consume: true, result: nil)
-                            }
-
-                            var testView: UIView? = localResult
-                            while true {
-                                if let testViewValue = testView {
-                                    if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
-                                        node.isUserInteractionEnabled = false
-                                        DispatchQueue.main.async {
-                                            node.isUserInteractionEnabled = true
-                                        }
-                                        return .dismiss(consume: false, result: nil)
-                                    } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
-                                        node.brieflyDisableTouchActions()
-                                        return .dismiss(consume: false, result: nil)
-                                    } else {
-                                        testView = testViewValue.superview
-                                    }
-                                } else {
-                                    break
-                                }
-                            }
-
-                            return .dismiss(consume: true, result: nil)
-                        }*/
                         controller.presentInGlobalOverlay(contextController)
                     }
                 ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))
@@ -1172,10 +1131,13 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             guard let strongSelf = self else {
                 return
             }
+            guard let peerId = strongSelf.call.peerId else {
+                return
+            }
             
             let _ = (strongSelf.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.call.peerId),
-                TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: strongSelf.call.peerId)
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: peerId)
             )
             |> map { peer, exportedInvitation -> GroupCallInviteLinks? in
                 if let inviteLinks = inviteLinks {
@@ -1213,7 +1175,11 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         }
         let _ = formatSendTitle
         
-        let _ = (combineLatest(queue: .mainQueue(), self.context.account.postbox.loadedPeerWithId(self.call.peerId), self.call.state |> take(1))
+        guard let peerId = self.call.peerId else {
+            return
+        }
+        
+        let _ = (combineLatest(queue: .mainQueue(), self.context.account.postbox.loadedPeerWithId(peerId), self.call.state |> take(1))
         |> deliverOnMainQueue).start(next: { [weak self] peer, callState in
             if let strongSelf = self {
                 var inviteLinks = inviteLinks

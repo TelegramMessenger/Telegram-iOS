@@ -16,6 +16,7 @@ import ImageTransparency
 import ChatInputTextNode
 import TextInputMenu
 import ObjCRuntimeUtils
+import MultilineTextComponent
 
 public final class EmptyInputView: UIView, UIInputViewAudioFeedback {
     public var enableInputClicksWhenVisible: Bool {
@@ -128,10 +129,12 @@ public final class TextFieldComponent: Component {
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
     public let customInputView: UIView?
+    public let placeholder: NSAttributedString?
     public let resetText: NSAttributedString?
     public let assumeIsEditing: Bool
     public let isOneLineWhenUnfocused: Bool
     public let characterLimit: Int?
+    public let enableInlineAnimations: Bool
     public let emptyLineHandling: EmptyLineHandling
     public let formatMenuAvailability: FormatMenuAvailability
     public let returnKeyType: UIReturnKeyType
@@ -152,10 +155,12 @@ public final class TextFieldComponent: Component {
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
         customInputView: UIView?,
+        placeholder: NSAttributedString? = nil,
         resetText: NSAttributedString?,
         assumeIsEditing: Bool = false,
         isOneLineWhenUnfocused: Bool,
         characterLimit: Int? = nil,
+        enableInlineAnimations: Bool = true,
         emptyLineHandling: EmptyLineHandling = .allowed,
         formatMenuAvailability: FormatMenuAvailability,
         returnKeyType: UIReturnKeyType = .default,
@@ -175,10 +180,12 @@ public final class TextFieldComponent: Component {
         self.insets = insets
         self.hideKeyboard = hideKeyboard
         self.customInputView = customInputView
+        self.placeholder = placeholder
         self.resetText = resetText
         self.assumeIsEditing = assumeIsEditing
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.characterLimit = characterLimit
+        self.enableInlineAnimations = enableInlineAnimations
         self.emptyLineHandling = emptyLineHandling
         self.formatMenuAvailability = formatMenuAvailability
         self.returnKeyType = returnKeyType
@@ -220,6 +227,9 @@ public final class TextFieldComponent: Component {
         if lhs.customInputView !== rhs.customInputView {
             return false
         }
+        if lhs.placeholder != rhs.placeholder {
+            return false
+        }
         if lhs.resetText != rhs.resetText {
             return false
         }
@@ -230,6 +240,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.characterLimit != rhs.characterLimit {
+            return false
+        }
+        if lhs.enableInlineAnimations != rhs.enableInlineAnimations {
             return false
         }
         if lhs.emptyLineHandling != rhs.emptyLineHandling {
@@ -261,6 +274,7 @@ public final class TextFieldComponent: Component {
     }
     
     public final class View: UIView, UIScrollViewDelegate, ChatInputTextNodeDelegate {
+        private var placeholder: ComponentView<Empty>?
         private let textView: ChatInputTextView
         private let inputMenu: TextInputMenu
         
@@ -1164,6 +1178,18 @@ public final class TextFieldComponent: Component {
                 }
 
                 customEmojiContainerView.update(fontSize: component.fontSize, textColor: component.textColor, emojiRects: customEmojiRects)
+                
+                for (_, emojiView) in customEmojiContainerView.emojiLayers {
+                    if let emojiView = emojiView as? EmojiTextAttachmentView {
+                        if emojiView.isActive != component.enableInlineAnimations {
+                            emojiView.isUnique = !component.enableInlineAnimations
+                            emojiView.isActive = component.enableInlineAnimations
+                            if !emojiView.isActive {
+                                emojiView.resetToFirstFrame()
+                            }
+                        }
+                    }
+                }
             } else if let customEmojiContainerView = self.customEmojiContainerView {
                 customEmojiContainerView.removeFromSuperview()
                 self.customEmojiContainerView = nil
@@ -1294,7 +1320,9 @@ public final class TextFieldComponent: Component {
                         return UIView()
                     }
                     let pointSize = floor(24.0 * 1.3)
-                    return EmojiTextAttachmentView(context: component.context, userLocation: .other, emoji: emoji, file: emoji.file, cache: component.context.animationCache, renderer: component.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                    let emojiView = EmojiTextAttachmentView(context: component.context, userLocation: .other, emoji: emoji, file: emoji.file, cache: component.context.animationCache, renderer: component.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                    emojiView.updateTextColor(component.textColor)
+                    return emojiView
                 }
                 
                 self.chatInputTextNodeDidUpdateText()
@@ -1340,6 +1368,40 @@ public final class TextFieldComponent: Component {
             self.textView.frame = textFrame
             self.textView.updateLayout(size: textFrame.size)
             self.textView.panGestureRecognizer.isEnabled = isEditing
+            
+            if let placeholderValue = component.placeholder {
+                var placeholderTransition = transition
+                let placeholder: ComponentView<Empty>
+                if let current = self.placeholder {
+                    placeholder = current
+                } else {
+                    placeholderTransition = placeholderTransition.withAnimation(.none)
+                    placeholder = ComponentView()
+                    self.placeholder = placeholder
+                }
+                let placeholderSize = placeholder.update(
+                    transition: .immediate,
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(placeholderValue)
+                    )),
+                    environment: {},
+                    containerSize: textFrame.size
+                )
+                let placeholderFrame = CGRect(origin: CGPoint(x: textFrame.minX, y: textFrame.minY + floor((textFrame.height - placeholderSize.height) * 0.5) - 1.0), size: placeholderSize)
+                if let placeholderView = placeholder.view {
+                    if placeholderView.superview == nil {
+                        placeholderView.layer.anchorPoint = CGPoint()
+                        self.insertSubview(placeholderView, belowSubview: self.textView)
+                    }
+                    placeholderTransition.setPosition(view: placeholderView, position: placeholderFrame.origin)
+                    placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
+                    
+                    placeholderView.isHidden = self.textView.textStorage.length != 0
+                }
+            } else if let placeholder = self.placeholder {
+                self.placeholder = nil
+                placeholder.view?.removeFromSuperview()
+            }
             
             self.updateEmojiSuggestion(transition: .immediate)
             

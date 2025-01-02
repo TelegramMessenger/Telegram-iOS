@@ -246,7 +246,9 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
                                 }
                             }
                             
-                            context.draw(dataImage, in: CGRect(origin: CGPoint(), size: displayDimensions).insetBy(dx: inset, dy: inset))
+                            let filledSize = CGSize(width: dataImage.width, height: dataImage.height).aspectFilled(displayDimensions)
+                            
+                            context.draw(dataImage, in: CGRect(origin: CGPoint(x: floor((displayDimensions.width - filledSize.width) / 2.0), y: floor((displayDimensions.height - filledSize.height) / 2.0)), size: filledSize).insetBy(dx: inset, dy: inset))
                             if blurred {
                                 context.setBlendMode(.normal)
                                 context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.45).cgColor)

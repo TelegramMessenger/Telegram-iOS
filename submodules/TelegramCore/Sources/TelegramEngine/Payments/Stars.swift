@@ -281,7 +281,7 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     }
     
     public var stringValue: String {
-        return "\(totalValue)"
+        return totalValue.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", totalValue) :  String(format: "%.02f", totalValue)
     }
     
     public var totalValue: Double {
@@ -612,10 +612,14 @@ private extension StarsContext.State.Transaction {
             if (apiFlags & (1 << 11)) != 0 {
                 flags.insert(.isReaction)
             }
+            if (apiFlags & (1 << 18)) != 0 {
+                flags.insert(.isStarGiftUpgrade)
+            }
             
             let media = extendedMedia.flatMap({ $0.compactMap { textMediaAndExpirationTimerFromApiMedia($0, PeerId(0)).media } }) ?? []
             let _ = subscriptionPeriod
-            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber, starrefCommissionPermille: starrefCommissionPermille, starrefPeerId: starrefPeer.flatMap(\.peerId), starrefAmount: starrefAmount.flatMap(StarsAmount.init(apiAmount:)))
+                        
+            self.init(flags: flags, id: id, count: StarsAmount(apiAmount: stars), date: date, peer: parsedPeer, title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), transactionDate: transactionDate, transactionUrl: transactionUrl, paidMessageId: paidMessageId, giveawayMessageId: giveawayMessageId, media: media, subscriptionPeriod: subscriptionPeriod, starGift: starGift.flatMap { StarGift(apiStarGift: $0) }, floodskipNumber: floodskipNumber, starrefCommissionPermille: starrefCommissionPermille, starrefPeerId: starrefPeer?.peerId, starrefAmount: starrefAmount.flatMap(StarsAmount.init(apiAmount:)))
         }
     }
 }
@@ -661,6 +665,7 @@ public final class StarsContext {
                 public static let isFailed = Flags(rawValue: 1 << 3)
                 public static let isGift = Flags(rawValue: 1 << 4)
                 public static let isReaction = Flags(rawValue: 1 << 5)
+                public static let isStarGiftUpgrade = Flags(rawValue: 1 << 6)
             }
             
             public enum Peer: Equatable {
@@ -1413,12 +1418,13 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                     case .starsChatSubscription:
                         let chats = updates.chats.compactMap { parseTelegramGroupOrChannel(chat: $0) }
                         if let first = chats.first {
-                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id)
+                            return .done(receiptMessageId: nil, subscriptionPeerId: first.id, uniqueStarGift: nil)
                         }
                     default:
                         break
                     }
                     var receiptMessageId: MessageId?
+                    var resultGift: ProfileGiftsContext.State.StarGift?
                     for apiMessage in updates.messages {
                         if let message = StoreMessage(apiMessage: apiMessage, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
@@ -1455,19 +1461,31 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                                     receiptMessageId = id
                                                 }
                                             }
-                                        case .giftCode, .stars, .starsGift:
-                                            receiptMessageId = nil
-                                        case .starsChatSubscription:
-                                            receiptMessageId = nil
-                                        case .starGift:
+                                        case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer:
                                             receiptMessageId = nil
                                         }
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
+                                        resultGift = ProfileGiftsContext.State.StarGift(
+                                            gift: gift,
+                                            fromPeer: nil,
+                                            date: message.timestamp,
+                                            text: nil,
+                                            entities: nil,
+                                            messageId: messageId,
+                                            nameHidden: false,
+                                            savedToProfile: savedToProfile,
+                                            convertStars: nil,
+                                            canUpgrade: false,
+                                            canExportDate: canExportDate,
+                                            upgradeStars: nil,
+                                            transferStars: transferStars
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil)
+                    return .done(receiptMessageId: receiptMessageId, subscriptionPeerId: nil, uniqueStarGift: resultGift)
                 case let .paymentVerificationNeeded(url):
                     return .externalVerificationRequired(url: url)
             }

@@ -8,6 +8,7 @@ import TelegramCore
 import SwiftSignalKit
 import ReactionSelectionNode
 import UndoUI
+import AccountContext
 
 private extension ContextControllerTakeViewInfo.ContainingItem {
     var contentRect: CGRect {
@@ -227,6 +228,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         return self._ready.get()
     }
     
+    private let context: AccountContext?
     private let getController: () -> ContextControllerProtocol?
     private let requestUpdate: (ContainedViewLayoutTransition) -> Void
     private let requestUpdateOverlayWantsToBeBelowKeyboard: (ContainedViewLayoutTransition) -> Void
@@ -268,6 +270,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private weak var currentUndoController: ViewController?
     
     init(
+        context: AccountContext?,
         getController: @escaping () -> ContextControllerProtocol?,
         requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
         requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void,
@@ -275,6 +278,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         requestAnimateOut: @escaping (ContextMenuActionResult, @escaping () -> Void) -> Void,
         source: ContentSource
     ) {
+        self.context = context
         self.getController = getController
         self.requestUpdate = requestUpdate
         self.requestUpdateOverlayWantsToBeBelowKeyboard = requestUpdateOverlayWantsToBeBelowKeyboard
@@ -308,6 +312,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         self.actionsContainerNode = ASDisplayNode()
         self.actionsStackNode = ContextControllerActionsStackNode(
+            context: self.context,
             getController: getController,
             requestDismiss: { result in
                 requestDismiss(result)
@@ -316,6 +321,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         )
         
         self.additionalActionsStackNode = ContextControllerActionsStackNode(
+            context: self.context,
             getController: getController,
             requestDismiss: { result in
                 requestDismiss(result)
@@ -1489,8 +1495,32 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
             }
             
-            let completeWithActionStack = itemContentNode == nil && controllerContentNode == nil
+            var restoreOverlayViews: [() -> Void] = []
+            if let overlayViews = self.getController()?.getOverlayViews?(), !overlayViews.isEmpty, let itemContentNode, let contentNodeSupernode = itemContentNode.supernode {
+                for view in overlayViews {
+                    let originalFrame = view.frame
+                    let originalSuperview = view.superview
+                    let originalIndex = view.superview?.subviews.firstIndex(of: view)
+                    let originalGroupOpacity = view.layer.allowsGroupOpacity
+                    
+                    contentNodeSupernode.view.insertSubview(view, aboveSubview: itemContentNode.view)
+                    view.frame = view.convert(view.bounds, to: contentNodeSupernode.view)
+                    view.layer.allowsGroupOpacity = true
+                    view.layer.animateAlpha(from: 0.0, to: view.alpha, duration: 0.2)
+                    
+                    restoreOverlayViews.append({
+                        view.frame = originalFrame
+                        view.layer.allowsGroupOpacity = originalGroupOpacity
+                        if let originalIndex {
+                            originalSuperview?.insertSubview(view, at: originalIndex)
+                        } else {
+                            originalSuperview?.addSubview(view)
+                        }
+                    })
+                }
+            }
             
+            let completeWithActionStack = itemContentNode == nil && controllerContentNode == nil
             if let contentNode = itemContentNode {
                 contentNode.containingItem.willUpdateIsExtractedToContextPreview?(false, transition)
                 
@@ -1536,7 +1566,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     additive: true,
                     completion: { [weak self] _ in
                         Queue.mainQueue().after(reactionContextNodeIsAnimatingOut ? 0.2 * UIView.animationDurationFactor() : 0.0, {
-                            
                             if let strongSelf = self, let contentNode = strongSelf.itemContentNode {
                                 switch contentNode.containingItem {
                                 case let .node(containingNode):
@@ -1549,6 +1578,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                             contentNode.containingItem.isExtractedToContextPreview = false
                             contentNode.containingItem.isExtractedToContextPreviewUpdated?(false)
                             
+                            restoreOverlayViews.forEach({ $0() })
                             completion()
                         })
                     }
@@ -1589,6 +1619,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
                 
                 contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.8, removeOnCompletion: false, completion: { _ in
+                    restoreOverlayViews.forEach({ $0() })
                     completion()
                 })
                 contentNode.layer.animate(
@@ -1624,6 +1655,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 removeOnCompletion: false,
                 completion: { _ in
                     if completeWithActionStack {
+                        restoreOverlayViews.forEach({ $0() })
                         completion()
                     }
                 }
@@ -1650,18 +1682,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             if let reactionContextNode = self.reactionContextNode {
                 reactionContextNode.animateOut(to: currentContentScreenFrame, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-            }
-            
-            if let overlayViews = self.getController()?.getOverlayViews?(), !overlayViews.isEmpty {
-                for view in overlayViews {
-                    if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
-                        snapshotView.frame = view.convert(view.bounds, to: nil)
-                        self.view.addSubview(snapshotView)
-                        snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
-                        })
-                    }
-                }
             }
         case .none:
             if animateReactionsIn, let reactionContextNode = self.reactionContextNode {

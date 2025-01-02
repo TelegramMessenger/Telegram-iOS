@@ -91,6 +91,7 @@ public enum ChatListNotice: Equatable {
     case reviewLogin(newSessionReview: NewSessionReview, totalCount: Int)
     case premiumGrace
     case starsSubscriptionLowBalance(amount: StarsAmount, peers: [EnginePeer])
+    case setupPhoto(EnginePeer)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {

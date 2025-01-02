@@ -53,6 +53,10 @@
     return (int32_t)_impl->size;
 }
 
+- (bool)isKeyframe {
+    return (_impl->flags & AV_PKT_FLAG_KEY) != 0;
+}
+
 - (uint8_t *)data {
     return _impl->data;
 }

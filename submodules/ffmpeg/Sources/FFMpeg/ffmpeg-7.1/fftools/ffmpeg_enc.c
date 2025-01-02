@@ -38,7 +38,12 @@
 
 #include "libavcodec/avcodec.h"
 
-struct Encoder {
+typedef struct EncoderPriv {
+    Encoder        e;
+
+    void          *log_parent;
+    char           log_name[32];
+
     // combined size of all the packets received from the encoder
     uint64_t data_size;
 
@@ -50,7 +55,12 @@ struct Encoder {
 
     Scheduler      *sch;
     unsigned        sch_idx;
-};
+} EncoderPriv;
+
+static EncoderPriv *ep_from_enc(Encoder *enc)
+{
+    return (EncoderPriv*)enc;
+}
 
 // data that is local to the decoder thread and not visible outside of it
 typedef struct EncoderThread {
@@ -65,56 +75,90 @@ void enc_free(Encoder **penc)
     if (!enc)
         return;
 
+    if (enc->enc_ctx)
+        av_freep(&enc->enc_ctx->stats_in);
+    avcodec_free_context(&enc->enc_ctx);
+
     av_freep(penc);
 }
 
-int enc_alloc(Encoder **penc, const AVCodec *codec,
-              Scheduler *sch, unsigned sch_idx)
+static const char *enc_item_name(void *obj)
 {
-    Encoder *enc;
+    const EncoderPriv *ep = obj;
+
+    return ep->log_name;
+}
+
+static const AVClass enc_class = {
+    .class_name                = "Encoder",
+    .version                   = LIBAVUTIL_VERSION_INT,
+    .parent_log_context_offset = offsetof(EncoderPriv, log_parent),
+    .item_name                 = enc_item_name,
+};
+
+int enc_alloc(Encoder **penc, const AVCodec *codec,
+              Scheduler *sch, unsigned sch_idx, void *log_parent)
+{
+    EncoderPriv *ep;
+    int ret = 0;
 
     *penc = NULL;
 
-    enc = av_mallocz(sizeof(*enc));
-    if (!enc)
+    ep = av_mallocz(sizeof(*ep));
+    if (!ep)
         return AVERROR(ENOMEM);
 
-    enc->sch     = sch;
-    enc->sch_idx = sch_idx;
+    ep->e.class    = &enc_class;
+    ep->log_parent = log_parent;
 
-    *penc = enc;
+    ep->sch     = sch;
+    ep->sch_idx = sch_idx;
+
+    snprintf(ep->log_name, sizeof(ep->log_name), "enc:%s", codec->name);
+
+    ep->e.enc_ctx = avcodec_alloc_context3(codec);
+    if (!ep->e.enc_ctx) {
+        ret = AVERROR(ENOMEM);
+        goto fail;
+    }
+
+    *penc = &ep->e;
 
     return 0;
+fail:
+    enc_free((Encoder**)&ep);
+    return ret;
 }
 
-static int hw_device_setup_for_encode(OutputStream *ost, AVBufferRef *frames_ref)
+static int hw_device_setup_for_encode(Encoder *e, AVCodecContext *enc_ctx,
+                                      AVBufferRef *frames_ref)
 {
     const AVCodecHWConfig *config;
     HWDevice *dev = NULL;
 
     if (frames_ref &&
         ((AVHWFramesContext*)frames_ref->data)->format ==
-        ost->enc_ctx->pix_fmt) {
+        enc_ctx->pix_fmt) {
         // Matching format, will try to use hw_frames_ctx.
     } else {
         frames_ref = NULL;
     }
 
     for (int i = 0;; i++) {
-        config = avcodec_get_hw_config(ost->enc_ctx->codec, i);
+        config = avcodec_get_hw_config(enc_ctx->codec, i);
         if (!config)
             break;
 
         if (frames_ref &&
             config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX &&
             (config->pix_fmt == AV_PIX_FMT_NONE ||
-             config->pix_fmt == ost->enc_ctx->pix_fmt)) {
-            av_log(ost->enc_ctx, AV_LOG_VERBOSE, "Using input "
+             config->pix_fmt == enc_ctx->pix_fmt)) {
+            av_log(e, AV_LOG_VERBOSE, "Using input "
                    "frames context (format %s) with %s encoder.\n",
-                   av_get_pix_fmt_name(ost->enc_ctx->pix_fmt),
-                   ost->enc_ctx->codec->name);
-            ost->enc_ctx->hw_frames_ctx = av_buffer_ref(frames_ref);
-            if (!ost->enc_ctx->hw_frames_ctx)
+                   av_get_pix_fmt_name(enc_ctx->pix_fmt),
+                   enc_ctx->codec->name);
+            enc_ctx->hw_frames_ctx = av_buffer_ref(frames_ref);
+            if (!enc_ctx->hw_frames_ctx)
                 return AVERROR(ENOMEM);
             return 0;
         }
@@ -125,40 +169,15 @@ static int hw_device_setup_for_encode(OutputStream *ost, AVBufferRef *frames_ref
     }
 
     if (dev) {
-        av_log(ost->enc_ctx, AV_LOG_VERBOSE, "Using device %s "
+        av_log(e, AV_LOG_VERBOSE, "Using device %s "
                "(type %s) with %s encoder.\n", dev->name,
-               av_hwdevice_get_type_name(dev->type), ost->enc_ctx->codec->name);
-        ost->enc_ctx->hw_device_ctx = av_buffer_ref(dev->device_ref);
-        if (!ost->enc_ctx->hw_device_ctx)
+               av_hwdevice_get_type_name(dev->type), enc_ctx->codec->name);
+        enc_ctx->hw_device_ctx = av_buffer_ref(dev->device_ref);
+        if (!enc_ctx->hw_device_ctx)
             return AVERROR(ENOMEM);
     } else {
         // No device required, or no device available.
     }
-    return 0;
-}
-
-static int set_encoder_id(OutputFile *of, OutputStream *ost)
-{
-    const char *cname = ost->enc_ctx->codec->name;
-    uint8_t *encoder_string;
-    int encoder_string_len;
-
-    if (av_dict_get(ost->st->metadata, "encoder",  NULL, 0))
-        return 0;
-
-    encoder_string_len = sizeof(LIBAVCODEC_IDENT) + strlen(cname) + 2;
-    encoder_string     = av_mallocz(encoder_string_len);
-    if (!encoder_string)
-        return AVERROR(ENOMEM);
-
-    if (!of->bitexact && !ost->bitexact)
-        av_strlcpy(encoder_string, LIBAVCODEC_IDENT " ", encoder_string_len);
-    else
-        av_strlcpy(encoder_string, "Lavc ", encoder_string_len);
-    av_strlcat(encoder_string, cname, encoder_string_len);
-    av_dict_set(&ost->st->metadata, "encoder",  encoder_string,
-                AV_DICT_DONT_STRDUP_VAL | AV_DICT_DONT_OVERWRITE);
-
     return 0;
 }
 
@@ -167,7 +186,8 @@ int enc_open(void *opaque, const AVFrame *frame)
     OutputStream *ost = opaque;
     InputStream *ist = ost->ist;
     Encoder              *e = ost->enc;
-    AVCodecContext *enc_ctx = ost->enc_ctx;
+    EncoderPriv         *ep = ep_from_enc(e);
+    AVCodecContext *enc_ctx = e->enc_ctx;
     Decoder            *dec = NULL;
     const AVCodec      *enc = enc_ctx->codec;
     OutputFile          *of = ost->file;
@@ -175,7 +195,7 @@ int enc_open(void *opaque, const AVFrame *frame)
     int frame_samples = 0;
     int ret;
 
-    if (e->opened)
+    if (ep->opened)
         return 0;
 
     // frame is always non-NULL for audio and video
@@ -200,10 +220,6 @@ int enc_open(void *opaque, const AVFrame *frame)
         }
     }
 
-    ret = set_encoder_id(of, ost);
-    if (ret < 0)
-        return ret;
-
     if (ist)
         dec = ist->decoder;
 
@@ -211,7 +227,6 @@ int enc_open(void *opaque, const AVFrame *frame)
     if (ost->type == AVMEDIA_TYPE_AUDIO || ost->type == AVMEDIA_TYPE_VIDEO) {
         enc_ctx->time_base      = frame->time_base;
         enc_ctx->framerate      = fd->frame_rate_filter;
-        ost->st->avg_frame_rate = fd->frame_rate_filter;
     }
 
     switch (enc_ctx->codec_type) {
@@ -238,7 +253,7 @@ int enc_open(void *opaque, const AVFrame *frame)
                    frame->height > 0);
         enc_ctx->width  = frame->width;
         enc_ctx->height = frame->height;
-        enc_ctx->sample_aspect_ratio = ost->st->sample_aspect_ratio =
+        enc_ctx->sample_aspect_ratio =
             ost->frame_aspect_ratio.num ? // overridden by the -aspect cli option
             av_mul_q(ost->frame_aspect_ratio, (AVRational){ enc_ctx->height, enc_ctx->width }) :
             frame->sample_aspect_ratio;
@@ -312,42 +327,31 @@ int enc_open(void *opaque, const AVFrame *frame)
 
     enc_ctx->flags |= AV_CODEC_FLAG_FRAME_DURATION;
 
-    ret = hw_device_setup_for_encode(ost, frame ? frame->hw_frames_ctx : NULL);
+    ret = hw_device_setup_for_encode(e, enc_ctx, frame ? frame->hw_frames_ctx : NULL);
     if (ret < 0) {
-        av_log(ost, AV_LOG_ERROR,
+        av_log(e, AV_LOG_ERROR,
                "Encoding hardware device setup failed: %s\n", av_err2str(ret));
         return ret;
     }
 
-    if ((ret = avcodec_open2(ost->enc_ctx, enc, NULL)) < 0) {
+    if ((ret = avcodec_open2(enc_ctx, enc, NULL)) < 0) {
         if (ret != AVERROR_EXPERIMENTAL)
-            av_log(ost, AV_LOG_ERROR, "Error while opening encoder - maybe "
+            av_log(e, AV_LOG_ERROR, "Error while opening encoder - maybe "
                    "incorrect parameters such as bit_rate, rate, width or height.\n");
         return ret;
     }
 
-    e->opened = 1;
+    ep->opened = 1;
 
-    if (ost->enc_ctx->frame_size)
-        frame_samples = ost->enc_ctx->frame_size;
+    if (enc_ctx->frame_size)
+        frame_samples = enc_ctx->frame_size;
 
-    if (ost->enc_ctx->bit_rate && ost->enc_ctx->bit_rate < 1000 &&
-        ost->enc_ctx->codec_id != AV_CODEC_ID_CODEC2 /* don't complain about 700 bit/s modes */)
-        av_log(ost, AV_LOG_WARNING, "The bitrate parameter is set too low."
+    if (enc_ctx->bit_rate && enc_ctx->bit_rate < 1000 &&
+        enc_ctx->codec_id != AV_CODEC_ID_CODEC2 /* don't complain about 700 bit/s modes */)
+        av_log(e, AV_LOG_WARNING, "The bitrate parameter is set too low."
                                     " It takes bits/s as argument, not kbits/s\n");
 
-    ret = avcodec_parameters_from_context(ost->par_in, ost->enc_ctx);
-    if (ret < 0) {
-        av_log(ost, AV_LOG_FATAL,
-               "Error initializing the output stream codec context.\n");
-        return ret;
-    }
-
-    // copy timebase while removing common factors
-    if (ost->st->time_base.num <= 0 || ost->st->time_base.den <= 0)
-        ost->st->time_base = av_add_q(ost->enc_ctx->time_base, (AVRational){0, 1});
-
-    ret = of_stream_init(of, ost);
+    ret = of_stream_init(of, ost, enc_ctx);
     if (ret < 0)
         return ret;
 
@@ -369,19 +373,20 @@ static int do_subtitle_out(OutputFile *of, OutputStream *ost, const AVSubtitle *
                            AVPacket *pkt)
 {
     Encoder *e = ost->enc;
+    EncoderPriv *ep = ep_from_enc(e);
     int subtitle_out_max_size = 1024 * 1024;
     int subtitle_out_size, nb, i, ret;
     AVCodecContext *enc;
     int64_t pts;
 
     if (sub->pts == AV_NOPTS_VALUE) {
-        av_log(ost, AV_LOG_ERROR, "Subtitle packets must have a pts\n");
+        av_log(e, AV_LOG_ERROR, "Subtitle packets must have a pts\n");
         return exit_on_error ? AVERROR(EINVAL) : 0;
     }
     if ((of->start_time != AV_NOPTS_VALUE && sub->pts < of->start_time))
         return 0;
 
-    enc = ost->enc_ctx;
+    enc = e->enc_ctx;
 
     /* Note: DVB subtitle need one packet to draw them and one other
        packet to clear them */
@@ -420,11 +425,11 @@ static int do_subtitle_out(OutputFile *of, OutputStream *ost, const AVSubtitle *
             local_sub.rects += i;
         }
 
-        ost->frames_encoded++;
+        e->frames_encoded++;
 
         subtitle_out_size = avcodec_encode_subtitle(enc, pkt->data, pkt->size, &local_sub);
         if (subtitle_out_size < 0) {
-            av_log(ost, AV_LOG_FATAL, "Subtitle encoding failed\n");
+            av_log(e, AV_LOG_FATAL, "Subtitle encoding failed\n");
             return subtitle_out_size;
         }
 
@@ -442,7 +447,7 @@ static int do_subtitle_out(OutputFile *of, OutputStream *ost, const AVSubtitle *
         }
         pkt->dts = pkt->pts;
 
-        ret = sch_enc_send(e->sch, e->sch_idx, pkt);
+        ret = sch_enc_send(ep->sch, ep->sch_idx, pkt);
         if (ret < 0) {
             av_packet_unref(pkt);
             return ret;
@@ -457,6 +462,7 @@ void enc_stats_write(OutputStream *ost, EncStats *es,
                      uint64_t frame_num)
 {
     Encoder      *e = ost->enc;
+    EncoderPriv *ep = ep_from_enc(e);
     AVIOContext *io = es->io;
     AVRational   tb = frame ? frame->time_base : pkt->time_base;
     int64_t     pts = frame ? frame->pts : pkt->pts;
@@ -494,7 +500,7 @@ void enc_stats_write(OutputStream *ost, EncStats *es,
 
         if (frame) {
             switch (c->type) {
-            case ENC_STATS_SAMPLE_NUM:  avio_printf(io, "%"PRIu64,  ost->samples_encoded);          continue;
+            case ENC_STATS_SAMPLE_NUM:  avio_printf(io, "%"PRIu64,  e->samples_encoded);            continue;
             case ENC_STATS_NB_SAMPLES:  avio_printf(io, "%d",       frame->nb_samples);             continue;
             default: av_assert0(0);
             }
@@ -512,7 +518,7 @@ void enc_stats_write(OutputStream *ost, EncStats *es,
             }
             case ENC_STATS_AVG_BITRATE: {
                 double duration = pkt->dts * av_q2d(tb);
-                avio_printf(io, "%g",  duration > 0 ? 8.0 * e->data_size / duration : -1.);
+                avio_printf(io, "%g",  duration > 0 ? 8.0 * ep->data_size / duration : -1.);
                 continue;
             }
             default: av_assert0(0);
@@ -533,9 +539,10 @@ static inline double psnr(double d)
 static int update_video_stats(OutputStream *ost, const AVPacket *pkt, int write_vstats)
 {
     Encoder        *e = ost->enc;
+    EncoderPriv   *ep = ep_from_enc(e);
     const uint8_t *sd = av_packet_get_side_data(pkt, AV_PKT_DATA_QUALITY_STATS,
                                                 NULL);
-    AVCodecContext *enc = ost->enc_ctx;
+    AVCodecContext *enc = e->enc_ctx;
     enum AVPictureType pict_type;
     int64_t frame_number;
     double ti1, bitrate, avg_bitrate;
@@ -566,7 +573,7 @@ static int update_video_stats(OutputStream *ost, const AVPacket *pkt, int write_
         }
     }
 
-    frame_number = e->packets_encoded;
+    frame_number = ep->packets_encoded;
     if (vstats_version <= 1) {
         fprintf(vstats_file, "frame= %5"PRId64" q= %2.1f ", frame_number,
                 quality / (float)FF_QP2LAMBDA);
@@ -586,9 +593,9 @@ static int update_video_stats(OutputStream *ost, const AVPacket *pkt, int write_
         ti1 = 0.01;
 
     bitrate     = (pkt->size * 8) / av_q2d(enc->time_base) / 1000.0;
-    avg_bitrate = (double)(e->data_size * 8) / ti1 / 1000.0;
+    avg_bitrate = (double)(ep->data_size * 8) / ti1 / 1000.0;
     fprintf(vstats_file, "s_size= %8.0fKiB time= %0.3f br= %7.1fkbits/s avg_br= %7.1fkbits/s ",
-           (double)e->data_size / 1024, ti1, bitrate, avg_bitrate);
+           (double)ep->data_size / 1024, ti1, bitrate, avg_bitrate);
     fprintf(vstats_file, "type= %c\n", av_get_picture_type_char(pict_type));
 
     return 0;
@@ -598,7 +605,8 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
                         AVPacket *pkt)
 {
     Encoder            *e = ost->enc;
-    AVCodecContext   *enc = ost->enc_ctx;
+    EncoderPriv       *ep = ep_from_enc(e);
+    AVCodecContext   *enc = e->enc_ctx;
     const char *type_desc = av_get_media_type_string(enc->codec_type);
     const char    *action = frame ? "encode" : "flush";
     int ret;
@@ -613,13 +621,13 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
 
         if (ost->enc_stats_pre.io)
             enc_stats_write(ost, &ost->enc_stats_pre, frame, NULL,
-                            ost->frames_encoded);
+                            e->frames_encoded);
 
-        ost->frames_encoded++;
-        ost->samples_encoded += frame->nb_samples;
+        e->frames_encoded++;
+        e->samples_encoded += frame->nb_samples;
 
         if (debug_ts) {
-            av_log(ost, AV_LOG_INFO, "encoder <- type:%s "
+            av_log(e, AV_LOG_INFO, "encoder <- type:%s "
                    "frame_pts:%s frame_pts_time:%s time_base:%d/%d\n",
                    type_desc,
                    av_ts2str(frame->pts), av_ts2timestr(frame->pts, &enc->time_base),
@@ -634,7 +642,7 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
 
     ret = avcodec_send_frame(enc, frame);
     if (ret < 0 && !(ret == AVERROR_EOF && !frame)) {
-        av_log(ost, AV_LOG_ERROR, "Error submitting %s frame to the encoder\n",
+        av_log(e, AV_LOG_ERROR, "Error submitting %s frame to the encoder\n",
                type_desc);
         return ret;
     }
@@ -659,7 +667,7 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
             return 0;
         } else if (ret < 0) {
             if (ret != AVERROR_EOF)
-                av_log(ost, AV_LOG_ERROR, "%s encoding failed\n", type_desc);
+                av_log(e, AV_LOG_ERROR, "%s encoding failed\n", type_desc);
             return ret;
         }
 
@@ -670,7 +678,7 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
 
         // attach stream parameters to first packet if requested
         avcodec_parameters_free(&fd->par_enc);
-        if (e->attach_par && !e->packets_encoded) {
+        if (ep->attach_par && !ep->packets_encoded) {
             fd->par_enc = avcodec_parameters_alloc();
             if (!fd->par_enc)
                 return AVERROR(ENOMEM);
@@ -690,10 +698,10 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
 
         if (ost->enc_stats_post.io)
             enc_stats_write(ost, &ost->enc_stats_post, NULL, pkt,
-                            e->packets_encoded);
+                            ep->packets_encoded);
 
         if (debug_ts) {
-            av_log(ost, AV_LOG_INFO, "encoder -> type:%s "
+            av_log(e, AV_LOG_INFO, "encoder -> type:%s "
                    "pkt_pts:%s pkt_pts_time:%s pkt_dts:%s pkt_dts_time:%s "
                    "duration:%s duration_time:%s\n",
                    type_desc,
@@ -702,11 +710,11 @@ static int encode_frame(OutputFile *of, OutputStream *ost, AVFrame *frame,
                    av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, &enc->time_base));
         }
 
-        e->data_size += pkt->size;
+        ep->data_size += pkt->size;
 
-        e->packets_encoded++;
+        ep->packets_encoded++;
 
-        ret = sch_enc_send(e->sch, e->sch_idx, pkt);
+        ret = sch_enc_send(ep->sch, ep->sch_idx, pkt);
         if (ret < 0) {
             av_packet_unref(pkt);
             return ret;
@@ -764,6 +772,7 @@ force_keyframe:
 
 static int frame_encode(OutputStream *ost, AVFrame *frame, AVPacket *pkt)
 {
+    Encoder *e = ost->enc;
     OutputFile *of = ost->file;
     enum AVMediaType type = ost->type;
 
@@ -781,8 +790,8 @@ static int frame_encode(OutputStream *ost, AVFrame *frame, AVPacket *pkt)
             return AVERROR_EOF;
 
         if (type == AVMEDIA_TYPE_VIDEO) {
-            frame->quality   = ost->enc_ctx->global_quality;
-            frame->pict_type = forced_kf_apply(ost, &ost->kf, frame);
+            frame->quality   = e->enc_ctx->global_quality;
+            frame->pict_type = forced_kf_apply(e, &ost->kf, frame);
 
 #if FFMPEG_OPT_TOP
             if (ost->top_field_first >= 0) {
@@ -791,9 +800,9 @@ static int frame_encode(OutputStream *ost, AVFrame *frame, AVPacket *pkt)
             }
 #endif
         } else {
-            if (!(ost->enc_ctx->codec->capabilities & AV_CODEC_CAP_PARAM_CHANGE) &&
-                ost->enc_ctx->ch_layout.nb_channels != frame->ch_layout.nb_channels) {
-                av_log(ost, AV_LOG_ERROR,
+            if (!(e->enc_ctx->codec->capabilities & AV_CODEC_CAP_PARAM_CHANGE) &&
+                e->enc_ctx->ch_layout.nb_channels != frame->ch_layout.nb_channels) {
+                av_log(e, AV_LOG_ERROR,
                        "Audio channel count changed and encoder does not support parameter changes\n");
                 return 0;
             }
@@ -807,7 +816,7 @@ static void enc_thread_set_name(const OutputStream *ost)
 {
     char name[16];
     snprintf(name, sizeof(name), "enc%d:%d:%s", ost->file->index, ost->index,
-             ost->enc_ctx->codec->name);
+             ost->enc->enc_ctx->codec->name);
     ff_thread_setname(name);
 }
 
@@ -842,6 +851,7 @@ int encoder_thread(void *arg)
 {
     OutputStream *ost = arg;
     Encoder        *e = ost->enc;
+    EncoderPriv   *ep = ep_from_enc(e);
     EncoderThread et;
     int ret = 0, input_status = 0;
     int name_set = 0;
@@ -864,17 +874,17 @@ int encoder_thread(void *arg)
     }
 
     while (!input_status) {
-        input_status = sch_enc_receive(e->sch, e->sch_idx, et.frame);
+        input_status = sch_enc_receive(ep->sch, ep->sch_idx, et.frame);
         if (input_status < 0) {
             if (input_status == AVERROR_EOF) {
-                av_log(ost, AV_LOG_VERBOSE, "Encoder thread received EOF\n");
-                if (e->opened)
+                av_log(e, AV_LOG_VERBOSE, "Encoder thread received EOF\n");
+                if (ep->opened)
                     break;
 
-                av_log(ost, AV_LOG_ERROR, "Could not open encoder before EOF\n");
+                av_log(e, AV_LOG_ERROR, "Could not open encoder before EOF\n");
                 ret = AVERROR(EINVAL);
             } else {
-                av_log(ost, AV_LOG_ERROR, "Error receiving a frame for encoding: %s\n",
+                av_log(e, AV_LOG_ERROR, "Error receiving a frame for encoding: %s\n",
                        av_err2str(ret));
                 ret = input_status;
             }
@@ -893,9 +903,9 @@ int encoder_thread(void *arg)
 
         if (ret < 0) {
             if (ret == AVERROR_EOF)
-                av_log(ost, AV_LOG_VERBOSE, "Encoder returned EOF, finishing\n");
+                av_log(e, AV_LOG_VERBOSE, "Encoder returned EOF, finishing\n");
             else
-                av_log(ost, AV_LOG_ERROR, "Error encoding a frame: %s\n",
+                av_log(e, AV_LOG_ERROR, "Error encoding a frame: %s\n",
                        av_err2str(ret));
             break;
         }
@@ -905,7 +915,7 @@ int encoder_thread(void *arg)
     if (ret == 0 || ret == AVERROR_EOF) {
         ret = frame_encode(ost, NULL, et.pkt);
         if (ret < 0 && ret != AVERROR_EOF)
-            av_log(ost, AV_LOG_ERROR, "Error flushing encoder: %s\n",
+            av_log(e, AV_LOG_ERROR, "Error flushing encoder: %s\n",
                    av_err2str(ret));
     }
 
@@ -921,6 +931,7 @@ finish:
 
 int enc_loopback(Encoder *enc)
 {
-    enc->attach_par = 1;
-    return enc->sch_idx;
+    EncoderPriv *ep = ep_from_enc(enc);
+    ep->attach_par = 1;
+    return ep->sch_idx;
 }

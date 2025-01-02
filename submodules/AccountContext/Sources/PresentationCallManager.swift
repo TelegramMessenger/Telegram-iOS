@@ -57,14 +57,14 @@ public struct PresentationCallState: Equatable {
     public enum VideoState: Equatable {
         case notAvailable
         case inactive
-        case active(isScreencast: Bool)
-        case paused(isScreencast: Bool)
+        case active(isScreencast: Bool, endpointId: String)
+        case paused(isScreencast: Bool, endpointId: String)
     }
     
     public enum RemoteVideoState: Equatable {
         case inactive
-        case active
-        case paused
+        case active(endpointId: String)
+        case paused(endpointId: String)
     }
     
     public enum RemoteAudioState: Equatable {
@@ -164,7 +164,8 @@ public protocol PresentationCall: AnyObject {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
+    func createConferenceIfPossible()
+    
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
 
@@ -395,7 +396,7 @@ public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
     var internalId: CallSessionInternalId { get }
-    var peerId: EnginePeer.Id { get }
+    var peerId: EnginePeer.Id? { get }
     
     var hasVideo: Bool { get }
     var hasScreencast: Bool { get }
@@ -459,7 +460,6 @@ public protocol PresentationGroupCall: AnyObject {
     
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
     
-    func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void)
     func makeOutgoingVideoView(requestClone: Bool, completion: @escaping (PresentationCallVideoView?, PresentationCallVideoView?) -> Void)
     
     func loadMoreMembers(token: String)

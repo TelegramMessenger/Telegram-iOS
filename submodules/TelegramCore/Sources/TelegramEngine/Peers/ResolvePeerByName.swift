@@ -25,14 +25,16 @@ public enum ResolvePeerResult {
 }
 
 func _internal_resolvePeerByName(account: Account, name: String, referrer: String?, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerIdByNameResult, NoError> {
+    return _internal_resolvePeerByName(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, name: name, referrer: referrer, ageLimit: ageLimit)
+}
+    
+func _internal_resolvePeerByName(postbox: Postbox, network: Network, accountPeerId: PeerId, name: String, referrer: String?, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerIdByNameResult, NoError> {
     var normalizedName = name
     if normalizedName.hasPrefix("@") {
        normalizedName = String(normalizedName[name.index(after: name.startIndex)...])
     }
     
-    let accountPeerId = account.peerId
-    
-    return account.postbox.transaction { transaction -> CachedResolvedByNamePeer? in
+    return postbox.transaction { transaction -> CachedResolvedByNamePeer? in
         return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)))?.get(CachedResolvedByNamePeer.self)
     }
     |> mapToSignal { cachedEntry -> Signal<ResolvePeerIdByNameResult, NoError> in
@@ -45,12 +47,12 @@ func _internal_resolvePeerByName(account: Account, name: String, referrer: Strin
                 flags |= 1 << 0
             }
             return .single(.progress)
-            |> then(account.network.request(Api.functions.contacts.resolveUsername(flags: flags, username: normalizedName, referer: referrer))
+            |> then(network.request(Api.functions.contacts.resolveUsername(flags: flags, username: normalizedName, referer: referrer))
             |> mapError { _ -> Void in
                 return Void()
             }
             |> mapToSignal { result -> Signal<ResolvePeerIdByNameResult, Void> in
-                return account.postbox.transaction { transaction -> ResolvePeerIdByNameResult in
+                return postbox.transaction { transaction -> ResolvePeerIdByNameResult in
                     var peerId: PeerId? = nil
                     
                     switch result {

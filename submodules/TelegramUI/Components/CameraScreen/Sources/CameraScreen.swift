@@ -154,6 +154,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let hasAppeared: Bool
     let isVisible: Bool
     let panelWidth: CGFloat
+    let resolvedCodePeer: EnginePeer?
     let animateFlipAction: ActionSlot<Void>
     let animateShutter: () -> Void
     let toggleCameraPositionAction: ActionSlot<Void>
@@ -162,6 +163,7 @@ private final class CameraScreenComponent: CombinedComponent {
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: ActionSlot<Signal<CameraScreenImpl.Result, NoError>>
+    let openResolvedPeer: (EnginePeer) -> Void
     
     init(
         context: AccountContext,
@@ -171,6 +173,7 @@ private final class CameraScreenComponent: CombinedComponent {
         hasAppeared: Bool,
         isVisible: Bool,
         panelWidth: CGFloat,
+        resolvedCodePeer: EnginePeer?,
         animateFlipAction: ActionSlot<Void>,
         animateShutter: @escaping () -> Void,
         toggleCameraPositionAction: ActionSlot<Void>,
@@ -178,7 +181,8 @@ private final class CameraScreenComponent: CombinedComponent {
         getController: @escaping () -> CameraScreenImpl?,
         present: @escaping (ViewController) -> Void,
         push: @escaping (ViewController) -> Void,
-        completion: ActionSlot<Signal<CameraScreenImpl.Result, NoError>>
+        completion: ActionSlot<Signal<CameraScreenImpl.Result, NoError>>,
+        openResolvedPeer: @escaping (EnginePeer) -> Void
     ) {
         self.context = context
         self.cameraState = cameraState
@@ -187,6 +191,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.hasAppeared = hasAppeared
         self.isVisible = isVisible
         self.panelWidth = panelWidth
+        self.resolvedCodePeer = resolvedCodePeer
         self.animateFlipAction = animateFlipAction
         self.animateShutter = animateShutter
         self.toggleCameraPositionAction = toggleCameraPositionAction
@@ -195,6 +200,7 @@ private final class CameraScreenComponent: CombinedComponent {
         self.present = present
         self.push = push
         self.completion = completion
+        self.openResolvedPeer = openResolvedPeer
     }
     
     static func ==(lhs: CameraScreenComponent, rhs: CameraScreenComponent) -> Bool {
@@ -217,6 +223,9 @@ private final class CameraScreenComponent: CombinedComponent {
             return false
         }
         if lhs.panelWidth != rhs.panelWidth {
+            return false
+        }
+        if lhs.resolvedCodePeer != rhs.resolvedCodePeer {
             return false
         }
         return true
@@ -630,6 +639,10 @@ private final class CameraScreenComponent: CombinedComponent {
             self.updated(transition: .easeInOut(duration: 0.2))
         }
         
+        var isRecording: Bool {
+            return self.cameraState?.recording != CameraState.Recording.none
+        }
+        
         var isTakingPhoto = false
         func takePhoto() {
             guard let controller = self.getController(), let camera = controller.camera, let cameraState = self.cameraState else {
@@ -890,11 +903,14 @@ private final class CameraScreenComponent: CombinedComponent {
             state.cameraState = component.cameraState
             state.volumeButtonsListenerActive = component.hasAppeared && component.isVisible
             
-            let isSticker: Bool
-            if let controller = controller() as? CameraScreenImpl, case .sticker = controller.mode {
-                isSticker = true
-            } else {
-                isSticker = false
+            var isSticker = false
+            var isAvatar = false
+            if let controller = controller() as? CameraScreenImpl {
+                if case .sticker = controller.mode {
+                    isSticker = true
+                } else if case .avatar = controller.mode {
+                    isAvatar = true
+                }
             }
             
             let isTablet: Bool
@@ -1028,8 +1044,10 @@ private final class CameraScreenComponent: CombinedComponent {
             
             let captureControls = captureControls.update(
                 component: CaptureControlsComponent(
+                    context: component.context,
                     isTablet: isTablet,
                     isSticker: isSticker,
+                    hasGallery: !isSticker && !isAvatar,
                     hasAppeared: component.hasAppeared && hasAllRequiredAccess,
                     hasAccess: hasAllRequiredAccess,
                     hideControls: component.cameraState.collageProgress > 1.0 - .ulpOfOne,
@@ -1038,6 +1056,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     tintColor: controlsTintColor,
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
+                    resolvedCodePeer: state.isTakingPhoto || state.isRecording ? nil : component.resolvedCodePeer,
                     tag: captureControlsTag,
                     galleryButtonTag: galleryButtonTag,
                     shutterTapped: { [weak state] in
@@ -1096,7 +1115,8 @@ private final class CameraScreenComponent: CombinedComponent {
                             state.updateZoom(fraction: fraction)
                         }
                     },
-                    flipAnimationAction: animateFlipAction
+                    flipAnimationAction: animateFlipAction,
+                    openResolvedPeer: component.openResolvedPeer
                 ),
                 availableSize: captureControlsAvailableSize,
                 transition: context.transition
@@ -1259,7 +1279,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         rightMostButtonWidth = flashButton.size.width
                     }
                     
-                    if !isSticker && !isTablet {
+                    if !isSticker && !isAvatar && !isTablet {
                         var nextButtonX = availableSize.width - topControlInset - rightMostButtonWidth / 2.0 - 58.0
                         if Camera.isDualCameraSupported(forRoundVideo: false) && !component.cameraState.isCollageEnabled {
                             let dualButton = dualButton.update(
@@ -1581,6 +1601,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     public enum Mode {
         case story
         case sticker
+        case avatar
     }
     
     public enum PIPPosition: Int32 {
@@ -1618,6 +1639,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }
                 public let content: Content
                 public let frame: CGRect
+                public let contentScale: CGFloat
+                public let contentOffset: CGPoint
             }
             public let items: [Item]
         }
@@ -1687,6 +1710,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         fileprivate let backgroundView: UIView
         fileprivate let containerView: UIView
         fileprivate let componentHost: ComponentView<ViewControllerComponentContainer.Environment>
+        fileprivate let codeFrameView: CameraCodeFrameView
         private let previewContainerView: UIView
         
         private let collageContainerView: UIView
@@ -1821,7 +1845,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     isDualCameraEnabled = isDualCameraEnabledValue.boolValue
                 }
             }
-            if case .sticker = controller.mode {
+            if [.sticker, .avatar].contains(controller.mode) {
                 isDualCameraEnabled = false
             }
             
@@ -1835,6 +1859,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             if let cameraFrontPositionValue = UserDefaults.standard.object(forKey: "TelegramStoryCameraUseFrontPosition") as? NSNumber, cameraFrontPositionValue.boolValue {
                 cameraFrontPosition = true
             }
+            
+            self.codeFrameView = CameraCodeFrameView(frame: .zero)
             
             self.collageContainerView = UIView()
             self.collageContainerView.clipsToBounds = true
@@ -1901,6 +1927,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             self.previewContainerView.addSubview(self.previewBlurView)
             self.previewContainerView.addSubview(self.previewFrameLeftDimView)
             self.previewContainerView.addSubview(self.previewFrameRightDimView)
+            self.previewContainerView.addSubview(self.codeFrameView)
             self.containerView.addSubview(self.transitionDimView)
             self.view.addSubview(self.transitionCornersView)
             
@@ -1912,21 +1939,16 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 if let self {
                     let pipPosition = self.pipPosition
                     if self.cameraState.isCollageEnabled {
-                        if let collage = self.collage {
+                        if let collage = self.collage, let collageView = self.collageView {
                             if collage.isComplete {
                                 self.animateOutToEditor()
                                 self.controller?.completion(
-                                    collage.result
+                                    collageView.result
                                     |> beforeNext { [weak self] value in
                                         guard let self else {
                                             return
                                         }
                                         Queue.mainQueue().async {
-                                            if case .image = value {
-                                                Queue.mainQueue().after(0.3) {
-                                                    self.previewBlurPromise.set(true)
-                                                }
-                                            }
                                             self.mainPreviewView.isEnabled = false
                                             self.additionalPreviewView.isEnabled = false
                                             self.camera?.stopCapture()
@@ -2099,7 +2121,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         isDualEnabled: self.cameraState.isDualCameraEnabled,
                         audio: true,
                         photo: true,
-                        metadata: false
+                        metadata: true
                     ),
                     previewView: self.mainPreviewView,
                     secondaryPreviewView: self.additionalPreviewView
@@ -2216,6 +2238,29 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             if isNew {
+                let throttledSignal = camera.detectedCodes
+                |> mapToThrottled { next -> Signal<[CameraCode], NoError> in
+                    return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
+                }
+                self.controller?.codeDisposable = (throttledSignal
+                |> deliverOnMainQueue).start(next: { [weak self] codes in
+                    guard let self else {
+                        return
+                    }
+                    let filteredCodes = codes.filter {
+                        let message = $0.message.replacingOccurrences(of: "https://", with: "")
+                        if message.hasPrefix("t.me/c/") || message.hasPrefix("t.me/+") || message.hasPrefix("t.me/contact/") || message.hasPrefix("t.me/") {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    if let code = filteredCodes.first, !self.cameraState.isCollageEnabled && self.cameraState.recording == CameraState.Recording.none {
+                        self.controller?.updateFocusedCode(code)
+                    } else {
+                        self.controller?.updateFocusedCode(nil)
+                    }
+                })
                 camera.startCapture()
             }
             self.captureStartTimestamp = CACurrentMediaTime()
@@ -2287,7 +2332,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                                 gestureRecognizer.isEnabled = false
                                 gestureRecognizer.isEnabled = true
                             }
-                        case .sticker:
+                        case .sticker, .avatar:
                             if (abs(translation.y) > 10.0 || self.isDismissing) && self.hasAppeared {
                                 self.containerView.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translation.y, 0.0)
                                 if !self.isDismissing {
@@ -2308,7 +2353,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
                         
                         self.isDismissing = false
-                    case .sticker:
+                    case .sticker, .avatar:
                         let velocity = gestureRecognizer.velocity(in: self.view)
                         let transitionFraction = translation.y / self.frame.height
                         if abs(transitionFraction) > 0.3 || abs(velocity.y) > 1000.0 {
@@ -2495,7 +2540,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     }
                     self.mainPreviewAnimationWrapperView.layer.animateBounds(from: sourceBounds, to: self.mainPreviewView.bounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                     
-                    let sourceScale = sourceInnerFrame.height / self.previewContainerView.frame.height
+                    let sourceScale = max(sourceInnerFrame.width / self.previewContainerView.frame.width, sourceInnerFrame.height / self.previewContainerView.frame.height)
                     self.mainPreviewView.transform = CGAffineTransform.identity
                     self.mainPreviewAnimationWrapperView.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
                         self.mainPreviewContainerView.addSubview(self.mainPreviewView)
@@ -2562,10 +2607,14 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                     if let holder = controller.holder {
                         targetBounds = CGRect(origin: .zero, size: holder.parentView.frame.size.aspectFitted(targetBounds.size))
                     }
-                    self.mainPreviewView.center = self.mainPreviewView.center.offsetBy(dx: (targetBounds.width - self.mainPreviewView.bounds.width) / 2.0, dy: 0.0)
+                    
+                    let previousPosition = self.mainPreviewView.center
+                    self.mainPreviewView.center = self.mainPreviewView.center.offsetBy(dx: (targetBounds.width - self.mainPreviewView.bounds.width) / 2.0, dy: (targetBounds.height - self.mainPreviewView.bounds.height) / 2.0)
+                    self.mainPreviewView.layer.animatePosition(from: previousPosition, to: self.mainPreviewView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    
                     self.mainPreviewAnimationWrapperView.layer.animateBounds(from: self.mainPreviewView.bounds, to: targetBounds, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                     
-                    let targetScale = destinationInnerFrame.height / self.previewContainerView.frame.height
+                    let targetScale = max(destinationInnerFrame.width / self.previewContainerView.frame.width, destinationInnerFrame.height / self.previewContainerView.frame.height)
                     self.mainPreviewAnimationWrapperView.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 }
                 
@@ -2616,6 +2665,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             }
             
             Queue.mainQueue().after(1.5, {
+                self.controller?.updateFocusedCode(nil)
+                
                 if let collageView = self.collageView {
                     collageView.stopPlayback()
                 }
@@ -2833,7 +2884,11 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 if self.additionalPreviewContainerView.bounds.contains(self.view.convert(point, to: self.additionalPreviewContainerView)) {
                     return self.additionalPreviewContainerView
                 } else {
-                    return self.collageView ?? self.mainPreviewView
+                    if let collageView = self.collageView {
+                        return collageView.hitTest(self.view.convert(point, to: collageView), with: event)
+                    } else {
+                        return self.mainPreviewView
+                    }
                 }
             }
             return result
@@ -2926,7 +2981,8 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }
                 self.didAppear()
             }
-
+            
+            
             let componentSize = self.componentHost.update(
                 transition: transition,
                 component: AnyComponent(
@@ -2938,6 +2994,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         hasAppeared: self.hasAppeared,
                         isVisible: self.cameraIsActive && !self.hasGallery && self.postingAvailable,
                         panelWidth: panelWidth,
+                        resolvedCodePeer: controller.resolvedCodePeer,
                         animateFlipAction: self.animateFlipAction,
                         animateShutter: { [weak self] in
                             guard let self else {
@@ -2963,7 +3020,21 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                         push: { [weak self] c in
                             self?.controller?.push(c)
                         },
-                        completion: self.completion
+                        completion: self.completion,
+                        openResolvedPeer: { [weak self] peer in
+                            guard let self, let controller = self.controller else {
+                                return
+                            }
+                            let context = self.context
+                            let navigationController = controller.navigationController as? NavigationController
+                            controller.requestDismiss(animated: true, interactive: false)
+                            Queue.mainQueue().after(0.4) {
+                                guard let navigationController else {
+                                    return
+                                }
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                            }
+                        }
                     )
                 ),
                 environment: {
@@ -3001,6 +3072,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             
             transition.setFrame(view: self.previewContainerView, frame: previewContainerFrame)
             transition.setFrame(view: self.collageContainerView, frame: CGRect(origin: .zero, size: previewContainerFrame.size))
+            
+            transition.setFrame(view: self.codeFrameView, frame: CGRect(origin: .zero, size: previewContainerFrame.size))
+            self.codeFrameView.update(size: previewContainerFrame.size, code: controller.focusedCode)
             
             if self.cameraState.isCollageEnabled {
                 let collage: CameraCollage
@@ -3045,7 +3119,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                             self.controller?.updateCameraState({ $0.updatedIsCollageEnabled(false).updatedCollageProgress(0.0) }, transition: .spring(duration: 0.3))
                         } else {
                             let currentCount = self.cameraState.collageGrid.count
-                            for grid in collageGrids.reversed() {
+                            for grid in collageGrids {
                                 if grid.count == currentCount - 1 {
                                     self.controller?.updateCameraState({ $0.updatedCollageGrid(grid) }, transition: .spring(duration: 0.3))
                                     break
@@ -3164,7 +3238,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             let additionalPreviewInnerFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((circleSide - additionalPreviewInnerSize.width) / 2.0), y: floorToScreenPixels((circleSide - additionalPreviewInnerSize.height) / 2.0)), size: additionalPreviewInnerSize)
             
             if mainPreviewView.superview != self.mainPreviewContainerView {
-                if case .sticker = controller.mode, !self.animatedIn {
+                if [.sticker, .avatar].contains(controller.mode), !self.animatedIn {
                     
                 } else {
                     self.mainPreviewContainerView.insertSubview(mainPreviewView, at: 0)
@@ -3174,7 +3248,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 self.additionalPreviewContainerView.insertSubview(additionalPreviewView, at: 0)
             }
             
-            if case .sticker = controller.mode {
+            if [.sticker, .avatar].contains(controller.mode) {
                 if self.animatedIn {
                     mainPreviewView.frame = mainPreviewInnerFrame
                 }
@@ -3207,7 +3281,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
             transition.setPosition(view: self.transitionCornersView, position: CGPoint(x: layout.size.width + screenCornerRadius / 2.0, y: layout.size.height / 2.0))
             transition.setBounds(view: self.transitionCornersView, bounds: CGRect(origin: .zero, size: CGSize(width: screenCornerRadius, height: layout.size.height)))
             
-            if (controller.mode == .sticker || isTablet) && isFirstTime {
+            if ([.sticker, .avatar].contains(controller.mode) || isTablet) && isFirstTime {
                 self.animateIn()
             }
             
@@ -3255,6 +3329,17 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     
     private let postingAvailabilityPromise = Promise<StoriesUploadAvailability>()
     private var postingAvailabilityDisposable: Disposable?
+    
+    private var codeDisposable: Disposable?
+    private var resolveCodeDisposable: Disposable?
+    private var focusedCodePromise = ValuePromise<CameraCode?>()
+    var focusedCode: CameraCode? {
+        didSet {
+            self.focusedCodePromise.set(self.focusedCode)
+        }
+    }
+    private var resolvePeerDisposable = MetaDisposable()
+    private var resolvedCodePeer: EnginePeer?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -3312,6 +3397,9 @@ public class CameraScreenImpl: ViewController, CameraScreen {
     deinit {
         self.audioSessionDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
+        self.codeDisposable?.dispose()
+        self.resolveCodeDisposable?.dispose()
+        self.resolvePeerDisposable.dispose()
         if #available(iOS 13.0, *) {
             try? AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(false)
         }
@@ -3378,6 +3466,54 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                 }
             })
         }
+        
+        self.resolveCodeDisposable = (self.focusedCodePromise.get()
+        |> map { code in
+            return code?.message
+        }
+        |> distinctUntilChanged
+        |> mapToSignal { code -> Signal<String?, NoError> in
+            if let _ = code {
+                return .single(code)
+            } else {
+                return .single(code)
+                |> delay(1.0, queue: Queue.mainQueue())
+            }
+        }).start(next: { [weak self] code in
+            guard let self else {
+                return
+            }
+            if let code {
+                self.resolvePeerDisposable.set(
+                    (self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: code, skipUrlAuth: false)
+                     |> deliverOnMainQueue).start(next: { [weak self] resolvedUrl in
+                         guard let self else {
+                             return
+                         }
+                         if case let .peer(peer, _) = resolvedUrl, let peer {
+                             self.resolvedCodePeer = EnginePeer(peer)
+                             self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                         }
+                     })
+                )
+            } else {
+                self.resolvedCodePeer = nil
+                self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+            }
+        })
+    }
+    
+    private func updateFocusedCode(_ code: CameraCode?) {
+        if self.focusedCode != code {
+            self.focusedCode = code
+            if code == nil {
+                Queue.mainQueue().after(1.0, {
+                    self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                })
+            } else {
+                self.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+            }
+        }
     }
     
     private func requestAudioSession() {
@@ -3439,24 +3575,106 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         if let current = self.galleryController {
             controller = current
         } else {
-            controller = self.context.sharedContext.makeStoryMediaPickerScreen(context: self.context, isDark: true, forCollage: self.cameraState.isCollageEnabled, getSourceRect: { [weak self] in
-                if let self {
-                    if let galleryButton = self.node.componentHost.findTaggedView(tag: galleryButtonTag) {
-                        return galleryButton.convert(galleryButton.bounds, to: self.view).offsetBy(dx: 0.0, dy: -15.0)
+            var selectionLimit: Int?
+            if self.cameraState.isCollageEnabled, let collage = self.node.collage {
+                selectionLimit = collage.grid.count - collage.results.count
+            } else {
+                selectionLimit = 6
+            }
+            controller = self.context.sharedContext.makeStoryMediaPickerScreen(
+                context: self.context,
+                isDark: true,
+                forCollage: self.cameraState.isCollageEnabled,
+                selectionLimit: selectionLimit,
+                getSourceRect: { [weak self] in
+                    if let self {
+                        if let galleryButton = self.node.componentHost.findTaggedView(tag: galleryButtonTag) {
+                            return galleryButton.convert(galleryButton.bounds, to: self.view).offsetBy(dx: 0.0, dy: -15.0)
+                        } else {
+                            return .zero
+                        }
                     } else {
                         return .zero
                     }
-                } else {
-                    return .zero
-                }
-            }, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
-                if let self {
-                    if self.cameraState.isCollageEnabled {
-                        if let asset = result as? PHAsset {
+                }, completion: { [weak self] result, transitionView, transitionRect, transitionImage, transitionOut, dismissed in
+                    if let self {
+                        if self.cameraState.isCollageEnabled {
+                            if let asset = result as? PHAsset {
+                                if asset.mediaType == .video && asset.duration > 1.0 {
+                                    self.node.collage?.addResult(.single(.asset(asset)), snapshotView: nil)
+                                } else {
+                                    self.node.collage?.addResult(
+                                        assetImage(asset: asset, targetSize: CGSize(width: 1080, height: 1080), exact: false, deliveryMode: .highQualityFormat)
+                                        |> runOn(Queue.concurrentDefaultQueue())
+                                        |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
+                                            if let image {
+                                                return .single(.image(Result.Image(image: image, additionalImage: nil, additionalImagePosition: .topLeft)))
+                                            } else {
+                                                return .complete()
+                                            }
+                                        },
+                                        snapshotView: nil
+                                    )
+                                }
+                            }
+
+                            dismissControllerImpl?()
+                        } else {
+                            stopCameraCapture()
+                            
+                            let resultTransition = ResultTransition(
+                                sourceView: transitionView,
+                                sourceRect: transitionRect,
+                                sourceImage: transitionImage,
+                                transitionOut: transitionOut
+                            )
+                            if let asset = result as? PHAsset {
+                                if asset.mediaType == .video && asset.duration < 1.0 {
+                                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                                    let alertController = textAlertController(
+                                        context: self.context,
+                                        forceTheme: defaultDarkColorPresentationTheme,
+                                        title: nil,
+                                        text: presentationData.strings.Story_Editor_VideoTooShort,
+                                        actions: [
+                                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                                        ],
+                                        actionLayout: .vertical
+                                    )
+                                    self.present(alertController, in: .window(.root))
+                                } else {
+                                    self.completion(.single(.asset(asset)), resultTransition, dismissed)
+                                }
+                            } else if let draft = result as? MediaEditorDraft {
+                                self.completion(.single(.draft(draft)), resultTransition, dismissed)
+                            }
+                        }
+                    }
+                }, multipleCompletion: { [weak self] results in
+                    guard let self else {
+                        return
+                    }
+                                        
+                    if !self.cameraState.isCollageEnabled {
+                        var selectedGrid: Camera.CollageGrid = collageGrids.first!
+                        for grid in collageGrids {
+                            if grid.count == results.count {
+                                selectedGrid = grid
+                                break
+                            }
+                        }
+                        self.updateCameraState({
+                            $0.updatedIsCollageEnabled(true).updatedCollageProgress(0.0).updatedIsDualCameraEnabled(false).updatedCollageGrid(selectedGrid)
+                        }, transition: .spring(duration: 0.3))
+                    }
+                    
+                    if let assets = results as? [PHAsset] {
+                        var results: [Signal<CameraScreenImpl.Result, NoError>] = []
+                        for asset in assets {
                             if asset.mediaType == .video && asset.duration > 1.0 {
-                                self.node.collage?.addResult(.single(.asset(asset)), snapshotView: nil)
+                                results.append(.single(.asset(asset)))
                             } else {
-                                self.node.collage?.addResult(
+                                results.append(
                                     assetImage(asset: asset, targetSize: CGSize(width: 1080, height: 1080), exact: false, deliveryMode: .highQualityFormat)
                                     |> runOn(Queue.concurrentDefaultQueue())
                                     |> mapToSignal { image -> Signal<CameraScreenImpl.Result, NoError> in
@@ -3465,55 +3683,25 @@ public class CameraScreenImpl: ViewController, CameraScreen {
                                         } else {
                                             return .complete()
                                         }
-                                    },
-                                    snapshotView: nil
+                                    }
                                 )
                             }
                         }
-                        
-                        
-                        
-                        dismissControllerImpl?()
-                    } else {
-                        stopCameraCapture()
-                        
-                        let resultTransition = ResultTransition(
-                            sourceView: transitionView,
-                            sourceRect: transitionRect,
-                            sourceImage: transitionImage,
-                            transitionOut: transitionOut
-                        )
-                        if let asset = result as? PHAsset {
-                            if asset.mediaType == .video && asset.duration < 1.0 {
-                                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                                let alertController = textAlertController(
-                                    context: self.context,
-                                    forceTheme: defaultDarkColorPresentationTheme,
-                                    title: nil,
-                                    text: presentationData.strings.Story_Editor_VideoTooShort,
-                                    actions: [
-                                        TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-                                    ],
-                                    actionLayout: .vertical
-                                )
-                                self.present(alertController, in: .window(.root))
-                            } else {
-                                self.completion(.single(.asset(asset)), resultTransition, dismissed)
-                            }
-                        } else if let draft = result as? MediaEditorDraft {
-                            self.completion(.single(.draft(draft)), resultTransition, dismissed)
-                        }
+                        self.node.collage?.addResults(signals: results)
                     }
+                    self.galleryController = nil
+                    
+                    dismissControllerImpl?()
+                }, dismissed: { [weak self] in
+                    resumeCameraCapture()
+                    if let self {
+                        self.node.hasGallery = false
+                        self.node.requestUpdateLayout(transition: .immediate)
+                    }
+                }, groupsPresented: {
+                    stopCameraCapture()
                 }
-            }, dismissed: { [weak self] in
-                resumeCameraCapture()
-                if let self {
-                    self.node.hasGallery = false
-                    self.node.requestUpdateLayout(transition: .immediate)
-                }
-            }, groupsPresented: {
-                stopCameraCapture()
-            })
+            )
             self.galleryController = controller
             
             dismissControllerImpl = { [weak controller] in
@@ -3557,7 +3745,7 @@ public class CameraScreenImpl: ViewController, CameraScreen {
         self.isDismissed = true
         if animated {
             self.ignoreStatusBar = true
-            if let layout = self.validLayout, layout.metrics.isTablet || self.mode == .sticker {
+            if let layout = self.validLayout, layout.metrics.isTablet || [.sticker, .avatar].contains(self.mode) {
                 self.node.animateOut(completion: {
                     self.dismiss(animated: false)
                     self.transitionedOut()

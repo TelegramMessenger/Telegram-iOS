@@ -16,24 +16,33 @@ public protocol ContactSelectionController: ViewController {
 
 public enum ContactSelectionControllerMode {
     case generic
-    case starsGifting(birthdays: [EnginePeer.Id: TelegramBirthday]?, hasActions: Bool)
+    case starsGifting(birthdays: [EnginePeer.Id: TelegramBirthday]?, hasActions: Bool, showSelf: Bool)
 }
 
 public struct ContactListAdditionalOption: Equatable {
+    public enum Style: Equatable {
+        case accent
+        case generic
+    }
+    
     public let title: String
+    public let subtitle: String?
     public let icon: ContactListActionItemIcon
+    public let style: Style
     public let action: () -> Void
     public let clearHighlightAutomatically: Bool
     
-    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void, clearHighlightAutomatically: Bool = false) {
+    public init(title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, style: Style = .accent, action: @escaping () -> Void, clearHighlightAutomatically: Bool = false) {
         self.title = title
+        self.subtitle = subtitle
         self.icon = icon
+        self.style = style
         self.action = action
         self.clearHighlightAutomatically = clearHighlightAutomatically
     }
     
     public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
-        return lhs.title == rhs.title && lhs.icon == rhs.icon
+        return lhs.title == rhs.title && lhs.subtitle == rhs.subtitle && lhs.icon == rhs.icon && lhs.style == rhs.style
     }
 }
 

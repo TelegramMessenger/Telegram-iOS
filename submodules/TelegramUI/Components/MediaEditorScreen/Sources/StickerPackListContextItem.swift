@@ -79,7 +79,7 @@ private final class StickerPackListContextItemNode: ASDisplayNode, ContextMenuCu
                     f(.dismissWithoutContent)
                 }
             })
-            let actionNode = ContextControllerActionsListActionItemNode(getController: getController, requestDismiss: actionSelected, requestUpdateAction: { _, _ in }, item: action)
+            let actionNode = ContextControllerActionsListActionItemNode(context: nil, getController: getController, requestDismiss: actionSelected, requestUpdateAction: { _, _ in }, item: action)
             actionNodes.append(actionNode)
             if actionNodes.count != item.packs.count {
                 let separatorNode = ASDisplayNode()

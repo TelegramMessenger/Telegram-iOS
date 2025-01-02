@@ -215,6 +215,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 } else if case .starGift = action.action {
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                     skipText = true
+                } else if case .starGiftUnique = action.action {
+                    result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    skipText = true
                 } else if case .suggestedProfilePhoto = action.action {
                     result.append((message, ChatMessageProfilePhotoSuggestionContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else if case .setChatWallpaper = action.action {
@@ -225,10 +228,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else if case .joinedChannel = action.action {
                     result.append((message, ChatMessageJoinedChannelBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                    needReactions = false
                 } else {
+                    if !canAddMessageReactions(message: message) {
+                        needReactions = false
+                    }
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 }
-                needReactions = false
             } else if let _ = media as? TelegramMediaMap {
                 result.append((message, ChatMessageMapBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let _ = media as? TelegramMediaGame {
@@ -1515,11 +1521,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     if let sourceAuthorInfo, let originalAuthorId = sourceAuthorInfo.originalAuthor, let peer = item.message.peers[originalAuthorId] {
                         effectiveAuthor = peer
                     } else if let sourceAuthorInfo, let originalAuthorName = sourceAuthorInfo.originalAuthorName {
-                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(originalAuthorName.persistentHashValue % 32))), accessHash: nil, firstName: originalAuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
+                        effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(originalAuthorName.persistentHashValue % 32))), accessHash: nil, firstName: originalAuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                     } else {
                         ignoreForward = true
                         if effectiveAuthor == nil, let authorSignature = forwardInfo.authorSignature {
-                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
+                            effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                         }
                     }
                 }
@@ -1536,7 +1542,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 displayAuthorInfo = !mergedTop.merged && incoming
             } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), let authorSignature = forwardInfo.authorSignature {
                 ignoreForward = true
-                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil)
+                effectiveAuthor = TelegramUser(id: PeerId(namespace: Namespaces.Peer.Empty, id: PeerId.Id._internalFromInt64Value(Int64(authorSignature.persistentHashValue % 32))), accessHash: nil, firstName: authorSignature, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil, subscriberCount: nil, verificationIconFileId: nil)
                 displayAuthorInfo = !mergedTop.merged && incoming
             } else if let _ = item.content.firstMessage.adAttribute, let author = item.content.firstMessage.author {
                 ignoreForward = true
@@ -2700,9 +2706,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
         if !bubbleReactions.reactions.isEmpty && !item.presentationData.isPreview {
+            var centerAligned = false
+            for media in item.message.media {
+                if let action = media as? TelegramMediaAction {
+                    switch action.action {
+                    case .phoneCall:
+                        break
+                    default:
+                        centerAligned = true
+                    }
+                }
+                break
+            }
+            
             var maximumNodeWidth = maximumNodeWidth
             if hasInstantVideo {
-                maximumNodeWidth = min(309, baseWidth - 84)
+                maximumNodeWidth = min(309.0, baseWidth - 84.0)
             }
             let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                 context: item.context,
@@ -2715,7 +2734,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 associatedData: item.associatedData,
                 accountPeer: item.associatedData.accountPeer,
                 isIncoming: incoming,
-                constrainedWidth: maximumNodeWidth
+                constrainedWidth: maximumNodeWidth,
+                centerAligned: centerAligned
             ))
             maxContentWidth = max(maxContentWidth, minWidth)
             reactionButtonsFinalize = buttonsLayout
@@ -3039,7 +3059,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if let reactionButtonsFinalize = reactionButtonsFinalize {
             var maxContentWidth = maxContentWidth
             if hasInstantVideo {
-                maxContentWidth = min(310, baseWidth - 84.0)
+                maxContentWidth = min(310.0, baseWidth - 84.0)
             }
             reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
@@ -3169,7 +3189,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 shareButtonOffset: shareButtonOffset,
                 avatarOffset: avatarOffset,
                 hidesHeaders: hidesHeaders,
-                disablesComments: disablesComments
+                disablesComments: disablesComments,
+                alignment: alignment
             )
         })
     }
@@ -3228,7 +3249,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         shareButtonOffset: CGPoint?,
         avatarOffset: CGFloat?,
         hidesHeaders: Bool,
-        disablesComments: Bool
+        disablesComments: Bool,
+        alignment: ChatMessageBubbleContentAlignment
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -4351,7 +4373,14 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-            var reactionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? (layoutConstants.bubble.contentInsets.left + 2.0) : (layoutConstants.bubble.contentInsets.right - 2.0)), y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
+            
+            var reactionButtonsOriginX: CGFloat
+            if case .center = alignment {
+                reactionButtonsOriginX = backgroundFrame.minX + 3.0
+            } else {
+                reactionButtonsOriginX = backgroundFrame.minX + (incoming ? (layoutConstants.bubble.contentInsets.left + 2.0) : (layoutConstants.bubble.contentInsets.right - 2.0))
+            }
+            var reactionButtonsFrame = CGRect(origin: CGPoint(x: reactionButtonsOriginX, y: backgroundFrame.maxY + reactionButtonsOffset + 4.0), size: reactionButtonsSizeAndApply.0)
             if !disablesComments && !incoming {
                 reactionButtonsFrame.origin.x = backgroundFrame.maxX - reactionButtonsSizeAndApply.0.width - layoutConstants.bubble.contentInsets.left
             }

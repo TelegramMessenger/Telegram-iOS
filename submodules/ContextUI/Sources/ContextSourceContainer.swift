@@ -9,6 +9,7 @@ import ComponentFlow
 import TabSelectorComponent
 import PlainButtonComponent
 import ComponentDisplayAdapters
+import AccountContext
 
 final class ContextSourceContainer: ASDisplayNode {
     final class Source {
@@ -16,6 +17,7 @@ final class ContextSourceContainer: ASDisplayNode {
         
         let id: AnyHashable
         let title: String
+        let context: AccountContext?
         let source: ContextContentSource
         let closeActionTitle: String?
         let closeAction: (() -> Void)?
@@ -42,6 +44,7 @@ final class ContextSourceContainer: ASDisplayNode {
             controller: ContextController,
             id: AnyHashable,
             title: String,
+            context: AccountContext?,
             source: ContextContentSource,
             items: Signal<ContextController.Items, NoError>,
             closeActionTitle: String? = nil,
@@ -50,6 +53,7 @@ final class ContextSourceContainer: ASDisplayNode {
             self.controller = controller
             self.id = id
             self.title = title
+            self.context = context
             self.source = source
             self.closeActionTitle = closeActionTitle
             self.closeAction = closeAction
@@ -65,6 +69,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 self.contentReady.set(.single(true))
                 
                 let presentationNode = ContextControllerExtractedPresentationNode(
+                    context: self.context,
                     getController: { [weak self] in
                         guard let self else {
                             return nil
@@ -105,6 +110,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 self.contentReady.set(.single(true))
                 
                 let presentationNode = ContextControllerExtractedPresentationNode(
+                    context: self.context,
                     getController: { [weak self] in
                         guard let self else {
                             return nil
@@ -145,6 +151,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 self.contentReady.set(.single(true))
                 
                 let presentationNode = ContextControllerExtractedPresentationNode(
+                    context: self.context,
                     getController: { [weak self] in
                         guard let self else {
                             return nil
@@ -188,6 +195,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 self.contentReady.set(source.controller.ready.get())
                 
                 let presentationNode = ContextControllerExtractedPresentationNode(
+                    context: self.context,
                     getController: { [weak self] in
                         guard let self else {
                             return nil
@@ -373,7 +381,7 @@ final class ContextSourceContainer: ASDisplayNode {
         return self.activeSource?.presentationNode.wantsDisplayBelowKeyboard() ?? false
     }
     
-    init(controller: ContextController, configuration: ContextController.Configuration) {
+    init(controller: ContextController, configuration: ContextController.Configuration, context: AccountContext?) {
         self.controller = controller
         
         self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
@@ -389,6 +397,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 controller: controller,
                 id: source.id,
                 title: source.title,
+                context: context,
                 source: source.source,
                 items: source.items,
                 closeActionTitle: source.closeActionTitle,

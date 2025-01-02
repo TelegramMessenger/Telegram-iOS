@@ -43,6 +43,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
+        #"//submodules/TelegramUI/Components/MessageInputPanelComponent",
     ],
     visibility = [
         "//visibility:public",

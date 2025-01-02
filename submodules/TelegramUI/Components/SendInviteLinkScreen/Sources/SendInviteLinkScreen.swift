@@ -1013,7 +1013,8 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
                         backgroundEmojiId: user.backgroundEmojiId,
                         profileColor: user.profileColor,
                         profileBackgroundEmojiId: user.profileBackgroundEmojiId,
-                        subscriberCount: user.subscriberCount
+                        subscriberCount: user.subscriberCount,
+                        verificationIconFileId: user.verificationIconFileId
                     )),
                     canInviteWithPremium: canInviteWithPremium,
                     premiumRequiredToContact: premiumRequiredToContact

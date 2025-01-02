@@ -3,10 +3,12 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
+import TelegramCore
 import Photos
 import LocalMediaResources
 import CameraButtonComponent
 import UIKitRuntimeUtils
+import AccountContext
 
 enum ShutterButtonState: Equatable {
     case disabled
@@ -560,8 +562,10 @@ final class CaptureControlsComponent: Component {
         case flip
     }
     
+    let context: AccountContext
     let isTablet: Bool
     let isSticker: Bool
+    let hasGallery: Bool
     let hasAppeared: Bool
     let hasAccess: Bool
     let hideControls: Bool
@@ -570,6 +574,7 @@ final class CaptureControlsComponent: Component {
     let tintColor: UIColor
     let shutterState: ShutterButtonState
     let lastGalleryAsset: PHAsset?
+    let resolvedCodePeer: EnginePeer?
     let tag: AnyObject?
     let galleryButtonTag: AnyObject?
     let shutterTapped: () -> Void
@@ -581,10 +586,13 @@ final class CaptureControlsComponent: Component {
     let swipeHintUpdated: (SwipeHint) -> Void
     let zoomUpdated: (CGFloat) -> Void
     let flipAnimationAction: ActionSlot<Void>
+    let openResolvedPeer: (EnginePeer) -> Void
     
     init(
+        context: AccountContext,
         isTablet: Bool,
         isSticker: Bool,
+        hasGallery: Bool,
         hasAppeared: Bool,
         hasAccess: Bool,
         hideControls: Bool,
@@ -593,6 +601,7 @@ final class CaptureControlsComponent: Component {
         tintColor: UIColor,
         shutterState: ShutterButtonState,
         lastGalleryAsset: PHAsset?,
+        resolvedCodePeer: EnginePeer?,
         tag: AnyObject?,
         galleryButtonTag: AnyObject?,
         shutterTapped: @escaping () -> Void,
@@ -603,10 +612,13 @@ final class CaptureControlsComponent: Component {
         galleryTapped: @escaping () -> Void,
         swipeHintUpdated: @escaping (SwipeHint) -> Void,
         zoomUpdated: @escaping (CGFloat) -> Void,
-        flipAnimationAction: ActionSlot<Void>
+        flipAnimationAction: ActionSlot<Void>,
+        openResolvedPeer: @escaping (EnginePeer) -> Void
     ) {
+        self.context = context
         self.isTablet = isTablet
         self.isSticker = isSticker
+        self.hasGallery = hasGallery
         self.hasAppeared = hasAppeared
         self.hasAccess = hasAccess
         self.hideControls = hideControls
@@ -615,6 +627,7 @@ final class CaptureControlsComponent: Component {
         self.tintColor = tintColor
         self.shutterState = shutterState
         self.lastGalleryAsset = lastGalleryAsset
+        self.resolvedCodePeer = resolvedCodePeer
         self.tag = tag
         self.galleryButtonTag = galleryButtonTag
         self.shutterTapped = shutterTapped
@@ -626,13 +639,20 @@ final class CaptureControlsComponent: Component {
         self.swipeHintUpdated = swipeHintUpdated
         self.zoomUpdated = zoomUpdated
         self.flipAnimationAction = flipAnimationAction
+        self.openResolvedPeer = openResolvedPeer
     }
     
     static func ==(lhs: CaptureControlsComponent, rhs: CaptureControlsComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
         if lhs.isTablet != rhs.isTablet {
             return false
         }
         if lhs.isSticker != rhs.isSticker {
+            return false
+        }
+        if lhs.hasGallery != rhs.hasGallery {
             return false
         }
         if lhs.hasAppeared != rhs.hasAppeared {
@@ -657,6 +677,9 @@ final class CaptureControlsComponent: Component {
             return false
         }
         if lhs.lastGalleryAsset?.localIdentifier != rhs.lastGalleryAsset?.localIdentifier {
+            return false
+        }
+        if lhs.resolvedCodePeer != rhs.resolvedCodePeer {
             return false
         }
         return true
@@ -709,6 +732,8 @@ final class CaptureControlsComponent: Component {
         private var component: CaptureControlsComponent?
         private var state: State?
         private var availableSize: CGSize?
+        
+        private var codeResultView: ComponentView<Empty>?
         
         private let zoomView = ComponentView<Empty>()
         private let lockView = ComponentView<Empty>()
@@ -1050,7 +1075,7 @@ final class CaptureControlsComponent: Component {
             
             let galleryButtonFrame: CGRect
             let gallerySize: CGSize
-            if !component.isSticker {
+            if component.hasGallery {
                 let galleryCornerRadius: CGFloat
                 if component.isTablet {
                     gallerySize = CGSize(width: 72.0, height: 72.0)
@@ -1276,6 +1301,46 @@ final class CaptureControlsComponent: Component {
                 }
             }
             
+            if let resolvedCodePeer = component.resolvedCodePeer {
+                let codeResultView: ComponentView<Empty>
+                if let current = self.codeResultView {
+                    codeResultView = current
+                } else {
+                    codeResultView = ComponentView<Empty>()
+                    self.codeResultView = codeResultView
+                }
+                
+                let codeResultSize = codeResultView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        CameraCodeResultComponent(
+                            context: component.context,
+                            peer: resolvedCodePeer,
+                            pressed: component.openResolvedPeer
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                
+                if let view = codeResultView.view {
+                    if view.superview == nil {
+                        self.insertSubview(view, at: 0)   
+                        if let view = view as? CameraCodeResultComponent.View {
+                            view.animateIn()
+                        }
+                    }
+                    view.frame = CGRect(origin: CGPoint(x: (availableSize.width - codeResultSize.width) / 2.0, y: (size.height - shutterButtonSize.height) / 2.0 - codeResultSize.height), size: codeResultSize)
+                }
+            } else if let codeResultView = self.codeResultView {
+                self.codeResultView = nil
+                codeResultView.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                    codeResultView.view?.removeFromSuperview()
+                })
+                codeResultView.view?.layer.animateScale(from: 1.0, to: 0.2, duration: 0.25, removeOnCompletion: false)
+                codeResultView.view?.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            }
+            
             let _ = self.lockView.update(
                 transition: .immediate,
                 component: AnyComponent(
@@ -1352,6 +1417,13 @@ final class CaptureControlsComponent: Component {
             }
             
             return size
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let codeResultView = self.codeResultView?.view, codeResultView.frame.contains(point) {
+                return codeResultView.hitTest(self.convert(point, to: codeResultView), with: event)
+            }
+            return super.hitTest(point, with: event)
         }
     }
 

@@ -85,7 +85,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MediaAssetsContext",
         "//submodules/UndoUI",
         "//submodules/ContextUI",
-        
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

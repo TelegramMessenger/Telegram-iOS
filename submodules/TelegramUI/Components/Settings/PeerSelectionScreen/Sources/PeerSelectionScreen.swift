@@ -119,7 +119,7 @@ final class PeerSelectionScreenComponent: Component {
                     context: listNode.context,
                     peerMode: .peer,
                     peer: .peer(peer: peer, chatPeer: peer),
-                    status: .custom(string: statusText, multiline: false, isActive: false, icon: nil),
+                    status: .custom(string: NSAttributedString(string: statusText), multiline: false, isActive: false, icon: nil),
                     badge: nil,
                     requiresPremiumForMessaging: false,
                     enabled: true,

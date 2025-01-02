@@ -124,7 +124,15 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
             case .destructiveAction, .genericAction:
                 break
         }
-        self.setAttributedTitle(NSAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center), for: [])
+        
+        let attributedString = NSMutableAttributedString(string: self.action.title, font: font, textColor: color, paragraphAlignment: .center)
+        if let range = attributedString.string.range(of: "$") {
+            attributedString.addAttribute(.attachment, value: UIImage(bundleImageName: "Item List/PremiumIcon")!, range: NSRange(range, in: attributedString.string))
+            attributedString.addAttribute(.foregroundColor, value: color, range: NSRange(range, in: attributedString.string))
+            attributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedString.string))
+        }
+        
+        self.setAttributedTitle(attributedString, for: [])
         self.accessibilityLabel = self.action.title
         self.accessibilityTraits = [.button]
     }

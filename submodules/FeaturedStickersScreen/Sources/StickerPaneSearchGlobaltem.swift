@@ -6,9 +6,9 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
-import StickerPackPreviewUI
 import ListSectionHeaderNode
 import AccountContext
+import StickerResources
 
 final class StickerPaneSearchGlobalSection: GridSection {
     let title: String?

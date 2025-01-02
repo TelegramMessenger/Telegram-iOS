@@ -19,6 +19,12 @@ import ContextUI
 import AsyncDisplayKit
 import UndoUI
 import PeerNameColorItem
+import EntityKeyboard
+import ComposePollUI
+import ChatEntityKeyboardInputNode
+import ComponentFlow
+import ChatPresentationInterfaceState
+import ComponentDisplayAdapters
 
 private enum FilterSection: Int32, Hashable {
     case include
@@ -28,6 +34,9 @@ private enum FilterSection: Int32, Hashable {
 private final class ChatListFilterPresetControllerArguments {
     let context: AccountContext
     let updateState: ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void
+    let updateName: (ChatFolderTitle) -> Void
+    let toggleNameInputMode: () -> Void
+    let toggleNameAnimations: () -> Void
     let openAddIncludePeer: () -> Void
     let openAddExcludePeer: () -> Void
     let deleteIncludePeer: (EnginePeer.Id) -> Void
@@ -49,6 +58,9 @@ private final class ChatListFilterPresetControllerArguments {
     init(
         context: AccountContext,
         updateState: @escaping ((ChatListFilterPresetControllerState) -> ChatListFilterPresetControllerState) -> Void,
+        updateName: @escaping (ChatFolderTitle) -> Void,
+        toggleNameInputMode: @escaping () -> Void,
+        toggleNameAnimations: @escaping () -> Void,
         openAddIncludePeer: @escaping () -> Void,
         openAddExcludePeer: @escaping () -> Void,
         deleteIncludePeer: @escaping (EnginePeer.Id) -> Void,
@@ -69,6 +81,9 @@ private final class ChatListFilterPresetControllerArguments {
     ) {
         self.context = context
         self.updateState = updateState
+        self.updateName = updateName
+        self.toggleNameInputMode = toggleNameInputMode
+        self.toggleNameAnimations = toggleNameAnimations
         self.openAddIncludePeer = openAddIncludePeer
         self.openAddExcludePeer = openAddExcludePeer
         self.deleteIncludePeer = deleteIncludePeer
@@ -216,8 +231,8 @@ private enum ChatListFilterRevealedItemId: Equatable {
 
 private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case screenHeader
-    case nameHeader(String)
-    case name(placeholder: String, value: String)
+    case nameHeader(title: String, enableAnimations: Bool?)
+    case name(placeholder: String, value: NSAttributedString, inputMode: ListComposePollOptionComponent.InputMode?, enableAnimations: Bool)
     case includePeersHeader(String)
     case addIncludePeer(title: String)
     case includeCategory(index: Int, category: ChatListFilterIncludeCategory, title: String, isRevealed: Bool)
@@ -234,7 +249,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case inviteLinkCreate(hasLinks: Bool)
     case inviteLink(Int, ExportedChatFolderLink)
     case inviteLinkInfo(text: String)
-    case tagColorHeader(name: String, color: PeerNameColors.Colors?, isPremium: Bool)
+    case tagColorHeader(name: ChatFolderTitle, color: PeerNameColors.Colors?, isPremium: Bool)
     case tagColor(colors: PeerNameColors, currentColor: PeerNameColor?, isPremium: Bool)
     case tagColorFooter
     
@@ -362,21 +377,32 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         switch self {
         case .screenHeader:
             return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: "", animation: .newFolder, sectionId: self.section)
-        case let .nameHeader(title):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-        case let .name(placeholder, value):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, type: .regular(capitalization: true, autocorrection: false), returnKeyType: .done, clearType: .always, maxLength: 12, sectionId: self.section, textUpdated: { value in
-                arguments.updateState { current in
-                    var state = current
-                    state.name = value
-                    state.changedName = true
-                    return state
+        case let .nameHeader(title, enableAnimations):
+            //TODO:localize
+            var actionText: String?
+            if let enableAnimations {
+                actionText = enableAnimations ? "Disable Animations" : "Enable Animations"
+            }
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: title, actionText: actionText, action: {
+                arguments.toggleNameAnimations()
+            }, sectionId: self.section)
+        case let .name(placeholder, value, inputMode, enableAnimations):
+            return ItemListFilterTitleInputItem(
+                context: arguments.context,
+                presentationData: presentationData,
+                text: value,
+                enableAnimations: enableAnimations,
+                placeholder: placeholder,
+                maxLength: 12,
+                inputMode: inputMode,
+                sectionId: self.section,
+                textUpdated: { value in
+                    arguments.updateName(ChatFolderTitle(attributedString: value, enableAnimations: true))
+                },
+                toggleInputMode: {
+                    arguments.toggleNameInputMode()
                 }
-            }, action: {
-                arguments.clearFocus()
-            }, cleared: {
-                arguments.focusOnName()
-            })
+            )
         case .includePeersHeader(let text), .excludePeersHeader(let text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case .includePeerInfo(let text), .excludePeerInfo(let text):
@@ -462,13 +488,13 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.expandSection(.exclude)
             })
         case let .tagColorHeader(name, color, isPremium):
-            var badge: String?
-            var badgeStyle: ItemListSectionHeaderItem.BadgeStyle?
+            var badge: ChatFolderTitle?
+            var badgeStyle: ChatListFilterTagSectionHeaderItem.BadgeStyle?
             var accessoryText: ItemListSectionHeaderAccessoryText?
             if isPremium {
                 if let color {
-                    badge = name.uppercased()
-                    badgeStyle = ItemListSectionHeaderItem.BadgeStyle(
+                    badge = ChatFolderTitle(text: name.text.uppercased(), entities: name.entities, enableAnimations: name.enableAnimations)
+                    badgeStyle = ChatListFilterTagSectionHeaderItem.BadgeStyle(
                         background: color.main.withMultipliedAlpha(0.1),
                         foreground: color.main
                     )
@@ -478,7 +504,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
             } else if color != nil {
                 accessoryText = ItemListSectionHeaderAccessoryText(value: presentationData.strings.ChatListFilter_TagLabelPremiumExpired, color: .generic)
             }
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.ChatListFilter_TagSectionTitle, badge: badge, badgeStyle: badgeStyle, accessoryText: accessoryText, sectionId: self.section)
+            return ChatListFilterTagSectionHeaderItem(context: arguments.context, presentationData: presentationData, text: presentationData.strings.ChatListFilter_TagSectionTitle, badge: badge, badgeStyle: badgeStyle, accessoryText: accessoryText, sectionId: self.section)
         case let .tagColor(colors, color, isPremium):
             return PeerNameColorItem(
                 theme: presentationData.theme,
@@ -519,8 +545,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
 }
 
 private struct ChatListFilterPresetControllerState: Equatable {
-    var name: String
+    var name: ChatFolderTitle
     var changedName: Bool
+    var nameInputMode: ListComposePollOptionComponent.InputMode = .keyboard
     var color: PeerNameColor?
     var colorUpdated: Bool = false
     var includeCategories: ChatListFilterPeerCategories
@@ -534,7 +561,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     var expandedSections: Set<FilterSection>
     
     var isComplete: Bool {
-        if self.name.isEmpty {
+        if self.name.text.isEmpty {
             return false
         }
         
@@ -565,8 +592,8 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         entries.append(.screenHeader)
     }
     
-    entries.append(.nameHeader(presentationData.strings.ChatListFolder_NameSectionHeader))
-    entries.append(.name(placeholder: presentationData.strings.ChatListFolder_NamePlaceholder, value: state.name))
+    entries.append(.nameHeader(title: presentationData.strings.ChatListFolder_NameSectionHeader, enableAnimations: state.name.entities.isEmpty ? nil : state.name.enableAnimations))
+    entries.append(.name(placeholder: presentationData.strings.ChatListFolder_NamePlaceholder, value: state.name.rawAttributedString, inputMode: state.nameInputMode, enableAnimations: state.name.enableAnimations))
     
     entries.append(.includePeersHeader(presentationData.strings.ChatListFolder_IncludedSectionHeader))
     if includePeers.count < limit {
@@ -648,6 +675,7 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         resolvedColor = context.peerNameColors.getChatFolderTag(tagColor, dark: presentationData.theme.overallDarkAppearance)
     }
     
+    //TODO:localize
     entries.append(.tagColorHeader(name: state.name, color: resolvedColor, isPremium: isPremium))
     entries.append(.tagColor(colors: context.peerNameColors, currentColor: tagColor, isPremium: isPremium))
     entries.append(.tagColorFooter)
@@ -1015,11 +1043,11 @@ func chatListFilterType(_ data: ChatListFilterData) -> ChatListFilterType {
 }
 
 private extension ChatListFilter {
-    var title: String {
+    var title: ChatFolderTitle {
         if case let .filter(_, title, _, _) = self {
             return title
         } else {
-            return ""
+            return ChatFolderTitle(text: "", entities: [], enableAnimations: true)
         }
     }
     
@@ -1040,14 +1068,338 @@ private extension ChatListFilter {
     }
 }
 
+private final class ChatListFilterPresetController: ItemListController {
+    private let context: AccountContext
+    
+    private var currentLayout: ContainerViewLayout?
+    
+    var titleItemNode: (() -> ItemListFilterTitleInputItemNode?)?
+    
+    var currentInputMode: ListComposePollOptionComponent.InputMode?
+    
+    private var inputMediaNodeData: ChatEntityKeyboardInputNode.InputData?
+    private var inputMediaNodeDataDisposable: Disposable?
+    private var inputMediaNodeStateContext = ChatEntityKeyboardInputNode.StateContext()
+    private var inputMediaInteraction: ChatEntityKeyboardInputNode.Interaction?
+    private var inputMediaNode: ChatEntityKeyboardInputNode?
+    private var inputMediaNodeBackground = SimpleLayer()
+    
+    private let inputMediaNodeDataPromise = Promise<ChatEntityKeyboardInputNode.InputData>()
+    
+    init<ItemGenerationArguments>(
+        context: AccountContext,
+        state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)),
+        NoError>
+    ) {
+        self.context = context
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        super.init(presentationData: ItemListPresentationData(presentationData), updatedPresentationData: context.sharedContext.presentationData |> map(ItemListPresentationData.init(_:)), state: state, tabBarItem: nil)
+        
+        self.inputMediaNodeDataPromise.set(
+            ChatEntityKeyboardInputNode.inputData(
+                context: self.context,
+                chatPeerId: nil,
+                areCustomEmojiEnabled: true,
+                hasTrending: false,
+                hasSearch: true,
+                hasStickers: false,
+                hasGifs: false,
+                hideBackground: true,
+                sendGif: nil
+            )
+        )
+        self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            self.inputMediaNodeData = value
+        })
+        
+        self.inputMediaInteraction = ChatEntityKeyboardInputNode.Interaction(
+            sendSticker: { _, _, _, _, _, _, _, _, _ in
+                return false
+            },
+            sendEmoji: { _, _, _ in
+            },
+            sendGif: { _, _, _, _, _ in
+                return false
+            },
+            sendBotContextResultAsGif: { _, _ , _, _, _, _ in
+                return false
+            },
+            updateChoosingSticker: { _ in
+            },
+            switchToTextInput: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.currentInputMode = .keyboard
+                self.update(transition: .animated(duration: 0.4, curve: .spring))
+            },
+            dismissTextInput: {
+            },
+            insertText: { [weak self] text in
+                guard let self else {
+                    return
+                }
+                guard let titleItemNode = self.titleItemNode?() else {
+                    return
+                }
+                guard let textFieldView = titleItemNode.textFieldView else {
+                    return
+                }
+                
+                if titleItemNode.textFieldState.isEditing {
+                    textFieldView.insertText(text: text)
+                }
+            },
+            backwardsDeleteText: { [weak self] in
+                guard let self else {
+                    return
+                }
+                guard let titleItemNode = self.titleItemNode?() else {
+                    return
+                }
+                guard let textFieldView = titleItemNode.textFieldView else {
+                    return
+                }
+                if titleItemNode.textFieldState.isEditing {
+                    textFieldView.backwardsDeleteText()
+                }
+            },
+            openStickerEditor: {
+            },
+            presentController: { [weak self] c, a in
+                guard let self else {
+                    return
+                }
+                self.present(c, in: .window(.root), with: a)
+            },
+            presentGlobalOverlayController: { [weak self] c, a in
+                guard let self else {
+                    return
+                }
+                self.presentInGlobalOverlay(c, with: a)
+            },
+            getNavigationController: { [weak self] () -> NavigationController? in
+                guard let self else {
+                    return nil
+                }
+                
+                if let navigationController = self.navigationController as? NavigationController {
+                    return navigationController
+                }
+                return nil
+            },
+            requestLayout: { [weak self] transition in
+                guard let self else {
+                    return
+                }
+                self.update(transition: transition)
+            }
+        )
+    }
+    
+    @MainActor required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.inputMediaNodeDataDisposable?.dispose()
+    }
+    
+    private func updateInputMediaNode(
+        context: AccountContext,
+        availableSize: CGSize,
+        bottomInset: CGFloat,
+        inputHeight: CGFloat,
+        effectiveInputHeight: CGFloat,
+        metrics: LayoutMetrics,
+        deviceMetrics: DeviceMetrics,
+        transition: ComponentTransition
+    ) -> CGFloat {
+        let bottomInset: CGFloat = bottomInset + 8.0
+        let bottomContainerInset: CGFloat = 0.0
+        let needsInputActivation: Bool = !"".isEmpty
+        
+        var height: CGFloat = 0.0
+        if case .emoji = self.currentInputMode, let inputData = self.inputMediaNodeData {
+            let inputMediaNode: ChatEntityKeyboardInputNode
+            var inputMediaNodeTransition = transition
+            var animateIn = false
+            if let current = self.inputMediaNode {
+                inputMediaNode = current
+            } else {
+                animateIn = true
+                inputMediaNodeTransition = inputMediaNodeTransition.withAnimation(.none)
+                inputMediaNode = ChatEntityKeyboardInputNode(
+                    context: context,
+                    currentInputData: inputData,
+                    updatedInputData: self.inputMediaNodeDataPromise.get(),
+                    defaultToEmojiTab: true,
+                    opaqueTopPanelBackground: false,
+                    useOpaqueTheme: true,
+                    interaction: self.inputMediaInteraction,
+                    chatPeerId: nil,
+                    stateContext: self.inputMediaNodeStateContext
+                )
+                inputMediaNode.clipsToBounds = true
+                
+                inputMediaNode.externalTopPanelContainerImpl = nil
+                inputMediaNode.useExternalSearchContainer = true
+                if inputMediaNode.view.superview == nil {
+                    self.inputMediaNodeBackground.removeAllAnimations()
+                    self.displayNode.layer.addSublayer(self.inputMediaNodeBackground)
+                    self.displayNode.view.addSubview(inputMediaNode.view)
+                }
+                self.inputMediaNode = inputMediaNode
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationInterfaceState = ChatPresentationInterfaceState(
+                chatWallpaper: .builtin(WallpaperSettings()),
+                theme: presentationData.theme,
+                strings: presentationData.strings,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                limitsConfiguration: context.currentLimitsConfiguration.with { $0 },
+                fontSize: presentationData.chatFontSize,
+                bubbleCorners: presentationData.chatBubbleCorners,
+                accountPeerId: context.account.peerId,
+                mode: .standard(.default),
+                chatLocation: .peer(id: context.account.peerId),
+                subject: nil,
+                peerNearbyData: nil,
+                greetingData: nil,
+                pendingUnpinnedAllMessages: false,
+                activeGroupCallInfo: nil,
+                hasActiveGroupCall: false,
+                importState: nil,
+                threadData: nil,
+                isGeneralThreadClosed: nil,
+                replyMessage: nil,
+                accountPeerColor: nil,
+                businessIntro: nil
+            )
+            
+            self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
+            
+            let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight < 100.0 ? inputHeight - bottomContainerInset : inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
+            let inputNodeHeight = heightAndOverflow.0
+            let inputNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - inputNodeHeight), size: CGSize(width: availableSize.width, height: inputNodeHeight))
+            
+            let inputNodeBackgroundFrame = CGRect(origin: CGPoint(x: inputNodeFrame.minX, y: inputNodeFrame.minY - 6.0), size: CGSize(width: inputNodeFrame.width, height: inputNodeFrame.height + 6.0))
+            
+            if needsInputActivation {
+                let inputNodeFrame = inputNodeFrame.offsetBy(dx: 0.0, dy: inputNodeHeight)
+                ComponentTransition.immediate.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                ComponentTransition.immediate.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+            }
+            
+            if animateIn {
+                var targetFrame = inputNodeFrame
+                targetFrame.origin.y = availableSize.height
+                inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: targetFrame)
+                
+                let inputNodeBackgroundTargetFrame = CGRect(origin: CGPoint(x: targetFrame.minX, y: targetFrame.minY - 6.0), size: CGSize(width: targetFrame.width, height: targetFrame.height + 6.0))
+                
+                inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundTargetFrame)
+                
+                transition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                transition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+            } else {
+                inputMediaNodeTransition.setFrame(layer: inputMediaNode.layer, frame: inputNodeFrame)
+                inputMediaNodeTransition.setFrame(layer: self.inputMediaNodeBackground, frame: inputNodeBackgroundFrame)
+            }
+            
+            height = heightAndOverflow.0
+        } else {
+            if let inputMediaNode = self.inputMediaNode {
+                self.inputMediaNode = nil
+                var targetFrame = inputMediaNode.frame
+                targetFrame.origin.y = availableSize.height
+                transition.setFrame(view: inputMediaNode.view, frame: targetFrame, completion: { [weak inputMediaNode] _ in
+                    if let inputMediaNode {
+                        Queue.mainQueue().after(0.3) {
+                            inputMediaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak inputMediaNode] _ in
+                                inputMediaNode?.view.removeFromSuperview()
+                            })
+                        }
+                    }
+                })
+                transition.setFrame(layer: self.inputMediaNodeBackground, frame: targetFrame, completion: { [weak self] _ in
+                    Queue.mainQueue().after(0.3) {
+                        guard let self else {
+                            return
+                        }
+                        if self.currentInputMode == .keyboard {
+                            self.inputMediaNodeBackground.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false, completion: { [weak self] finished in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                if finished {
+                                    self.inputMediaNodeBackground.removeFromSuperlayer()
+                                }
+                                self.inputMediaNodeBackground.removeAllAnimations()
+                            })
+                        }
+                    }
+                })
+            }
+        }
+        
+        return height
+    }
+    
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.currentLayout = layout
+        
+        let inputHeight = self.updateInputMediaNode(
+            context: self.context,
+            availableSize: layout.size,
+            bottomInset: layout.intrinsicInsets.bottom,
+            inputHeight: layout.inputHeight ?? 0.0,
+            effectiveInputHeight: layout.deviceMetrics.standardInputHeight(inLandscape: false),
+            metrics: layout.metrics,
+            deviceMetrics: layout.deviceMetrics,
+            transition: ComponentTransition(transition)
+        )
+        
+        var innerLayout = layout
+        innerLayout.inputHeight = max(innerLayout.inputHeight ?? 0.0, inputHeight)
+        
+        super.containerLayoutUpdated(innerLayout, transition: transition)
+    }
+    
+    func update(transition: ContainedViewLayoutTransition) {
+        if let currentLayout = self.currentLayout {
+            self.containerLayoutUpdated(currentLayout, transition: transition)
+        }
+    }
+}
+
 func chatListFilterPresetController(context: AccountContext, currentPreset initialPreset: ChatListFilter?, updated: @escaping ([ChatListFilter]) -> Void) -> ViewController {
-    let initialName: String
+    let initialName: ChatFolderTitle
     if let initialPreset {
         initialName = initialPreset.title
     } else {
-        initialName = ""
+        initialName = ChatFolderTitle(text: "", entities: [], enableAnimations: true)
     }
-    var initialState = ChatListFilterPresetControllerState(name: initialName, changedName: initialPreset != nil, color: initialPreset?.data?.color, includeCategories: initialPreset?.data?.categories ?? [], excludeMuted: initialPreset?.data?.excludeMuted ?? false, excludeRead: initialPreset?.data?.excludeRead ?? false, excludeArchived: initialPreset?.data?.excludeArchived ?? false, additionallyIncludePeers: initialPreset?.data?.includePeers.peers ?? [], additionallyExcludePeers: initialPreset?.data?.excludePeers ?? [], expandedSections: [])
+    var initialState = ChatListFilterPresetControllerState(
+        name: initialName,
+        changedName: initialPreset != nil,
+        color: initialPreset?.data?.color,
+        includeCategories: initialPreset?.data?.categories ?? [],
+        excludeMuted: initialPreset?.data?.excludeMuted ?? false,
+        excludeRead: initialPreset?.data?.excludeRead ?? false,
+        excludeArchived: initialPreset?.data?.excludeArchived ?? false,
+        additionallyIncludePeers: initialPreset?.data?.includePeers.peers ?? [],
+        additionallyExcludePeers: initialPreset?.data?.excludePeers ?? [],
+        expandedSections: []
+    )
     initialState.colorUpdated = true
     
     let updatedCurrentPreset: Signal<ChatListFilter?, NoError>
@@ -1060,6 +1412,8 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
     } else {
         updatedCurrentPreset = .single(nil)
     }
+    
+    var withController: (((ChatListFilterPresetController) -> Void) -> Void)?
     
     let stateValue = Atomic(value: initialState)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -1076,23 +1430,28 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
                     case .generic:
                         state.name = initialName
                     case .unmuted:
-                        state.name = presentationData.strings.ChatListFolder_NameNonMuted
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameNonMuted, entities: [], enableAnimations: true)
                     case .unread:
-                        state.name = presentationData.strings.ChatListFolder_NameUnread
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameUnread, entities: [], enableAnimations: true)
                     case .channels:
-                        state.name = presentationData.strings.ChatListFolder_NameChannels
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameChannels, entities: [], enableAnimations: true)
                     case .groups:
-                        state.name = presentationData.strings.ChatListFolder_NameGroups
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameGroups, entities: [], enableAnimations: true)
                     case .bots:
-                        state.name = presentationData.strings.ChatListFolder_NameBots
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameBots, entities: [], enableAnimations: true)
                     case .contacts:
-                        state.name = presentationData.strings.ChatListFolder_NameContacts
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameContacts, entities: [], enableAnimations: true)
                     case .nonContacts:
-                        state.name = presentationData.strings.ChatListFolder_NameNonContacts
+                        state.name = ChatFolderTitle(text: presentationData.strings.ChatListFolder_NameNonContacts, entities: [], enableAnimations: true)
                     }
                 }
             }
             return state
+        })
+        withController?({ c in
+            let state = stateValue.with({ $0 })
+            c.currentInputMode = state.nameInputMode
+            c.update(transition: .animated(duration: 0.5, curve: .spring))
         })
     }
     var skipStateAnimation = false
@@ -1179,6 +1538,42 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         context: context,
         updateState: { f in
             updateState(f)
+        },
+        updateName: { name in
+            if name != stateValue.with({ $0 }).name {
+                updateState { current in
+                    var name = name
+                    name.enableAnimations = current.name.enableAnimations
+                    
+                    var state = current
+                    state.name = name
+                    state.changedName = true
+                    return state
+                }
+            }
+        },
+        toggleNameInputMode: {
+            updateState { current in
+                var state = current
+                if state.nameInputMode == .emoji {
+                    state.nameInputMode = .keyboard
+                } else {
+                    state.nameInputMode = .emoji
+                }
+                return state
+            }
+            focusOnNameImpl?()
+        },
+        toggleNameAnimations: {
+            updateState { current in
+                var name = current.name
+                name.enableAnimations = !current.name.enableAnimations
+                
+                var state = current
+                state.name = name
+                state.changedName = true
+                return state
+            }
         },
         openAddIncludePeer: {
             let _ = combineLatest(
@@ -1714,7 +2109,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = ChatListFilterPresetController(context: context, state: signal)
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, d in
         controller?.present(c, in: .window(.root), with: d)
@@ -1730,7 +2125,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             return
         }
         controller.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+            if let itemNode = itemNode as? ItemListFilterTitleInputItemNode {
                 itemNode.focus()
             }
         }
@@ -1740,6 +2135,21 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
             return
         }
         controller.view.endEditing(true)
+    }
+    withController = { [weak controller] f in
+        guard let controller = controller else {
+            return
+        }
+        f(controller)
+    }
+    controller.titleItemNode = { [weak controller] in
+        var foundItemNode: ItemListFilterTitleInputItemNode?
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListFilterTitleInputItemNode {
+                foundItemNode = itemNode
+            }
+        }
+        return foundItemNode
     }
     controller.attemptNavigation = { _ in
         if let attemptNavigationImpl {
@@ -1812,7 +2222,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
     return controller
 }
 
-func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: String, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, pushPremiumController: @escaping (ViewController) -> Void, completed: @escaping () -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
+func openCreateChatListFolderLink(context: AccountContext, folderId: Int32, checkIfExists: Bool, title: ChatFolderTitle, peerIds: [EnginePeer.Id], pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController) -> Void, pushPremiumController: @escaping (ViewController) -> Void, completed: @escaping () -> Void, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void) {
     if peerIds.isEmpty {
         completed()
         return

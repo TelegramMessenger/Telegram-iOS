@@ -116,9 +116,21 @@ public extension TelegramEngine {
         public func convertStarGift(messageId: EngineMessage.Id) -> Signal<Never, NoError> {
             return _internal_convertStarGift(account: self.account, messageId: messageId)
         }
-
+        
         public func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) -> Signal<Never, NoError> {
             return _internal_updateStarGiftAddedToProfile(account: self.account, messageId: messageId, added: added)
+        }
+        
+        public func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+            return _internal_transferStarGift(account: self.account, prepaid: prepaid, messageId: messageId, peerId: peerId)
+        }
+        
+        public func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+            return _internal_upgradeStarGift(account: self.account, formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+        }
+        
+        public func starGiftUpgradePreview(giftId: Int64) -> Signal<[StarGift.UniqueGift.Attribute], NoError> {
+            return _internal_starGiftUpgradePreview(account: self.account, giftId: giftId)
         }
     }
 }

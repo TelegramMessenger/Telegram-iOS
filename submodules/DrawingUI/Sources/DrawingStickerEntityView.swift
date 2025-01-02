@@ -330,7 +330,7 @@ public class DrawingStickerEntityView: DrawingEntityView {
     
     private func setupWithVideo(_ file: TelegramMediaFile) {
         let videoNode = UniversalVideoNode(
-            accountId: self.context.account.id,
+            context: self.context,
             postbox: self.context.account.postbox,
             audioSession: self.context.sharedContext.mediaManager.audioSession,
             manager: self.context.sharedContext.mediaManager.universalVideoManager,

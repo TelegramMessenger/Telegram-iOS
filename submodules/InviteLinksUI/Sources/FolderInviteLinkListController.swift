@@ -62,7 +62,7 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
         case peer(EnginePeer.Id)
     }
     
-    case header(String)
+    case header(NSAttributedString)
    
     case mainLinkHeader(String)
     case mainLink(link: ExportedChatFolderLink?, isGenerating: Bool)
@@ -225,13 +225,13 @@ private enum InviteLinksListEntry: ItemListNodeEntry {
 private func folderInviteLinkListControllerEntries(
     presentationData: PresentationData,
     state: FolderInviteLinkListControllerState,
-    title: String,
+    title: ChatFolderTitle,
     allPeers: [EnginePeer]
 ) -> [InviteLinksListEntry] {
     var entries: [InviteLinksListEntry] = []
     
     var infoString: String?
-    let chatCountString: String
+    let chatCountString: NSAttributedString
     let peersHeaderString: String
     
     let canShareChats = !allPeers.allSatisfy({ !canShareLinkToPeer(peer: $0) })
@@ -241,16 +241,36 @@ private func folderInviteLinkListControllerEntries(
     
     if !canShareChats {
         infoString = presentationData.strings.FolderLinkScreen_TitleDescriptionUnavailable
-        chatCountString = presentationData.strings.FolderLinkScreen_ChatCountHeaderUnavailable
+        chatCountString = NSAttributedString(string: presentationData.strings.FolderLinkScreen_ChatCountHeaderUnavailable)
         peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeaderUnavailable
     } else if state.selectedPeerIds.isEmpty {
-        chatCountString = presentationData.strings.FolderLinkScreen_TitleDescriptionDeselected(title).string
+        let chatCountStringValue = NSMutableAttributedString(string: presentationData.strings.FolderLinkScreen_TitleDescriptionDeselectedV2)
+        let folderRange = (chatCountStringValue.string as NSString).range(of: "{folder}")
+        if folderRange.location != NSNotFound {
+            chatCountStringValue.replaceCharacters(in: folderRange, with: "")
+            chatCountStringValue.insert(title.rawAttributedString, at: folderRange.location)
+        }
+        
+        chatCountString = chatCountStringValue
         peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeader
         if allPeers.count > 1 {
             selectAllString = allSelected ? presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionDeselectAll : presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionSelectAll
         }
     } else {
-        chatCountString = presentationData.strings.FolderLinkScreen_TitleDescriptionSelected(title, presentationData.strings.FolderLinkScreen_TitleDescriptionSelectedCount(Int32(state.selectedPeerIds.count))).string
+        let chatCountStringValue = NSMutableAttributedString(string: presentationData.strings.FolderLinkScreen_TitleDescriptionSelectedV2)
+        let folderRange = (chatCountStringValue.string as NSString).range(of: "{folder}")
+        if folderRange.location != NSNotFound {
+            chatCountStringValue.replaceCharacters(in: folderRange, with: "")
+            chatCountStringValue.insert(title.rawAttributedString, at: folderRange.location)
+        }
+        let chatsRange = (chatCountStringValue.string as NSString).range(of: "{chats}")
+        if chatsRange.location != NSNotFound {
+            chatCountStringValue.replaceCharacters(in: chatsRange, with: "")
+            let countValue = presentationData.strings.FolderLinkScreen_TitleDescriptionSelectedCount(Int32(state.selectedPeerIds.count))
+            chatCountStringValue.insert(NSAttributedString(string: countValue), at: chatsRange.location)
+        }
+        
+        chatCountString = chatCountStringValue
         peersHeaderString = presentationData.strings.FolderLinkScreen_ChatsSectionHeaderSelected(Int32(state.selectedPeerIds.count))
         if allPeers.count > 1 {
             selectAllString = allSelected ? presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionDeselectAll : presentationData.strings.FolderLinkScreen_ChatsSectionHeaderActionSelectAll
@@ -304,7 +324,7 @@ private struct FolderInviteLinkListControllerState: Equatable {
     var isSaving: Bool = false
 }
 
-public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: String, allPeerIds: [EnginePeer.Id], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
+public func folderInviteLinkListController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filterId: Int32, title filterTitle: ChatFolderTitle, allPeerIds: [EnginePeer.Id], currentInvitation: ExportedChatFolderLink?, linkUpdated: @escaping (ExportedChatFolderLink?) -> Void, presentController parentPresentController: ((ViewController) -> Void)?) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     let _ = pushControllerImpl
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?

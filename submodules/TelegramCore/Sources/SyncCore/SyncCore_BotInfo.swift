@@ -98,6 +98,38 @@ public struct BotAppSettings: PostboxCoding, Equatable {
     }
 }
 
+public struct BotVerifierSettings: PostboxCoding, Equatable {
+    public let iconFileId: Int64
+    public let companyName: String
+    public let customDescription: String?
+    public let canModifyDescription: Bool
+    
+    public init(iconFileId: Int64, companyName: String, customDescription: String?, canModifyDescription: Bool) {
+        self.iconFileId = iconFileId
+        self.companyName = companyName
+        self.customDescription = customDescription
+        self.canModifyDescription = canModifyDescription
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.iconFileId = decoder.decodeInt64ForKey("i", orElse: 0)
+        self.companyName = decoder.decodeStringForKey("cn", orElse: "")
+        self.customDescription = decoder.decodeOptionalStringForKey("d")
+        self.canModifyDescription = decoder.decodeBoolForKey("md", orElse: false)
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.iconFileId, forKey: "i")
+        encoder.encodeString(self.companyName, forKey: "cn")
+        if let customDescription = self.customDescription {
+            encoder.encodeString(customDescription, forKey: "d")
+        } else {
+            encoder.encodeNil(forKey: "d")
+        }
+        encoder.encodeBool(self.canModifyDescription, forKey: "md")
+    }
+}
+
 public final class BotInfo: PostboxCoding, Equatable {
     public let description: String
     public let photo: TelegramMediaImage?
@@ -106,8 +138,9 @@ public final class BotInfo: PostboxCoding, Equatable {
     public let menuButton: BotMenuButton
     public let privacyPolicyUrl: String?
     public let appSettings: BotAppSettings?
+    public let verifierSettings: BotVerifierSettings?
     
-    public init(description: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, commands: [BotCommand], menuButton: BotMenuButton, privacyPolicyUrl: String?, appSettings: BotAppSettings?) {
+    public init(description: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, commands: [BotCommand], menuButton: BotMenuButton, privacyPolicyUrl: String?, appSettings: BotAppSettings?, verifierSettings: BotVerifierSettings?) {
         self.description = description
         self.photo = photo
         self.video = video
@@ -115,6 +148,7 @@ public final class BotInfo: PostboxCoding, Equatable {
         self.menuButton = menuButton
         self.privacyPolicyUrl = privacyPolicyUrl
         self.appSettings = appSettings
+        self.verifierSettings = verifierSettings
     }
     
     public init(decoder: PostboxDecoder) {
@@ -136,6 +170,11 @@ public final class BotInfo: PostboxCoding, Equatable {
             self.appSettings = appSettings
         } else {
             self.appSettings = nil
+        }
+        if let verifierSettings = decoder.decodeObjectForKey("vs", decoder: { BotVerifierSettings(decoder: $0) }) as? BotVerifierSettings {
+            self.verifierSettings = verifierSettings
+        } else {
+            self.verifierSettings = nil
         }
     }
     
@@ -163,9 +202,14 @@ public final class BotInfo: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "as")
         }
+        if let verifierSettings = self.verifierSettings {
+            encoder.encodeObject(verifierSettings, forKey: "vs")
+        } else {
+            encoder.encodeNil(forKey: "vs")
+        }
     }
     
     public static func ==(lhs: BotInfo, rhs: BotInfo) -> Bool {
-        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo == rhs.photo && lhs.privacyPolicyUrl == rhs.privacyPolicyUrl && lhs.appSettings == rhs.appSettings
+        return lhs.description == rhs.description && lhs.commands == rhs.commands && lhs.menuButton == rhs.menuButton && lhs.photo == rhs.photo && lhs.privacyPolicyUrl == rhs.privacyPolicyUrl && lhs.appSettings == rhs.appSettings && lhs.verifierSettings == rhs.verifierSettings
     }
 }

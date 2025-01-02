@@ -69,7 +69,7 @@ public extension TelegramChannel {
                     if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banSendPhotos) {
                         return false
                     }
-                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banSendText) && !ignoreDefault {
+                    if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banSendPhotos) && !ignoreDefault {
                         return false
                     }
                     return true

@@ -655,7 +655,7 @@ final class ComposePollScreenComponent: Component {
                 theme: environment.theme,
                 strings: environment.strings,
                 resetText: self.resetPollText.flatMap { resetText in
-                    return ListComposePollOptionComponent.ResetText(value: resetText)
+                    return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
                 },
                 assumeIsEditing: self.inputMediaNodeTargetTag === self.pollTextFieldTag,
                 characterLimit: component.initialData.maxPollTextLength,
@@ -750,7 +750,7 @@ final class ComposePollScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     resetText: pollOption.resetText.flatMap { resetText in
-                        return ListComposePollOptionComponent.ResetText(value: resetText)
+                        return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
                     },
                     assumeIsEditing: self.inputMediaNodeTargetTag === pollOption.textFieldTag,
                     characterLimit: component.initialData.maxPollOptionLength,
@@ -1139,7 +1139,7 @@ final class ComposePollScreenComponent: Component {
                             theme: environment.theme,
                             strings: environment.strings,
                             resetText: self.resetQuizAnswerText.flatMap { resetText in
-                                return ListComposePollOptionComponent.ResetText(value: resetText)
+                                return ListComposePollOptionComponent.ResetText(value: NSAttributedString(string: resetText))
                             },
                             assumeIsEditing: self.inputMediaNodeTargetTag === self.quizAnswerTextInputTag,
                             characterLimit: component.initialData.maxPollTextLength,

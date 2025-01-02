@@ -218,7 +218,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
     public var isPlaying: Bool = false
     private var currentLoopCount: Int = 0
     private var canDisplayFirstFrame: Bool = false
-    private var playbackMode: AnimatedStickerPlaybackMode = .loop
+    public var playbackMode: AnimatedStickerPlaybackMode = .loop
     
     public var stopAtNearestLoop: Bool = false
     

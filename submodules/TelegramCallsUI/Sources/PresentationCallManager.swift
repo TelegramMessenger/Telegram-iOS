@@ -536,7 +536,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             |> mapToSignal { areVideoCallsAvailable -> Signal<CallSessionInternalId, NoError> in
                 let isVideoPossible: Bool = areVideoCallsAvailable
                 
-                return context.account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, internalId: internalId)
+                return context.account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, conferenceCall: nil, internalId: internalId)
             }
             
             return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), context.account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
@@ -702,7 +702,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                                 isChannel: isChannel,
                                 invite: nil,
                                 joinAsPeerId: nil,
-                                isStream: false
+                                isStream: false,
+                                encryptionKey: nil,
+                                conferenceFromCallId: nil,
+                                isConference: false,
+                                sharedAudioDevice: nil
                             )
                             call.schedule(timestamp: timestamp)
                             
@@ -741,15 +745,19 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     isChannel: isChannel,
                     invite: nil,
                     joinAsPeerId: nil,
-                    isStream: false
+                    isStream: false,
+                    encryptionKey: nil,
+                    conferenceFromCallId: nil,
+                    isConference: false,
+                    sharedAudioDevice: nil
                 )
                 strongSelf.updateCurrentGroupCall(call)
                 strongSelf.currentGroupCallPromise.set(.single(call))
                 strongSelf.hasActiveGroupCallsPromise.set(true)
                 strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
-                                                                 |> filter { $0 }
-                                                                 |> take(1)
-                                                                 |> deliverOnMainQueue).start(next: { [weak call] value in
+                |> filter { $0 }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak call] value in
                     guard let strongSelf = self, let call = call else {
                         return
                     }
@@ -921,7 +929,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 isChannel: isChannel,
                 invite: invite,
                 joinAsPeerId: joinAsPeerId,
-                isStream: initialCall.isStream ?? false
+                isStream: initialCall.isStream ?? false,
+                encryptionKey: nil,
+                conferenceFromCallId: nil,
+                isConference: false,
+                sharedAudioDevice: nil
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

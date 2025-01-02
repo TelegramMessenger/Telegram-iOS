@@ -62,6 +62,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var dynamicStreaming: Bool
     public var enableLocalTranslation: Bool
     public var autoBenchmarkReflectors: Bool?
+    public var conferenceCalls: Bool
+    public var playerV2: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -101,7 +103,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
             liveStreamV2: false,
             dynamicStreaming: false,
             enableLocalTranslation: false,
-            autoBenchmarkReflectors: nil
+            autoBenchmarkReflectors: nil,
+            conferenceCalls: false,
+            playerV2: false
         )
     }
     
@@ -142,7 +146,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         liveStreamV2: Bool,
         dynamicStreaming: Bool,
         enableLocalTranslation: Bool,
-        autoBenchmarkReflectors: Bool?
+        autoBenchmarkReflectors: Bool?,
+        conferenceCalls: Bool,
+        playerV2: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -181,6 +187,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = dynamicStreaming
         self.enableLocalTranslation = enableLocalTranslation
         self.autoBenchmarkReflectors = autoBenchmarkReflectors
+        self.conferenceCalls = conferenceCalls
+        self.playerV2 = playerV2
     }
     
     public init(from decoder: Decoder) throws {
@@ -223,6 +231,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = try container.decodeIfPresent(Bool.self, forKey: "dynamicStreaming_v2") ?? false
         self.enableLocalTranslation = try container.decodeIfPresent(Bool.self, forKey: "enableLocalTranslation") ?? false
         self.autoBenchmarkReflectors = try container.decodeIfPresent(Bool.self, forKey: "autoBenchmarkReflectors")
+        self.conferenceCalls = try container.decodeIfPresent(Bool.self, forKey: "conferenceCalls") ?? false
+        self.playerV2 = try container.decodeIfPresent(Bool.self, forKey: "playerV2") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -265,6 +275,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.dynamicStreaming, forKey: "dynamicStreaming")
         try container.encode(self.enableLocalTranslation, forKey: "enableLocalTranslation")
         try container.encodeIfPresent(self.autoBenchmarkReflectors, forKey: "autoBenchmarkReflectors")
+        try container.encodeIfPresent(self.conferenceCalls, forKey: "conferenceCalls")
+        try container.encodeIfPresent(self.playerV2, forKey: "playerV2")
     }
 }
 
