@@ -1037,7 +1037,9 @@ public final class OngoingGroupCallContext {
         }
         
         func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+            #if os(iOS)
             self.context.addRemoteConnectedEvent(isRemoteConntected)
+            #endif
         }
     }
     

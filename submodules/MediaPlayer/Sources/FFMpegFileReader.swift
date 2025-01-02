@@ -62,22 +62,22 @@ private func FFMpegFileReader_seekCallback(userData: UnsafeMutableRawPointer?, o
     }
 }
 
-final class FFMpegFileReader {
-    enum SourceDescription {
+public final class FFMpegFileReader {
+    public enum SourceDescription {
         case file(String)
         case resource(mediaBox: MediaBox, resource: MediaResource, size: Int64)
     }
     
-    final class StreamInfo: Equatable {
-        let index: Int
-        let codecId: Int32
-        let startTime: CMTime
-        let duration: CMTime
-        let timeBase: CMTimeValue
-        let timeScale: CMTimeScale
-        let fps: CMTime
+    public final class StreamInfo: Equatable {
+        public let index: Int
+        public let codecId: Int32
+        public let startTime: CMTime
+        public let duration: CMTime
+        public let timeBase: CMTimeValue
+        public let timeScale: CMTimeScale
+        public let fps: CMTime
         
-        init(index: Int, codecId: Int32, startTime: CMTime, duration: CMTime, timeBase: CMTimeValue, timeScale: CMTimeScale, fps: CMTime) {
+        public init(index: Int, codecId: Int32, startTime: CMTime, duration: CMTime, timeBase: CMTimeValue, timeScale: CMTimeScale, fps: CMTime) {
             self.index = index
             self.codecId = codecId
             self.startTime = startTime
@@ -87,7 +87,7 @@ final class FFMpegFileReader {
             self.fps = fps
         }
         
-        static func ==(lhs: StreamInfo, rhs: StreamInfo) -> Bool {
+        public static func ==(lhs: StreamInfo, rhs: StreamInfo) -> Bool {
             if lhs.index != rhs.index {
                 return false
             }
@@ -169,8 +169,8 @@ final class FFMpegFileReader {
         }
     }
     
-    enum SelectedStream {
-        enum MediaType {
+    public enum SelectedStream {
+        public enum MediaType {
             case audio
             case video
         }
@@ -179,7 +179,7 @@ final class FFMpegFileReader {
         case index(Int)
     }
     
-    enum ReadFrameResult {
+    public enum ReadFrameResult {
         case frame(MediaTrackFrame)
         case waitingForMoreData
         case endOfStream
