@@ -1468,7 +1468,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             transition: .immediate,
                             component: AnyComponent(verifiedIconComponent),
                             environment: {},
-                            containerSize: CGSize(width: 20.0, height: 20.0)
+                            containerSize: CGSize(width: 16.0, height: 16.0)
                         )
                         
                         transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
