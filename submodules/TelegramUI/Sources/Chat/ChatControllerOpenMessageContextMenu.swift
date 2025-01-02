@@ -301,8 +301,20 @@ extension ChatControllerImpl {
                 
                 self.canReadHistory.set(false)
                 
+                var hideReactionPanelTail = false
+                for media in message.media {
+                    if let action = media as? TelegramMediaAction {
+                        switch action.action {
+                        case .phoneCall:
+                            break
+                        default:
+                            hideReactionPanelTail = true
+                        }
+                    }
+                }
+                
                 let isSecret = self.presentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
-                let controller = ContextController(presentationData: self.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture, disableScreenshots: isSecret)
+                let controller = ContextController(presentationData: self.presentationData, source: source, items: actionsSignal, recognizer: recognizer, gesture: gesture, disableScreenshots: isSecret, hideReactionPanelTail: hideReactionPanelTail)
                 controller.dismissed = { [weak self] in
                     self?.canReadHistory.set(true)
                 }

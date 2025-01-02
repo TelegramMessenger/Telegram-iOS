@@ -306,18 +306,7 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let self else {
                 return
             }
-            if let mainPreviewIconView = self.mainPreviewIcon?.view {
-                mainPreviewIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
-                    guard let self else {
-                        return
-                    }
-                    if let mainPreviewIconView = self.mainPreviewIcon?.view {
-                        self.mainPreviewIcon = nil
-                        mainPreviewIconView.removeFromSuperview()
-                    }
-                })
-                mainPreviewIconView.layer.animateScale(from: 1.0, to: 0.5, duration: 0.2, removeOnCompletion: false)
-            }
+            self.hideMainPreviewIcon()
         }
         
         self.gridNode.interactiveScrollingEnded = { [weak self] in
@@ -643,6 +632,8 @@ private final class StickerPackContainer: ASDisplayNode {
             return nil
         }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
+                strongSelf.hideMainPreviewIcon()
+                
                 let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceView: {
                     return (sourceView, sourceRect)
                 })
@@ -695,6 +686,21 @@ private final class StickerPackContainer: ASDisplayNode {
         reorderingGestureRecognizer.isEnabled = self.isEditing
         self.reorderingGestureRecognizer = reorderingGestureRecognizer
         self.gridNode.view.addGestureRecognizer(reorderingGestureRecognizer)
+    }
+    
+    private func hideMainPreviewIcon() {
+        if let mainPreviewIconView = self.mainPreviewIcon?.view {
+            mainPreviewIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let mainPreviewIconView = self.mainPreviewIcon?.view {
+                    self.mainPreviewIcon = nil
+                    mainPreviewIconView.removeFromSuperview()
+                }
+            })
+            mainPreviewIconView.layer.animateScale(from: 1.0, to: 0.5, duration: 0.2, removeOnCompletion: false)
+        }
     }
     
     private var reorderFeedback: HapticFeedback?
@@ -2184,7 +2190,7 @@ private final class StickerPackContainer: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         
         if let previewIconFile = self.previewIconFile, let mainPreviewIcon = self.mainPreviewIcon {
-            let iconFitSize = CGSize(width: 90.0, height: 90.0)
+            let iconFitSize = CGSize(width: 120.0, height: 120.0)
             let iconSize = mainPreviewIcon.update(
                 transition: .immediate,
                 component: AnyComponent(EmojiStatusComponent(
