@@ -1429,10 +1429,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 leftExpandedOffset = nextExpandedIconX + 4.0
             } else {
                 titleHorizontalOffset += (verifiedIconSize.width + 4.0) / 2.0
-                titleExpandedHorizontalOffset += titleExpandedVerifiedIconSize.width
+                titleExpandedHorizontalOffset += titleExpandedVerifiedIconSize.width - 2.0
                 
                 leftOffset = -verifiedIconSize.width - 4.0
-                leftExpandedOffset = -titleExpandedVerifiedIconSize.width - 8.0
+                leftExpandedOffset = -titleExpandedVerifiedIconSize.width - 4.0
             }
            
             var collapsedTransitionOffset: CGFloat = 0.0
