@@ -320,6 +320,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             self?.editPressed()
                         }
                     )))
+                    self.primaryContext?.leftButton?.accessibilityLabel = NSLocalizedString("Edit", comment: "Accessibility label for the Edit button")
                     
                     self.primaryContext?.rightButton = AnyComponentWithIdentity(id: "compose", component: AnyComponent(NavigationButtonComponent(
                         content: .icon(imageName: "Chat List/ComposeIcon"),
@@ -327,6 +328,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             self?.composePressed()
                         }
                     )))
+                    self.primaryContext?.rightButton?.accessibilityLabel = NSLocalizedString("Compose", comment: "Accessibility label for the Compose button")
                     
                     //let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
                     //backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
@@ -340,6 +342,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 self?.editPressed()
                             }
                         )))
+                        self.primaryContext?.rightButton?.accessibilityLabel = NSLocalizedString("Edit", comment: "Accessibility label for the Edit button")
                     case .forum:
                         break
                     case .savedMessagesChats:
