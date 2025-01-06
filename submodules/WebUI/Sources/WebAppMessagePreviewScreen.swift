@@ -324,7 +324,8 @@ private final class WebAppMessagePreviewSheetComponent: CombinedComponent {
                         preparedMessage: context.component.preparedMessage,
                         dismiss: {
                             animateOut.invoke(Action { _ in
-                                if let controller = controller() {
+                                if let controller = controller() as? WebAppMessagePreviewScreen {
+                                    controller.completeWithResult(false)
                                     controller.dismiss(completion: nil)
                                 }
                             })
