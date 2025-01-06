@@ -13641,3 +13641,12 @@ Sorry for the inconvenience.";
 
 "Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
 "Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";
+
+"Conversation.ViewStarGift" = "VIEW COLLECTIBLE";
+
+"ChatList.AddPhoto.Title" = "Add your photo! 📸";
+"ChatList.AddPhoto.Text" = "Help your friends spot you easily.";
+
+"Story.ViewGift" = "View Gift";
+
+"Camera.OpenChat" = "Open Chat";

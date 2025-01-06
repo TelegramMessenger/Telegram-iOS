@@ -1198,7 +1198,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.push(controller)
                             return true
                         case .starGift, .starGiftUnique:
-                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message))
+                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message), shareStory: { [weak self] in
+                                if let self, case let .starGiftUnique(gift, _, _, _, _, _, _) = action.action, case let .unique(uniqueGift) = gift {
+                                    Queue.mainQueue().after(0.15) {
+                                        self.openStorySharing(subject: .gift(uniqueGift))
+                                    }
+                                }
+                            })
                             strongSelf.push(controller)
                             return true
                         case .giftStars:

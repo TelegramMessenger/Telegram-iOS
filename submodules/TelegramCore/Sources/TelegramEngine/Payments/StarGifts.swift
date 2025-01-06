@@ -204,7 +204,9 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             case id
             case title
             case number
+            case slug
             case ownerPeerId
+            case ownerName
             case attributes
             case availability
         }
@@ -428,6 +430,11 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
                 encoder.encodeInt32(self.total, forKey: CodingKeys.total.rawValue)
             }
         }
+        
+        public enum Owner: Equatable {
+            case peerId(EnginePeer.Id)
+            case name(String)
+        }
                 
         public enum DecodingError: Error {
             case generic
@@ -436,15 +443,17 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public let id: Int64
         public let title: String
         public let number: Int32
-        public let ownerPeerId: EnginePeer.Id
+        public let slug: String
+        public let owner: Owner
         public let attributes: [Attribute]
         public let availability: Availability
         
-        public init(id: Int64, title: String, number: Int32, ownerPeerId: EnginePeer.Id, attributes: [Attribute], availability: Availability) {
+        public init(id: Int64, title: String, number: Int32, slug: String, owner: Owner, attributes: [Attribute], availability: Availability) {
             self.id = id
             self.title = title
             self.number = number
-            self.ownerPeerId = ownerPeerId
+            self.slug = slug
+            self.owner = owner
             self.attributes = attributes
             self.availability = availability
         }
@@ -454,7 +463,14 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.id = try container.decode(Int64.self, forKey: .id)
             self.title = try container.decode(String.self, forKey: .title)
             self.number = try container.decode(Int32.self, forKey: .number)
-            self.ownerPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(try container.decode(Int64.self, forKey: .ownerPeerId)))
+            self.slug = try container.decodeIfPresent(String.self, forKey: .slug) ?? ""
+            if let ownerId = try container.decodeIfPresent(Int64.self, forKey: .ownerPeerId) {
+                self.owner = .peerId(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)))
+            } else if let ownerName = try container.decodeIfPresent(String.self, forKey: .ownerName) {
+                self.owner = .name(ownerName)
+            } else {
+                self.owner = .name("Unknown")
+            }
             self.attributes = try container.decode([UniqueGift.Attribute].self, forKey: .attributes)
             self.availability = try container.decode(UniqueGift.Availability.self, forKey: .availability)
         }
@@ -463,7 +479,14 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.id = decoder.decodeInt64ForKey(CodingKeys.id.rawValue, orElse: 0)
             self.title = decoder.decodeStringForKey(CodingKeys.title.rawValue, orElse: "")
             self.number = decoder.decodeInt32ForKey(CodingKeys.number.rawValue, orElse: 0)
-            self.ownerPeerId = EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(decoder.decodeInt64ForKey(CodingKeys.ownerPeerId.rawValue, orElse: 0)))
+            self.slug = decoder.decodeStringForKey(CodingKeys.slug.rawValue, orElse: "")
+            if let ownerId = decoder.decodeOptionalInt64ForKey(CodingKeys.ownerPeerId.rawValue) {
+                self.owner = .peerId(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)))
+            } else if let ownerName = decoder.decodeOptionalStringForKey(CodingKeys.ownerName.rawValue) {
+                self.owner = .name(ownerName)
+            } else {
+                self.owner = .name("Unknown")
+            }
             self.attributes = (try? decoder.decodeObjectArrayWithCustomDecoderForKey(CodingKeys.attributes.rawValue, decoder: { UniqueGift.Attribute(decoder: $0) })) ?? []
             self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { UniqueGift.Availability(decoder: $0) }) as! UniqueGift.Availability
         }
@@ -473,7 +496,13 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             try container.encode(self.id, forKey: .id)
             try container.encode(self.title, forKey: .title)
             try container.encode(self.number, forKey: .number)
-            try container.encode(self.ownerPeerId.id._internalGetInt64Value(), forKey: .ownerPeerId)
+            try container.encode(self.slug, forKey: .slug)
+            switch self.owner {
+            case let .peerId(peerId):
+                try container.encode(peerId.id._internalGetInt64Value(), forKey: .ownerPeerId)
+            case let .name(name):
+                try container.encode(name, forKey: .ownerName)
+            }
             try container.encode(self.attributes, forKey: .attributes)
             try container.encode(self.availability, forKey: .availability)
         }
@@ -482,7 +511,13 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             encoder.encodeInt64(self.id, forKey: CodingKeys.id.rawValue)
             encoder.encodeString(self.title, forKey: CodingKeys.title.rawValue)
             encoder.encodeInt32(self.number, forKey: CodingKeys.number.rawValue)
-            encoder.encodeInt64(self.ownerPeerId.id._internalGetInt64Value(), forKey: CodingKeys.ownerPeerId.rawValue)
+            encoder.encodeString(self.slug, forKey: CodingKeys.slug.rawValue)
+            switch self.owner {
+            case let .peerId(peerId):
+                encoder.encodeInt64(peerId.id._internalGetInt64Value(), forKey: CodingKeys.ownerPeerId.rawValue)
+            case let .name(name):
+                encoder.encodeString(name, forKey: CodingKeys.ownerName.rawValue)
+            }
             encoder.encodeObjectArray(self.attributes, forKey: CodingKeys.attributes.rawValue)
             encoder.encodeObject(self.availability, forKey: CodingKeys.availability.rawValue)
         }
@@ -570,8 +605,16 @@ extension StarGift {
                 return nil
             }
             self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
-        case let .starGiftUnique(id, title, num, ownerId, attributes, availabilityIssued, availabilityTotal):
-            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, ownerPeerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)), attributes: attributes.compactMap { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal)))
+        case let .starGiftUnique(_, id, title, slug, num, ownerId, ownerName, attributes, availabilityIssued, availabilityTotal):
+            let owner: StarGift.UniqueGift.Owner
+            if let ownerId {
+                owner = .peerId(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)))
+            } else if let ownerName {
+                owner = .name(ownerName)
+            } else {
+                return nil
+            }
+            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, slug: slug, owner: owner, attributes: attributes.compactMap { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal)))
         }
     }
 }
@@ -1308,6 +1351,32 @@ extension StarGift.UniqueGift.Attribute {
                 entities = messageTextEntitiesFromApiEntities(entitiesValue)
             }
             self = .originalInfo(senderPeerId: senderId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, recipientPeerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(recipientId)), date: date, text: text, entities: entities)
+        }
+    }
+}
+
+
+func _internal_getUniqueStarGift(account: Account, slug: String) -> Signal<StarGift.UniqueGift?, NoError> {
+    return account.network.request(Api.functions.payments.getUniqueStarGift(slug: slug))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.payments.UniqueStarGift?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<StarGift.UniqueGift?, NoError> in
+        if let result = result {
+            switch result {
+            case let .uniqueStarGift(gift, users):
+                return account.postbox.transaction { transaction in
+                    let parsedPeers = AccumulatedPeers(users: users)
+                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
+                    guard case let .unique(uniqueGift) = StarGift(apiStarGift: gift) else {
+                        return nil
+                    }
+                    return uniqueGift
+                }
+            }
+        } else {
+            return .single(nil)
         }
     }
 }

@@ -1,3 +1,57 @@
+public extension Api.upload {
+    enum WebFile: TypeConstructorDescription {
+        case webFile(size: Int32, mimeType: String, fileType: Api.storage.FileType, mtime: Int32, bytes: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
+                    if boxed {
+                        buffer.appendInt32(568808380)
+                    }
+                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    fileType.serialize(buffer, true)
+                    serializeInt32(mtime, buffer: buffer, boxed: false)
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webFile(let size, let mimeType, let fileType, let mtime, let bytes):
+                return ("webFile", [("size", size as Any), ("mimeType", mimeType as Any), ("fileType", fileType as Any), ("mtime", mtime as Any), ("bytes", bytes as Any)])
+    }
+    }
+    
+        public static func parse_webFile(_ reader: BufferReader) -> WebFile? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Api.storage.FileType?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.storage.FileType
+            }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Buffer?
+            _5 = parseBytes(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.upload.WebFile.webFile(size: _1!, mimeType: _2!, fileType: _3!, mtime: _4!, bytes: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.users {
     enum UserFull: TypeConstructorDescription {
         case userFull(fullUser: Api.UserFull, chats: [Api.Chat], users: [Api.User])

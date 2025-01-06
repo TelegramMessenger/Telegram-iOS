@@ -433,7 +433,6 @@ final class MediaEditorScreenComponent: Component {
                         }
                     },
                     dismissTextInput: {
-
                     },
                     insertText: { [weak self] text in
                         if let self {
@@ -1661,7 +1660,17 @@ final class MediaEditorScreenComponent: Component {
                 var topButtonOffsetX: CGFloat = 0.0
                 var topButtonOffsetY: CGFloat = 0.0
                 
-                if let subject = controller.node.subject, case .message = subject {
+                var hasDayNightSelection = false
+                if let subject = controller.node.subject {
+                    switch subject {
+                    case .message, .gift:
+                        hasDayNightSelection = true
+                    default:
+                        break
+                    }
+                }
+                
+                if hasDayNightSelection {
                     let isNightTheme = mediaEditor?.values.nightTheme == true
                     
                     let dayNightContentComponent: AnyComponentWithIdentity<Empty>
@@ -3145,6 +3154,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 isSavingAvailable = true
             case .message:
                 isSavingAvailable = true
+            case .gift:
+                isSavingAvailable = true
             default:
                 isSavingAvailable = false
             }
@@ -3237,8 +3248,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     mediaEditor.seek(initialVideoPosition, andPlay: true)
                 }
             }
-            if case .message = subject, self.context.sharedContext.currentPresentationData.with({$0}).autoNightModeTriggered {
-                mediaEditor.setNightTheme(true)
+            if self.context.sharedContext.currentPresentationData.with({$0}).autoNightModeTriggered {
+                switch subject {
+                case .message, .gift:
+                    mediaEditor.setNightTheme(true)
+                default:
+                    break
+                }
             }
             mediaEditor.valuesUpdated = { [weak self] values in
                 if let self, let controller = self.controller, values.gradientColors != nil, controller.previousSavedValues != values {
@@ -3284,28 +3300,33 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 self.stickerMaskDrawingView?.clearWithEmptyColor()
             }
             
-            if case .message = effectiveSubject {
-            } else {
+            switch effectiveSubject {
+            case .message, .gift:
+                break
+            default:
                 self.readyValue.set(.single(true))
             }
             
-            if case let .image(_, _, additionalImage, position) = effectiveSubject, let additionalImage {
-                let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
-                    let bounds = CGRect(origin: .zero, size: size)
-                    context.clear(bounds)
-                    context.addEllipse(in: bounds)
-                    context.clip()
-                    
-                    if let cgImage = additionalImage.cgImage {
-                        context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
-                    }
-                }, scale: 1.0)
-                let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, .dualPhoto))
-                imageEntity.referenceDrawingSize = storyDimensions
-                imageEntity.scale = 1.625
-                imageEntity.position = position.getPosition(storyDimensions)
-                self.entitiesView.add(imageEntity, announce: false)
-            } else if case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position) = effectiveSubject {
+            switch effectiveSubject {
+            case let .image(_, _, additionalImage, position):
+                if let additionalImage {
+                    let image = generateImage(CGSize(width: additionalImage.size.width, height: additionalImage.size.width), contextGenerator: { size, context in
+                        let bounds = CGRect(origin: .zero, size: size)
+                        context.clear(bounds)
+                        context.addEllipse(in: bounds)
+                        context.clip()
+                        
+                        if let cgImage = additionalImage.cgImage {
+                            context.draw(cgImage, in: CGRect(origin: CGPoint(x: (size.width - additionalImage.size.width) / 2.0, y: (size.height - additionalImage.size.height) / 2.0), size: additionalImage.size))
+                        }
+                    }, scale: 1.0)
+                    let imageEntity = DrawingStickerEntity(content: .image(image ?? additionalImage, .dualPhoto))
+                    imageEntity.referenceDrawingSize = storyDimensions
+                    imageEntity.scale = 1.625
+                    imageEntity.position = position.getPosition(storyDimensions)
+                    self.entitiesView.add(imageEntity, announce: false)
+                }
+            case let .video(_, _, mirror, additionalVideoPath, _, _, _, changes, position):
                 mediaEditor.setVideoIsMirrored(mirror)
                 if let additionalVideoPath {
                     let videoEntity = DrawingStickerEntity(content: .dualVideoReference(false))
@@ -3324,24 +3345,41 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         }
                     }
                 }
-            } else if case let .videoCollage(items) = effectiveSubject {
+            case let .videoCollage(items):
                 mediaEditor.setupCollage(items.map { $0.editorItem })
-            } else if case let .message(messageIds) = effectiveSubject {
+            case let .sticker(_, emoji):
+                controller.stickerSelectedEmoji = emoji
+            case .message, .gift:
+                var isGift = false
+                let messages: Signal<[Message], NoError>
+                if case let .message(messageIds) = effectiveSubject {
+                    messages = self.context.engine.data.get(
+                        EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
+                    )
+                    |> map { result in
+                        var messages: [Message] = []
+                        for id in messageIds {
+                            if let maybeMessage = result[id], let message = maybeMessage {
+                                messages.append(message._asMessage())
+                            }
+                        }
+                        return messages
+                    }
+                } else if case let .gift(gift) = effectiveSubject {
+                    isGift = true
+                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false))]
+                    let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                    messages = .single([message])
+                } else {
+                    fatalError()
+                }
+                
                 let isNightTheme = mediaEditor.values.nightTheme
-                let _ = ((self.context.engine.data.get(
-                    EngineDataMap(messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init(id:)))
-                ))
-                |> deliverOnMainQueue).start(next: { [weak self] result in
+                let _ = (messages
+                |> deliverOnMainQueue).start(next: { [weak self] messages in
                     guard let self else {
                         return
                     }
-                    var messages: [Message] = []
-                    for id in messageIds {
-                        if let maybeMessage = result[id], let message = maybeMessage {
-                            messages.append(message._asMessage())
-                        }
-                    }
-                    
                     var messageFile: TelegramMediaFile?
                     if let maybeFile = messages.first?.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile, maybeFile.isVideo, let _ = self.context.account.postbox.mediaBox.completedResourcePath(maybeFile.resource, pathExtension: nil) {
                         messageFile = maybeFile
@@ -3350,7 +3388,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         messageFile = nil
                     }
                     
-                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view)
+                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view, isGift: isGift)
                     renderer.render(completion: { result in
                         if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
                             if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
@@ -3366,12 +3404,25 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             messageEntity.overlayRenderImage = result.overlayImage
                             existingEntityView.update(animated: false)
                         } else {
-                            let messageEntity = DrawingStickerEntity(content: .message(messageIds, result.size, messageFile, result.mediaFrame?.rect, result.mediaFrame?.cornerRadius))
+                            var content: DrawingStickerEntity.Content
+                            var position: CGPoint
+                            switch effectiveSubject {
+                            case let .message(messageIds):
+                                content = .message(messageIds, result.size, messageFile, result.mediaFrame?.rect, result.mediaFrame?.cornerRadius)
+                                position = CGPoint(x: storyDimensions.width / 2.0 - 54.0, y: storyDimensions.height / 2.0)
+                            case let .gift(gift):
+                                content = .gift(gift, result.size)
+                                position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
+                            default:
+                                fatalError()
+                            }
+                            
+                            let messageEntity = DrawingStickerEntity(content: content)
                             messageEntity.renderImage = result.dayImage
                             messageEntity.secondaryRenderImage = result.nightImage
                             messageEntity.overlayRenderImage = result.overlayImage
                             messageEntity.referenceDrawingSize = storyDimensions
-                            messageEntity.position = CGPoint(x: storyDimensions.width / 2.0 - 54.0, y: storyDimensions.height / 2.0)
+                            messageEntity.position = position
                             
                             let fraction = max(result.size.width, result.size.height) / 353.0
                             messageEntity.scale = min(6.0, 3.3 * fraction)
@@ -3386,10 +3437,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         self.readyValue.set(.single(true))
                     })
                 })
-            } else if case let .sticker(_, emoji) = effectiveSubject {
-                controller.stickerSelectedEmoji = emoji
+            default:
+                break
             }
-            
+                        
             self.gradientColorsDisposable = mediaEditor.gradientColors.start(next: { [weak self] colors in
                 if let self, let colors {
                     let gradientImage = generateGradientImage(size: CGSize(width: 5.0, height: 640.0), colors: colors.array, locations: [0.0, 1.0])
@@ -3749,10 +3800,12 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         }
         
         private var canEnhance: Bool {
-            if case .message = self.subject {
+            switch self.subject {
+            case .message, .gift:
                 return false
+            default:
+                return true
             }
-            return true
         }
         
         private var enhanceInitialTranslation: Float?
@@ -3856,8 +3909,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             guard !self.isCollageTimelineOpen else {
                 return
             }
-            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
-                return
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                switch subject {
+                case .message, .gift:
+                    return
+                default:
+                    break
+                }
             }
             let currentTimestamp = CACurrentMediaTime()
             if let previousPanTimestamp = self.previousPanTimestamp, currentTimestamp - previousPanTimestamp < 0.016, case .changed = gestureRecognizer.state {
@@ -3871,8 +3929,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             guard !self.isCollageTimelineOpen else {
                 return
             }
-            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
-                return
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                switch subject {
+                case .message, .gift:
+                    return
+                default:
+                    break
+                }
             }
             let currentTimestamp = CACurrentMediaTime()
             if let previousPinchTimestamp = self.previousPinchTimestamp, currentTimestamp - previousPinchTimestamp < 0.016, case .changed = gestureRecognizer.state {
@@ -3886,8 +3949,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             guard !self.isCollageTimelineOpen else {
                 return
             }
-            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, case .message = subject, !self.entitiesView.hasSelection {
-                return
+            if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                switch subject {
+                case .message, .gift:
+                    return
+                default:
+                    break
+                }
             }
             let currentTimestamp = CACurrentMediaTime()
             if let previousRotateTimestamp = self.previousRotateTimestamp, currentTimestamp - previousRotateTimestamp < 0.016, case .changed = gestureRecognizer.state {
@@ -4072,7 +4140,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 var animateIn = false
                 if let subject {
                     switch subject {
-                    case .empty, .message, .sticker, .image:
+                    case .empty, .message, .gift, .sticker, .image:
                         animateIn = true
                     default:
                         break
@@ -5924,6 +5992,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         case asset(PHAsset)
         case draft(MediaEditorDraft, Int64?)
         case message([MessageId])
+        case gift(StarGift.UniqueGift)
         case sticker(TelegramMediaFile, [String])
         
         var dimensions: PixelDimensions {
@@ -5936,7 +6005,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
             case let .draft(draft, _):
                 return draft.dimensions
-            case .message, .sticker, .videoCollage:
+            case .message, .gift, .sticker, .videoCollage:
                 return PixelDimensions(width: 1080, height: 1920)
             }
         }
@@ -5960,6 +6029,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return .draft(draft)
             case let .message(messageIds):
                 return .message(messageIds.first!)
+            case let .gift(gift):
+                return .gift(gift)
             case let .sticker(sticker, _):
                 return .sticker(sticker)
             }
@@ -5984,6 +6055,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             case let .draft(draft, _):
                 return draft.isVideo
             case .message:
+                return false
+            case .gift:
                 return false
             case .sticker:
                 return false
@@ -6189,9 +6262,12 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         if self.isEditingStory {
             needsAudioSession = true
         }
-        if case .message = subject {
+        switch subject {
+        case .message, .gift:
             needsAudioSession = true
             checkPostingAvailability = true
+        default:
+            break
         }
         if needsAudioSession {
             self.audioSessionDisposable = self.context.sharedContext.mediaManager.audioSession.push(audioSessionType: .record(speaker: false, video: true, withOthers: true), activate: { _ in
@@ -7195,9 +7271,16 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         firstFrame = .single((UIImage(), nil))
                     }
                 }
-            case let .message(messages):
+            case .message, .gift:
+                let peerId: EnginePeer.Id
+                if case let .message(messageIds) = subject {
+                    peerId = messageIds.first!.peerId
+                } else {
+                    peerId = self.context.account.peerId
+                }
+                
                 let isNightTheme = mediaEditor.values.nightTheme
-                let wallpaper = getChatWallpaperImage(context: self.context, messageId: messages.first!)
+                let wallpaper = getChatWallpaperImage(context: self.context, peerId: peerId)
                 |> map { _, image, nightImage -> UIImage? in
                     if isNightTheme {
                         return nightImage ?? image
@@ -8055,7 +8138,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             case let .message(messages):
                 let isNightTheme = mediaEditor.values.nightTheme
-                exportSubject = getChatWallpaperImage(context: self.context, messageId: messages.first!)
+                exportSubject = getChatWallpaperImage(context: self.context, peerId: messages.first!.peerId)
+                |> mapToSignal { _, image, nightImage -> Signal<MediaEditorVideoExport.Subject, NoError> in
+                    if isNightTheme {
+                        let effectiveImage = nightImage ?? image
+                        return effectiveImage.flatMap({ .single(.image(image: $0)) }) ?? .complete()
+                    } else {
+                        return image.flatMap({ .single(.image(image: $0)) }) ?? .complete()
+                    }
+                }
+            case .gift:
+                let isNightTheme = mediaEditor.values.nightTheme
+                exportSubject = getChatWallpaperImage(context: self.context, peerId: self.context.account.peerId)
                 |> mapToSignal { _, image, nightImage -> Signal<MediaEditorVideoExport.Subject, NoError> in
                     if isNightTheme {
                         let effectiveImage = nightImage ?? image

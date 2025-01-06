@@ -366,7 +366,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 var buttonTitle = item.presentationData.strings.Notification_PremiumGift_View
                 var buttonIcon: String?
                 var ribbonTitle = ""
-                var hasServiceMessage = true
                 var textSpacing: CGFloat = 0.0
                 var isStarGift = false
                 
@@ -380,6 +379,9 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 var uniqueSecondBackgroundColor: UIColor?
                 var uniquePatternColor: UIColor?
                 var uniquePatternFile: TelegramMediaFile?
+                
+                let isStoryEntity = item.message.id.id == -1
+                var hasServiceMessage = !isStoryEntity
                 
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
@@ -560,10 +562,10 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 }
-                                title = item.presentationData.strings.Notification_StarGift_Title(authorName).string
-                                text = "**\(uniqueGift.title) #\(uniqueGift.number)**"
-                                ribbonTitle = item.presentationData.strings.Notification_StarGift_Gift
-                                buttonTitle = item.presentationData.strings.Notification_StarGift_View
+                                title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                text =  isStoryEntity ? "**Collectible #\(uniqueGift.number)**" : "**\(uniqueGift.title) #\(uniqueGift.number)**"
+                                ribbonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_Gift
+                                buttonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_View
                                 modelTitle = item.presentationData.strings.Notification_StarGift_Model
                                 backdropTitle = item.presentationData.strings.Notification_StarGift_Backdrop
                                 symbolTitle = item.presentationData.strings.Notification_StarGift_Symbol
@@ -697,6 +699,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if !buttonTitle.isEmpty {
                     giftSize.height += 48.0
+                } else if isStoryEntity {
+                    giftSize.height += 12.0
                 }
                 
                 var labelRects = labelLayout.linesRects()
@@ -754,7 +758,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            let overlayColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
+                            let overlayColor = item.presentationData.theme.theme.overallDarkAppearance && uniquePatternFile == nil ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 12.0 : 0.0), size: giftSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
@@ -767,11 +771,12 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             let animationFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - iconSize.width) / 2.0), y: mediaBackgroundFrame.minY - 16.0 + iconOffset), size: iconSize)
                             strongSelf.animationNode.frame = animationFrame
+                            strongSelf.animationNode.isHidden = isStoryEntity
                             
                             strongSelf.buttonNode.isHidden = buttonTitle.isEmpty
                             strongSelf.buttonTitleNode.isHidden = buttonTitle.isEmpty
                         
-                            if strongSelf.item == nil {
+                            if strongSelf.item == nil && !isStoryEntity {
                                 strongSelf.animationNode.started = { [weak self] in
                                     if let strongSelf = self {
                                         let current = CACurrentMediaTime()
@@ -883,63 +888,78 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.dustNode = nil
                             }
                             
-                            var middleX = mediaBackgroundFrame.width / 2.0
-                            if let (modelValueLayout, _) = modelValueLayoutAndApply, let (backdropValueLayout, _) = backdropValueLayoutAndApply, let (symbolValueLayout, _) = symbolValueLayoutAndApply {
-                                let maxWidth = max(modelValueLayout.size.width, max(backdropValueLayout.size.width, symbolValueLayout.size.width))
-                                middleX = min(mediaBackgroundFrame.width - maxWidth - 16.0, middleX)
+                            let attributeSpacing: CGFloat = 6.0
+                            let attributeVerticalSpacing: CGFloat = 22.0
+                            var attributeMidpoints: [CGFloat] = []
+                            
+                            func appendAttributeMidpoint(titleLayout: TextNodeLayout?, valueLayout: TextNodeLayout?) {
+                                if let titleLayout, let valueLayout {
+                                    let totalWidth = titleLayout.size.width + attributeSpacing + valueLayout.size.width
+                                    let titleOffset = titleLayout.size.width + attributeSpacing / 2.0
+                                    let midpoint = (mediaBackgroundFrame.width - totalWidth) / 2.0 + titleOffset
+                                    attributeMidpoints.append(midpoint)
+                                }
                             }
-                                
-                            let titleMaxX: CGFloat = mediaBackgroundFrame.minX + middleX - 2.0
-                            let valueMinX: CGFloat = mediaBackgroundFrame.minX + middleX + 3.0
+                            appendAttributeMidpoint(titleLayout: modelTitleLayoutAndApply?.0, valueLayout: modelValueLayoutAndApply?.0)
+                            appendAttributeMidpoint(titleLayout: backdropTitleLayoutAndApply?.0, valueLayout: backdropValueLayoutAndApply?.0)
+                            appendAttributeMidpoint(titleLayout: symbolTitleLayoutAndApply?.0, valueLayout: symbolValueLayoutAndApply?.0)
+                            
+                            let middleX = attributeMidpoints.isEmpty ? mediaBackgroundFrame.width / 2.0 : attributeMidpoints.reduce(0, +) / CGFloat(attributeMidpoints.count)
+                            
+                            let titleMaxX: CGFloat = mediaBackgroundFrame.minX + middleX - attributeSpacing / 2.0
+                            let valueMinX: CGFloat = mediaBackgroundFrame.minX + middleX + attributeSpacing / 2.0
                           
-                            if let (modelTitleLayout, modelTitleApply) = modelTitleLayoutAndApply {
-                                if strongSelf.modelTitleTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.modelTitleTextNode)
+                            func positionAttributeNodes(
+                                titleTextNode: TextNode,
+                                valueTextNode: TextNode,
+                                titleLayoutAndApply: (TextNodeLayout, () -> TextNode)?,
+                                valueLayoutAndApply: (TextNodeLayout, () -> TextNode)?,
+                                yOffset: CGFloat
+                            ) {
+                                if let (titleLayout, titleApply) = titleLayoutAndApply {
+                                    if titleTextNode.supernode == nil {
+                                        strongSelf.addSubnode(titleTextNode)
+                                    }
+                                    let _ = titleApply()
+                                    titleTextNode.frame = CGRect(
+                                        origin: CGPoint(x: titleMaxX - titleLayout.size.width, y: clippingTextFrame.maxY + yOffset),
+                                        size: titleLayout.size
+                                    )
                                 }
-                                let _ = modelTitleApply()
-                                strongSelf.modelTitleTextNode.frame = CGRect(origin: CGPoint(x: titleMaxX - modelTitleLayout.size.width, y: clippingTextFrame.maxY + 10.0), size: modelTitleLayout.size)
+                                if let (valueLayout, valueApply) = valueLayoutAndApply {
+                                    if valueTextNode.supernode == nil {
+                                        strongSelf.addSubnode(valueTextNode)
+                                    }
+                                    let _ = valueApply()
+                                    valueTextNode.frame = CGRect(
+                                        origin: CGPoint(x: valueMinX, y: clippingTextFrame.maxY + yOffset),
+                                        size: valueLayout.size
+                                    )
+                                }
                             }
                             
-                            if let (modelValueLayout, modelValueApply) = modelValueLayoutAndApply {
-                                if strongSelf.modelValueTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.modelValueTextNode)
-                                }
-                                let _ = modelValueApply()
-                                strongSelf.modelValueTextNode.frame = CGRect(origin: CGPoint(x: valueMinX, y: clippingTextFrame.maxY + 10.0), size: modelValueLayout.size)
-                            }
-                            
-                            if let (backdropTitleLayout, backdropTitleApply) = backdropTitleLayoutAndApply {
-                                if strongSelf.backdropTitleTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.backdropTitleTextNode)
-                                }
-                                let _ = backdropTitleApply()
-                                strongSelf.backdropTitleTextNode.frame = CGRect(origin: CGPoint(x: titleMaxX - backdropTitleLayout.size.width, y: clippingTextFrame.maxY + 32.0), size: backdropTitleLayout.size)
-                            }
-                            
-                            if let (backdropValueLayout, backdropValueApply) = backdropValueLayoutAndApply {
-                                if strongSelf.backdropValueTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.backdropValueTextNode)
-                                }
-                                let _ = backdropValueApply()
-                                strongSelf.backdropValueTextNode.frame = CGRect(origin: CGPoint(x: valueMinX, y: clippingTextFrame.maxY + 32.0), size: backdropValueLayout.size)
-                            }
-                            
-                            if let (symbolTitleLayout, symbolTitleApply) = symbolTitleLayoutAndApply {
-                                if strongSelf.symbolTitleTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.symbolTitleTextNode)
-                                }
-                                let _ = symbolTitleApply()
-                                strongSelf.symbolTitleTextNode.frame = CGRect(origin: CGPoint(x: titleMaxX - symbolTitleLayout.size.width, y: clippingTextFrame.maxY + 54.0), size: symbolTitleLayout.size)
-                            }
-                            
-                            if let (symbolValueLayout, symbolValueApply) = symbolValueLayoutAndApply {
-                                if strongSelf.symbolValueTextNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.symbolValueTextNode)
-                                }
-                                let _ = symbolValueApply()
-                                strongSelf.symbolValueTextNode.frame = CGRect(origin: CGPoint(x: valueMinX, y: clippingTextFrame.maxY + 54.0), size: symbolValueLayout.size)
-                            }
-                            
+                            positionAttributeNodes(
+                                titleTextNode: strongSelf.modelTitleTextNode,
+                                valueTextNode: strongSelf.modelValueTextNode,
+                                titleLayoutAndApply: modelTitleLayoutAndApply,
+                                valueLayoutAndApply: modelValueLayoutAndApply,
+                                yOffset: 10.0
+                            )
+                            positionAttributeNodes(
+                                titleTextNode: strongSelf.backdropTitleTextNode,
+                                valueTextNode: strongSelf.backdropValueTextNode,
+                                titleLayoutAndApply: backdropTitleLayoutAndApply,
+                                valueLayoutAndApply: backdropValueLayoutAndApply,
+                                yOffset: 10.0 + attributeVerticalSpacing
+                            )
+                            positionAttributeNodes(
+                                titleTextNode: strongSelf.symbolTitleTextNode,
+                                valueTextNode: strongSelf.symbolValueTextNode,
+                                titleLayoutAndApply: symbolTitleLayoutAndApply,
+                                valueLayoutAndApply: symbolValueLayoutAndApply,
+                                yOffset: 10.0 + attributeVerticalSpacing * 2
+                            )
+ 
                             var buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 34.0)
                             var buttonOriginY = clippingTextFrame.maxY + 10.0
                             if modelTitleLayoutAndApply != nil {

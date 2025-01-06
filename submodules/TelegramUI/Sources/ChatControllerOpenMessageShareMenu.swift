@@ -134,7 +134,7 @@ extension ChatControllerImpl {
                     return
                 }
                 Queue.mainQueue().after(0.15) {
-                    self.openStorySharing(messages: messages)
+                    self.openStorySharing(subject: .messages(messages))
                 }
             }
         }

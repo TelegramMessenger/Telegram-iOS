@@ -431,10 +431,9 @@ public final class GiftItemComponent: Component {
                     }
                     price = priceValue
                 case .uniqueGift:
-                    //TODO:localize
                     buttonColor = UIColor.white
                     starsColor = UIColor.white
-                    price = "Unique"
+                    price = ""
                 }
                 
                 let buttonSize = self.button.update(

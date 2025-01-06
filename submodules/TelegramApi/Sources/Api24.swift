@@ -575,7 +575,7 @@ public extension Api {
 public extension Api {
     enum StarGift: TypeConstructorDescription {
         case starGift(flags: Int32, id: Int64, sticker: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?, convertStars: Int64, firstSaleDate: Int32?, lastSaleDate: Int32?, upgradeStars: Int64?)
-        case starGiftUnique(id: Int64, title: String, num: Int32, ownerId: Int64, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32)
+        case starGiftUnique(flags: Int32, id: Int64, title: String, slug: String, num: Int32, ownerId: Int64?, ownerName: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -594,14 +594,17 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(lastSaleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt64(upgradeStars!, buffer: buffer, boxed: false)}
                     break
-                case .starGiftUnique(let id, let title, let num, let ownerId, let attributes, let availabilityIssued, let availabilityTotal):
+                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let attributes, let availabilityIssued, let availabilityTotal):
                     if boxed {
-                        buffer.appendInt32(1779697613)
+                        buffer.appendInt32(880997154)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(slug, buffer: buffer, boxed: false)
                     serializeInt32(num, buffer: buffer, boxed: false)
-                    serializeInt64(ownerId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(ownerId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(ownerName!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(attributes.count))
                     for item in attributes {
@@ -617,8 +620,8 @@ public extension Api {
         switch self {
                 case .starGift(let flags, let id, let sticker, let stars, let availabilityRemains, let availabilityTotal, let convertStars, let firstSaleDate, let lastSaleDate, let upgradeStars):
                 return ("starGift", [("flags", flags as Any), ("id", id as Any), ("sticker", sticker as Any), ("stars", stars as Any), ("availabilityRemains", availabilityRemains as Any), ("availabilityTotal", availabilityTotal as Any), ("convertStars", convertStars as Any), ("firstSaleDate", firstSaleDate as Any), ("lastSaleDate", lastSaleDate as Any), ("upgradeStars", upgradeStars as Any)])
-                case .starGiftUnique(let id, let title, let num, let ownerId, let attributes, let availabilityIssued, let availabilityTotal):
-                return ("starGiftUnique", [("id", id as Any), ("title", title as Any), ("num", num as Any), ("ownerId", ownerId as Any), ("attributes", attributes as Any), ("availabilityIssued", availabilityIssued as Any), ("availabilityTotal", availabilityTotal as Any)])
+                case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let attributes, let availabilityIssued, let availabilityTotal):
+                return ("starGiftUnique", [("flags", flags as Any), ("id", id as Any), ("title", title as Any), ("slug", slug as Any), ("num", num as Any), ("ownerId", ownerId as Any), ("ownerName", ownerName as Any), ("attributes", attributes as Any), ("availabilityIssued", availabilityIssued as Any), ("availabilityTotal", availabilityTotal as Any)])
     }
     }
     
@@ -663,31 +666,40 @@ public extension Api {
             }
         }
         public static func parse_starGiftUnique(_ reader: BufferReader) -> StarGift? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: [Api.StarGiftAttribute]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_7 = parseString(reader) }
+            var _8: [Api.StarGiftAttribute]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
             }
-            var _6: Int32?
-            _6 = reader.readInt32()
-            var _7: Int32?
-            _7 = reader.readInt32()
+            var _9: Int32?
+            _9 = reader.readInt32()
+            var _10: Int32?
+            _10 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.StarGift.starGiftUnique(id: _1!, title: _2!, num: _3!, ownerId: _4!, attributes: _5!, availabilityIssued: _6!, availabilityTotal: _7!)
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.StarGift.starGiftUnique(flags: _1!, id: _2!, title: _3!, slug: _4!, num: _5!, ownerId: _6, ownerName: _7, attributes: _8!, availabilityIssued: _9!, availabilityTotal: _10!)
             }
             else {
                 return nil

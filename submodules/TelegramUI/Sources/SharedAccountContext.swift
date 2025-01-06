@@ -76,6 +76,7 @@ import StarsIntroScreen
 import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
+import ShareController
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2922,8 +2923,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsIntroScreen(context: context)
     }
     
-    public func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController {
-        return GiftViewScreen(context: context, subject: .message(message))
+    public func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: (() -> Void)?) -> ViewController {
+        return GiftViewScreen(context: context, subject: .message(message), shareStory: shareStory)
+    }
+    
+    public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?) -> ViewController {
+        return GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
     }
     
     public func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?) {
@@ -2933,6 +2938,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 present(ContentReportScreen(context: context, subject: subject, title: title, options: options, forceDark: forceDark, completed: completion, requestSelectMessages: requestSelectMessages))
             }
         })
+    }
+    
+    public func makeShareController(context: AccountContext, subject: ShareControllerSubject, forceExternal: Bool, shareStory: (() -> Void)?, actionCompleted: (() -> Void)?) -> ViewController {
+        let controller = ShareController(context: context, subject: subject, externalShare: forceExternal)
+        controller.shareStory = shareStory
+        controller.actionCompleted = actionCompleted
+        return controller
     }
     
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {
