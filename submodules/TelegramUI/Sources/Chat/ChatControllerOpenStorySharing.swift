@@ -27,10 +27,21 @@ import StoryContainerScreen
 import SaveToCameraRoll
 import MediaEditorScreen
 
+enum StorySharingSubject {
+    case messages([Message])
+    case gift(StarGift.UniqueGift)
+}
+
 extension ChatControllerImpl {
-    func openStorySharing(messages: [Message]) {
+    func openStorySharing(subject: StorySharingSubject) {
         let context = self.context
-        let subject: Signal<MediaEditorScreenImpl.Subject?, NoError> = .single(.message(messages.map { $0.id }))
+        let editorSubject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+        switch subject {
+        case let .messages(messages):
+            editorSubject = .single(.message(messages.map { $0.id }))
+        case let .gift(gift):
+            editorSubject = .single(.gift(gift))
+        }
         
         let externalState = MediaEditorTransitionOutExternalState(
             storyTarget: nil,
@@ -42,7 +53,7 @@ extension ChatControllerImpl {
         let controller = MediaEditorScreenImpl(
             context: context,
             mode: .storyEditor,
-            subject: subject,
+            subject: editorSubject,
             transitionIn: nil,
             transitionOut: { _, _ in
                 return nil

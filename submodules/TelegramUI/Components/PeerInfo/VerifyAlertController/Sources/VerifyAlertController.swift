@@ -306,9 +306,8 @@ private final class VerifyAlertContentNode: AlertContentNode {
                 }
             }
             
-            let placeholderText = self.verifierSettings.customDescription ?? "This page is verified by \(self.verifierSettings.companyName)"
+            let placeholderText = self.verifierSettings.customDescription ?? self.strings.BotVerification_Verify_Placeholder(self.verifierSettings.companyName).string
             
-            //TODO:localize
             let inputPlaceholderSize = self.inputPlaceholderView.update(
                 transition: .immediate,
                 component: AnyComponent(
@@ -404,16 +403,32 @@ public func verifyAlertController(context: AccountContext, updatedPresentationDa
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
-    //TODO:localize
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: "Verify", action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.BotVerification_Verify_Verify, action: {
         dismissImpl?(true)
         applyImpl?()
     })]
     
-    //TODO:localize
-    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: "Verify Account", text: "Do you want to verify this account with your verification mark and description?", peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: verifierSettings.canModifyDescription)
+    let title: String
+    let text: String
+    if case let .user(user) = peer {
+        if let _ = user.botInfo {
+            title = presentationData.strings.BotVerification_Verify_Bot_Title
+            text = presentationData.strings.BotVerification_Verify_Bot_Text
+        } else {
+            title = presentationData.strings.BotVerification_Verify_User_Title
+            text = presentationData.strings.BotVerification_Verify_User_Text
+        }
+    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+        title = presentationData.strings.BotVerification_Verify_Channel_Title
+        text = presentationData.strings.BotVerification_Verify_Channel_Text
+    } else {
+        title = presentationData.strings.BotVerification_Verify_Group_Title
+        text = presentationData.strings.BotVerification_Verify_Group_Text
+    }
+    
+    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: verifierSettings.canModifyDescription)
     contentNode.complete = {
         applyImpl?()
     }
@@ -454,16 +469,28 @@ public func removeVerificationAlertController(context: AccountContext, updatedPr
     var dismissImpl: ((Bool) -> Void)?
     var applyImpl: (() -> Void)?
     
-    //TODO:localize
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultDestructiveAction, title: "Remove", action: {
+    }), TextAlertAction(type: .defaultDestructiveAction, title: presentationData.strings.BotVerification_Remove_Remove, action: {
         dismissImpl?(true)
         applyImpl?()
     })]
     
-    //TODO:localize
-    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: "Remove Verification", text: "This account is already verified by you. Do you want to remove verification?", peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: false)
+    let title = presentationData.strings.BotVerification_Remove_Title
+    let text: String
+    if case let .user(user) = peer {
+        if let _ = user.botInfo {
+            text = presentationData.strings.BotVerification_Remove_Bot_Text
+        } else {
+            text = presentationData.strings.BotVerification_Remove_User_Text
+        }
+    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
+        text = presentationData.strings.BotVerification_Remove_Channel_Text
+    } else {
+        text = presentationData.strings.BotVerification_Remove_Group_Text
+    }
+    
+    let contentNode = VerifyAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationTheme: presentationData.theme, strings: presentationData.strings, actions: actions, title: title, text: text, peer: peer, verifierSettings: verifierSettings, verifierIcon: verifierIcon, hasInput: false)
     applyImpl = {
         completion()
     }

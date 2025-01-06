@@ -1266,6 +1266,8 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
     var verifiedIconComponent: EmojiStatusComponent?
     var credibilityIconView: ComponentHostView<Empty>?
     var credibilityIconComponent: EmojiStatusComponent?
+    var statusIconView: ComponentHostView<Empty>?
+    var statusIconComponent: EmojiStatusComponent?
     let mutedIconNode: ASImageNode
     var itemTagList: ComponentView<Empty>?
     var actionButtonTitleNode: TextNode?
@@ -2142,6 +2144,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentMutedIconImage: UIImage?
             var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentVerifiedIconContent: EmojiStatusComponent.Content?
+            var currentStatusIconContent: EmojiStatusComponent.Content?
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
             var currentStoryIcon: UIImage?
@@ -3098,14 +3101,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             } else if peer.isFake {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                             } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                                currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                                currentStatusIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
                             
                             if peer.isVerified {
                                 currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                            } else if let verificationIconFileId = peer.verificationIconFileId {
+                            }
+                            if let verificationIconFileId = peer.verificationIconFileId {
                                 currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                             }
                         }
@@ -3125,14 +3129,15 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                        currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                        currentStatusIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
                     
                     if peer.isVerified {
                         currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                    } else if let verificationIconFileId = peer.verificationIconFileId {
+                    }
+                    if let verificationIconFileId = peer.verificationIconFileId {
                         currentVerifiedIconContent = .animation(content: .customEmoji(fileId: verificationIconFileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(0))
                     }
                 }
@@ -3144,7 +3149,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var titleLeftOffset: CGFloat = 0.0
             if let currentVerifiedIconContent {
                 if titleLeftOffset.isZero, case .animation = currentVerifiedIconContent {
-                    titleLeftOffset += 20.0
+                    titleLeftOffset += 19.0
                 }
                 
                 if titleIconsWidth.isZero {
@@ -3169,6 +3174,22 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     titleIconsWidth += 2.0
                 }
                 switch currentCredibilityIconContent {
+                case let .text(_, string):
+                    let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                    let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                    titleIconsWidth += floor(stringRect.width) + 11.0
+                default:
+                    titleIconsWidth += 8.0
+                }
+            }
+            
+            if let currentStatusIconContent {
+                if titleIconsWidth.isZero {
+                    titleIconsWidth += 4.0
+                } else {
+                    titleIconsWidth += 2.0
+                }
+                switch currentStatusIconContent {
                 case let .text(_, string):
                     let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
                     let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
@@ -4512,6 +4533,41 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         lastLineRect = CGRect(origin: CGPoint(), size: titleLayout.size)
                     }
+                                        
+                    if let currentStatusIconContent {
+                        let statusIconView: ComponentHostView<Empty>
+                        if let current = strongSelf.statusIconView {
+                            statusIconView = current
+                        } else {
+                            statusIconView = ComponentHostView<Empty>()
+                            strongSelf.statusIconView = statusIconView
+                            strongSelf.mainContentContainerNode.view.addSubview(statusIconView)
+                        }
+                                                
+                        let statusIconComponent = EmojiStatusComponent(
+                            context: item.context,
+                            animationCache: item.interaction.animationCache,
+                            animationRenderer: item.interaction.animationRenderer,
+                            content: currentStatusIconContent,
+                            isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
+                            action: nil
+                        )
+                        strongSelf.statusIconComponent = statusIconComponent
+                        
+                        let iconOrigin: CGFloat = nextTitleIconOrigin
+                        let containerSize = CGSize(width: 20.0, height: 20.0)
+                        let iconSize = statusIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(statusIconComponent),
+                            environment: {},
+                            containerSize: containerSize
+                        )
+                        transition.updateFrame(view: statusIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.maxY - lastLineRect.height * 0.5 - iconSize.height / 2.0) - UIScreenPixel), size: iconSize))
+                        nextTitleIconOrigin += statusIconView.bounds.width + 4.0
+                    } else if let statusIconView = strongSelf.statusIconView {
+                        strongSelf.statusIconView = nil
+                        statusIconView.removeFromSuperview()
+                    }
                     
                     if let currentCredibilityIconContent {
                         let credibilityIconView: ComponentHostView<Empty>
@@ -4534,7 +4590,12 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         
                         let iconOrigin: CGFloat = nextTitleIconOrigin
-                        let containerSize = CGSize(width: 20.0, height: 20.0)
+                        let containerSize: CGSize
+                        if case .verified = currentCredibilityIconContent {
+                            containerSize = CGSize(width: 16.0, height: 16.0)
+                        } else {
+                            containerSize = CGSize(width: 20.0, height: 20.0)
+                        }
                         let iconSize = credibilityIconView.update(
                             transition: .immediate,
                             component: AnyComponent(credibilityIconComponent),
@@ -4721,7 +4782,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let dateFrame = strongSelf.dateNode.frame
                         shapes.append(.roundedRectLine(startPoint: CGPoint(x: dateFrame.maxX - dateLineWidth, y: dateFrame.minY + 3.0), width: dateLineWidth, diameter: lineDiameter))
                         
-                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                        shimmerNode.update(backgroundColor: item.presentationData.theme.list.plainBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
                     } else if let shimmerNode = strongSelf.placeholderNode {
                         strongSelf.placeholderNode = nil
                         shimmerNode.removeFromSupernode()

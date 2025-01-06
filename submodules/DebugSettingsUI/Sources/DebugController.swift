@@ -103,7 +103,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case playlistPlayback(Bool)
     case enableQuickReactionSwitch(Bool)
     case disableReloginTokens(Bool)
-    case disableCallV2(Bool)
+    case liveStreamV2(Bool)
     case experimentalCallMute(Bool)
     case conferenceCalls(Bool)
     case playerV2(Bool)
@@ -133,7 +133,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .disableCallV2, .experimentalCallMute, .conferenceCalls, .playerV2, .benchmarkReflectors, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .conferenceCalls, .playerV2, .benchmarkReflectors, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -246,7 +246,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 49
         case .enableQuickReactionSwitch:
             return 50
-        case .disableCallV2:
+        case .liveStreamV2:
             return 51
         case .experimentalCallMute:
             return 52
@@ -1328,12 +1328,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .disableCallV2(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Disable Video Chat V2", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .liveStreamV2(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Live Stream V2", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.disableCallV2 = value
+                        settings.liveStreamV2 = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1587,7 +1587,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         }
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
-        entries.append(.disableCallV2(experimentalSettings.disableCallV2))
+        entries.append(.liveStreamV2(experimentalSettings.liveStreamV2))
         entries.append(.experimentalCallMute(experimentalSettings.experimentalCallMute))
         
         entries.append(.conferenceCalls(experimentalSettings.conferenceCalls))

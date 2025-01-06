@@ -868,6 +868,7 @@ public extension Api {
         case inputMediaAreaVenue(coordinates: Api.MediaAreaCoordinates, queryId: Int64, resultId: String)
         case mediaAreaChannelPost(coordinates: Api.MediaAreaCoordinates, channelId: Int64, msgId: Int32)
         case mediaAreaGeoPoint(flags: Int32, coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, address: Api.GeoPointAddress?)
+        case mediaAreaStarGift(coordinates: Api.MediaAreaCoordinates, slug: String)
         case mediaAreaSuggestedReaction(flags: Int32, coordinates: Api.MediaAreaCoordinates, reaction: Api.Reaction)
         case mediaAreaUrl(coordinates: Api.MediaAreaCoordinates, url: String)
         case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
@@ -907,6 +908,13 @@ public extension Api {
                     coordinates.serialize(buffer, true)
                     geo.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {address!.serialize(buffer, true)}
+                    break
+                case .mediaAreaStarGift(let coordinates, let slug):
+                    if boxed {
+                        buffer.appendInt32(1468491885)
+                    }
+                    coordinates.serialize(buffer, true)
+                    serializeString(slug, buffer: buffer, boxed: false)
                     break
                 case .mediaAreaSuggestedReaction(let flags, let coordinates, let reaction):
                     if boxed {
@@ -957,6 +965,8 @@ public extension Api {
                 return ("mediaAreaChannelPost", [("coordinates", coordinates as Any), ("channelId", channelId as Any), ("msgId", msgId as Any)])
                 case .mediaAreaGeoPoint(let flags, let coordinates, let geo, let address):
                 return ("mediaAreaGeoPoint", [("flags", flags as Any), ("coordinates", coordinates as Any), ("geo", geo as Any), ("address", address as Any)])
+                case .mediaAreaStarGift(let coordinates, let slug):
+                return ("mediaAreaStarGift", [("coordinates", coordinates as Any), ("slug", slug as Any)])
                 case .mediaAreaSuggestedReaction(let flags, let coordinates, let reaction):
                 return ("mediaAreaSuggestedReaction", [("flags", flags as Any), ("coordinates", coordinates as Any), ("reaction", reaction as Any)])
                 case .mediaAreaUrl(let coordinates, let url):
@@ -1048,6 +1058,22 @@ public extension Api {
             let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.MediaArea.mediaAreaGeoPoint(flags: _1!, coordinates: _2!, geo: _3!, address: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaStarGift(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MediaArea.mediaAreaStarGift(coordinates: _1!, slug: _2!)
             }
             else {
                 return nil

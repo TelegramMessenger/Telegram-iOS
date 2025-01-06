@@ -289,9 +289,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 titleString = attributedTitle
                 textString = NSAttributedString(string: text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .setupPhoto(accountPeer):
-                //TODO:localize
-                titleString = NSAttributedString(string: "Add your photo! 📸", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
-                textString = NSAttributedString(string: "Help your friends spot you easily.", font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                titleString = NSAttributedString(string: item.strings.ChatList_AddPhoto_Title, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: item.strings.ChatList_AddPhoto_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
                 avatarPeer = accountPeer
             }
             

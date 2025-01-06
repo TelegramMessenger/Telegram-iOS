@@ -1622,18 +1622,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
                                 
-                if user.isVerified {
-                    let description = presentationData.strings.PeerInfo_VerificationInfo_Bot
-                    
-                    let attributedPrefix = NSMutableAttributedString(string: "  ")
-                    attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .verification), range: NSMakeRange(0, 1))
-                    
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
-                        if case .tap = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                        }
-                    }))
-                } else if let verification = (data.cachedData as? CachedUserData)?.verification {
+                if let verification = (data.cachedData as? CachedUserData)?.verification {
                     let description: String
                     let descriptionString = verification.description
                     let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
@@ -1801,23 +1790,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
                 
-                if channel.isVerified {
-                    let description: String
-                    if case .group = channel.info {
-                        description = presentationData.strings.PeerInfo_VerificationInfo_Group
-                    } else {
-                        description = presentationData.strings.PeerInfo_VerificationInfo_Channel
-                    }
-                    
-                    let attributedPrefix = NSMutableAttributedString(string: "  ")
-                    attributedPrefix.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .verification), range: NSMakeRange(0, 1))
-                    
-                    items[currentPeerInfoSection]!.append(PeerInfoScreenCommentItem(id: 800, text: description, attributedPrefix: attributedPrefix, useAccentLinkColor: false, linkAction: { action in
-                        if case .tap = action, let navigationController = interaction.getController()?.navigationController as? NavigationController {
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.PeerInfo_VerificationInfo_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                        }
-                    }))
-                } else if let verification = (data.cachedData as? CachedChannelData)?.verification {
+                if let verification = (data.cachedData as? CachedChannelData)?.verification {
                     let description: String
                     let descriptionString = verification.description
                     let entities = generateTextEntities(descriptionString, enabledTypes: [.allUrl])
@@ -8818,9 +8791,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let controller = self.context.sharedContext.makePeerSelectionController(
             PeerSelectionControllerParams(
                 context: self.context,
-                filter: [.excludeSecretChats, .excludeRecent, .excludeSavedMessages],
+                filter: [.excludeSecretChats, .excludeRecent, .excludeSavedMessages, .includeSelf, .doNotSearchMessages],
                 hasContactSelector: false,
-                title: "Choose Chat to Verify"
+                title: self.presentationData.strings.BotVerification_ChooseChat
             )
         )
         controller.peerSelected = { [weak self, weak controller] peer, _ in
@@ -8849,7 +8822,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 let undoController = UndoOverlayController(
                                     presentationData: self.presentationData,
-                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: "You have removed **\(peer.compactDisplayTitle)'s** verification.", action: nil, duration: 5.0),
+                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: self.presentationData.strings.BotVerification_Removed(peer.compactDisplayTitle).string, action: nil, duration: 5.0),
                                     elevatedLayout: false,
                                     action: { _ in return true }
                                 )
@@ -8878,7 +8851,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 }
                                 let undoController = UndoOverlayController(
                                     presentationData: self.presentationData,
-                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: "**\(peer.compactDisplayTitle)** has been notified and will receive your verification mark and description upon accepting.", action: nil, duration: 5.0),
+                                    content: .invitedToVoiceChat(context: self.context, peer: peer, title: nil, text: self.presentationData.strings.BotVerification_Added(peer.compactDisplayTitle).string, action: nil, duration: 5.0),
                                     elevatedLayout: false,
                                     action: { _ in return true }
                                 )

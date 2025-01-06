@@ -1093,7 +1093,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
         
         self.playerNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicDimensions)
         
-        /*var didProcessFramesToDisplay = false
+        var didProcessFramesToDisplay = false
         self.playerNode.isHidden = true
         self.playerNode.hasSentFramesToDisplay = { [weak self] in
             guard let self, !didProcessFramesToDisplay else {
@@ -1101,7 +1101,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
             }
             didProcessFramesToDisplay = true
             self.playerNode.isHidden = false
-        }*/
+        }
 
         let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference, codecConfiguration: self.codecConfiguration)?.file ?? fileReference
         
@@ -1834,7 +1834,8 @@ private final class SourceBuffer {
                             startTime: fragmentInfo.startTime.seconds,
                             endTime: fragmentInfo.startTime.seconds + fragmentInfo.duration.seconds,
                             content: ChunkMediaPlayerPart.TempFile(file: tempFile),
-                            codecName: videoCodecName
+                            codecName: videoCodecName,
+                            offsetTime: 0.0
                         )
                         self.items.append(item)
                         self.updateRanges()

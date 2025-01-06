@@ -40,17 +40,6 @@ public enum ShareControllerPreferredAction {
     case custom(action: ShareControllerAction)
 }
 
-public enum ShareControllerExternalStatus {
-    case preparing(Bool)
-    case progress(Float)
-    case done
-}
-
-public enum ShareControllerError {
-    case generic
-    case fileTooBig(Int64)
-}
-
 public struct ShareControllerSegmentedValue {
     let title: String
     let subject: ShareControllerSubject
@@ -63,17 +52,6 @@ public struct ShareControllerSegmentedValue {
         self.actionTitle = actionTitle
         self.formatSendTitle = formatSendTitle
     }
-}
-
-public enum ShareControllerSubject {
-    case url(String)
-    case text(String)
-    case quote(text: String, url: String)
-    case messages([Message])
-    case image([ImageRepresentationWithReference])
-    case media(AnyMediaReference)
-    case mapMedia(TelegramMediaMap)
-    case fromExternal(([PeerId], [PeerId: Int64], String, ShareControllerAccountContext, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
 }
 
 private enum ExternalShareItem {

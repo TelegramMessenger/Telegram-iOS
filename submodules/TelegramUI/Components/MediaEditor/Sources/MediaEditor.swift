@@ -168,6 +168,7 @@ public final class MediaEditor {
         case asset(PHAsset)
         case draft(MediaEditorDraft)
         case message(MessageId)
+        case gift(StarGift.UniqueGift)
         case sticker(TelegramMediaFile)
         
         var dimensions: PixelDimensions {
@@ -178,7 +179,7 @@ public final class MediaEditor {
                 return PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
             case let .draft(draft):
                 return draft.dimensions
-            case .message, .sticker, .videoCollage:
+            case .message, .gift, .sticker, .videoCollage:
                 return PixelDimensions(width: 1080, height: 1920)
             }
         }
@@ -817,7 +818,7 @@ public final class MediaEditor {
                         player = self.makePlayer(asset: asset)
                     }
                 }
-                return getChatWallpaperImage(context: self.context, messageId: messageId)
+                return getChatWallpaperImage(context: self.context, peerId: messageId.peerId)
                 |> map { _, image, nightImage in
                     return TextureSourceResult(
                         image: image,
@@ -827,6 +828,17 @@ public final class MediaEditor {
                         gradientColors: GradientColors(top: .black, bottom: .black)
                     )
                 }
+            }
+        case .gift:
+            textureSource = getChatWallpaperImage(context: self.context, peerId: self.context.account.peerId)
+            |> map { _, image, nightImage in
+                return TextureSourceResult(
+                    image: image,
+                    nightImage: nightImage,
+                    player: nil,
+                    playerIsReference: true,
+                    gradientColors: GradientColors(top: .black, bottom: .black)
+                )
             }
         case let .sticker(file):
             let entity = MediaEditorComposerStickerEntity(

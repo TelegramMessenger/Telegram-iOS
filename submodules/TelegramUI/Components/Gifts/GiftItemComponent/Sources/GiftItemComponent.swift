@@ -220,13 +220,13 @@ public final class GiftItemComponent: Component {
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .profile:
-                size = CGSize(width: availableSize.width, height: availableSize.width)
+                size = availableSize
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .thumbnail:
-                size = CGSize(width: 60.0, height: 60.0)
-                iconSize = CGSize(width: 42.0, height: 42.0)
-                cornerRadius = 12.0
+                size = CGSize(width: availableSize.width, height: availableSize.width)
+                iconSize = CGSize(width: floor(size.width * 0.7), height: floor(size.width * 0.7))
+                cornerRadius = floor(availableSize.width * 0.2)
             }
             
             self.backgroundLayer.cornerRadius = cornerRadius
@@ -431,10 +431,9 @@ public final class GiftItemComponent: Component {
                     }
                     price = priceValue
                 case .uniqueGift:
-                    //TODO:localize
                     buttonColor = UIColor.white
                     starsColor = UIColor.white
-                    price = "Unique"
+                    price = ""
                 }
                 
                 let buttonSize = self.button.update(
@@ -460,11 +459,17 @@ public final class GiftItemComponent: Component {
             }
             
             if let ribbon = component.ribbon {
+                let ribbonFontSize: CGFloat
+                if case .profile = component.mode {
+                    ribbonFontSize = 9.0
+                } else {
+                    ribbonFontSize = 10.0
+                }
                 let ribbonTextSize = self.ribbonText.update(
                     transition: transition,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: ribbon.text, font: Font.semibold(10.0), textColor: .white)),
+                            text: .plain(NSAttributedString(string: ribbon.text, font: Font.semibold(ribbonFontSize), textColor: .white)),
                             horizontalAlignment: .center
                         )
                     ),
@@ -510,7 +515,7 @@ public final class GiftItemComponent: Component {
                 
                 switch peer {
                 case let .peer(peer):
-                    avatarNode.setPeerV2(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: 20.0, height: 20.0))
+                    avatarNode.setPeer(context: component.context, theme: component.theme, peer: peer, displayDimensions: CGSize(width: 20.0, height: 20.0))
                 case .anonymous:
                     avatarNode.setPeer(context: component.context, theme: component.theme, peer: nil, overrideImage: .anonymousSavedMessagesIcon(isColored: true))
                 }

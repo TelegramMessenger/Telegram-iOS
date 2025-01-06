@@ -152,6 +152,7 @@ public enum MediaArea: Codable, Equatable {
     case channelMessage(coordinates: Coordinates, messageId: EngineMessage.Id)
     case link(coordinates: Coordinates, url: String)
     case weather(coordinates: Coordinates, emoji: String, temperature: Double, color: Int32)
+    case starGift(coordinates: Coordinates, slug: String)
    
     public struct ReactionFlags: OptionSet {
         public var rawValue: Int32
@@ -174,6 +175,7 @@ public enum MediaArea: Codable, Equatable {
         case channelMessage
         case link
         case weather
+        case starGift
     }
     
     public enum DecodingError: Error {
@@ -210,6 +212,10 @@ public enum MediaArea: Codable, Equatable {
             let temperature = try container.decode(Double.self, forKey: .temperature)
             let color = try container.decodeIfPresent(Int32.self, forKey: .color) ?? 0
             self = .weather(coordinates: coordinates, emoji: emoji, temperature: temperature, color: color)
+        case .starGift:
+            let coordinates = try container.decode(MediaArea.Coordinates.self, forKey: .coordinates)
+            let slug = try container.decode(String.self, forKey: .value)
+            self = .starGift(coordinates: coordinates, slug: slug)
         }
     }
     
@@ -240,6 +246,10 @@ public enum MediaArea: Codable, Equatable {
             try container.encode(emoji, forKey: .value)
             try container.encode(temperature, forKey: .temperature)
             try container.encode(color, forKey: .color)
+        case let .starGift(coordinates, slug):
+            try container.encode(MediaAreaType.starGift.rawValue, forKey: .type)
+            try container.encode(coordinates, forKey: .coordinates)
+            try container.encode(slug, forKey: .value)
         }
     }
 }
@@ -256,6 +266,8 @@ public extension MediaArea {
         case let .link(coordinates, _):
             return coordinates
         case let .weather(coordinates, _, _, _):
+            return coordinates
+        case let .starGift(coordinates, _):
             return coordinates
         }
     }

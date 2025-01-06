@@ -655,6 +655,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addtheme/\(parameter)"
                         }
                     }
+                } else if parsedUrl.host == "nft" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var slug: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        slug = value
+                                    }
+                                }
+                            }
+                        }
+                        if let slug {
+                            convertedUrl = "https://t.me/nft/\(slug)"
+                        }
+                    }
                 } else if parsedUrl.host == "privatepost" {
                     if let components = URLComponents(string: "/?" + query) {
                         var channelId: Int64?

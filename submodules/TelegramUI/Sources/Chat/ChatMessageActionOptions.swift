@@ -554,7 +554,7 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
         guard let selfController else {
             return
         }
-        let filter: ChatListNodePeersFilter = [.onlyWriteable, .includeSavedMessages, .excludeDisabled, .doNotSearchMessages]
+        let filter: ChatListNodePeersFilter = [.onlyWriteable, .excludeDisabled, .doNotSearchMessages]
         var attemptSelectionImpl: ((EnginePeer, ChatListDisabledPeerReason) -> Void)?
         let controller = selfController.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(
             context: selfController.context,

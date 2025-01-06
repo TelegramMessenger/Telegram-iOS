@@ -105,6 +105,7 @@ public enum ParsedInternalUrl {
     case chatFolder(slug: String)
     case premiumGiftCode(slug: String)
     case messageLink(slug: String)
+    case collectible(slug: String)
     case externalUrl(url: String)
 }
 
@@ -523,6 +524,8 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                     return .wallpaper(parameter)
                 } else if pathComponents[0] == "addtheme" {
                     return .theme(pathComponents[1])
+                } else if pathComponents[0] == "nft" {
+                    return .collectible(slug: pathComponents[1])
                 } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" || pathComponents[0] == "list" {
                     return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents[0] == "boost", pathComponents.count == 2 {
@@ -1086,6 +1089,11 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .premiumGiftCode(slug):
             return .single(.result(.premiumGiftCode(slug: slug)))
+        case let .collectible(slug):
+            return .single(.progress) |> then(context.engine.payments.getUniqueStarGift(slug: slug)
+            |> map { gift -> ResolveInternalUrlResult in
+                return .result(.collectible(gift: gift))
+            })
         case let .messageLink(slug):
             return .single(.progress)
             |> then(context.engine.peers.resolveMessageLink(slug: slug)

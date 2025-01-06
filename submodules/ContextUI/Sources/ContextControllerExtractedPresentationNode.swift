@@ -645,7 +645,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         var contentTopInset: CGFloat = topInset
         var removedReactionContextNode: ReactionContextNode?
         
-        if let reactionItems = self.actionsStackNode.topReactionItems, !reactionItems.reactionItems.isEmpty {
+        if let reactionItems = self.actionsStackNode.topReactionItems, !reactionItems.reactionItems.isEmpty, let controller = self.getController() as? ContextController {
             let reactionContextNode: ReactionContextNode
             if let current = self.reactionContextNode {
                 reactionContextNode = current
@@ -681,6 +681,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition)
                     }
                 )
+                reactionContextNode.displayTail = !controller.hideReactionPanelTail
                 self.reactionContextNode = reactionContextNode
                 self.addSubnode(reactionContextNode)
                 

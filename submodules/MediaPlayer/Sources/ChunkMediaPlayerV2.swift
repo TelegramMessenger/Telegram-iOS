@@ -77,19 +77,21 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             let content: Content
             let mediaType: AVMediaType
             let codecName: String?
+            let offset: Double
             
             private(set) var reader: MediaDataReader?
             
             var didBeginReading: Bool = false
             var isFinished: Bool = false
             
-            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?) {
+            init(queue: Queue, content: Content, mediaType: AVMediaType, codecName: String?, offset: Double) {
                 assert(queue.isCurrent())
                 
                 self.queue = queue
                 self.content = content
                 self.mediaType = mediaType
                 self.codecName = codecName
+                self.offset = offset
             }
             
             deinit {
@@ -425,7 +427,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                         clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
                         endTime: part.endTime,
                         content: part.content,
-                        codecName: part.codecName
+                        codecName: part.codecName,
+                        offsetTime: part.offsetTime
                     ))
                     minStartTime = max(minStartTime, partEndTime)
                 }
@@ -447,7 +450,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             clippedStartTime: partStartTime == part.startTime ? nil : partStartTime,
                             endTime: part.endTime,
                             content: part.content,
-                            codecName: part.codecName
+                            codecName: part.codecName,
+                            offsetTime: part.offsetTime
                         ))
                         minStartTime = max(minStartTime, partEndTime)
                         break
@@ -519,7 +523,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                                 queue: dataQueue,
                                 content: .tempFile(part.part.content),
                                 mediaType: .audio,
-                                codecName: part.part.codecName
+                                codecName: part.part.codecName,
+                                offset: part.part.offsetTime
                             )
                             cleanAudio.load(params: mediaDataReaderParams)
                             
@@ -533,7 +538,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             queue: dataQueue,
                             content: .tempFile(part.part.content),
                             mediaType: .video,
-                            codecName: part.part.codecName
+                            codecName: part.part.codecName,
+                            offset: part.part.offsetTime
                         )
                         video.load(params: mediaDataReaderParams)
                         
@@ -541,7 +547,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             queue: dataQueue,
                             content: .tempFile(part.part.content),
                             mediaType: .audio,
-                            codecName: part.part.codecName
+                            codecName: part.part.codecName,
+                            offset: part.part.offsetTime
                         )
                         audio.load(params: mediaDataReaderParams)
                         
@@ -622,7 +629,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                                 queue: dataQueue,
                                 content: .directStream(media),
                                 mediaType: .video,
-                                codecName: media.codecName
+                                codecName: media.codecName,
+                                offset: 0.0
                             )
                         }
                         video?.load(params: mediaDataReaderParams)
@@ -632,7 +640,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                                 queue: dataQueue,
                                 content: .directStream(media),
                                 mediaType: .audio,
-                                codecName: media.codecName
+                                codecName: media.codecName,
+                                offset: 0.0
                             )
                         }
                         audio?.load(params: mediaDataReaderParams)
@@ -973,6 +982,11 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 switch reader.readSampleBuffer() {
                 case let .frame(sampleBuffer):
                     var sampleBuffer = sampleBuffer
+                    if media.offset != 0.0 {
+                        if let updatedSampleBuffer = createSampleBuffer(fromSampleBuffer: sampleBuffer, withTimeOffset: CMTimeMakeWithSeconds(Float64(media.offset), preferredTimescale: CMSampleBufferGetPresentationTimeStamp(sampleBuffer).timescale), duration: nil) {
+                            sampleBuffer = updatedSampleBuffer
+                        }
+                    }
                     if let seekFromMinTimestamp = loadedPartsMediaData.seekFromMinTimestamp, CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds < seekFromMinTimestamp {
                         if isVideo {
                             var updatedSampleBuffer: CMSampleBuffer?

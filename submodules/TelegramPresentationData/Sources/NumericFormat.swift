@@ -2,17 +2,17 @@ import Foundation
 import PresentationStrings
 import TelegramCore
 
-public func compactNumericCountString(_ count: Int, decimalSeparator: String = ".") -> String {
+public func compactNumericCountString(_ count: Int, decimalSeparator: String = ".", showDecimalPart: Bool = true) -> String {
     if count >= 1000 * 1000 {
         let remainder = (count % (1000 * 1000)) / (1000 * 100)
-        if remainder != 0 {
+        if remainder != 0 && showDecimalPart {
             return "\(count / (1000 * 1000))\(decimalSeparator)\(remainder)M"
         } else {
             return "\(count / (1000 * 1000))M"
         }
     } else if count >= 1000 {
         let remainder = (count % (1000)) / (100)
-        if remainder != 0 {
+        if remainder != 0 && showDecimalPart {
             return "\(count / 1000)\(decimalSeparator)\(remainder)K"
         } else {
             return "\(count / 1000)K"
