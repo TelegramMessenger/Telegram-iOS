@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import Display
+import ComponentFlow
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -31,6 +32,7 @@ import ChatMessageItemCommon
 import WallpaperPreviewMedia
 import TextNodeWithEntities
 import RangeSet
+import GiftItemComponent
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -433,6 +435,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var videoNode: UniversalVideoNode?
     private var videoContent: UniversalVideoContent?
     private var animatedStickerNode: AnimatedStickerNode?
+    private var giftView: ComponentView<Empty>?
     private var statusNode: RadialStatusNode?
     public var videoNodeDecoration: ChatBubbleVideoDecoration?
     public var decoration: UniversalVideoDecoration? {
@@ -833,6 +836,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             var maxDimensions = layoutConstants.image.maxDimensions
             var maxHeight = layoutConstants.image.maxDimensions.height
             var isStory = false
+            var isGift = false
             
             let _ = isStory
             
@@ -907,6 +911,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     case .color, .gradient, .emoticon:
                         unboundSize = CGSize(width: 128.0, height: 128.0)
                 }
+            } else if let _ = media as? UniqueGiftPreviewMedia {
+                isGift = true
+                unboundSize = CGSize(width: 200.0, height: 200.0)
             } else {
                 var extendedMedia: TelegramExtendedMedia?
                 if let invoice = media as? TelegramMediaInvoice, let selectedMedia = invoice.extendedMedia {
@@ -960,7 +967,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             
             switch sizeCalculation {
                 case let .constrained(constrainedSize):
-                    if isSticker {
+                    if isSticker || isGift {
                         nativeSize = unboundSize.aspectFittedOrSmaller(constrainedSize)
                     } else {
                         var constrainedSize = constrainedSize
@@ -1691,6 +1698,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 case .themeSettings, .color, .gradient, .image, .emoticon:
                                     updatedStatusSignal = .single((.Local, nil))
                             }
+                        } else if let _ = media as? UniqueGiftPreviewMedia {
+                            updatedStatusSignal = .single((.Local, nil))
                         }
                     }
 
@@ -1887,7 +1896,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            
                             if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
                                 strongSelf.internallyVisible = false
                             }
@@ -1922,6 +1930,40 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             if let animatedStickerNode = strongSelf.animatedStickerNode {
                                 animatedStickerNode.frame = imageFrame
                                 animatedStickerNode.updateLayout(size: imageFrame.size)
+                            }
+                            
+                            if let giftPreview = media as? UniqueGiftPreviewMedia, let gift = giftPreview.content {
+                                let giftView: ComponentView<Empty>
+                                if let current = strongSelf.giftView {
+                                    giftView = current
+                                } else {
+                                    giftView = ComponentView()
+                                    strongSelf.giftView = giftView
+                                }
+                                
+                                let _ = giftView.update(
+                                    transition: .immediate,
+                                    component: AnyComponent(
+                                        GiftItemComponent(
+                                            context: context,
+                                            theme: presentationData.theme.theme,
+                                            subject: .uniqueGift(gift: gift),
+                                            mode: .preview
+                                        )
+                                    ),
+                                    environment: {},
+                                    containerSize: imageFrame.size
+                                )
+                                
+                                if let giftView = giftView.view {
+                                    if giftView.superview == nil {
+                                        strongSelf.pinchContainerNode.contentNode.view.addSubview(giftView)
+                                    }
+                                    giftView.frame = imageFrame
+                                }
+                            } else if let giftView = strongSelf.giftView {
+                                strongSelf.giftView = nil
+                                giftView.view?.removeFromSuperview()
                             }
                             
                             if let updateImageSignal = updateImageSignal {

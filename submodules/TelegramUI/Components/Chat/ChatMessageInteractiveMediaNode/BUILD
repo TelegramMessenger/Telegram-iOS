@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Postbox",
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/Display",
+        "//submodules/ComponentFlow",
         "//submodules/TelegramCore",
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
@@ -40,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
         "//submodules/Utils/RangeSet",
     ],
     visibility = [
