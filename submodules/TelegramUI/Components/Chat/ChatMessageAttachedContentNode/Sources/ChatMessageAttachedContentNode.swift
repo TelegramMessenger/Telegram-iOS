@@ -315,7 +315,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             var mediaAndFlags = mediaAndFlags
             if let mediaAndFlagsValue = mediaAndFlags {
-                if mediaAndFlagsValue.0.first is TelegramMediaStory || mediaAndFlagsValue.0.first is WallpaperPreviewMedia {
+                if mediaAndFlagsValue.0.first is TelegramMediaStory || mediaAndFlagsValue.0.first is WallpaperPreviewMedia || mediaAndFlagsValue.0.first is UniqueGiftPreviewMedia {
                     var flags = mediaAndFlagsValue.1
                     flags.remove(.preferMediaInline)
                     mediaAndFlags = (mediaAndFlagsValue.0, flags)
@@ -374,13 +374,15 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 contentMediaAspectFilled = true
                             }
                         }
-                    } else if let _ = media as? TelegramMediaImage {
+                    } else if media is TelegramMediaImage {
                         contentMediaValue = media
-                    } else if let _ = media as? TelegramMediaWebFile {
+                    } else if media is TelegramMediaWebFile {
                         contentMediaValue = media
-                    } else if let _ = media as? WallpaperPreviewMedia {
+                    } else if media is WallpaperPreviewMedia {
                         contentMediaValue = media
-                    } else if let _ = media as? TelegramMediaStory {
+                    } else if media is TelegramMediaStory {
+                        contentMediaValue = media
+                    } else if media is UniqueGiftPreviewMedia {
                         contentMediaValue = media
                     }
                 }

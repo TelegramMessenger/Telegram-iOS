@@ -80,6 +80,7 @@ public final class GiftItemComponent: Component {
         case generic
         case profile
         case thumbnail
+        case preview
     }
     
     let context: AccountContext
@@ -97,7 +98,7 @@ public final class GiftItemComponent: Component {
     public init(
         context: AccountContext,
         theme: PresentationTheme,
-        peer: GiftItemComponent.Peer?,
+        peer: GiftItemComponent.Peer? = nil,
         subject: GiftItemComponent.Subject,
         title: String? = nil,
         subtitle: String? = nil,
@@ -227,6 +228,10 @@ public final class GiftItemComponent: Component {
                 size = CGSize(width: availableSize.width, height: availableSize.width)
                 iconSize = CGSize(width: floor(size.width * 0.7), height: floor(size.width * 0.7))
                 cornerRadius = floor(availableSize.width * 0.2)
+            case .preview:
+                size = availableSize
+                iconSize = CGSize(width: floor(size.width * 0.6), height: floor(size.width * 0.6))
+                cornerRadius = 4.0
             }
             
             self.backgroundLayer.cornerRadius = cornerRadius

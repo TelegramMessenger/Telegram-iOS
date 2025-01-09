@@ -1274,6 +1274,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         if updated {
                             strongSelf.textInputPanelNode?.updateSendButtonEnabled(count > 0, animated: true)
                             strongSelf.requestDeactivateSearch?()
+                            if let (layout, navigationBarHeight, actualNavigationBarHeight) = strongSelf.containerLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .immediate)
+                            }
                         } else if let requestOpenPeerFromSearch = strongSelf.requestOpenPeerFromSearch {
                             requestOpenPeerFromSearch(peer, threadId)
                         }

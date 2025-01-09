@@ -4403,14 +4403,24 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     func scrollToTop() -> Bool {
         if !self.mediaNode.isHidden {
             return self.mediaNode.scrollToTop()
-        }
-        let offset = self.listNode.visibleContentOffset()
-        switch offset {
-        case let .known(value) where value <= CGFloat.ulpOfOne:
-            return false
-        default:
-            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-            return true
+        } else if !self.recentListNode.isHidden {
+            let offset = self.recentListNode.visibleContentOffset()
+            switch offset {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                return false
+            default:
+                self.recentListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
+        } else {
+            let offset = self.listNode.visibleContentOffset()
+            switch offset {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                return false
+            default:
+                self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
         }
     }
     

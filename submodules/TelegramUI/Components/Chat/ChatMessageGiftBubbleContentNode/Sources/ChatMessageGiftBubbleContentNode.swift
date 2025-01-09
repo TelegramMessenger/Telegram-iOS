@@ -1093,7 +1093,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         subject: .custom(uniqueBackgroundColor, uniqueSecondBackgroundColor, uniquePatternColor, uniquePatternFile.fileId.id),
                                         files: files,
                                         isDark: false,
-                                        avatarCenter: CGPoint(x: patternSize.width / 2.0, y: 106.0),
+                                        avatarCenter: CGPoint(x: patternSize.width / 2.0, y: 104.0),
                                         avatarScale: 1.0,
                                         defaultHeight: patternSize.height,
                                         avatarTransitionFraction: 0.0,
