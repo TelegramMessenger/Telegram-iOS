@@ -13650,3 +13650,20 @@ Sorry for the inconvenience.";
 "Story.ViewGift" = "View Gift";
 
 "Camera.OpenChat" = "Open Chat";
+
+"Conversation.AddToContactsLong" = "Add to Contacts";
+
+"PeerInfo.PaneRecommendedBots" = "Similar Bots";
+
+"SharedMedia.SimilarChannelCount_1" = "%@ channel";
+"SharedMedia.SimilarChannelCount_any" = "%@ channels";
+
+"SharedMedia.SimilarBotCount_1" = "%@ bot";
+"SharedMedia.SimilarBotCount_any" = "%@ bots";
+
+"PeerInfo.SimilarBots.ShowMore" = "Show More Bots";
+"PeerInfo.SimilarBots.ShowMoreInfo" = "Subscribe to [Telegram Premium]()\nto unlock up to **100** similar bots.";
+
+"Gift.View.Context.Share" = "Share";
+"Gift.View.Context.CopyLink" = "Copy Link";
+"Gift.View.Context.Transfer" = "Transfer";

@@ -13,7 +13,6 @@ import TelegramPresentationData
 import ShimmerEffect
 import StickerPeekUI
 import TextFormat
-import Accelerate
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
@@ -535,101 +534,4 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             }
         }
     }
-}
-
-private func getAverageColor(image: UIImage) -> UIColor? {
-    let blurredWidth = 16
-    let blurredHeight = 16
-    let blurredBytesPerRow = blurredWidth * 4
-    guard let context = DrawingContext(size: CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight)), scale: 1.0, opaque: true, bytesPerRow: blurredBytesPerRow) else {
-        return nil
-    }
-    
-    let size = CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight))
-    
-    if let cgImage = image.cgImage {
-        context.withFlippedContext { c in
-            c.setFillColor(UIColor.white.cgColor)
-            c.fill(CGRect(origin: CGPoint(), size: size))
-            c.draw(cgImage, in: CGRect(origin: CGPoint(x: -size.width / 2.0, y: -size.height / 2.0), size: CGSize(width: size.width * 1.8, height: size.height * 1.8)))
-        }
-    }
-        
-    var destinationBuffer = vImage_Buffer()
-    destinationBuffer.width = UInt(blurredWidth)
-    destinationBuffer.height = UInt(blurredHeight)
-    destinationBuffer.data = context.bytes
-    destinationBuffer.rowBytes = context.bytesPerRow
-    
-    vImageBoxConvolve_ARGB8888(&destinationBuffer,
-                               &destinationBuffer,
-                               nil,
-                               0, 0,
-                               UInt32(15),
-                               UInt32(15),
-                               nil,
-                               vImage_Flags(kvImageTruncateKernel))
-    
-    let divisor: Int32 = 0x1000
-
-    let rwgt: CGFloat = 0.3086
-    let gwgt: CGFloat = 0.6094
-    let bwgt: CGFloat = 0.0820
-
-    let adjustSaturation: CGFloat = 1.7
-
-    let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
-    let b = (1.0 - adjustSaturation) * rwgt
-    let c = (1.0 - adjustSaturation) * rwgt
-    let d = (1.0 - adjustSaturation) * gwgt
-    let e = (1.0 - adjustSaturation) * gwgt + adjustSaturation
-    let f = (1.0 - adjustSaturation) * gwgt
-    let g = (1.0 - adjustSaturation) * bwgt
-    let h = (1.0 - adjustSaturation) * bwgt
-    let i = (1.0 - adjustSaturation) * bwgt + adjustSaturation
-
-    let satMatrix: [CGFloat] = [
-        a, b, c, 0,
-        d, e, f, 0,
-        g, h, i, 0,
-        0, 0, 0, 1
-    ]
-
-    var matrix: [Int16] = satMatrix.map { value in
-        return Int16(value * CGFloat(divisor))
-    }
-
-    vImageMatrixMultiply_ARGB8888(&destinationBuffer, &destinationBuffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
-    
-    context.withFlippedContext { c in
-        c.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
-        c.fill(CGRect(origin: CGPoint(), size: size))
-    }
-    
-    var sumR: UInt64 = 0
-    var sumG: UInt64 = 0
-    var sumB: UInt64 = 0
-    var sumA: UInt64 = 0
-    
-    for y in 0 ..< blurredHeight {
-        let row = context.bytes.assumingMemoryBound(to: UInt8.self).advanced(by: y * blurredBytesPerRow)
-        for x in 0 ..< blurredWidth {
-            let pixel = row.advanced(by: x * 4)
-            sumB += UInt64(pixel.advanced(by: 0).pointee)
-            sumG += UInt64(pixel.advanced(by: 1).pointee)
-            sumR += UInt64(pixel.advanced(by: 2).pointee)
-            sumA += UInt64(pixel.advanced(by: 3).pointee)
-        }
-    }
-    sumR /= UInt64(blurredWidth * blurredHeight)
-    sumG /= UInt64(blurredWidth * blurredHeight)
-    sumB /= UInt64(blurredWidth * blurredHeight)
-    sumA /= UInt64(blurredWidth * blurredHeight)
-    sumA = 255
-    
-    var color = UIColor(red: CGFloat(sumR) / 255.0, green: CGFloat(sumG) / 255.0, blue: CGFloat(sumB) / 255.0, alpha: CGFloat(sumA) / 255.0)
-    if color.lightness > 0.8 {
-        color = color.withMultipliedBrightnessBy(0.8)
-    }
-    return color
 }

@@ -382,17 +382,12 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
-                    var hasCloseButton = false
-                    if case .xmasPremiumGift = item.notice {
+                    let hasCloseButton: Bool
+                    switch item.notice {
+                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto:
                         hasCloseButton = true
-                    } else if case .setupBirthday = item.notice {
-                        hasCloseButton = true
-                    } else if case .birthdayPremiumGift = item.notice {
-                        hasCloseButton = true
-                    } else if case .premiumGrace = item.notice {
-                        hasCloseButton = true
-                    } else if case .starsSubscriptionLowBalance = item.notice {
-                        hasCloseButton = true
+                    default:
+                        hasCloseButton = false
                     }
                                         
                     if let okButtonLayout, let cancelButtonLayout {

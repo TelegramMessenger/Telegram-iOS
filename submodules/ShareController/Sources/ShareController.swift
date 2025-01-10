@@ -664,6 +664,8 @@ public final class ShareController: ViewController {
         var fromPublicChannel = false
         if case let .messages(messages) = self.subject, let message = messages.first, let peer = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
             fromPublicChannel = true
+        } else if case let .url(link) = self.subject, link.contains("t.me/nft/") {
+            fromPublicChannel = true
         }
         
         self.displayNode = ShareControllerNode(controller: self, environment: self.environment, presentationData: self.presentationData, presetText: self.presetText, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in

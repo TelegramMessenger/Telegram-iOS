@@ -1137,6 +1137,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     subject: shareSubject,
                     forceExternal: false,
                     shareStory: nil,
+                    enqueued: nil,
                     actionCompleted: { [weak parentNavigationController] in
                         if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

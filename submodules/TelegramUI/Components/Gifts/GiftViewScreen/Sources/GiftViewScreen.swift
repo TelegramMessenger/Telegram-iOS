@@ -1847,6 +1847,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         var transferGiftImpl: (() -> Void)?
         var showAttributeInfoImpl: ((Any, Float) -> Void)?
         var upgradeGiftImpl: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)?
+        var shareGiftImpl: (() -> Void)?
         var openMoreImpl: ((ASDisplayNode, ContextGesture?) -> Void)?
         var viewUpgradedImpl: ((EngineMessage.Id) -> Void)?
         
@@ -2140,6 +2141,74 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
         }
         
+        shareGiftImpl = { [weak self] in
+            guard let self, let arguments = self.subject.arguments, case let .unique(gift) = arguments.gift else {
+                return
+            }
+            let link = "https://t.me/nft/\(gift.slug)"
+            let shareController = context.sharedContext.makeShareController(
+                context: context,
+                subject: .url(link),
+                forceExternal: false,
+                shareStory: shareStory,
+                enqueued: { peerIds, _ in
+                    let _ = (context.engine.data.get(
+                        EngineDataList(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                        )
+                    )
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
+                        let peers = peerList.compactMap { $0 }
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let text: String
+                        var savedMessages = false
+                        if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
+                            text = presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One
+                            savedMessages = true
+                        } else {
+                            if peers.count == 1, let peer = peers.first {
+                                var peerName = peer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                peerName = peerName.replacingOccurrences(of: "**", with: "")
+                                text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
+                            } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                var firstPeerName = firstPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                firstPeerName = firstPeerName.replacingOccurrences(of: "**", with: "")
+                                var secondPeerName = secondPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                secondPeerName = secondPeerName.replacingOccurrences(of: "**", with: "")
+                                text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                            } else if let peer = peers.first {
+                                var peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                peerName = peerName.replacingOccurrences(of: "**", with: "")
+                                text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                            } else {
+                                text = ""
+                            }
+                        }
+                        
+                        self?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                            if savedMessages, action == .info {
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    guard let peer else {
+                                        return
+                                    }
+                                    openPeerImpl?(peer)
+                                    Queue.mainQueue().after(1.0) {
+                                        self?.dismiss(animated: false, completion: nil)
+                                    }
+                                })
+                            }
+                            return false
+                        }, additionalView: nil), in: .current)
+                    })
+                },
+                actionCompleted: { [weak self] in
+                    self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                }
+            )
+            self.present(shareController, in: .window(.root))
+        }
+        
         viewUpgradedImpl = { [weak self] messageId in
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
@@ -2178,13 +2247,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
-            //TODO:localize
             let link = "https://t.me/nft/\(gift.slug)"
             
             var items: [ContextMenuItem] = []
-            
-            items.append(.action(ContextMenuActionItem(text: "Copy Link", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] c, _ in
                 c?.dismiss(completion: nil)
@@ -2198,28 +2264,16 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             })))
             
-            items.append(.action(ContextMenuActionItem(text: "Share", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Share, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
+            }, action: { c, _ in
                 c?.dismiss(completion: nil)
                 
-                guard let self else {
-                    return
-                }
-                let shareController = context.sharedContext.makeShareController(
-                    context: context,
-                    subject: .url(link),
-                    forceExternal: false,
-                    shareStory: shareStory,
-                    actionCompleted: { [weak self] in
-                        self?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                    }
-                )
-                self.present(shareController, in: .window(.root))
+                shareGiftImpl?()
             })))
             
             if let _ = arguments.transferStars {
-                items.append(.action(ContextMenuActionItem(text: "Transfer", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Transfer, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
                 }, action: { c, _ in
                     c?.dismiss(completion: nil)

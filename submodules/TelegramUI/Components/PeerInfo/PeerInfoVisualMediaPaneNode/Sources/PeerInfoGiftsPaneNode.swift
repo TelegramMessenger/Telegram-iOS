@@ -249,6 +249,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return .never()
                                             }
                                             return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+                                        },
+                                        shareStory: { [weak self] in
+                                            guard let self, case let .unique(uniqueGift) = product.gift, let parentController = self.parentController else {
+                                                return
+                                            }
+                                            Queue.mainQueue().after(0.15) {
+                                                let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: parentController)
+                                                parentController.push(controller)
+                                            }
                                         }
                                     )
                                     self.parentController?.push(controller)
