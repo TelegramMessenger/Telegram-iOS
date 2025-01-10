@@ -1008,6 +1008,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 groupsInCommon = nil
             }
             
+            let recommendedBots: Signal<RecommendedBots?, NoError>
+            if case .bot = kind {
+                recommendedBots = context.engine.peers.recommendedBots(peerId: userPeerId)
+            } else {
+                recommendedBots = .single(nil)
+            }
+            
             let premiumGiftOptions: Signal<[PremiumGiftCodeOption], NoError>
             let profileGiftsContext: ProfileGiftsContext?
             if case .user = kind {
@@ -1309,6 +1316,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 status,
                 hasStories,
                 hasStoryArchive,
+                recommendedBots,
                 accountIsPremium,
                 savedMessagesPeer,
                 hasSavedMessagesChats,
@@ -1322,7 +1330,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 premiumGiftOptions,
                 webAppPermissions
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, hasStoryArchive, recommendedBots, accountIsPremium, savedMessagesPeer, hasSavedMessagesChats, hasSavedMessages, hasSavedMessageTags, hasBotPreviewItems, personalChannel, privacySettings, starsRevenueContextAndState, revenueContextAndState, premiumGiftOptions, webAppPermissions -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if isMyProfile {
                     availablePanes?.insert(.stories, at: 0)
@@ -1372,6 +1380,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         } else if let cachedData = peerView.cachedData as? CachedUserData, let botPreview = cachedData.botPreview, !botPreview.items.isEmpty {
                             availablePanes?.insert(.botPreview, at: 0)
                         }
+                    }
+                    
+                    if let recommendedBots, recommendedBots.count > 0 {
+                        availablePanes?.append(.similarBots)
                     }
                 } else {
                     availablePanes = nil
@@ -1574,7 +1586,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         availablePanes?.insert(.stories, at: 0)
                     }
                     if let recommendedChannels, !recommendedChannels.channels.isEmpty {
-                        availablePanes?.append(.recommended)
+                        availablePanes?.append(.similarChannels)
                     }
                     
                     if case .peer = chatLocation {

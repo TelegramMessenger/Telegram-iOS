@@ -744,6 +744,54 @@ public extension Api.messages {
     
     }
 }
+public extension Api.messages {
+    indirect enum WebPagePreview: TypeConstructorDescription {
+        case webPagePreview(media: Api.MessageMedia, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webPagePreview(let media, let users):
+                    if boxed {
+                        buffer.appendInt32(-1254192351)
+                    }
+                    media.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webPagePreview(let media, let users):
+                return ("webPagePreview", [("media", media as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_webPagePreview(_ reader: BufferReader) -> WebPagePreview? {
+            var _1: Api.MessageMedia?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.WebPagePreview.webPagePreview(media: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.payments {
     enum BankCardData: TypeConstructorDescription {
         case bankCardData(title: String, openUrls: [Api.BankCardOpenUrl])
@@ -1530,48 +1578,6 @@ public extension Api.payments {
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             if _c1 && _c2 {
                 return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum StarGiftUpgradePreview: TypeConstructorDescription {
-        case starGiftUpgradePreview(sampleAttributes: [Api.StarGiftAttribute])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .starGiftUpgradePreview(let sampleAttributes):
-                    if boxed {
-                        buffer.appendInt32(377215243)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sampleAttributes.count))
-                    for item in sampleAttributes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .starGiftUpgradePreview(let sampleAttributes):
-                return ("starGiftUpgradePreview", [("sampleAttributes", sampleAttributes as Any)])
-    }
-    }
-    
-        public static func parse_starGiftUpgradePreview(_ reader: BufferReader) -> StarGiftUpgradePreview? {
-            var _1: [Api.StarGiftAttribute]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarGiftUpgradePreview.starGiftUpgradePreview(sampleAttributes: _1!)
             }
             else {
                 return nil

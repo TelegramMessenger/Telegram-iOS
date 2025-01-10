@@ -72,3 +72,39 @@ public extension WallpaperPreviewMedia {
         }
     }
 }
+
+public final class UniqueGiftPreviewMedia: Media {
+    public var id: MediaId? {
+        return nil
+    }
+    public let peerIds: [PeerId] = []
+    
+    public let content: StarGift.UniqueGift?
+    
+    public init(content: StarGift.UniqueGift) {
+        self.content = content
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.content = nil
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    public func isEqual(to other: Media) -> Bool {
+        guard let other = other as? UniqueGiftPreviewMedia else {
+            return false
+        }
+        
+        if self.content != other.content {
+            return false
+        }
+        
+        return true
+    }
+    
+    public func isSemanticallyEqual(to other: Media) -> Bool {
+        return self.isEqual(to: other)
+    }
+}

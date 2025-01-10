@@ -2383,12 +2383,11 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
-                static func getBotRecommendations(flags: Int32, bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.Users>) {
+                static func getBotRecommendations(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.users.Users>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(676707937)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    buffer.appendInt32(-1581840363)
                     bot.serialize(buffer, true)
-                    return (FunctionDescription(name: "bots.getBotRecommendations", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.users.Users? in
+                    return (FunctionDescription(name: "bots.getBotRecommendations", parameters: [("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.users.Users? in
                         let reader = BufferReader(buffer)
                         var result: Api.users.Users?
                         if let signature = reader.readInt32() {
@@ -7063,9 +7062,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getWebPagePreview(flags: Int32, message: String, entities: [Api.MessageEntity]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.MessageMedia>) {
+                static func getWebPagePreview(flags: Int32, message: String, entities: [Api.MessageEntity]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.WebPagePreview>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1956073268)
+                    buffer.appendInt32(1460498287)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(message, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
@@ -7073,11 +7072,11 @@ public extension Api.functions.messages {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription(name: "messages.getWebPagePreview", parameters: [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.MessageMedia? in
+                    return (FunctionDescription(name: "messages.getWebPagePreview", parameters: [("flags", String(describing: flags)), ("message", String(describing: message)), ("entities", String(describing: entities))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.WebPagePreview? in
                         let reader = BufferReader(buffer)
-                        var result: Api.MessageMedia?
+                        var result: Api.messages.WebPagePreview?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                            result = Api.parse(reader, signature: signature) as? Api.messages.WebPagePreview
                         }
                         return result
                     })
@@ -9474,6 +9473,21 @@ public extension Api.functions.payments {
                         var result: Api.payments.SuggestedStarRefBots?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.SuggestedStarRefBots
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func getUniqueStarGift(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.UniqueStarGift>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1583919758)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.getUniqueStarGift", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.UniqueStarGift? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.UniqueStarGift?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.UniqueStarGift
                         }
                         return result
                     })

@@ -318,6 +318,7 @@ public enum ResolvedUrl {
     case boost(peerId: PeerId?, status: ChannelBoostStatus?, myBoostStatus: MyBoostStatus?)
     case premiumGiftCode(slug: String)
     case premiumMultiGift(reference: String?)
+    case collectible(gift: StarGift.UniqueGift?)
     case messageLink(link: TelegramResolvedMessageLink?)
 }
 
@@ -1099,9 +1100,14 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
-    func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController
+    func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: (() -> Void)?) -> ViewController
+    func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?) -> ViewController
+    
+    func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController
     
     func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?)
+    
+    func makeShareController(context: AccountContext, subject: ShareControllerSubject, forceExternal: Bool, shareStory: (() -> Void)?, enqueued: (([PeerId], [Int64]) -> Void)?, actionCompleted: (() -> Void)?) -> ViewController
     
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
@@ -1337,29 +1343,4 @@ public struct StickersSearchConfiguration {
             return .defaultValue
         }
     }
-}
-
-public protocol ShareControllerAccountContext: AnyObject {
-    var accountId: AccountRecordId { get }
-    var accountPeerId: EnginePeer.Id { get }
-    var stateManager: AccountStateManager { get }
-    var engineData: TelegramEngine.EngineData { get }
-    var animationCache: AnimationCache { get }
-    var animationRenderer: MultiAnimationRenderer { get }
-    var contentSettings: ContentSettings { get }
-    var appConfiguration: AppConfiguration { get }
-    
-    func resolveInlineStickers(fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
-}
-
-public protocol ShareControllerEnvironment: AnyObject {
-    var presentationData: PresentationData { get }
-    var updatedPresentationData: Signal<PresentationData, NoError> { get }
-    var isMainApp: Bool { get }
-    var energyUsageSettings: EnergyUsageSettings { get }
-    
-    var mediaManager: MediaManager? { get }
-    
-    func setAccountUserInterfaceInUse(id: AccountRecordId) -> Disposable
-    func donateSendMessageIntent(account: ShareControllerAccountContext, peerIds: [EnginePeer.Id])
 }

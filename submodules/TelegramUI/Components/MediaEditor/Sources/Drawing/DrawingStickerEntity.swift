@@ -39,6 +39,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case video(TelegramMediaFile)
         case dualVideoReference(Bool)
         case message([MessageId], CGSize, TelegramMediaFile?, CGRect?, CGFloat?)
+        case gift(StarGift.UniqueGift, CGSize)
         
         public static func == (lhs: Content, rhs: Content) -> Bool {
             switch lhs {
@@ -78,6 +79,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
                 } else {
                     return false
                 }
+            case let .gift(lhsGift, lhsSize):
+                if case let .gift(rhsGift, rhsSize) = rhs {
+                    return lhsGift == rhsGift && lhsSize == rhsSize
+                } else {
+                    return false
+                }
             }
         }
     }
@@ -98,6 +105,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         case messageSize
         case messageMediaRect
         case messageMediaCornerRadius
+        
+        case gift
+        
         case referenceDrawingSize
         case position
         case scale
@@ -119,6 +129,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             if case let .file(_, type) = self.content, case .reaction = type {
                 self.scale = max(0.59, min(1.77, self.scale))
             } else if case .message = self.content {
+                self.scale = max(2.5, self.scale)
+            } else if case .gift = self.content {
                 self.scale = max(2.5, self.scale)
             }
         }
@@ -164,6 +176,8 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             dimensions = CGSize(width: 512.0, height: 512.0)
         case let .message(_, size, _, _, _):
             dimensions = size
+        case let .gift(_, size):
+            dimensions = size
         }
         
         let boundingSize = CGSize(width: size, height: size)
@@ -191,7 +205,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return true
         case .dualVideoReference:
             return true
-        case .message:
+        case .message, .gift:
             return !(self.renderSubEntities ?? []).isEmpty
         }
     }
@@ -202,7 +216,7 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             return imageType == .rectangle
         case .video:
             return true
-        case .message:
+        case .message, .gift:
             return true
         default:
             return false
@@ -232,7 +246,10 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
+        if let gift = try container.decodeIfPresent(StarGift.UniqueGift.self, forKey: .gift) {
+            let size = try container.decodeIfPresent(CGSize.self, forKey: .messageSize) ?? .zero
+            self.content = .gift(gift, size)
+        } else if let messageIds = try container.decodeIfPresent([MessageId].self, forKey: .messageIds) {
             let size = try container.decodeIfPresent(CGSize.self, forKey: .messageSize) ?? .zero
             let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .messageFile)
             let mediaRect = try container.decodeIfPresent(CGRect.self, forKey: .messageMediaRect)
@@ -343,6 +360,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
             try container.encodeIfPresent(file, forKey: .messageFile)
             try container.encodeIfPresent(mediaRect, forKey: .messageMediaRect)
             try container.encodeIfPresent(mediaCornerRadius, forKey: .messageMediaCornerRadius)
+        case let .gift(gift, size):
+            try container.encode(gift, forKey: .gift)
+            try container.encode(size, forKey: .messageSize)
         }
         try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
         try container.encode(self.position, forKey: .position)

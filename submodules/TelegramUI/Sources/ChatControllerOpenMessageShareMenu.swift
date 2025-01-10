@@ -134,7 +134,8 @@ extension ChatControllerImpl {
                     return
                 }
                 Queue.mainQueue().after(0.15) {
-                    self.openStorySharing(messages: messages)
+                    let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .messages(messages), parentController: self)
+                    self.push(controller)
                 }
             }
         }

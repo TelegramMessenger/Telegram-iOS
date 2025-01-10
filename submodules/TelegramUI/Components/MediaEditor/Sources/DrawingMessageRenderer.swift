@@ -87,17 +87,29 @@ public final class DrawingMessageRenderer {
         private let isNight: Bool
         private let isOverlay: Bool
         private let isLink: Bool
+        private let isGift: Bool
+        private let wallpaperColor: UIColor?
         
         private let messagesContainerNode: ASDisplayNode
         private var avatarHeaderNode: ListViewItemHeaderNode?
         private var messageNodes: [ListViewItemNode]?
         
-        init(context: AccountContext, messages: [Message], isNight: Bool = false, isOverlay: Bool = false, isLink: Bool = false) {
+        init(
+            context: AccountContext,
+            messages: [Message],
+            isNight: Bool = false,
+            isOverlay: Bool = false,
+            isLink: Bool = false,
+            isGift: Bool = false,
+            wallpaperColor: UIColor? = nil
+        ) {
             self.context = context
             self.messages = messages
             self.isNight = isNight
             self.isOverlay = isOverlay
             self.isLink = isLink
+            self.isGift = isGift
+            self.wallpaperColor = wallpaperColor
             
             self.messagesContainerNode = ASDisplayNode()
             self.messagesContainerNode.clipsToBounds = true
@@ -160,14 +172,19 @@ public final class DrawingMessageRenderer {
                         }
                     }
                 }
+                
+                var borderColor: UIColor?
+                if self.isGift && !self.isOverlay, let wallpaperColor = self.wallpaperColor {
+                    borderColor = wallpaperColor.withMultiplied(hue: 1.0, saturation: 1.5, brightness: self.isNight ? 1.6 : 0.7).withAlphaComponent(0.6)
+                }
 
-                self.generate(size: size) { image in
+                self.generate(size: size, borderColor: borderColor) { image in
                     completion(size, image, mediaRect)
                 }
             })
         }
         
-        private func generate(size: CGSize, completion: @escaping (UIImage) -> Void) {
+        private func generate(size: CGSize, borderColor: UIColor? = nil, completion: @escaping (UIImage) -> Void) {
             UIGraphicsBeginImageContextWithOptions(size, false, 3.0)
             self.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
             let img = UIGraphicsGetImageFromCurrentImageContext()
@@ -175,6 +192,11 @@ public final class DrawingMessageRenderer {
             
             let finalImage = generateImage(CGSize(width: size.width * 3.0, height: size.height * 3.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
+                if let borderColor {
+                    context.addPath(CGPath(roundedRect: CGRect(origin: CGPoint(x: 6.0, y: 12.0), size: CGSize(width: size.width - 6.0, height: size.height - 13.0)), cornerWidth: 70.0, cornerHeight: 70.0, transform: nil))
+                    context.setFillColor(borderColor.cgColor)
+                    context.fillPath()
+                }
                 if let cgImage = img?.cgImage {
                     context.draw(cgImage, in: CGRect(origin: .zero, size: size), byTiling: false)
                 }
@@ -198,7 +220,13 @@ public final class DrawingMessageRenderer {
             
             let avatarHeaderItem: ListViewItemHeader?
             if let author = self.messages.first?.author {
-                avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: self.messages.first!.peers[author.id]!, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
+                let avatarPeer: Peer
+                if let peer = self.messages.first!.peers[author.id] {
+                    avatarPeer = peer
+                } else {
+                    avatarPeer = author
+                }
+                avatarHeaderItem = self.context.sharedContext.makeChatMessageAvatarHeaderItem(context: self.context, timestamp: self.messages.first?.timestamp ?? 0, peer: avatarPeer, message: self.messages.first!, theme: theme, strings: presentationData.strings, wallpaper: presentationData.chatWallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder)
             } else {
                 avatarHeaderItem = nil
             }
@@ -208,6 +236,8 @@ public final class DrawingMessageRenderer {
             var leftInset: CGFloat = 37.0
             if self.isLink {
                 leftInset = -6.0
+            } else if self.isGift {
+                leftInset = -50.0
             }
             let containerWidth = layout.size.width - inset * 2.0
             let params = ListViewItemLayoutParams(width: containerWidth, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, availableHeight: layout.size.height)
@@ -329,13 +359,21 @@ public final class DrawingMessageRenderer {
     private let nightContainerNode: ContainerNode
     private let overlayContainerNode: ContainerNode
     
-    public init(context: AccountContext, messages: [Message], parentView: UIView, isLink: Bool = false) {
+    public init(
+        context: AccountContext,
+        messages: [Message],
+        parentView: UIView,
+        isLink: Bool = false,
+        isGift: Bool = false,
+        wallpaperDayColor: UIColor? = nil,
+        wallpaperNightColor: UIColor? = nil
+    ) {
         self.context = context
         self.messages = messages
         
-        self.dayContainerNode = ContainerNode(context: context, messages: messages, isLink: isLink)
-        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true, isLink: isLink)
-        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true, isLink: isLink)
+        self.dayContainerNode = ContainerNode(context: context, messages: messages, isLink: isLink, isGift: isGift, wallpaperColor: wallpaperDayColor)
+        self.nightContainerNode = ContainerNode(context: context, messages: messages, isNight: true, isLink: isLink, isGift: isGift, wallpaperColor: wallpaperNightColor)
+        self.overlayContainerNode = ContainerNode(context: context, messages: messages, isOverlay: true, isLink: isLink, isGift: isGift, wallpaperColor: nil)
         
         parentView.addSubview(self.dayContainerNode.view)
         parentView.addSubview(self.nightContainerNode.view)

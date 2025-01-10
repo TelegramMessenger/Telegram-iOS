@@ -357,6 +357,16 @@ public final class ButtonComponent: Component {
             self.cornerRadius = cornerRadius
             self.isShimmering = isShimmering
         }
+        
+        public func withIsShimmering(_ isShimmering: Bool) -> Background {
+            return Background(
+                color: self.color,
+                foreground: self.foreground,
+                pressedColor: self.pressedColor,
+                cornerRadius: self.cornerRadius,
+                isShimmering: isShimmering
+            )
+        }
     }
 
     public let background: Background

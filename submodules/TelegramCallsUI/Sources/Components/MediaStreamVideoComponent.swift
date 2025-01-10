@@ -11,6 +11,7 @@ import SwiftSignalKit
 import AvatarNode
 import Postbox
 import TelegramVoip
+import ComponentDisplayAdapters
 
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
@@ -157,7 +158,7 @@ final class MediaStreamVideoComponent: Component {
         private var lastPresentation: UIView?
         private var pipTrackDisplayLink: CADisplayLink?
         
-        private var livePlayerView: ProxyVideoView?
+        private var livestreamVideoView: LivestreamVideoViewV1?
         
         override init(frame: CGRect) {
             self.blurTintView = UIView()
@@ -500,9 +501,9 @@ final class MediaStreamVideoComponent: Component {
                 
                 var isVideoVisible = component.isVisible
                 
-                if !wasVisible && component.isVisible {
+                if !self.wasVisible && component.isVisible {
                     videoView.layer.animateAlpha(from: 0, to: 1, duration: 0.2)
-                } else if wasVisible && !component.isVisible {
+                } else if self.wasVisible && !component.isVisible {
                     videoView.layer.animateAlpha(from: 1, to: 0, duration: 0.2)
                 }
                 
@@ -522,7 +523,6 @@ final class MediaStreamVideoComponent: Component {
                 videoFrameUpdateTransition.setFrame(view: videoView, frame: newVideoFrame, completion: nil)
                 
                 if let videoBlurView = self.videoBlurView {
-                    
                     videoBlurView.updateIsEnabled(component.isVisible)
                     if component.isFullscreen {
                         videoFrameUpdateTransition.setFrame(view: videoBlurView, frame: CGRect(
@@ -545,16 +545,16 @@ final class MediaStreamVideoComponent: Component {
                     videoFrameUpdateTransition.setFrame(layer: self.videoBlurSolidMask, frame: self.videoBlurGradientMask.bounds)
                 }
                 
-                if self.livePlayerView == nil {
-                    let livePlayerView = ProxyVideoView(context: component.call.accountContext, call: component.call)
-                    self.livePlayerView = livePlayerView
-                    livePlayerView.layer.masksToBounds = true
-                    self.addSubview(livePlayerView)
-                    livePlayerView.frame = newVideoFrame
-                    livePlayerView.layer.cornerRadius = videoCornerRadius
-                    livePlayerView.update(size: newVideoFrame.size)
+                if component.call.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 && self.livestreamVideoView == nil {
+                    let livestreamVideoView = LivestreamVideoViewV1(context: component.call.accountContext, audioSessionManager: component.call.accountContext.sharedContext.mediaManager.audioSession, call: component.call)
+                    self.livestreamVideoView = livestreamVideoView
+                    livestreamVideoView.layer.masksToBounds = true
+                    self.addSubview(livestreamVideoView)
+                    livestreamVideoView.frame = newVideoFrame
+                    livestreamVideoView.layer.cornerRadius = videoCornerRadius
+                    livestreamVideoView.update(size: newVideoFrame.size, transition: .immediate)
                     
-                    var pictureInPictureController: AVPictureInPictureController? = nil
+                    /*var pictureInPictureController: AVPictureInPictureController? = nil
                     if #available(iOS 15.0, *) {
                         pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(playerLayer: livePlayerView.playerLayer))
                         pictureInPictureController?.playerLayer.masksToBounds = false
@@ -570,12 +570,14 @@ final class MediaStreamVideoComponent: Component {
                     if #available(iOS 14.0, *) {
                         pictureInPictureController?.requiresLinearPlayback = true
                     }
-                    self.pictureInPictureController = pictureInPictureController
+                    self.pictureInPictureController = pictureInPictureController*/
                 }
-                if let livePlayerView = self.livePlayerView {
-                    videoFrameUpdateTransition.setFrame(view: livePlayerView, frame: newVideoFrame, completion: nil)
-                    videoFrameUpdateTransition.setCornerRadius(layer: livePlayerView.layer, cornerRadius: videoCornerRadius)
-                    livePlayerView.update(size: newVideoFrame.size)
+                if let livestreamVideoView = self.livestreamVideoView {
+                    videoFrameUpdateTransition.setFrame(view: livestreamVideoView, frame: newVideoFrame, completion: nil)
+                    videoFrameUpdateTransition.setCornerRadius(layer: livestreamVideoView.layer, cornerRadius: videoCornerRadius)
+                    livestreamVideoView.update(size: newVideoFrame.size, transition: transition.containedViewLayoutTransition)
+                    
+                    videoView.isHidden = true
                 }
             } else {
                 videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
@@ -583,30 +585,33 @@ final class MediaStreamVideoComponent: Component {
             
             let loadingBlurViewFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
             
-            if loadingBlurView.frame == .zero {
-                loadingBlurView.frame = loadingBlurViewFrame
+            if self.loadingBlurView.frame == .zero {
+                self.loadingBlurView.frame = loadingBlurViewFrame
             } else {
                 // Using ComponentTransition.setFrame on UIVisualEffectView causes instant update of sublayers
                 switch videoFrameUpdateTransition.animation {
                 case let .curve(duration, curve):
-                    UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: { [self] in
-                        loadingBlurView.frame = loadingBlurViewFrame
+                    UIView.animate(withDuration: duration, delay: 0, options: curve.containedViewLayoutTransitionCurve.viewAnimationOptions, animations: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.loadingBlurView.frame = loadingBlurViewFrame
                     })
                     
                 default:
-                    loadingBlurView.frame = loadingBlurViewFrame
+                    self.loadingBlurView.frame = loadingBlurViewFrame
                 }
             }
-            videoFrameUpdateTransition.setCornerRadius(layer: loadingBlurView.layer, cornerRadius: videoCornerRadius)
-            videoFrameUpdateTransition.setFrame(view: placeholderView, frame: loadingBlurViewFrame)
-            videoFrameUpdateTransition.setCornerRadius(layer: placeholderView.layer, cornerRadius: videoCornerRadius)
-            placeholderView.clipsToBounds = true
-            placeholderView.subviews.forEach {
-                videoFrameUpdateTransition.setFrame(view: $0, frame: placeholderView.bounds)
+            videoFrameUpdateTransition.setCornerRadius(layer: self.loadingBlurView.layer, cornerRadius: videoCornerRadius)
+            videoFrameUpdateTransition.setFrame(view: self.placeholderView, frame: loadingBlurViewFrame)
+            videoFrameUpdateTransition.setCornerRadius(layer: self.placeholderView.layer, cornerRadius: videoCornerRadius)
+            self.placeholderView.clipsToBounds = true
+            self.placeholderView.subviews.forEach {
+                videoFrameUpdateTransition.setFrame(view: $0, frame: self.placeholderView.bounds)
             }
             
-            let initialShimmerBounds = shimmerBorderLayer.bounds
-            videoFrameUpdateTransition.setFrame(layer: shimmerBorderLayer, frame: loadingBlurView.bounds)
+            let initialShimmerBounds = self.shimmerBorderLayer.bounds
+            videoFrameUpdateTransition.setFrame(layer: self.shimmerBorderLayer, frame: loadingBlurView.bounds)
             
             let borderMask = CAShapeLayer()
             let initialPath = CGPath(roundedRect: .init(x: 0, y: 0, width: initialShimmerBounds.width, height: initialShimmerBounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
@@ -617,11 +622,10 @@ final class MediaStreamVideoComponent: Component {
             borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
             borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
             borderMask.lineWidth = 3
-            shimmerBorderLayer.mask = borderMask
-            shimmerBorderLayer.cornerRadius = videoCornerRadius
+            self.shimmerBorderLayer.mask = borderMask
+            self.shimmerBorderLayer.cornerRadius = videoCornerRadius
             
-            if !self.hadVideo {
-                
+            if !self.hadVideo && !component.call.accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
                 if self.noSignalTimer == nil {
                     if #available(iOS 10.0, *) {
                         let noSignalTimer = Timer(timeInterval: 20.0, repeats: false, block: { [weak self] _ in
