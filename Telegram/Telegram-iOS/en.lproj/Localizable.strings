@@ -13651,6 +13651,21 @@ Sorry for the inconvenience.";
 
 "Camera.OpenChat" = "Open Chat";
 
+"Gift.Wear.Wear" = "Wear %@";
+"Gift.Wear.GetBenefits" = "and get these benefits:";
+"Gift.Wear.Badge.Title" = "Radiant Badge";
+"Gift.Wear.Badge.Text" = "The glittering icon of this item will be displayed next to your name.";
+"Gift.Wear.Design.Title" = "Unqiue Profile Design";
+"Gift.Wear.Design.Text" = "Your profile page will get the color and the symbol of this item.";
+"Gift.Wear.Proof.Title" = "Proof of Ownership";
+"Gift.Wear.Proof.Text" = "Tapping the icon of this item next to your name will show its info and owner.";
+"Gift.Wear.Start" = "Start Wearing";
+
+"Gift.View.Header.Transfer" = "transfer";
+"Gift.View.Header.Wear" = "wear";
+"Gift.View.Header.TakeOff" = "take off";
+"Gift.View.Header.Share" = "share";
+
 "Conversation.AddToContactsLong" = "Add to Contacts";
 
 "PeerInfo.PaneRecommendedBots" = "Similar Bots";

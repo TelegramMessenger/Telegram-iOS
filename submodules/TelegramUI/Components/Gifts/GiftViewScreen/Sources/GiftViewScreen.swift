@@ -22,6 +22,7 @@ import TextFormat
 import TelegramStringFormatting
 import StarsAvatarComponent
 import EmojiTextAttachmentView
+import EmojiStatusComponent
 import UndoUI
 import ConfettiEffect
 import PlainButtonComponent
@@ -34,6 +35,7 @@ import ContextUI
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
 private let symbolButtonTag = GenericComponentViewTag()
+private let statusTag = GenericComponentViewTag()
 
 private final class GiftViewSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -49,7 +51,8 @@ private final class GiftViewSheetContent: CombinedComponent {
     let openMyGifts: () -> Void
     let transferGift: () -> Void
     let upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)
-    let showAttributeInfo: (Any, Float) -> Void
+    let shareGift: () -> Void
+    let showAttributeInfo: (Any, String) -> Void
     let viewUpgraded: (EngineMessage.Id) -> Void
     let openMore: (ASDisplayNode, ContextGesture?) -> Void
     let getController: () -> ViewController?
@@ -66,7 +69,8 @@ private final class GiftViewSheetContent: CombinedComponent {
     	openMyGifts: @escaping () -> Void,
         transferGift: @escaping () -> Void,
         upgradeGift: @escaping ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>),
-        showAttributeInfo: @escaping (Any, Float) -> Void,
+        shareGift: @escaping () -> Void,
+        showAttributeInfo: @escaping (Any, String) -> Void,
         viewUpgraded: @escaping (EngineMessage.Id) -> Void,
         openMore: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         getController: @escaping () -> ViewController?
@@ -82,6 +86,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.openMyGifts = openMyGifts
         self.transferGift = transferGift
         self.upgradeGift = upgradeGift
+        self.shareGift = shareGift
         self.showAttributeInfo = showAttributeInfo
         self.viewUpgraded = viewUpgraded
         self.openMore = openMore
@@ -123,6 +128,10 @@ private final class GiftViewSheetContent: CombinedComponent {
         var upgradeFormDisposable: Disposable?
         var upgradeDisposable: Disposable?
         
+        var inWearPreview = false
+        var pendingWear = false
+        var pendingTakeOff = false
+        
         var sampleGiftAttributes: [StarGift.UniqueGift.Attribute]?
         let sampleDisposable = DisposableSet()
         
@@ -135,13 +144,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
         }
         private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
-        
-        var mockFiles: [TelegramMediaFile] = []
-        var mockIconFiles: [TelegramMediaFile] = []
-        var upgradedMockId: Int = 0
-        var upgradedMockBackgroundColor: UIColor = .white
-        var upgradedMockIcon: TelegramMediaFile?
-        
+                
         init(
             context: AccountContext,
             subject: GiftViewScreen.Subject,
@@ -278,6 +281,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.updated(transition: .spring(duration: 0.4))
         }
         
+        func requestWearPreview() {
+            self.inWearPreview = true
+            self.updated(transition: .spring(duration: 0.4))
+        }
+        
         func commitUpgrade() {
             guard let arguments = self.subject.arguments, let peerId = arguments.peerId, let starsContext = self.context.starsContext, let starsState = starsContext.currentState else {
                 return
@@ -343,6 +351,18 @@ private final class GiftViewSheetContent: CombinedComponent {
         let animation = Child(GiftCompositionComponent.self)
         let title = Child(MultilineTextComponent.self)
         let description = Child(MultilineTextComponent.self)
+        
+        let transferButton = Child(PlainButtonComponent.self)
+        let wearButton = Child(PlainButtonComponent.self)
+        let shareButton = Child(PlainButtonComponent.self)
+        
+        let wearAvatar = Child(AvatarComponent.self)
+        let wearPeerName = Child(MultilineTextComponent.self)
+        let wearPeerStatus = Child(MultilineTextComponent.self)
+        let wearTitle = Child(MultilineTextComponent.self)
+        let wearDescription = Child(MultilineTextComponent.self)
+        let wearPerks = Child(List<Empty>.self)
+        
         let hiddenText = Child(MultilineTextComponent.self)
         let table = Child(TableComponent.self)
         let additionalText = Child(MultilineTextComponent.self)
@@ -456,12 +476,15 @@ private final class GiftViewSheetContent: CombinedComponent {
                 component: ButtonsComponent(
                     theme: theme,
                     isOverlay: showUpgradePreview || uniqueGift != nil,
-                    showMoreButton: uniqueGift != nil,
+                    showMoreButton: uniqueGift != nil && !state.inWearPreview,
                     closePressed: { [weak state] in
                         guard let state else {
                             return
                         }
-                        if state.inUpgradePreview {
+                        if state.inWearPreview {
+                            state.inWearPreview = false
+                            state.updated(transition: .spring(duration: 0.4))
+                        } else if state.inUpgradePreview {
                             state.inUpgradePreview = false
                             state.updated(transition: .spring(duration: 0.4))
                         } else {
@@ -477,46 +500,247 @@ private final class GiftViewSheetContent: CombinedComponent {
             )
                                     
             var originY: CGFloat = 0.0
-            
-            let animationHeight: CGFloat
-            let animationSubject: GiftCompositionComponent.Subject?
+                        
+            let headerHeight: CGFloat
+            let headerSubject: GiftCompositionComponent.Subject?
             if let uniqueGift {
-                animationHeight = 240.0
-                animationSubject = .unique(uniqueGift)
+                if state.inWearPreview {
+                    headerHeight = 200.0
+                } else if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
+                    headerHeight = 314.0
+                } else {
+                    headerHeight = 240.0
+                }
+                headerSubject = .unique(uniqueGift)
             } else if state.inUpgradePreview, let attributes = state.sampleGiftAttributes {
-                animationHeight = 258.0
-                animationSubject = .preview(attributes)
+                headerHeight = 258.0
+                headerSubject = .preview(attributes)
             } else if case let .upgradePreview(attributes, _) = component.subject {
-                animationHeight = 258.0
-                animationSubject = .preview(attributes)
+                headerHeight = 258.0
+                headerSubject = .preview(attributes)
             } else if let animationFile {
-                animationHeight = 210.0
-                animationSubject = .generic(animationFile)
+                headerHeight = 210.0
+                headerSubject = .generic(animationFile)
             } else {
-                animationHeight = 210.0
-                animationSubject = nil
+                headerHeight = 210.0
+                headerSubject = nil
             }
-            if let animationSubject {
+            
+            var wearPeerNameChild: _UpdatedChildComponent?
+            if state.inWearPreview, let uniqueGift {
+                var peerName = ""
+                if let accountPeer = state.peerMap[component.context.account.peerId] {
+                    peerName = accountPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                }
+                wearPeerNameChild = wearPeerName.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: peerName,
+                            font: Font.bold(28.0),
+                            textColor: .white,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                
+                let wearTitle = wearTitle.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.Gift_Wear_Wear("\(uniqueGift.title) #\(uniqueGift.number)").string,
+                            font: Font.bold(24.0),
+                            textColor: theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                let wearDescription = wearDescription.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.Gift_Wear_GetBenefits,
+                            font: Font.regular(15.0),
+                            textColor: theme.actionSheet.primaryTextColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                
+                var titleOriginY = headerHeight + 18.0
+                context.add(wearTitle
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY + wearTitle.size.height))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                titleOriginY += wearTitle.size.height
+                titleOriginY += 18.0
+                
+                context.add(wearDescription
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: titleOriginY + wearDescription.size.height))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+            }
+            
+            var animationOffset: CGPoint?
+            var animationScale: CGFloat?
+            if let wearPeerNameChild {
+                animationOffset = CGPoint(x: wearPeerNameChild.size.width / 2.0 + 20.0 - 12.0, y: 56.0)
+                animationScale = 0.19
+            }
+            
+            if let headerSubject {
                 let animation = animation.update(
                     component: GiftCompositionComponent(
                         context: component.context,
                         theme: environment.theme,
-                        subject: animationSubject,
+                        subject: headerSubject,
+                        animationOffset: animationOffset,
+                        animationScale: animationScale,
+                        displayAnimationStars: state.inWearPreview,
                         externalState: giftCompositionExternalState,
                         requestUpdate: { [weak state] in
                             state?.updated()
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width, height: animationHeight),
-                    transition: .immediate
+                    availableSize: CGSize(width: context.availableSize.width, height: headerHeight),
+                    transition: context.transition
                 )
                 context.add(animation
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: animationHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: headerHeight / 2.0))
                 )
             }
-            originY += animationHeight
-                        
-            if showUpgradePreview {
+            originY += headerHeight
+            
+            let vibrantColor: UIColor
+            if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
+                vibrantColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
+            } else {
+                vibrantColor = UIColor.white.withAlphaComponent(0.6)
+            }
+            
+            if let wearPeerNameChild, let accountPeer = state.peerMap[component.context.account.peerId] {
+                let wearAvatar = wearAvatar.update(
+                    component: AvatarComponent(
+                        context: component.context,
+                        theme: theme,
+                        peer: accountPeer
+                    ),
+                    environment: {},
+                    availableSize: CGSize(width: 100.0, height: 100.0),
+                    transition: context.transition
+                )
+                context.add(wearAvatar
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 67.0))
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
+                )
+                
+                let wearPeerStatus = wearPeerStatus.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: strings.Presence_online,
+                            font: Font.regular(17.0),
+                            textColor: vibrantColor,
+                            paragraphAlignment: .center
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 5,
+                        lineSpacing: 0.2
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 50.0, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                                
+                context.add(wearPeerNameChild
+                    .position(CGPoint(x: context.availableSize.width / 2.0 - 12.0, y: 144.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                context.add(wearPeerStatus
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 174.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                originY += 18.0
+                originY += 28.0
+                originY += 18.0
+                originY += 20.0
+                originY += 24.0
+                                
+                let textColor = theme.actionSheet.primaryTextColor
+                let secondaryTextColor = theme.actionSheet.secondaryTextColor
+                let linkColor = theme.actionSheet.controlAccentColor
+                
+                var items: [AnyComponentWithIdentity<Empty>] = []
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "badge",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Wear_Badge_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Wear_Badge_Text,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/Collectible/Badge",
+                            iconColor: linkColor
+                        ))
+                    )
+                )
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "design",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Wear_Design_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Wear_Design_Text,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/BoostPerk/CoverColor",
+                            iconColor: linkColor
+                        ))
+                    )
+                )
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "proof",
+                        component: AnyComponent(ParagraphComponent(
+                            title: strings.Gift_Wear_Proof_Title,
+                            titleColor: textColor,
+                            text: strings.Gift_Wear_Proof_Text,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Premium/Collectible/Proof",
+                            iconColor: linkColor
+                        ))
+                    )
+                )
+                
+                let perksSideInset = sideInset + 16.0
+                let wearPerks = wearPerks.update(
+                    component: List(items),
+                    availableSize: CGSize(width: context.availableSize.width - perksSideInset * 2.0, height: 10000.0),
+                    transition: context.transition
+                )
+                context.add(wearPerks
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + wearPerks.size.height / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+                originY += wearPerks.size.height
+                originY += 16.0
+            } else if showUpgradePreview {
                 let title: String
                 let description: String
                 let uniqueText: String
@@ -550,18 +774,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
-                let descriptionColor: UIColor
-                if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
-                    descriptionColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
-                } else {
-                    descriptionColor = UIColor.white.withAlphaComponent(0.6)
-                }
                 let upgradeDescription = upgradeDescription.update(
                     component: BalancedTextComponent(
                         text: .plain(NSAttributedString(
                             string: description,
                             font: Font.regular(13.0),
-                            textColor: descriptionColor,
+                            textColor: vibrantColor,
                             paragraphAlignment: .center
                         )),
                         horizontalAlignment: .center,
@@ -637,7 +855,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     )
                 )
                 
-                let perksSideInset = sideInset + 12.0
+                let perksSideInset = sideInset + 16.0
                 let upgradePerks = upgradePerks.update(
                     component: List(items),
                     availableSize: CGSize(width: context.availableSize.width - perksSideInset * 2.0, height: 10000.0),
@@ -784,11 +1002,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     let textColor: UIColor
                     if let _ = uniqueGift {
                         textFont = Font.regular(13.0)
-                        if let previewPatternColor = giftCompositionExternalState.previewPatternColor {
-                            textColor = previewPatternColor.withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
-                        } else {
-                            textColor = UIColor.white.withAlphaComponent(0.6)
-                        }
+                        textColor = vibrantColor
                     } else {
                         textFont = soldOut ? Font.medium(15.0) : Font.regular(15.0)
                         textColor = soldOut ? theme.list.itemDestructiveColor : theme.list.itemPrimaryTextColor
@@ -883,13 +1097,46 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let tableLinkColor = theme.list.itemAccentColor
                 var tableItems: [TableComponent.Item] = []
                 
+                var isWearing = state.pendingWear
+                
                 if !soldOut {
                     if let uniqueGift {
                         switch uniqueGift.owner {
                         case let .peerId(peerId):
                             if let peer = state.peerMap[peerId] {
                                 let ownerComponent: AnyComponent<Empty>
-                                if let _ = subject.arguments?.transferStars {
+                                if peer.id == component.context.account.peerId, peer.isPremium {
+                                    let animationContent: EmojiStatusComponent.Content
+                                    var color: UIColor?
+                                    if state.pendingWear {
+                                        var fileId: Int64?
+                                        for attribute in uniqueGift.attributes {
+                                            if case let .model(_, file, _) = attribute {
+                                                fileId = file.fileId.id
+                                            }
+                                            if case let .backdrop(_, innerColor, _, _, _, _) = attribute {
+                                                color = UIColor(rgb: UInt32(bitPattern: innerColor))
+                                            }
+                                        }
+                                        if let fileId {
+                                            animationContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: tableLinkColor, loopMode: .count(2))
+                                        } else {
+                                            animationContent = .premium(color: tableLinkColor)
+                                        }
+                                    } else if let emojiStatus = peer.emojiStatus, !state.pendingTakeOff {
+                                        animationContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: tableLinkColor, loopMode: .count(2))
+                                        if case let .starGift(id, _, _, _, _, innerColor, _, _, _) = emojiStatus.content {
+                                            color = UIColor(rgb: UInt32(bitPattern: innerColor))
+                                            if id == uniqueGift.id {
+                                                isWearing = true
+                                                state.pendingWear = false
+                                            }
+                                        }
+                                    } else {
+                                        animationContent = .premium(color: tableLinkColor)
+                                        state.pendingTakeOff = false
+                                    }
+                                    
                                     ownerComponent = AnyComponent(
                                         HStack([
                                             AnyComponentWithIdentity(
@@ -913,21 +1160,21 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             ),
                                             AnyComponentWithIdentity(
                                                 id: AnyHashable(1),
-                                                component: AnyComponent(Button(
-                                                    content: AnyComponent(ButtonContentComponent(
-                                                        context: component.context,
-                                                        text: strings.Gift_Unique_Transfer,
-                                                        color: theme.list.itemAccentColor
-                                                    )),
+                                                component: AnyComponent(EmojiStatusComponent(
+                                                    context: component.context,
+                                                    animationCache: component.context.animationCache,
+                                                    animationRenderer: component.context.animationRenderer,
+                                                    content: animationContent,
+                                                    particleColor: color,
+                                                    size: CGSize(width: 18.0, height: 18.0),
+                                                    isVisibleForAnimations: true,
                                                     action: {
-                                                        component.transferGift()
-                                                        Queue.mainQueue().after(1.0, {
-                                                            component.cancel(false)
-                                                        })
-                                                    }
+                                                        
+                                                    },
+                                                    tag: statusTag
                                                 ))
                                             )
-                                        ], spacing: 4.0)
+                                        ], spacing: 2.0)
                                     )
                                 } else {
                                     ownerComponent = AnyComponent(Button(
@@ -1052,6 +1299,93 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 
                 if let uniqueGift {
+                    if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
+                        let buttonSpacing: CGFloat = 10.0
+                        let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * 2.0) / 3.0
+                        let buttonHeight: CGFloat = 58.0
+                        
+                        let transferButton = transferButton.update(
+                            component: PlainButtonComponent(
+                                content: AnyComponent(
+                                    HeaderButtonComponent(
+                                        title: strings.Gift_View_Header_Transfer,
+                                        iconName: "Premium/Collectible/Transfer"
+                                    )
+                                ),
+                                effectAlignment: .center,
+                                action: {
+                                    component.transferGift()
+                                    Queue.mainQueue().after(1.0, {
+                                        component.cancel(false)
+                                    })
+                                }
+                            ),
+                            environment: {},
+                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                            transition: context.transition
+                        )
+                        context.add(transferButton
+                            .position(CGPoint(x: sideInset + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                        )
+                    
+                        let controller = environment.controller
+                        let wearButton = wearButton.update(
+                            component: PlainButtonComponent(
+                                content: AnyComponent(
+                                    HeaderButtonComponent(
+                                        title: isWearing ? strings.Gift_View_Header_TakeOff : strings.Gift_View_Header_Wear,
+                                        iconName: isWearing ? "Premium/Collectible/Unwear" : "Premium/Collectible/Wear"
+                                    )
+                                ),
+                                effectAlignment: .center,
+                                action: { [weak state] in
+                                    if let state {
+                                        if isWearing {
+                                            state.pendingTakeOff = true
+                                            state.pendingWear = false
+                                            state.updated(transition: .spring(duration: 0.4))
+                                            
+                                            component.showAttributeInfo(statusTag, "You took off \(uniqueGift.title) #\(uniqueGift.number)")
+                                        } else {
+                                            if let controller = controller() as? GiftViewScreen {
+                                                controller.dismissAllTooltips()
+                                            }
+                                            
+                                            state.requestWearPreview()
+                                        }
+                                    }
+                                }
+                            ),
+                            environment: {},
+                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                            transition: context.transition
+                        )
+                        context.add(wearButton
+                            .position(CGPoint(x: context.availableSize.width / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                        )
+                        
+                        let shareButton = shareButton.update(
+                            component: PlainButtonComponent(
+                                content: AnyComponent(
+                                    HeaderButtonComponent(
+                                        title: strings.Gift_View_Header_Share,
+                                        iconName: "Premium/Collectible/Share"
+                                    )
+                                ),
+                                effectAlignment: .center,
+                                action: {
+                                    component.shareGift()
+                                }
+                            ),
+                            environment: {},
+                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                            transition: context.transition
+                        )
+                        context.add(shareButton
+                            .position(CGPoint(x: context.availableSize.width - sideInset - buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                        )
+                    }
+                    
                     let showAttributeInfo = component.showAttributeInfo
                     
                     let order: [StarGift.UniqueGift.Attribute.AttributeType] = [
@@ -1191,7 +1525,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             color: theme.list.itemAccentColor
                                         )),
                                         action: {
-                                            showAttributeInfo(tag, percentage)
+                                            showAttributeInfo(tag, strings.Gift_Unique_AttributeDescription(formatPercentage(percentage)).string)
                                         }
                                     ).tagged(tag))
                                 ))
@@ -1393,7 +1727,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += table.size.height + 23.0
             }
             
-            if incoming && !converted && !upgraded && !showUpgradePreview {
+            if incoming && !converted && !upgraded && !showUpgradePreview && !state.inWearPreview {
                 let linkColor = theme.actionSheet.controlAccentColor
                 if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
                     state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
@@ -1452,8 +1786,41 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += 16.0
             }
             
+            let buttonSize = CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0)
+            let buttonBackground = ButtonComponent.Background(
+                color: theme.list.itemCheckColors.fillColor,
+                foreground: theme.list.itemCheckColors.foregroundColor,
+                pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+            )
             let buttonChild: _UpdatedChildComponent
-            if state.inUpgradePreview {
+            if state.inWearPreview, let uniqueGift {
+                buttonChild = button.update(
+                    component: ButtonComponent(
+                        background: buttonBackground,
+                        content: AnyComponentWithIdentity(
+                            id: AnyHashable("wear"),
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Wear_Start, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                        ),
+                        isEnabled: true,
+                        displaysProgress: false,
+                        action: { [weak state] in
+                            if let state {
+                                state.pendingWear = true
+                                state.pendingTakeOff = false
+                                state.inWearPreview = false
+                                state.updated(transition: .spring(duration: 0.4))
+                                
+                                let _ = component.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).start()
+                                
+                                Queue.mainQueue().after(0.2) {
+                                    component.showAttributeInfo(statusTag, "You put on \(uniqueGift.title) #\(uniqueGift.number)")
+                                }
+                            }
+                        }),
+                    availableSize: buttonSize,
+                    transition: context.transition
+                )
+            } else if state.inUpgradePreview {
                 if state.cachedStarImage == nil || state.cachedStarImage?.1 !== theme {
                     state.cachedStarImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/PremiumIcon"), color: theme.list.itemCheckColors.foregroundColor)!, theme)
                 }
@@ -1470,12 +1837,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 buttonChild = button.update(
                     component: ButtonComponent(
-                        background: ButtonComponent.Background(
-                            color: theme.list.itemCheckColors.fillColor,
-                            foreground: theme.list.itemCheckColors.foregroundColor,
-                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0
-                        ),
+                        background: buttonBackground,
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("upgrade"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
@@ -1485,7 +1847,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         action: { [weak state] in
                             state?.commitUpgrade()
                         }),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    availableSize: buttonSize,
                     transition: context.transition
                 )
             } else if upgraded, let upgradeMessageIdId = subject.arguments?.upgradeMessageId, let originalMessageId = subject.arguments?.messageId {
@@ -1493,12 +1855,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let buttonTitle = strings.Gift_View_ViewUpgraded
                 buttonChild = button.update(
                     component: ButtonComponent(
-                        background: ButtonComponent.Background(
-                            color: theme.list.itemCheckColors.fillColor,
-                            foreground: theme.list.itemCheckColors.foregroundColor,
-                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0
-                        ),
+                        background: buttonBackground,
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("button"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
@@ -1509,20 +1866,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                             component.cancel(true)
                             component.viewUpgraded(upgradeMessageId)
                         }),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    availableSize: buttonSize,
                     transition: context.transition
                 )
             } else if incoming && !converted && !upgraded, let upgradeStars, upgradeStars > 0 {
                 let buttonTitle = strings.Gift_View_UpgradeForFree
                 buttonChild = button.update(
                     component: ButtonComponent(
-                        background: ButtonComponent.Background(
-                            color: theme.list.itemCheckColors.fillColor,
-                            foreground: theme.list.itemCheckColors.foregroundColor,
-                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0,
-                            isShimmering: true
-                        ),
+                        background: buttonBackground.withIsShimmering(true),
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("freeUpgrade"),
                             component: AnyComponent(HStack([
@@ -1546,19 +1897,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                             state?.requestUpgradePreview()
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    availableSize: buttonSize,
                     transition: context.transition
                 )
             } else if incoming && !converted && !savedToProfile {
                 let buttonTitle = savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display
                 buttonChild = button.update(
                     component: ButtonComponent(
-                        background: ButtonComponent.Background(
-                            color: theme.list.itemCheckColors.fillColor,
-                            foreground: theme.list.itemCheckColors.foregroundColor,
-                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0
-                        ),
+                        background: buttonBackground,
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("button"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
@@ -1568,18 +1914,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                         action: {
                             component.updateSavedToProfile(!savedToProfile)
                         }),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    availableSize: buttonSize,
                     transition: context.transition
                 )
             } else {
                 buttonChild = button.update(
                     component: ButtonComponent(
-                        background: ButtonComponent.Background(
-                            color: theme.list.itemCheckColors.fillColor,
-                            foreground: theme.list.itemCheckColors.foregroundColor,
-                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9),
-                            cornerRadius: 10.0
-                        ),
+                        background: buttonBackground,
                         content: AnyComponentWithIdentity(
                             id: AnyHashable("ok"),
                             component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Common_OK, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
@@ -1589,7 +1930,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         action: {
                             component.cancel(true)
                         }),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                    availableSize: buttonSize,
                     transition: context.transition
                 )
             }
@@ -1625,9 +1966,10 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let openMyGifts: () -> Void
     let transferGift: () -> Void
     let upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)
+    let shareGift: () -> Void
     let viewUpgraded: (EngineMessage.Id) -> Void
     let openMore: (ASDisplayNode, ContextGesture?) -> Void
-    let showAttributeInfo: (Any, Float) -> Void
+    let showAttributeInfo: (Any, String) -> Void
     
     init(
         context: AccountContext,
@@ -1640,9 +1982,10 @@ private final class GiftViewSheetComponent: CombinedComponent {
         openMyGifts: @escaping () -> Void,
         transferGift: @escaping () -> Void,
         upgradeGift: @escaping ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>),
+        shareGift: @escaping () -> Void,
         viewUpgraded: @escaping (EngineMessage.Id) -> Void,
         openMore: @escaping (ASDisplayNode, ContextGesture?) -> Void,
-        showAttributeInfo: @escaping (Any, Float) -> Void
+        showAttributeInfo: @escaping (Any, String) -> Void
     ) {
         self.context = context
         self.subject = subject
@@ -1654,6 +1997,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.openMyGifts = openMyGifts
         self.transferGift = transferGift
         self.upgradeGift = upgradeGift
+        self.shareGift = shareGift
         self.viewUpgraded = viewUpgraded
         self.openMore = openMore
         self.showAttributeInfo = showAttributeInfo
@@ -1704,6 +2048,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
                         openMyGifts: context.component.openMyGifts,
                         transferGift: context.component.transferGift,
                         upgradeGift: context.component.upgradeGift,
+                        shareGift: context.component.shareGift,
                         showAttributeInfo: context.component.showAttributeInfo,
                         viewUpgraded: context.component.viewUpgraded,
                         openMore: context.component.openMore,
@@ -1845,10 +2190,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         var sendGiftImpl: ((EnginePeer.Id) -> Void)?
         var openMyGiftsImpl: (() -> Void)?
         var transferGiftImpl: (() -> Void)?
-        var showAttributeInfoImpl: ((Any, Float) -> Void)?
         var upgradeGiftImpl: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)?
         var shareGiftImpl: (() -> Void)?
         var openMoreImpl: ((ASDisplayNode, ContextGesture?) -> Void)?
+        var showAttributeInfoImpl: ((Any, String) -> Void)?
         var viewUpgradedImpl: ((EngineMessage.Id) -> Void)?
         
         super.init(
@@ -1880,14 +2225,17 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 upgradeGift: { formId, keepOriginalInfo in
                     return upgradeGiftImpl?(formId, keepOriginalInfo) ?? .complete()
                 },
+                shareGift: {
+                    shareGiftImpl?()
+                },
                 viewUpgraded: { messageId in
                     viewUpgradedImpl?(messageId)
                 },
                 openMore: { node, gesture in
                     openMoreImpl?(node, gesture)
                 },
-                showAttributeInfo: { tag, rarity in
-                    showAttributeInfoImpl?(tag, rarity)
+                showAttributeInfo: { tag, text in
+                    showAttributeInfoImpl?(tag, text)
                 }
             ),
             navigationBarAppearance: .none,
@@ -2224,7 +2572,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             })
         }
         
-        showAttributeInfoImpl = { [weak self] tag, rarity in
+        showAttributeInfoImpl = { [weak self] tag, text in
             guard let self else {
                 return
             }
@@ -2235,7 +2583,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
             
             let location = CGRect(origin: CGPoint(x: absoluteLocation.x, y: absoluteLocation.y - 12.0), size: CGSize())
-            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: presentationData.strings.Gift_Unique_AttributeDescription(formatPercentage(rarity)).string), location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let controller = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), style: .wide, location: .point(location, .bottom), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.present(controller, in: .current)
@@ -3040,5 +3388,149 @@ private final class GiftViewContextReferenceContentSource: ContextReferenceConte
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class HeaderButtonComponent: CombinedComponent {
+    let title: String
+    let iconName: String
+    
+    public init(
+        title: String,
+        iconName: String
+    ) {
+        self.title = title
+        self.iconName = iconName
+    }
+    
+    static func ==(lhs: HeaderButtonComponent, rhs: HeaderButtonComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let background = Child(RoundedRectangle.self)
+        let title = Child(MultilineTextComponent.self)
+        let icon = Child(BundleIconComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let background = background.update(
+                component: RoundedRectangle(
+                    color: UIColor.white.withAlphaComponent(0.16),
+                    cornerRadius: 10.0
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(background
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+            )
+            
+            let icon = icon.update(
+                component: BundleIconComponent(
+                    name: component.iconName,
+                    tintColor: UIColor.white
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            context.add(icon
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 22.0))
+            )
+                        
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: component.title,
+                        font: Font.regular(11.0),
+                        textColor: UIColor.white,
+                        paragraphAlignment: .natural
+                    )),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: CGSize(width: context.availableSize.width - 16.0, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(title
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 42.0))
+            )
+            
+            return context.availableSize
+        }
+    }
+}
+
+private final class AvatarComponent: Component {
+    let context: AccountContext
+    let theme: PresentationTheme
+    let peer: EnginePeer
+
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+        self.context = context
+        self.theme = theme
+        self.peer = peer
+    }
+
+    static func ==(lhs: AvatarComponent, rhs: AvatarComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let avatarNode: AvatarNode
+        
+        private var component: AvatarComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
+            
+            super.init(frame: frame)
+            
+            self.addSubnode(self.avatarNode)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: AvatarComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            self.avatarNode.frame = CGRect(origin: .zero, size: availableSize)
+            self.avatarNode.setPeer(
+                context: component.context,
+                theme: component.theme,
+                peer: component.peer,
+                synchronousLoad: true
+            )
+            
+            return availableSize
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

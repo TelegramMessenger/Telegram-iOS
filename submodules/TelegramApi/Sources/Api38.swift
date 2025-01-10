@@ -465,6 +465,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func getCollectibleEmojiStatuses(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.EmojiStatuses>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(779830595)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getCollectibleEmojiStatuses", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.EmojiStatuses? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.EmojiStatuses?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.EmojiStatuses
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func getConnectedBots() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.ConnectedBots>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1319421967)

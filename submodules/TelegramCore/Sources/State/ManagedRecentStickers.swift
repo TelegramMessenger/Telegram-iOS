@@ -213,11 +213,11 @@ func managedRecentStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void
             case let .emojiStatuses(_, statuses):
                 let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
                 
-                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.compactMap(\.emojiFileId))
                 |> map { files -> [OrderedItemListEntry] in
                     var items: [OrderedItemListEntry] = []
                     for status in parsedStatuses {
-                        guard let file = files[status.fileId] else {
+                        guard let fileId = status.emojiFileId, let file = files[fileId] else {
                             continue
                         }
                         if let entry = CodableEntry(RecentMediaItem(file)) {
@@ -243,11 +243,11 @@ func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Vo
             case let .emojiStatuses(_, statuses):
                 let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
                 
-                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.compactMap(\.emojiFileId))
                 |> map { files -> [OrderedItemListEntry] in
                     var items: [OrderedItemListEntry] = []
                     for status in parsedStatuses {
-                        guard let file = files[status.fileId] else {
+                        guard let fileId = status.emojiFileId, let file = files[fileId] else {
                             continue
                         }
                         if let entry = CodableEntry(RecentMediaItem(file)) {
@@ -273,11 +273,11 @@ func managedFeaturedChannelStatusEmoji(postbox: Postbox, network: Network) -> Si
             case let .emojiStatuses(_, statuses):
                 let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
                 
-                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.map(\.fileId))
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.compactMap(\.emojiFileId))
                 |> map { files -> [OrderedItemListEntry] in
                     var items: [OrderedItemListEntry] = []
                     for status in parsedStatuses {
-                        guard let file = files[status.fileId] else {
+                        guard let fileId = status.emojiFileId, let file = files[fileId] else {
                             continue
                         }
                         if let entry = CodableEntry(RecentMediaItem(file)) {
@@ -291,6 +291,55 @@ func managedFeaturedChannelStatusEmoji(postbox: Postbox, network: Network) -> Si
     })
     return (poll |> then(.complete() |> suspendAwareDelay(3.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
+
+func managedUniqueStarGifts(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudUniqueStarGifts, extractItemId: { RecentStarGiftItemId($0).id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
+        return network.request(Api.functions.account.getCollectibleEmojiStatuses(hash: hash))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            switch result {
+            case .emojiStatusesNotModified:
+                return .single(nil)
+            case let .emojiStatuses(_, statuses):
+                let parsedStatuses = statuses.compactMap(PeerEmojiStatus.init(apiStatus:))
+                
+                return _internal_resolveInlineStickers(postbox: postbox, network: network, fileIds: parsedStatuses.flatMap(\.associatedFileIds))
+                |> map { files -> [OrderedItemListEntry] in
+                    var items: [OrderedItemListEntry] = []
+                    for status in parsedStatuses {
+                        switch status.content {
+                        case let .starGift(id, fileId, title, slug, patternFileId, innerColor, outerColor, patternColor, textColor):
+                            let slugComponents = slug.components(separatedBy: "-")
+                            if let file = files[fileId], let patternFile = files[patternFileId], let numberString = slugComponents.last, let number = Int32(numberString) {
+                                let gift = StarGift.UniqueGift(
+                                    id: id,
+                                    title: title,
+                                    number: number,
+                                    slug: slug,
+                                    owner: .peerId(accountPeerId),
+                                    attributes: [
+                                        .model(name: "", file: file, rarity: 0),
+                                        .pattern(name: "", file: patternFile, rarity: 0),
+                                        .backdrop(name: "", innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
+                                    ],
+                                    availability: StarGift.UniqueGift.Availability(issued: 0, total: 0)
+                                )
+                                if let entry = CodableEntry(RecentStarGiftItem(gift)) {
+                                    items.append(OrderedItemListEntry(id: RecentStarGiftItemId(id).rawValue, contents: entry))
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    return items
+                }
+            }
+        }
+    })
+    return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
+}
+
 
 func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in

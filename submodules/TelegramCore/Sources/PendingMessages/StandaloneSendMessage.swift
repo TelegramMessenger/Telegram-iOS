@@ -702,7 +702,7 @@ private func uploadedFile(account: Account, data: Data, mimeType: String, attrib
         |> map { next -> UploadMediaEvent in
             switch next {
                 case let .inputFile(inputFile):
-                    return .result(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, ttlSeconds: nil))
+                    return .result(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, videoCover: nil, ttlSeconds: nil))
                 case .inputSecretFile:
                     preconditionFailure()
                 case let .progress(progress):

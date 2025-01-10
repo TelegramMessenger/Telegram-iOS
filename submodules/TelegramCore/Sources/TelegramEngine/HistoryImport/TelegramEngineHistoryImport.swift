@@ -153,7 +153,7 @@ public extension TelegramEngine {
                         default:
                             break
                         }
-                        inputMedia = .inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: resolvedMimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)
+                        inputMedia = .inputMediaUploadedDocument(flags: 0, file: inputFile, thumb: nil, mimeType: resolvedMimeType, attributes: attributes, stickers: nil, videoCover: nil, ttlSeconds: nil)
                     }
                 case let .progress(value):
                     return .single(value)

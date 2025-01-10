@@ -284,7 +284,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .verified
                                     }
                                     if let verificationIconFileId = peer.verificationIconFileId {
-                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verificationIconFileId, expirationDate: nil))
+                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(content: .emoji(fileId: verificationIconFileId), expirationDate: nil))
                                     }
                                 }
                             }

@@ -4661,6 +4661,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
             }
             
+            self.headerNode.displayUniqueGiftInfo = { [weak self] sourceView, text in
+                guard let self, let controller = self.controller else {
+                    return
+                }
+                let sourceRect = sourceView.convert(sourceView.bounds, to: controller.view)
+                let tooltipController = TooltipScreen(
+                    context: self.context,
+                    account: self.context.account,
+                    sharedContext: self.context.sharedContext,
+                    text: .attributedString(text: NSAttributedString(string: text, font: Font.semibold(11.0), textColor: .white)),
+                    style: .customBlur(UIColor(rgb: self.headerNode.isAvatarExpanded ? 0x000000 : 0x92c8de, alpha: 0.65), -4.0),
+                    arrowStyle: .small,
+                    location: .point(sourceRect, .bottom),
+                    cornerRadius: 10.0,
+                    shouldDismissOnTouch: { _, _ in
+                        return .dismiss(consume: false)
+                    }
+                )
+                controller.present(tooltipController, in: .current)
+            }
+            
             self.headerNode.displayStatusPremiumIntro = { [weak self] in
                 guard let self else {
                     return

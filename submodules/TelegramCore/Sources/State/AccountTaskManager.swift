@@ -108,6 +108,7 @@ final class AccountTaskManager {
                     tasks.add(managedRecentStatusEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedFeaturedStatusEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedFeaturedChannelStatusEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
+                    tasks.add(managedUniqueStarGifts(accountPeerId: self.accountPeerId, postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedProfilePhotoEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedGroupPhotoEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())
                     tasks.add(managedBackgroundIconEmoji(postbox: self.stateManager.postbox, network: self.stateManager.network).start())

@@ -59,22 +59,26 @@ public final class EmojiStatusComponent: Component {
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let content: Content
+    public let particleColor: UIColor?
     public let size: CGSize?
     public let isVisibleForAnimations: Bool
     public let useSharedAnimation: Bool
     public let action: (() -> Void)?
     public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
+    public let tag: AnyObject?
     
     public convenience init(
         context: AccountContext,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         content: Content,
+        particleColor: UIColor? = nil,
         size: CGSize? = nil,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
-        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
+        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil,
+        tag: AnyObject? = nil
     ) {
         self.init(
             postbox: context.account.postbox,
@@ -85,11 +89,13 @@ public final class EmojiStatusComponent: Component {
             animationCache: animationCache,
             animationRenderer: animationRenderer,
             content: content,
+            particleColor: particleColor,
             size: size,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: useSharedAnimation,
             action: action,
-            emojiFileUpdated: emojiFileUpdated
+            emojiFileUpdated: emojiFileUpdated,
+            tag: tag
         )
     }
     
@@ -100,11 +106,13 @@ public final class EmojiStatusComponent: Component {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         content: Content,
+        particleColor: UIColor? = nil,
         size: CGSize? = nil,
         isVisibleForAnimations: Bool,
         useSharedAnimation: Bool = false,
         action: (() -> Void)?,
-        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
+        emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil,
+        tag: AnyObject? = nil
     ) {
         self.postbox = postbox
         self.energyUsageSettings = energyUsageSettings
@@ -112,11 +120,13 @@ public final class EmojiStatusComponent: Component {
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.content = content
+        self.particleColor = particleColor
         self.size = size
         self.isVisibleForAnimations = isVisibleForAnimations
         self.useSharedAnimation = useSharedAnimation
         self.action = action
         self.emojiFileUpdated = emojiFileUpdated
+        self.tag = tag
     }
     
     public func withVisibleForAnimations(_ isVisibleForAnimations: Bool) -> EmojiStatusComponent {
@@ -127,11 +137,13 @@ public final class EmojiStatusComponent: Component {
             animationCache: self.animationCache,
             animationRenderer: self.animationRenderer,
             content: self.content,
+            particleColor: self.particleColor,
             size: self.size,
             isVisibleForAnimations: isVisibleForAnimations,
             useSharedAnimation: self.useSharedAnimation,
             action: self.action,
-            emojiFileUpdated: self.emojiFileUpdated
+            emojiFileUpdated: self.emojiFileUpdated,
+            tag: self.tag
         )
     }
     
@@ -151,6 +163,9 @@ public final class EmojiStatusComponent: Component {
         if lhs.content != rhs.content {
             return false
         }
+        if lhs.particleColor != rhs.particleColor {
+            return false
+        }
         if lhs.size != rhs.size {
             return false
         }
@@ -160,10 +175,23 @@ public final class EmojiStatusComponent: Component {
         if lhs.useSharedAnimation != rhs.useSharedAnimation {
             return false
         }
+        if lhs.tag !== rhs.tag {
+            return false
+        }
         return true
     }
 
-    public final class View: UIView {
+    public final class View: UIView, ComponentTaggedView {
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
         private final class AnimationFileProperties {
             let path: String
             let coloredComposition: Animation?
@@ -195,6 +223,7 @@ public final class EmojiStatusComponent: Component {
         
         private weak var state: EmptyComponentState?
         private var component: EmojiStatusComponent?
+        private var starsLayer: StarsEffectLayer?
         private var iconView: UIImageView?
         private var animationLayer: InlineStickerItemLayer?
         private var lottieAnimationView: AnimationView?
@@ -254,6 +283,24 @@ public final class EmojiStatusComponent: Component {
             var iconTintColor: UIColor?
             
             self.isUserInteractionEnabled = component.action != nil
+            
+            if let particleColor = component.particleColor {
+                let starsLayer: StarsEffectLayer
+                if let current = self.starsLayer {
+                    starsLayer = current
+                } else {
+                    starsLayer = StarsEffectLayer()
+                    self.layer.insertSublayer(starsLayer, at: 0)
+                    self.starsLayer = starsLayer
+                }
+                let side = floor(availableSize.width * 1.25)
+                let starsFrame = CGSize(width: side, height: side).centered(in: CGRect(origin: .zero, size: availableSize))
+                starsLayer.frame = starsFrame
+                starsLayer.update(color: particleColor, size: starsFrame.size)
+            } else if let starsLayer = self.starsLayer {
+                self.starsLayer = nil
+                starsLayer.removeFromSuperlayer()
+            }
             
             //let previousContent = self.component?.content
             if self.component?.content != component.content {
@@ -661,4 +708,58 @@ public func topicIconColors(for color: Int32) -> ([UInt32], [UInt32]) {
     ]
     
     return topicColors[color] ?? ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
+}
+
+public final class StarsEffectLayer: SimpleLayer {
+    private let emitterLayer = CAEmitterLayer()
+    
+    public override init() {
+        super.init()
+        
+        self.addSublayer(self.emitterLayer)
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setup(color: UIColor, size: CGSize) {
+        let emitter = CAEmitterCell()
+        emitter.name = "emitter"
+        emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        emitter.birthRate = 8.0
+        emitter.lifetime = 2.0
+        emitter.velocity = 0.1
+        emitter.scale = (size.width / 32.0) * 0.12
+        emitter.scaleRange = 0.02
+        emitter.alphaRange = 0.1
+        emitter.emissionRange = .pi * 2.0
+        
+        let staticColors: [Any] = [
+            color.withAlphaComponent(0.0).cgColor,
+            color.withAlphaComponent(0.58).cgColor,
+            color.withAlphaComponent(0.58).cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        staticColorBehavior.setValue(staticColors, forKey: "colors")
+        emitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+        self.emitterLayer.emitterCells = [emitter]
+    }
+    
+    public func update(color: UIColor, size: CGSize) {
+        if self.emitterLayer.emitterCells == nil {
+            self.setup(color: color, size: size)
+        }
+        self.emitterLayer.seed = UInt32.random(in: .min ..< .max)
+        self.emitterLayer.emitterShape = .circle
+        self.emitterLayer.emitterSize = size
+        self.emitterLayer.emitterMode = .surface
+        self.emitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+    }
 }

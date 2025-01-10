@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TextFormat",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoCoverComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode",
     ],
