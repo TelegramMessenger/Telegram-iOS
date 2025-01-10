@@ -20,29 +20,29 @@ import Markdown
 import SolidRoundedButtonNode
 import PeerInfoPaneNode
 
-private struct RecommendedChannelsListTransaction {
+private struct RecommendedPeersListTransaction {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
     let animated: Bool
 }
 
-private enum RecommendedChannelsListEntryStableId: Hashable {
+private enum RecommendedPeersListEntryStableId: Hashable {
     case addMember
     case peer(PeerId)
 }
 
-private enum RecommendedChannelsListEntry: Comparable, Identifiable {
+private enum RecommendedPeersListEntry: Comparable, Identifiable {
     case peer(theme: PresentationTheme, index: Int, peer: EnginePeer, subscribers: Int32)
         
-    var stableId: RecommendedChannelsListEntryStableId {
+    var stableId: RecommendedPeersListEntryStableId {
         switch self {
             case let .peer(_, _, peer, _):
                 return .peer(peer.id)
         }
     }
     
-    static func ==(lhs: RecommendedChannelsListEntry, rhs: RecommendedChannelsListEntry) -> Bool {
+    static func ==(lhs: RecommendedPeersListEntry, rhs: RecommendedPeersListEntry) -> Bool {
         switch lhs {
             case let .peer(lhsTheme, lhsIndex, lhsPeer, lhsSubscribers):
                 if case let .peer(rhsTheme, rhsIndex, rhsPeer, rhsSubscribers) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsPeer == rhsPeer, lhsSubscribers == rhsSubscribers {
@@ -53,7 +53,7 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
         }
     }
     
-    static func <(lhs: RecommendedChannelsListEntry, rhs: RecommendedChannelsListEntry) -> Bool {
+    static func <(lhs: RecommendedPeersListEntry, rhs: RecommendedPeersListEntry) -> Bool {
         switch lhs {
             case let .peer(_, lhsIndex, _, _):
                 switch rhs {
@@ -66,8 +66,15 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> ListViewItem {
         switch self {
             case let .peer(_, _, peer, subscribers):
-                let subtitle = presentationData.strings.Conversation_StatusSubscribers(subscribers)
-                return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: nil, text: .text(subtitle, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
+                let text: ItemListPeerItemText
+                if subscribers > 0 {
+                    text = .text(presentationData.strings.Conversation_StatusSubscribers(subscribers), .secondary)
+                } else if let addressName = peer.addressName {
+                    text = .text("@\(addressName)", .secondary)
+                } else {
+                    text = .none
+                }
+            return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
                     action(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in
@@ -78,19 +85,29 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [RecommendedChannelsListEntry], to toEntries: [RecommendedChannelsListEntry], context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> RecommendedChannelsListTransaction {
+private func preparedTransition(from fromEntries: [RecommendedPeersListEntry], to toEntries: [RecommendedPeersListEntry], context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> RecommendedPeersListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     
-    return RecommendedChannelsListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
+    return RecommendedPeersListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
 }
 
-private let channelsLimit: Int32 = 8
+private protocol RecommendedPeers {
+    
+}
 
-final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode {
+extension RecommendedChannels: RecommendedPeers {
+    
+}
+
+extension RecommendedBots: RecommendedPeers {
+    
+}
+
+final class PeerInfoRecommendedPeersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let chatControllerInteraction: ChatControllerInteraction
     private let openPeerContextAction: (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void
@@ -98,9 +115,9 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
     weak var parentController: ViewController?
     
     private let listNode: ListView
-    private var currentEntries: [RecommendedChannelsListEntry] = []
-    private var currentState: (RecommendedChannels?, Bool)?
-    private var enqueuedTransactions: [RecommendedChannelsListTransaction] = []
+    private var currentEntries: [RecommendedPeersListEntry] = []
+    private var enqueuedTransactions: [RecommendedPeersListTransaction] = []
+    private var currentState: (RecommendedPeers?, Bool)?
     
     private var unlockBackground: UIImageView?
     private var unlockText: ComponentView<Empty>?
@@ -145,32 +162,35 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         self.listNode.preloadPages = true
         self.addSubnode(self.listNode)
         
+        let signal: Signal<RecommendedPeers?, NoError>
+        if peerId.namespace == Namespaces.Peer.CloudUser {
+            signal = context.engine.peers.recommendedBots(peerId: peerId)
+            |> map {
+                $0 as RecommendedPeers?
+            }
+        } else {
+            signal = context.engine.peers.recommendedChannels(peerId: peerId)
+            |> map {
+                $0 as RecommendedPeers?
+            }
+        }
+            
         self.disposable = (combineLatest(queue: .mainQueue(),
             self.presentationDataPromise.get(),
-            context.engine.peers.recommendedChannels(peerId: peerId),
+            signal,
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
             |> map { peer -> Bool in
                 return peer?.isPremium ?? false
             }
         )
-        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, recommendedChannels, isPremium in
-            guard let strongSelf = self else {
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, recommendedPeers, isPremium in
+            guard let self else {
                 return
             }
-            strongSelf.currentState = (recommendedChannels, isPremium)
-            strongSelf.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
+            self.currentState = (recommendedPeers, isPremium)
+            self.updateState(recommendedPeers: recommendedPeers, isPremium: isPremium, presentationData: presentationData)
         })
-        
-        self.statusPromise.set(context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Peer.ParticipantCount(id: peerId)
-        )
-        |> map { count -> PeerInfoStatusData? in
-            if let count {
-                return PeerInfoStatusData(text: presentationData.strings.Conversation_StatusSubscribers(Int32(count)), isActivity: true, key: .recommended)
-            }
-            return nil
-        })
-        
+                
         self.listNode.visibleBottomContentOffsetChanged = { [weak self] offset in
             if let self {
                 self.layoutUnlockPanel(transition: .animated(duration: 0.4, curve: .spring))
@@ -215,8 +235,8 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         
         self.listNode.scrollEnabled = !isScrollingLockedAtTop
         
-        if isFirstLayout, let (recommendedChannels, isPremium) = self.currentState {
-            self.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
+        if isFirstLayout, let (recommendedPeers, isPremium) = self.currentState {
+            self.updateState(recommendedPeers: recommendedPeers, isPremium: isPremium, presentationData: presentationData)
         }
     }
     
@@ -225,8 +245,16 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         self.chatControllerInteraction.navigationController()?.pushViewController(controller)
     }
     
+    private func updateState(recommendedPeers: RecommendedPeers?, isPremium: Bool, presentationData: PresentationData) {
+        if let recommendedChannels = recommendedPeers as? RecommendedChannels {
+            self.updateState(recommendedChannels: recommendedChannels, isPremium: isPremium, presentationData: presentationData)
+        } else if let recommendedBots = recommendedPeers as? RecommendedBots {
+            self.updateState(recommendedBots: recommendedBots, isPremium: isPremium, presentationData: presentationData)
+        }
+    }
+    
     private func updateState(recommendedChannels: RecommendedChannels?, isPremium: Bool, presentationData: PresentationData) {
-        var entries: [RecommendedChannelsListEntry] = []
+        var entries: [RecommendedPeersListEntry] = []
                                 
         if let channels = recommendedChannels?.channels {
             for channel in channels {
@@ -243,6 +271,42 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         self.currentEntries = entries
         self.enqueuedTransactions.append(transaction)
         self.dequeueTransaction()
+        
+        if let recommendedChannels {
+            self.statusPromise.set(.single(
+                PeerInfoStatusData(text: presentationData.strings.SharedMedia_SimilarChannelCount(recommendedChannels.count), isActivity: true, key: .similarChannels)
+            ))
+        }
+    }
+    
+    private func updateState(recommendedBots: RecommendedBots?, isPremium: Bool, presentationData: PresentationData) {
+        var entries: [RecommendedPeersListEntry] = []
+                                
+        if let bots = recommendedBots?.bots {
+            for bot in bots {
+                var subscriberCount: Int32 = 0
+                if case let .user(user) = bot {
+                    subscriberCount = user.subscriberCount ?? 0
+                }
+                entries.append(.peer(theme: presentationData.theme, index: entries.count, peer: bot, subscribers: subscriberCount))
+            }
+        }
+        
+        let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, action: { [weak self] peer in
+            self?.chatControllerInteraction.openPeer(peer, .info(nil), nil, .default)
+        }, openPeerContextAction: { [weak self] peer, node, gesture in
+            self?.openPeerContextAction(true, peer, node, gesture)
+        })
+        
+        self.currentEntries = entries
+        self.enqueuedTransactions.append(transaction)
+        self.dequeueTransaction()
+        
+        if let recommendedBots {
+            self.statusPromise.set(.single(
+                PeerInfoStatusData(text: presentationData.strings.SharedMedia_SimilarBotCount(recommendedBots.count), isActivity: true, key: .similarBots)
+            ))
+        }
     }
     
     private func layoutUnlockPanel(transition: ContainedViewLayoutTransition) {
@@ -278,6 +342,11 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                 self.view.addSubview(unlockBackground)
                 self.unlockBackground = unlockBackground
             }
+            
+            var isBots = false
+            if let (state, _) = self.currentState, state is RecommendedBots {
+                isBots = true
+            }
                                     
             if let current = self.unlockButton {
                 unlockButton = current
@@ -289,7 +358,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                 unlockButton.animationLoopTime = 2.5
                 unlockButton.animation = "premium_unlock"
                 unlockButton.iconPosition = .right
-                unlockButton.title = presentationData.strings.Channel_SimilarChannels_ShowMore
+                unlockButton.title = isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMore : presentationData.strings.Channel_SimilarChannels_ShowMore
                 
                 unlockButton.pressed = { [weak self] in
                     self?.unlockPressed()
@@ -320,7 +389,7 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .markdown(text: presentationData.strings.Channel_SimilarChannels_ShowMoreInfo, attributes: markdownAttributes),
+                        text: .markdown(text: isBots ? presentationData.strings.PeerInfo_SimilarBots_ShowMoreInfo : presentationData.strings.Channel_SimilarChannels_ShowMoreInfo, attributes: markdownAttributes),
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.2

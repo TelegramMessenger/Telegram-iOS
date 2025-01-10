@@ -221,25 +221,17 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     })]
                 }
                 
-            
-                var storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
                 if let customSubtitle {
                     status = .custom(string: NSAttributedString(string: customSubtitle), multiline: false, isActive: false, icon: nil)
-                } else if let storyData {
-                    storyStats = (storyData.count, storyData.unseenCount, storyData.hasUnseenCloseFriends)
-                    
-                    let text: String
-                    text = presentationData.strings.ChatList_ArchiveStoryCount(Int32(storyData.count))
-                    status = .custom(string: NSAttributedString(string: text), multiline: false, isActive: false, icon: nil)
                 }
                 
-            return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch(isSavedMessages: false) : .peer, peer: itemPeer, status: status, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
-                    interaction.openPeer(peer, .generic, nil, nil)
-            }, disabledAction: { _ in
-                if case let .peer(peer, _, _) = peer {
-                    interaction.openDisabledPeer(EnginePeer(peer), requiresPremiumForMessaging ? .premiumRequired : .generic)
-                }
-            }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, storyStats: storyStats, openStories: { peer, sourceNode in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch(isSavedMessages: false) : .peer, peer: itemPeer, status: status, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
+                        interaction.openPeer(peer, .generic, nil, nil)
+                }, disabledAction: { _ in
+                    if case let .peer(peer, _, _) = peer {
+                        interaction.openDisabledPeer(EnginePeer(peer), requiresPremiumForMessaging ? .premiumRequired : .generic)
+                    }
+                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, storyStats: nil, openStories: { peer, sourceNode in
                     if case let .peer(peerValue, _) = peer, let peerValue {
                         interaction.openStories(peerValue, sourceNode)
                     }
@@ -581,15 +573,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     case let .custom(showSelf, sections):
         if !topPeers.isEmpty {
             var index: Int = 0
-            
-            if showSelf, let accountPeer {
-                if let peer = topPeers.first(where: { $0.id == accountPeer.id }) {
-                    let header = ChatListSearchItemHeader(type: .text(strings.Premium_Gift_ContactSelection_ThisIsYou.uppercased(), AnyHashable(10)), theme: theme, strings: strings)
-                    entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false, strings.Premium_Gift_ContactSelection_BuySelf))
-                    existingPeerIds.insert(.peer(peer.id))
-                }
-            }
-            
+                        
             var sectionId: Int = 2
             for (title, peerIds, hasActions) in sections {
                 var allSelected = true
@@ -645,6 +629,14 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     }
                 }
                 sectionId += 1
+            }
+            
+            if showSelf, let accountPeer {
+                if let peer = topPeers.first(where: { $0.id == accountPeer.id }) {
+                    let header = ChatListSearchItemHeader(type: .text(strings.Premium_Gift_ContactSelection_ThisIsYou.uppercased(), AnyHashable(10)), theme: theme, strings: strings)
+                    entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false, strings.Premium_Gift_ContactSelection_BuySelf))
+                    existingPeerIds.insert(.peer(peer.id))
+                }
             }
             
             var hasDeselectAll = !(selectionState?.selectedPeerIndices ?? [:]).isEmpty

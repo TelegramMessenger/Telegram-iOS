@@ -17,7 +17,7 @@ import AccountContext
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block
-    case addContact(String?)
+    case addContact(String?, Bool)
     case shareMyPhoneNumber
     case reportSpam
     case reportUserSpam
@@ -30,11 +30,15 @@ private enum ChatReportPeerTitleButton: Equatable {
         switch self {
         case .block:
             return strings.Conversation_BlockUser
-        case let .addContact(name):
+        case let .addContact(name, long):
             if let name = name {
                 return strings.Conversation_AddNameToContacts(name).string
             } else {
-                return strings.Conversation_AddToContacts
+                if long {
+                    return strings.Conversation_AddToContactsLong
+                } else {
+                    return strings.Conversation_AddToContacts
+                }
             }
         case .shareMyPhoneNumber:
             return strings.Conversation_ShareMyPhoneNumber
@@ -76,9 +80,9 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
                 }
             }
             if buttons.isEmpty, let phone = peer.phone, !phone.isEmpty {
-                buttons.append(.addContact(EnginePeer(peer).compactDisplayTitle))
+                buttons.append(.addContact(EnginePeer(peer).compactDisplayTitle, buttons.isEmpty))
             } else {
-                buttons.append(.addContact(nil))
+                buttons.append(.addContact(nil, buttons.isEmpty))
             }
         } else {
             if peerStatusSettings.contains(.canBlock) || peerStatusSettings.contains(.canReport) {

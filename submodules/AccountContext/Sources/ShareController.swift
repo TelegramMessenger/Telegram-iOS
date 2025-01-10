@@ -7,6 +7,11 @@ import TelegramUIPreferences
 import AnimationCache
 import MultiAnimationRenderer
 
+public enum StorySharingSubject {
+    case messages([Message])
+    case gift(StarGift.UniqueGift)
+}
+
 public protocol ShareControllerAccountContext: AnyObject {
     var accountId: AccountRecordId { get }
     var accountPeerId: EnginePeer.Id { get }

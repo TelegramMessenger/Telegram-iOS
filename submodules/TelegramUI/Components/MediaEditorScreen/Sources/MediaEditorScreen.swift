@@ -3388,53 +3388,83 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         messageFile = nil
                     }
                     
-                    let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view, isGift: isGift)
-                    renderer.render(completion: { result in
-                        if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
-                            if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }) as? DrawingStickerEntityView {
-                            existingEntityView.isNightTheme = isNightTheme
-                            let messageEntity = existingEntityView.entity as! DrawingStickerEntity
-                            messageEntity.renderImage = result.dayImage
-                            messageEntity.secondaryRenderImage = result.nightImage
-                            messageEntity.overlayRenderImage = result.overlayImage
-                            existingEntityView.update(animated: false)
-                        } else {
-                            var content: DrawingStickerEntity.Content
-                            var position: CGPoint
-                            switch effectiveSubject {
-                            case let .message(messageIds):
-                                content = .message(messageIds, result.size, messageFile, result.mediaFrame?.rect, result.mediaFrame?.cornerRadius)
-                                position = CGPoint(x: storyDimensions.width / 2.0 - 54.0, y: storyDimensions.height / 2.0)
-                            case let .gift(gift):
-                                content = .gift(gift, result.size)
-                                position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
-                            default:
-                                fatalError()
-                            }
-                            
-                            let messageEntity = DrawingStickerEntity(content: content)
-                            messageEntity.renderImage = result.dayImage
-                            messageEntity.secondaryRenderImage = result.nightImage
-                            messageEntity.overlayRenderImage = result.overlayImage
-                            messageEntity.referenceDrawingSize = storyDimensions
-                            messageEntity.position = position
-                            
-                            let fraction = max(result.size.width, result.size.height) / 353.0
-                            messageEntity.scale = min(6.0, 3.3 * fraction)
-                            
-                            if let entityView = self.entitiesView.add(messageEntity, announce: false) as? DrawingStickerEntityView {
-                                if isNightTheme {
-                                    entityView.isNightTheme = true
+                    let wallpaperColors: Signal<(UIColor?, UIColor?), NoError>
+                    if let subject = self.subject, case .gift = subject {
+                        wallpaperColors = self.mediaEditorPromise.get()
+                        |> mapToSignal { mediaEditor in
+                            if let mediaEditor {
+                                return mediaEditor.wallpapers
+                                |> filter {
+                                    $0 != nil
+                                }
+                                |> take(1)
+                                |> map { result in
+                                    if let (dayImage, nightImage) = result {
+                                        return (getAverageColor(image: dayImage), nightImage.flatMap { getAverageColor(image: $0) })
+                                    }
+                                    return (nil, nil)
                                 }
                             }
+                            return .complete()
                         }
-                        
-                        self.readyValue.set(.single(true))
+                    
+                    } else {
+                        wallpaperColors = .single((nil, nil))
+                    }
+                    
+                    let _ = (wallpaperColors
+                    |> deliverOnMainQueue).start(next: { [weak self] wallpaperColors in
+                        guard let self else {
+                            return
+                        }
+                        let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view, isGift: isGift, wallpaperDayColor: wallpaperColors.0, wallpaperNightColor: wallpaperColors.1)
+                        renderer.render(completion: { result in
+                            if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
+                                if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }) as? DrawingStickerEntityView {
+                                existingEntityView.isNightTheme = isNightTheme
+                                let messageEntity = existingEntityView.entity as! DrawingStickerEntity
+                                messageEntity.renderImage = result.dayImage
+                                messageEntity.secondaryRenderImage = result.nightImage
+                                messageEntity.overlayRenderImage = result.overlayImage
+                                existingEntityView.update(animated: false)
+                            } else {
+                                var content: DrawingStickerEntity.Content
+                                var position: CGPoint
+                                switch effectiveSubject {
+                                case let .message(messageIds):
+                                    content = .message(messageIds, result.size, messageFile, result.mediaFrame?.rect, result.mediaFrame?.cornerRadius)
+                                    position = CGPoint(x: storyDimensions.width / 2.0 - 54.0, y: storyDimensions.height / 2.0)
+                                case let .gift(gift):
+                                    content = .gift(gift, result.size)
+                                    position = CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
+                                default:
+                                    fatalError()
+                                }
+                                
+                                let messageEntity = DrawingStickerEntity(content: content)
+                                messageEntity.renderImage = result.dayImage
+                                messageEntity.secondaryRenderImage = result.nightImage
+                                messageEntity.overlayRenderImage = result.overlayImage
+                                messageEntity.referenceDrawingSize = storyDimensions
+                                messageEntity.position = position
+                                
+                                let fraction = max(result.size.width, result.size.height) / 353.0
+                                messageEntity.scale = min(6.0, 3.3 * fraction)
+                                
+                                if let entityView = self.entitiesView.add(messageEntity, announce: false) as? DrawingStickerEntityView {
+                                    if isNightTheme {
+                                        entityView.isNightTheme = true
+                                    }
+                                }
+                            }
+                            
+                            self.readyValue.set(.single(true))
+                        })
                     })
                 })
             default:
