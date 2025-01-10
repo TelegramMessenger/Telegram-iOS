@@ -53,6 +53,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
     private var iconLayer: SimpleLayer?
     private var tintIconLayer: SimpleLayer?
     
+    private(set) var underlyingContentLayer: SimpleLayer?
     private(set) var tintContentLayer: SimpleLayer?
     
     private var badge: Badge?
@@ -93,6 +94,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
             if let mirrorLayer = self.tintContentLayer {
                 mirrorLayer.position = value
             }
+            if let mirrorLayer = self.underlyingContentLayer {
+                mirrorLayer.position = value
+            }
             super.position = value
         }
     }
@@ -104,6 +108,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
             if let mirrorLayer = self.tintContentLayer {
                 mirrorLayer.bounds = value
             }
+            if let mirrorLayer = self.underlyingContentLayer {
+                mirrorLayer.bounds = value
+            }
             super.bounds = value
         }
     }
@@ -112,7 +119,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         if let mirrorLayer = self.tintContentLayer {
             mirrorLayer.add(animation, forKey: key)
         }
-        
+        if let mirrorLayer = self.underlyingContentLayer {
+            mirrorLayer.add(animation, forKey: key)
+        }
         super.add(animation, forKey: key)
     }
     
@@ -120,7 +129,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         if let mirrorLayer = self.tintContentLayer {
             mirrorLayer.removeAllAnimations()
         }
-        
+        if let mirrorLayer = self.underlyingContentLayer {
+            mirrorLayer.removeAllAnimations()
+        }
         super.removeAllAnimations()
     }
     
@@ -128,7 +139,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         if let mirrorLayer = self.tintContentLayer {
             mirrorLayer.removeAnimation(forKey: forKey)
         }
-        
+        if let mirrorLayer = self.underlyingContentLayer {
+            mirrorLayer.removeAnimation(forKey: forKey)
+        }
         super.removeAnimation(forKey: forKey)
     }
     
@@ -232,6 +245,16 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
                         }
                     }
                 })
+            }
+            
+            if let particleColor = animationData.particleColor {
+                let underlyingContentLayer = SimpleLayer()
+                self.underlyingContentLayer = underlyingContentLayer
+                
+                let starsLayer = StarsEffectLayer()
+                starsLayer.frame = CGRect(origin: CGPoint(x: -3.0, y: -3.0), size: CGSize(width: 42.0, height: 42.0))
+                starsLayer.update(color: particleColor, size: CGSize(width: 42.0, height: 42.0))
+                underlyingContentLayer.addSublayer(starsLayer)
             }
         case let .staticEmoji(staticEmoji):
             let image = generateImage(pointSize, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in

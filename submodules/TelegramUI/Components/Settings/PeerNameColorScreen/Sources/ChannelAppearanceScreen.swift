@@ -727,7 +727,7 @@ final class ChannelAppearanceScreenComponent: Component {
                     }
            
                     if let result {
-                        self.updatedPeerStatus = PeerEmojiStatus(fileId: result.fileId.id, expirationDate: timestamp)
+                        self.updatedPeerStatus = PeerEmojiStatus(content: .emoji(fileId: result.fileId.id), expirationDate: timestamp)
                     } else {
                         self.updatedPeerStatus = .some(nil)
                     }

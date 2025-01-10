@@ -260,11 +260,62 @@ public enum PeerNameColor: Hashable {
 }
 
 public struct PeerEmojiStatus: Equatable, Codable {
-    public var fileId: Int64
+    public enum Content: Equatable, Codable {
+        private enum CodingKeys: String, CodingKey {
+            case discriminator
+            case fileId
+            case id
+            case title
+            case slug
+            case patternFileId
+            case innerColor
+            case outerColor
+            case patternColor
+            case textColor
+        }
+        
+        case emoji(fileId: Int64)
+        case starGift(id: Int64, fileId: Int64, title: String, slug: String, patternFileId: Int64, innerColor: Int32, outerColor: Int32, patternColor: Int32, textColor: Int32)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            switch try container.decode(Int32.self, forKey: .discriminator) {
+            case 0:
+                self = .emoji(fileId: try container.decode(Int64.self, forKey: .fileId))
+            case 1:
+                self = .starGift(id: try container.decode(Int64.self, forKey: .id), fileId: try container.decode(Int64.self, forKey: .fileId), title: try container.decode(String.self, forKey: .title), slug: try container.decode(String.self, forKey: .slug), patternFileId: try container.decode(Int64.self, forKey: .patternFileId), innerColor: try container.decode(Int32.self, forKey: .innerColor), outerColor: try container.decode(Int32.self, forKey: .outerColor), patternColor: try container.decode(Int32.self, forKey: .patternColor), textColor: try container.decode(Int32.self, forKey: .textColor))
+            default:
+                throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "content"))
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            switch self {
+            case let .emoji(fileId):
+                try container.encode(0 as Int32, forKey: .discriminator)
+                try container.encode(fileId, forKey: .fileId)
+            case let .starGift(id, fileId, title, slug, patternFileId, innerColor, outerColor, patternColor, textColor):
+                try container.encode(1 as Int32, forKey: .discriminator)
+                try container.encode(id, forKey: .id)
+                try container.encode(fileId, forKey: .fileId)
+                try container.encode(title, forKey: .title)
+                try container.encode(slug, forKey: .slug)
+                try container.encode(patternFileId, forKey: .patternFileId)
+                try container.encode(innerColor, forKey: .innerColor)
+                try container.encode(outerColor, forKey: .outerColor)
+                try container.encode(patternColor, forKey: .patternColor)
+                try container.encode(textColor, forKey: .textColor)
+            }
+        }
+    }
+    public var content: Content
     public var expirationDate: Int32?
     
-    public init(fileId: Int64, expirationDate: Int32?) {
-        self.fileId = fileId
+    public init(content: Content, expirationDate: Int32?) {
+        self.content = content
         self.expirationDate = expirationDate
     }
 }
@@ -272,12 +323,49 @@ public struct PeerEmojiStatus: Equatable, Codable {
 extension PeerEmojiStatus {
     init?(apiStatus: Api.EmojiStatus) {
         switch apiStatus {
-        case let .emojiStatus(documentId):
-            self.init(fileId: documentId, expirationDate: nil)
-        case let .emojiStatusUntil(documentId, until):
-            self.init(fileId: documentId, expirationDate: until)
-        case .emojiStatusEmpty:
+        case let .emojiStatus(_, documentId, until):
+            self.init(content: .emoji(fileId: documentId), expirationDate: until)
+        case let .emojiStatusCollectible(_, collectibleId, documentId, title, slug, patternDocumentId, centerColor, edgeColor, patternColor, textColor, until):
+            self.init(content: .starGift(id: collectibleId, fileId: documentId, title: title, slug: slug, patternFileId: patternDocumentId, innerColor: centerColor, outerColor: edgeColor, patternColor: patternColor, textColor: textColor), expirationDate: until)
+        case .emojiStatusEmpty, .inputEmojiStatusCollectible:
             return nil
+        }
+    }
+}
+extension PeerEmojiStatus {
+    var emojiFileId: Int64? {
+        switch self.content {
+        case let .emoji(fileId):
+            return fileId
+        default:
+            return nil
+        }
+    }
+    
+    var associatedFileIds: [Int64] {
+        switch self.content {
+        case let .emoji(fileId):
+            return [fileId]
+        case let .starGift(_, fileId, _, _, patternFileId, _, _, _, _):
+            return [fileId, patternFileId]
+        }
+    }
+    
+    public var fileId: Int64 {
+        switch self.content {
+        case let .emoji(fileId):
+            return fileId
+        case let .starGift(_, fileId, _, _, _, _, _, _, _):
+            return fileId
+        }
+    }
+    
+    public var color: Int32? {
+        switch self.content {
+        case .emoji:
+            return nil
+        case let .starGift(_, _, _, _, _, innerColor, _, _, _):
+            return innerColor
         }
     }
 }

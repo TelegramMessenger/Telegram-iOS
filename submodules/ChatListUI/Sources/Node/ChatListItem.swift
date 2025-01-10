@@ -2145,6 +2145,7 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
             var currentCredibilityIconContent: EmojiStatusComponent.Content?
             var currentVerifiedIconContent: EmojiStatusComponent.Content?
             var currentStatusIconContent: EmojiStatusComponent.Content?
+            var currentStatusIconParticleColor: UIColor?
             var currentSecretIconImage: UIImage?
             var currentForwardedIcon: UIImage?
             var currentStoryIcon: UIImage?
@@ -3102,6 +3103,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                             } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                                 currentStatusIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                                if case let .starGift(_, _, _, _, _, innerColor, _, _, _) = emojiStatus.content {
+                                    currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: innerColor))
+                                }
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
@@ -3130,6 +3134,9 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                         currentStatusIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                        if case let .starGift(_, _, _, _, _, innerColor, _, _, _) = emojiStatus.content {
+                            currentStatusIconParticleColor = UIColor(rgb: UInt32(bitPattern: innerColor))
+                        }
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
@@ -4543,12 +4550,13 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusIconView = statusIconView
                             strongSelf.mainContentContainerNode.view.addSubview(statusIconView)
                         }
-                                                
+                                                        
                         let statusIconComponent = EmojiStatusComponent(
                             context: item.context,
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
                             content: currentStatusIconContent,
+                            particleColor: currentStatusIconParticleColor,
                             isVisibleForAnimations: strongSelf.visibilityStatus && item.context.sharedContext.energyUsageSettings.loopEmoji,
                             action: nil
                         )

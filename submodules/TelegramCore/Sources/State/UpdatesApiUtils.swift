@@ -52,7 +52,7 @@ extension Api.MessageMedia {
                 } else {
                     return nil
                 }
-            case let .messageMediaDocument(_, document, _, _):
+            case let .messageMediaDocument(_, document, _, _, _):
                 if let document = document {
                     return collectPreCachedResources(for: document)
                 }
@@ -626,14 +626,14 @@ extension Api.EncryptedMessage {
 extension Api.InputMedia {
     func withUpdatedStickers(_ stickers: [Api.InputDocument]?) -> Api.InputMedia {
         switch self {
-        case let .inputMediaUploadedDocument(flags, file, thumb, mimeType, attributes, _, ttlSeconds):
+        case let .inputMediaUploadedDocument(flags, file, thumb, mimeType, attributes, _, videoCover, ttlSeconds):
             var flags = flags
             var attributes = attributes
             if let _ = stickers {
                 flags |= (1 << 0)
                 attributes.append(.documentAttributeHasStickers)
             }
-            return .inputMediaUploadedDocument(flags: flags, file: file, thumb: thumb, mimeType: mimeType, attributes: attributes, stickers: stickers, ttlSeconds: ttlSeconds)
+            return .inputMediaUploadedDocument(flags: flags, file: file, thumb: thumb, mimeType: mimeType, attributes: attributes, stickers: stickers, videoCover: videoCover, ttlSeconds: ttlSeconds)
         case let .inputMediaUploadedPhoto(flags, file, _, ttlSeconds):
             var flags = flags
             if let _ = stickers {
