@@ -1336,8 +1336,13 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 switch controller.mode {
                 case .statusSelection:
-                    let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
-                    |> deliverOnMainQueue).start()
+                    if let gift = item?.itemGift {
+                        let _ = (self.context.engine.accountData.setStarGiftStatus(starGift: gift, expirationDate: nil)
+                        |> deliverOnMainQueue).start()
+                    } else {
+                        let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
+                        |> deliverOnMainQueue).start()
+                    }
                 case let .backgroundSelection(completion):
                     completion(item?.itemFile)
                 case let .customStatusSelection(completion):

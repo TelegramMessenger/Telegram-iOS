@@ -3342,14 +3342,14 @@ final class StoryItemSetContainerSendMessage {
             useGesturePosition = true
             let action = { [weak self, weak view, weak controller] in
                 let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: true))
-                |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
+                          |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
                     if case let .result(messages) = result {
                         return .single(messages.first)
                     } else {
                         return .complete()
                     }
                 })
-                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view, weak controller] message in
+                         |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view, weak controller] message in
                     guard let self, let view else {
                         return
                     }
@@ -3365,7 +3365,7 @@ final class StoryItemSetContainerSendMessage {
                     switch error {
                     case .privateChannel:
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-                        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] peer in
+                                 |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] peer in
                             guard let self, let view else {
                                 return
                             }
@@ -3416,6 +3416,31 @@ final class StoryItemSetContainerSendMessage {
             }))
         case .weather:
             return
+        case let .starGift(_, slug):
+            useGesturePosition = true
+            let action = {
+                let _ = openUserGeneratedUrl(context: component.context, peerId: nil, url: "https://t.me/nft/\(slug)", concealed: false, skipUrlAuth: false, skipConcealedAlert: false, forceDark: true, present: { [weak controller] c in
+                    controller?.present(c, in: .window(.root))
+                }, openResolved: { [weak self, weak view] resolved in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.openResolved(view: view, result: resolved, forceExternal: false, concealed: false)
+                }, alertDisplayUpdated: { [weak self, weak view] alertController in
+                    guard let self, let view else {
+                        return
+                    }
+                    self.statusController = alertController
+                    view.updateIsProgressPaused()
+                })
+            }
+            if immediate {
+                action()
+                return
+            }
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewGift, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: {
+                action()
+            }))
         }
         
         self.selectedMediaArea =  mediaArea

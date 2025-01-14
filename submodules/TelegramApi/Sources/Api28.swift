@@ -207,6 +207,7 @@ public extension Api {
         case webPageAttributeStickerSet(flags: Int32, stickers: [Api.Document])
         case webPageAttributeStory(flags: Int32, peer: Api.Peer, id: Int32, story: Api.StoryItem?)
         case webPageAttributeTheme(flags: Int32, documents: [Api.Document]?, settings: Api.ThemeSettings?)
+        case webPageAttributeUniqueStarGift(gift: Api.StarGift)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -242,6 +243,12 @@ public extension Api {
                     }}
                     if Int(flags) & Int(1 << 1) != 0 {settings!.serialize(buffer, true)}
                     break
+                case .webPageAttributeUniqueStarGift(let gift):
+                    if boxed {
+                        buffer.appendInt32(-814781000)
+                    }
+                    gift.serialize(buffer, true)
+                    break
     }
     }
     
@@ -253,6 +260,8 @@ public extension Api {
                 return ("webPageAttributeStory", [("flags", flags as Any), ("peer", peer as Any), ("id", id as Any), ("story", story as Any)])
                 case .webPageAttributeTheme(let flags, let documents, let settings):
                 return ("webPageAttributeTheme", [("flags", flags as Any), ("documents", documents as Any), ("settings", settings as Any)])
+                case .webPageAttributeUniqueStarGift(let gift):
+                return ("webPageAttributeUniqueStarGift", [("gift", gift as Any)])
     }
     }
     
@@ -312,6 +321,19 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.WebPageAttribute.webPageAttributeTheme(flags: _1!, documents: _2, settings: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webPageAttributeUniqueStarGift(_ reader: BufferReader) -> WebPageAttribute? {
+            var _1: Api.StarGift?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StarGift
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.WebPageAttribute.webPageAttributeUniqueStarGift(gift: _1!)
             }
             else {
                 return nil

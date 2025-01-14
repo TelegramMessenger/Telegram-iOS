@@ -13054,6 +13054,7 @@ Sorry for the inconvenience.";
 "Gift.Options.Gift.Text" = "Give **%@** gifts that can be kept on the profile or converted to Stars. [What are Stars >]()";
 "Gift.Options.Gift.Filter.AllGifts" = "All Gifts";
 "Gift.Options.Gift.Filter.Limited" = "Limited";
+"Gift.Options.Gift.Filter.InStock" = "In Stock";
 "Gift.Options.Gift.Limited" = "limited";
 "Gift.Options.Gift.SoldOut" = "sold out";
 "Gift.Options.SoldOut.Text" = "Sorry, this gift is sold out.";
@@ -13087,6 +13088,7 @@ Sorry for the inconvenience.";
 "Gift.Send.HideMyName" = "Hide My Name";
 "Gift.Send.HideMyName.Info" = "Hide my name and message from visitors to %1$@'s profile. %2$@ will still see your name and message.";
 "Gift.Send.Send" = "Send a Gift for";
+"Gift.Send.Buy" = "Buy a Gift for";
 "Gift.Send.Limited" = "Limited";
 "Gift.Send.Remains_1" = "%@ left";
 "Gift.Send.Remains_any" = "%@ left";
@@ -13616,7 +13618,7 @@ Sorry for the inconvenience.";
 "BotVerification.Verify.Channel.Text" = "Do you want to verify this channel with your verification mark and description?";
 "BotVerification.Verify.Group.Title" = "Verify Group";
 "BotVerification.Verify.Group.Text" = "Do you want to verify this group with your verification mark and description?";
-"BotVerification.Verify.User.Title" = "Verify Bot";
+"BotVerification.Verify.User.Title" = "Verify User";
 "BotVerification.Verify.User.Text" = "Do you want to verify this user with your verification mark and description?";
 "BotVerification.Verify.Bot.Title" = "Verify Bot";
 "BotVerification.Verify.Bot.Text" = "Do you want to verify this bot with your verification mark and description?";
@@ -13639,3 +13641,44 @@ Sorry for the inconvenience.";
 
 "Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
 "Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";
+
+"Conversation.ViewStarGift" = "VIEW COLLECTIBLE";
+
+"ChatList.AddPhoto.Title" = "Add your photo! 📸";
+"ChatList.AddPhoto.Text" = "Help your friends spot you easily.";
+
+"Story.ViewGift" = "View Gift";
+
+"Camera.OpenChat" = "Open Chat";
+
+"Gift.Wear.Wear" = "Wear %@";
+"Gift.Wear.GetBenefits" = "and get these benefits:";
+"Gift.Wear.Badge.Title" = "Radiant Badge";
+"Gift.Wear.Badge.Text" = "The glittering icon of this item will be displayed next to your name.";
+"Gift.Wear.Design.Title" = "Unqiue Profile Design";
+"Gift.Wear.Design.Text" = "Your profile page will get the color and the symbol of this item.";
+"Gift.Wear.Proof.Title" = "Proof of Ownership";
+"Gift.Wear.Proof.Text" = "Tapping the icon of this item next to your name will show its info and owner.";
+"Gift.Wear.Start" = "Start Wearing";
+
+"Gift.View.Header.Transfer" = "transfer";
+"Gift.View.Header.Wear" = "wear";
+"Gift.View.Header.TakeOff" = "take off";
+"Gift.View.Header.Share" = "share";
+
+"Conversation.AddToContactsLong" = "Add to Contacts";
+
+"PeerInfo.PaneRecommendedBots" = "Similar Bots";
+
+"SharedMedia.SimilarChannelCount_1" = "%@ channel";
+"SharedMedia.SimilarChannelCount_any" = "%@ channels";
+
+"SharedMedia.SimilarBotCount_1" = "%@ bot";
+"SharedMedia.SimilarBotCount_any" = "%@ bots";
+
+"PeerInfo.SimilarBots.ShowMore" = "Show More Bots";
+"PeerInfo.SimilarBots.ShowMoreInfo" = "Subscribe to [Telegram Premium]()\nto unlock up to **100** similar bots.";
+
+"Gift.View.Context.Share" = "Share";
+"Gift.View.Context.CopyLink" = "Copy Link";
+"Gift.View.Context.Transfer" = "Transfer";

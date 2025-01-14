@@ -2865,6 +2865,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     for renderedPeer in foundLocalPeers.peers {
                         if renderedPeer.peerId == context.account.peerId, let peer = renderedPeer.peers[renderedPeer.peerId], filteredPeer(peer, EnginePeer(accountPeer)) {
                             if !existingPeerIds.contains(peer.id) {
+                                existingPeerIds.insert(peer.id)
                                 entries.append(.localPeer(peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType, nil, false, true))
                             }
                             break
@@ -4402,14 +4403,24 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     func scrollToTop() -> Bool {
         if !self.mediaNode.isHidden {
             return self.mediaNode.scrollToTop()
-        }
-        let offset = self.listNode.visibleContentOffset()
-        switch offset {
-        case let .known(value) where value <= CGFloat.ulpOfOne:
-            return false
-        default:
-            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-            return true
+        } else if !self.recentListNode.isHidden {
+            let offset = self.recentListNode.visibleContentOffset()
+            switch offset {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                return false
+            default:
+                self.recentListNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
+        } else {
+            let offset = self.listNode.visibleContentOffset()
+            switch offset {
+            case let .known(value) where value <= CGFloat.ulpOfOne:
+                return false
+            default:
+                self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                return true
+            }
         }
     }
     

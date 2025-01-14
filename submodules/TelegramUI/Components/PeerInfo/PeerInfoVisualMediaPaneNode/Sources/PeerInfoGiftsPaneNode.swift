@@ -130,10 +130,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let sideInset = params.sideInset + 16.0
             
-            let itemsInRow = max(1, min(starsProducts.count, 3))
+            let defaultItemsInRow = 3
+            let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
+            let defaultOptionWidth = (params.size.width - sideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - sideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
             
-            let starsOptionSize = CGSize(width: optionWidth, height: optionWidth)
+            let starsOptionSize = CGSize(width: optionWidth, height: defaultOptionWidth)
             
             let visibleBounds = self.scrollNode.bounds.insetBy(dx: 0.0, dy: -10.0)
             
@@ -176,12 +178,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     switch product.gift {
                     case let .generic(gift):
                         if let availability = gift.availability {
-                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total))).string
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(availability.total), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
                         } else {
                             ribbonText = nil
                         }
                     case let .unique(gift):
-                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total))).string
+                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.total), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
                         for attribute in gift.attributes {
                             if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
                                 ribbonColor = .custom(outerColor, innerColor)
@@ -247,6 +249,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 return .never()
                                             }
                                             return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+                                        },
+                                        shareStory: { [weak self] in
+                                            guard let self, case let .unique(uniqueGift) = product.gift, let parentController = self.parentController else {
+                                                return
+                                            }
+                                            Queue.mainQueue().after(0.15) {
+                                                let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: parentController)
+                                                parentController.push(controller)
+                                            }
                                         }
                                     )
                                     self.parentController?.push(controller)

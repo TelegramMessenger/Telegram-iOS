@@ -1211,6 +1211,13 @@ func openResolvedUrlImpl(
                     present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
             })
+        case let .collectible(gift):
+            if let gift {
+                let controller = context.sharedContext.makeGiftViewScreen(context: context, gift: gift, shareStory: nil)
+                navigationController?.pushViewController(controller)
+            } else {
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
         case let .messageLink(link):
             if let link {
                 if let navigationController = navigationController {

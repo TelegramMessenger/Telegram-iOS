@@ -203,7 +203,7 @@ extension MediaEditorScreenImpl {
                     } else if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
                         innerSaveDraft(media: .image(image: image, dimensions: draft.dimensions))
                     }
-                case .message:
+                case .message, .gift:
                     if let pixel = generateSingleColorImage(size: CGSize(width: 1, height: 1), color: .black) {
                         innerSaveDraft(media: .image(image: pixel, dimensions: PixelDimensions(width: 1080, height: 1920)))
                     }

@@ -43,7 +43,9 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
-        #"//submodules/TelegramUI/Components/MessageInputPanelComponent",
+        "//submodules/TelegramUI/Components/MessageInputPanelComponent",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/ChatPresentationInterfaceState",
     ],
     visibility = [
         "//visibility:public",

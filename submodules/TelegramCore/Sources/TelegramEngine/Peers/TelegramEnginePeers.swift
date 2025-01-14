@@ -1454,7 +1454,15 @@ public extension TelegramEngine {
         public func requestRecommendedAppsIfNeeded() -> Signal<Never, NoError> {
             return _internal_requestRecommendedApps(account: self.account, forceUpdate: false)
         }
+
+        public func recommendedBots(peerId: EnginePeer.Id) -> Signal<RecommendedBots?, NoError> {
+            return _internal_recommendedBots(account: self.account, peerId: peerId)
+        }
         
+        public func requestRecommendedBots(peerId: EnginePeer.Id, forceUpdate: Bool = false) -> Signal<Never, NoError> {
+            return _internal_requestRecommendedBots(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
+        }
+                
         public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
             return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
         }

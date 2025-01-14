@@ -186,22 +186,26 @@ public final class TelegramChannel: Peer, Equatable {
     }
     
     public var associatedMediaIds: [MediaId]? {
-        if let emojiStatus = self.emojiStatus, let backgroundEmojiId = self.backgroundEmojiId {
-            return [
-                MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId),
-                MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId)
-            ]
-        } else if let emojiStatus = self.emojiStatus {
-            return [
-                MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId)
-            ]
-        } else if let backgroundEmojiId = self.backgroundEmojiId {
-            return [
-                MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId)
-            ]
-        } else {
+        var mediaIds: [MediaId] = []
+        if let emojiStatus = self.emojiStatus {
+            switch emojiStatus.content {
+            case let .emoji(fileId):
+                mediaIds.append(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId))
+            case let .starGift(_, fileId, _, _, patternFileId, _, _, _, _):
+                mediaIds.append(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId))
+                mediaIds.append(MediaId(namespace: Namespaces.Media.CloudFile, id: patternFileId))
+            }
+        }
+        if let backgroundEmojiId = self.backgroundEmojiId {
+            mediaIds.append(MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId))
+        }
+        if let profileBackgroundEmojiId = self.profileBackgroundEmojiId {
+            mediaIds.append(MediaId(namespace: Namespaces.Media.CloudFile, id: profileBackgroundEmojiId))
+        }
+        guard !mediaIds.isEmpty else {
             return nil
         }
+        return mediaIds
     }
     
     public let associatedPeerId: PeerId? = nil

@@ -4,12 +4,14 @@ private enum TelegramMediaWebpageAttributeTypes: Int32 {
     case unsupported
     case theme
     case stickerPack
+    case starGift
 }
 
 public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
     case unsupported
     case theme(TelegraMediaWebpageThemeAttribute)
     case stickerPack(TelegramMediaWebpageStickerPackAttribute)
+    case starGift(TelegramMediaWebpageStarGiftAttribute)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -17,6 +19,8 @@ public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
                 self = .theme(decoder.decodeObjectForKey("a", decoder: { TelegraMediaWebpageThemeAttribute(decoder: $0) }) as! TelegraMediaWebpageThemeAttribute)
             case TelegramMediaWebpageAttributeTypes.stickerPack.rawValue:
                 self = .stickerPack(decoder.decodeObjectForKey("a", decoder: { TelegramMediaWebpageStickerPackAttribute(decoder: $0) }) as! TelegramMediaWebpageStickerPackAttribute)
+            case TelegramMediaWebpageAttributeTypes.starGift.rawValue:
+                self = .starGift(decoder.decodeObjectForKey("a", decoder: { TelegramMediaWebpageStarGiftAttribute(decoder: $0) }) as! TelegramMediaWebpageStarGiftAttribute)
             default:
                 self = .unsupported
         }
@@ -31,6 +35,9 @@ public enum TelegramMediaWebpageAttribute: PostboxCoding, Equatable {
                 encoder.encodeObject(attribute, forKey: "a")
             case let .stickerPack(attribute):
                 encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.stickerPack.rawValue, forKey: "r")
+                encoder.encodeObject(attribute, forKey: "a")
+            case let .starGift(attribute):
+                encoder.encodeInt32(TelegramMediaWebpageAttributeTypes.starGift.rawValue, forKey: "r")
                 encoder.encodeObject(attribute, forKey: "a")
         }
     }
@@ -124,6 +131,29 @@ public final class TelegramMediaWebpageStickerPackAttribute: PostboxCoding, Equa
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.flags.rawValue, forKey: "flags")
         encoder.encodeObjectArray(self.files, forKey: "files")
+    }
+}
+
+public final class TelegramMediaWebpageStarGiftAttribute: PostboxCoding, Equatable {
+    public static func == (lhs: TelegramMediaWebpageStarGiftAttribute, rhs: TelegramMediaWebpageStarGiftAttribute) -> Bool {
+        if lhs.gift != rhs.gift {
+            return false
+        }
+        return true
+    }
+    
+    public let gift: StarGift
+    
+    public init(gift: StarGift) {
+        self.gift = gift
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.gift = decoder.decodeObjectForKey("gift", decoder: { StarGift(decoder: $0) }) as! StarGift
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.gift, forKey: "gift")
     }
 }
 

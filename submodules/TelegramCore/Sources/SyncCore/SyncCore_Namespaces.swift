@@ -95,6 +95,7 @@ public struct Namespaces {
         public static let CloudFeaturedChannelStatusEmoji: Int32 = 27
         public static let CloudDisabledChannelStatusEmoji: Int32 = 28
         public static let CloudDefaultTagReactions: Int32 = 29
+        public static let CloudUniqueStarGifts: Int32 = 30
     }
     
     public struct CachedItemCollection {
@@ -138,6 +139,7 @@ public struct Namespaces {
         public static let starsReactionDefaultToPrivate: Int8 = 41
         public static let cachedPremiumGiftCodeOptions: Int8 = 42
         public static let cachedProfileGifts: Int8 = 43
+        public static let recommendedBots: Int8 = 44
     }
     
     public struct UnorderedItemList {

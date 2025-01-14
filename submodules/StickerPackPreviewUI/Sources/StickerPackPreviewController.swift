@@ -7,7 +7,6 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
-import ShareController
 import StickerResources
 import AlertUI
 import PresentationDataUtils
@@ -116,15 +115,20 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 }
                 
                 if let stickerPackContentsValue = strongSelf.stickerPackContentsValue, case let .result(info, _, _) = stickerPackContentsValue, !info.shortName.isEmpty {
-                    let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/addstickers/\(info.shortName)"), externalShare: true)
-                    
                     let parentNavigationController = strongSelf.parentNavigationController
-                    shareController.actionCompleted = { [weak parentNavigationController] in
-                        if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
-                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                            controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    let shareController = strongSelf.context.sharedContext.makeShareController(
+                        context: strongSelf.context,
+                        subject: .url("https://t.me/addstickers/\(info.shortName)"),
+                        forceExternal: true,
+                        shareStory: nil,
+                        enqueued: nil,
+                        actionCompleted: { [weak parentNavigationController] in
+                            if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            }
                         }
-                    }
+                    )
                     strongSelf.present(shareController, in: .window(.root))
                     strongSelf.dismiss()
                 }

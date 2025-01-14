@@ -380,6 +380,14 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             let media = WallpaperPreviewMedia(content: .themeSettings(settings))
                             mediaAndFlags = ([media], ChatMessageAttachedContentNodeMediaFlags())
                         }
+                    } else if type == "telegram_nft" {
+                        for attribute in webpage.attributes {
+                            if case let .starGift(gift) = attribute, case let .unique(uniqueGift) = gift.gift {
+                                let media = UniqueGiftPreviewMedia(content: uniqueGift)
+                                mediaAndFlags = ([media], [])
+                                break
+                            }
+                        }
                     }
                 }
                 
@@ -457,6 +465,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                                 }
                             }
                             actionTitle = isEmoji ? item.presentationData.strings.Conversation_ViewEmojis : item.presentationData.strings.Conversation_ViewStickers
+                        case "telegram_nft":
+                            actionTitle = item.presentationData.strings.Conversation_ViewStarGift
+                            text = nil
+                            entities = nil
                         default:
                             break
                     }

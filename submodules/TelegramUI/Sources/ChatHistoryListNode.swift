@@ -2905,12 +2905,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             for entry in historyView.filteredEntries {
                 switch entry {
                 case let .MessageEntry(message, _, _, _, _, _):
-                    var hasAction = false
-                    for media in message.media {
-                        if let _ = media as? TelegramMediaAction {
-                            hasAction = true
-                        }
-                    }
                     if let _ = message.inlineBotAttribute {
                         if let visibleBusinessBotMessageIdValue = visibleBusinessBotMessageId {
                             if visibleBusinessBotMessageIdValue < message.id {
@@ -2920,22 +2914,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             visibleBusinessBotMessageId = message.id
                         }
                     }
-                    if !hasAction {
-                        switch message.id.peerId.namespace {
-                        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-                            messageIdsWithPossibleReactions.append(message.id)
-                        default:
-                            break
-                        }
+                    switch message.id.peerId.namespace {
+                    case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                        messageIdsWithPossibleReactions.append(message.id)
+                    default:
+                        break
                     }
                 case let .MessageGroupEntry(_, messages, _):
                     for (message, _, _, _, _) in messages {
-                        var hasAction = false
-                        for media in message.media {
-                            if let _ = media as? TelegramMediaAction {
-                                hasAction = true
-                            }
-                        }
                         if let _ = message.inlineBotAttribute {
                             if let visibleBusinessBotMessageIdValue = visibleBusinessBotMessageId {
                                 if visibleBusinessBotMessageIdValue < message.id {
@@ -2945,13 +2931,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                 visibleBusinessBotMessageId = message.id
                             }
                         }
-                        if !hasAction {
-                            switch message.id.peerId.namespace {
-                            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-                                messageIdsWithPossibleReactions.append(message.id)
-                            default:
-                                break
-                            }
+                        switch message.id.peerId.namespace {
+                        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                            messageIdsWithPossibleReactions.append(message.id)
+                        default:
+                            break
                         }
                     }
                 default:

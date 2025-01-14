@@ -76,6 +76,7 @@ import StarsIntroScreen
 import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
+import ShareController
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2922,8 +2923,81 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsIntroScreen(context: context)
     }
     
-    public func makeGiftViewScreen(context: AccountContext, message: EngineMessage) -> ViewController {
-        return GiftViewScreen(context: context, subject: .message(message))
+    public func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: (() -> Void)?) -> ViewController {
+        return GiftViewScreen(context: context, subject: .message(message), shareStory: shareStory)
+    }
+    
+    public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?) -> ViewController {
+        return GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
+    }
+    
+    public func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController {
+        let editorSubject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+        switch subject {
+        case let .messages(messages):
+            editorSubject = .single(.message(messages.map { $0.id }))
+        case let .gift(gift):
+            editorSubject = .single(.gift(gift))
+        }
+        
+        let externalState = MediaEditorTransitionOutExternalState(
+            storyTarget: nil,
+            isForcedTarget: false,
+            isPeerArchived: false,
+            transitionOut: nil
+        )
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = MediaEditorScreenImpl(
+            context: context,
+            mode: .storyEditor,
+            subject: editorSubject,
+            transitionIn: nil,
+            transitionOut: { _, _ in
+                return nil
+            },
+            completion: { [weak parentController] result, commit in
+                let targetPeerId: EnginePeer.Id
+                let target: Stories.PendingTarget
+                if let sendAsPeerId = result.options.sendAsPeerId {
+                    target = .peer(sendAsPeerId)
+                    targetPeerId = sendAsPeerId
+                } else {
+                    target = .myStories
+                    targetPeerId = context.account.peerId
+                }
+                externalState.storyTarget = target
+                
+                if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
+                    rootController.proceedWithStoryUpload(target: target, result: result, existingMedia: nil, forwardInfo: nil, externalState: externalState, commit: commit)
+                }
+                
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer else {
+                        return
+                    }
+                    let text: String
+                    if case .channel = peer {
+                        text = presentationData.strings.Story_MessageReposted_Channel(peer.compactDisplayTitle).string
+                    } else {
+                        text = presentationData.strings.Story_MessageReposted_Personal
+                    }
+                    Queue.mainQueue().after(0.25) {
+                        parentController?.present(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .forward(savedMessages: false, text: text),
+                            elevatedLayout: false,
+                            action: { _ in return false }
+                        ), in: .current)
+                        
+                        Queue.mainQueue().after(0.1) {
+                            HapticFeedback().success()
+                        }
+                    }
+                })
+            }
+        )
+        return controller
     }
     
     public func makeContentReportScreen(context: AccountContext, subject: ReportContentSubject, forceDark: Bool, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void, requestSelectMessages: ((String, Data, String?) -> Void)?) {
@@ -2933,6 +3007,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 present(ContentReportScreen(context: context, subject: subject, title: title, options: options, forceDark: forceDark, completed: completion, requestSelectMessages: requestSelectMessages))
             }
         })
+    }
+    
+    public func makeShareController(context: AccountContext, subject: ShareControllerSubject, forceExternal: Bool, shareStory: (() -> Void)?, enqueued: (([PeerId], [Int64]) -> Void)?, actionCompleted: (() -> Void)?) -> ViewController {
+        let controller = ShareController(context: context, subject: subject, externalShare: forceExternal)
+        controller.shareStory = shareStory
+        controller.enqueued = enqueued
+        controller.actionCompleted = actionCompleted
+        return controller
     }
     
     public func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError> {

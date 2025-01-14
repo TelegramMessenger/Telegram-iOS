@@ -350,7 +350,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
             return (mediaMap, nil, nil, nil, nil)
-        case let .messageMediaDocument(flags, document, altDocuments, ttlSeconds):
+        case let .messageMediaDocument(flags, document, altDocuments, coverPhoto, ttlSeconds):
+            let _ = coverPhoto
             if let document = document {
                 if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments) {
                     return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0, nil)
@@ -542,6 +543,8 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
         return .channelMessage(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId))
     case let .mediaAreaWeather(coordinates, emoji, temperatureC, color):
         return .weather(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), emoji: emoji, temperature: temperatureC, color: color)
+    case let .mediaAreaStarGift(coordinates, slug):
+        return .starGift(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), slug: slug)
     }
 }
 
@@ -596,6 +599,8 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea], transaction: Transac
             apiMediaAreas.append(.mediaAreaUrl(coordinates: inputCoordinates, url: url))
         case let .weather(_, emoji, temperature, color):
             apiMediaAreas.append(.mediaAreaWeather(coordinates: inputCoordinates, emoji: emoji, temperatureC: temperature, color: color))
+        case let .starGift(_, slug):
+            apiMediaAreas.append(.mediaAreaStarGift(coordinates: inputCoordinates, slug: slug))
         }
     }
     return apiMediaAreas

@@ -289,9 +289,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 titleString = attributedTitle
                 textString = NSAttributedString(string: text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             case let .setupPhoto(accountPeer):
-                //TODO:localize
-                titleString = NSAttributedString(string: "Add your photo! 📸", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
-                textString = NSAttributedString(string: "Help your friends spot you easily.", font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                titleString = NSAttributedString(string: item.strings.ChatList_AddPhoto_Title, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor)
+                textString = NSAttributedString(string: item.strings.ChatList_AddPhoto_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
                 avatarPeer = accountPeer
             }
             
@@ -383,17 +382,12 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
-                    var hasCloseButton = false
-                    if case .xmasPremiumGift = item.notice {
+                    let hasCloseButton: Bool
+                    switch item.notice {
+                    case .xmasPremiumGift, .setupBirthday, .birthdayPremiumGift, .premiumGrace, .starsSubscriptionLowBalance, .setupPhoto:
                         hasCloseButton = true
-                    } else if case .setupBirthday = item.notice {
-                        hasCloseButton = true
-                    } else if case .birthdayPremiumGift = item.notice {
-                        hasCloseButton = true
-                    } else if case .premiumGrace = item.notice {
-                        hasCloseButton = true
-                    } else if case .starsSubscriptionLowBalance = item.notice {
-                        hasCloseButton = true
+                    default:
+                        hasCloseButton = false
                     }
                                         
                     if let okButtonLayout, let cancelButtonLayout {

@@ -4297,7 +4297,17 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func animateQuizCorrectOptionSelected() {
+    private var previousConfettiAnimationTimestamp: Double?
+    func playConfettiAnimation() {
+        guard self.view.bounds.width > 0.0 else {
+            return
+        }
+        let currentTime = CACurrentMediaTime()
+        if let previousConfettiAnimationTimestamp = self.previousConfettiAnimationTimestamp, abs(currentTime - previousConfettiAnimationTimestamp) < 0.1 {
+            return
+        }
+        self.previousConfettiAnimationTimestamp = currentTime
+        
         self.view.insertSubview(ConfettiView(frame: self.view.bounds), aboveSubview: self.historyNode.view)
     }
     

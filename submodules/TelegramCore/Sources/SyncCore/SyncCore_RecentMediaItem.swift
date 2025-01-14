@@ -284,3 +284,47 @@ public final class RecentReactionItem: Codable, Equatable {
         return lhs.content == rhs.content
     }
 }
+
+public struct RecentStarGiftItemId {
+    public let rawValue: MemoryBuffer
+    public let id: Int64
+    
+    public init(_ rawValue: MemoryBuffer) {
+        self.rawValue = rawValue
+        assert(rawValue.length == 8)
+        var id: Int64 = 0
+        memcpy(&id, rawValue.memory, 8)
+        self.id = id
+    }
+    
+    public init(_ id: Int64) {
+        var id = id
+        self.id = id
+        self.rawValue = MemoryBuffer(memory: malloc(8)!, capacity: 8, length: 8, freeWhenDone: true)
+        memcpy(self.rawValue.memory, &id, 8)
+    }
+}
+
+public final class RecentStarGiftItem: Codable, Equatable {
+    public let starGift: StarGift.UniqueGift
+    
+    public init(_ starGift: StarGift.UniqueGift) {
+        self.starGift = starGift
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.starGift = try container.decode(StarGift.UniqueGift.self, forKey: "g")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.starGift, forKey: "g")
+    }
+    
+    public static func ==(lhs: RecentStarGiftItem, rhs: RecentStarGiftItem) -> Bool {
+        return lhs.starGift == rhs.starGift
+    }
+}

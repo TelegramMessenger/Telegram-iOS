@@ -284,7 +284,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .verified
                                     }
                                     if let verificationIconFileId = peer.verificationIconFileId {
-                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(fileId: verificationIconFileId, expirationDate: nil))
+                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(content: .emoji(fileId: verificationIconFileId), expirationDate: nil))
                                     }
                                 }
                             }
@@ -950,13 +950,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition = .immediate
         }
         
-        let iconSpacing: CGFloat = 2.0
         let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
             var titleInsets: UIEdgeInsets = .zero
             if case .emojiStatus = self.titleVerifiedIcon, verifiedIconWidth > 0.0 {
-                titleInsets.left = verifiedIconWidth + iconSpacing
+                titleInsets.left = verifiedIconWidth
             }
             
             var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - verifiedIconWidth - statusIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), insets: titleInsets, animated: titleTransition.isAnimated)
@@ -998,18 +997,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             
             var nextIconX: CGFloat = titleFrame.width
             
-            var verifiedIconX: CGFloat
-            if case .emojiStatus = self.titleVerifiedIcon {
-                verifiedIconX = 0.0
-            } else {
-                verifiedIconX = nextIconX - titleVerifiedSize.width
-            }
-            
-            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: verifiedIconX, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
-            if case .emojiStatus = self.titleVerifiedIcon {
-            } else {
-                nextIconX -= titleVerifiedSize.width
-            }
+            self.titleVerifiedIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: floor((titleFrame.height - titleVerifiedSize.height) / 2.0)), size: titleVerifiedSize)
             
             self.titleCredibilityIconView.frame = CGRect(origin: CGPoint(x: nextIconX - titleCredibilitySize.width, y: floor((titleFrame.height - titleCredibilitySize.height) / 2.0)), size: titleCredibilitySize)
             nextIconX -= titleCredibilitySize.width

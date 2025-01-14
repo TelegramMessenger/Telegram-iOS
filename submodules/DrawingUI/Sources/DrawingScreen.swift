@@ -3096,6 +3096,8 @@ public final class DrawingToolsInteraction {
                     isAdditional = isAdditionalValue
                 } else if case .message = entity.content {
                     isMessage = true
+                } else if case .gift = entity.content {
+                    isMessage = true
                 }
             } else if entityView.entity is DrawingLinkEntity {
                 isLink = true

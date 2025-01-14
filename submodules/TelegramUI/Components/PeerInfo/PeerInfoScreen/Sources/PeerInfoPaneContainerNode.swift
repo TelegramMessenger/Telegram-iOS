@@ -545,8 +545,8 @@ private final class PeerInfoPendingPane {
             } else {
                 preconditionFailure()
             }
-        case .recommended:
-            paneNode = PeerInfoRecommendedChannelsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction)
+        case .similarChannels, .similarBots:
+            paneNode = PeerInfoRecommendedPeersPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction)
         case .savedMessagesChats:
             paneNode = PeerInfoChatListPaneNode(context: context, navigationController: chatControllerInteraction.navigationController)
         case .savedMessages:
@@ -1201,8 +1201,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_PaneGroups
             case .members:
                 title = presentationData.strings.PeerInfo_PaneMembers
-            case .recommended:
+            case .similarChannels:
                 title = presentationData.strings.PeerInfo_PaneRecommended
+            case .similarBots:
+                title = presentationData.strings.PeerInfo_PaneRecommendedBots
             case .savedMessagesChats:
                 title = presentationData.strings.DialogList_TabTitle
             case .savedMessages:

@@ -6586,7 +6586,13 @@ private final class ChatListLocationContext {
                     if channel.flags.contains(.requestToJoin) {
                         actionTitle = presentationData.strings.Group_ApplyToJoin
                     } else {
-                        actionTitle = presentationData.strings.Channel_JoinChannel
+                        switch channel.info {
+                        case .broadcast:
+                            actionTitle = presentationData.strings.Channel_JoinChannel
+                        case .group:
+                            actionTitle = presentationData.strings.Group_JoinGroup
+                        }
+                        
                     }
                     toolbar = Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true))
                 }

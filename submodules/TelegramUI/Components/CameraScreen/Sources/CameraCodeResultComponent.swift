@@ -189,8 +189,7 @@ final class CameraCodeResultComponent: Component {
                 view.frame = CGRect(origin: CGPoint(x: 54.0, y: 9.0), size: titleSize)
             }
             
-            //TODO:localize
-            let subtitleString = NSMutableAttributedString(string: "Open Chat >", font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
+            let subtitleString = NSMutableAttributedString(string: "\(presentationData.strings.Camera_OpenChat) >", font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
             if let range = subtitleString.string.range(of: ">"), let arrowImage = UIImage(bundleImageName: "Item List/InlineTextRightArrow") {
                 subtitleString.addAttribute(.attachment, value: arrowImage, range: NSRange(range, in: subtitleString.string))
                 subtitleString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: subtitleString.string))

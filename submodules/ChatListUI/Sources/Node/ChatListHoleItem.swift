@@ -191,6 +191,14 @@ class ChatListSearchEmptyFooterItemNode: ListViewItemNode {
         self.contentNode.frame = contentFrame
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if let contentResult = self.contentNode.view.hitTest(self.view.convert(point, to: self.contentNode.view), with: event), contentResult === self.searchAllMessagesButton.view {
+            return contentResult
+        }
+        return result
+    }
+    
     func asyncLayout() -> (_ item: ChatListSearchEmptyFooterItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleNodeLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextNodeLayout = TextNode.asyncLayout(self.textNode)

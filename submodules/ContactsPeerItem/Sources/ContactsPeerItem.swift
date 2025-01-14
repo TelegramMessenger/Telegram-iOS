@@ -794,7 +794,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var verifiedIcon: EmojiStatusComponent.Content?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList || item.aliasHandling == .treatSelfAsSaved) {
+                if let peer = peer, (peer.id != item.context.account.peerId || item.peerMode == .memberList || item.aliasHandling == .standard) {
                     if peer.isScam {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {
@@ -1422,13 +1422,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 )
                                 strongSelf.verifiedIconComponent = verifiedIconComponent
                                                                 
-                                let iconOrigin: CGFloat
-                                if case .animation = verifiedIcon {
-                                    iconOrigin = titleFrame.minX
-                                } else {
-                                    nextIconX += 4.0
-                                    iconOrigin = nextIconX
-                                }
                                 let containerSize = CGSize(width: 16.0, height: 16.0)
                                 
                                 let iconSize = verifiedIconView.update(
@@ -1438,14 +1431,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     containerSize: containerSize
                                 )
                                 
-                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: iconOrigin, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                                transition.updateFrame(view: verifiedIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
                                 
-                                if case .animation = verifiedIcon {
-                                    titleLeftOffset += iconSize.width + 4.0
-                                    nextIconX += iconSize.width
-                                } else {
-                                    nextIconX += iconSize.width
-                                }
+                                titleLeftOffset += iconSize.width + 4.0
+                                nextIconX += iconSize.width + 4.0
                             } else if let verifiedIconView = strongSelf.verifiedIconView {
                                 strongSelf.verifiedIconView = nil
                                 verifiedIconView.removeFromSuperview()

@@ -600,7 +600,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
         }
         
-        let textSize: CGSize
+        var textSize: CGSize
         
         var isTextWithEntities = false
         switch self.text {
@@ -630,6 +630,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
                 environment: {},
                 containerSize: CGSize(width: containerWidth - contentInset * 2.0 - animationSize.width - animationSpacing - buttonInset, height: 1000000.0)
             )
+            if case let .customBlur(_, inset) = self.tooltipStyle, inset < 0.0 {
+                textSize.height -= 3.0
+            }
         } else {
             textSize = self.textView.update(
                 transition: .immediate,

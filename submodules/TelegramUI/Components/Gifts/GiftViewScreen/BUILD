@@ -42,6 +42,8 @@ swift_library(
         "//submodules/ConfettiEffect",
         "//submodules/TooltipUI",
         "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
+        "//submodules/MoreButtonNode",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

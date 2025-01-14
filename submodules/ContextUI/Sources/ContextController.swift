@@ -2490,6 +2490,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     public var immediateItemsTransitionAnimation = false
     let workaroundUseLegacyImplementation: Bool
     let disableScreenshots: Bool
+    let hideReactionPanelTail: Bool
 
     public enum HandledTouchEvent {
         case ignore
@@ -2505,7 +2506,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var getOverlayViews: (() -> [UIView])?
     
-    convenience public init(context: AccountContext? = nil, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false, disableScreenshots: Bool = false) {
+    convenience public init(context: AccountContext? = nil, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false, disableScreenshots: Bool = false, hideReactionPanelTail: Bool = false) {
         self.init(
             context: context,
             presentationData: presentationData,
@@ -2521,7 +2522,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
             recognizer: recognizer,
             gesture: gesture,
             workaroundUseLegacyImplementation: workaroundUseLegacyImplementation,
-            disableScreenshots: disableScreenshots
+            disableScreenshots: disableScreenshots,
+            hideReactionPanelTail: hideReactionPanelTail
         )
     }
     
@@ -2532,7 +2534,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
         recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil,
         gesture: ContextGesture? = nil,
         workaroundUseLegacyImplementation: Bool = false,
-        disableScreenshots: Bool = false
+        disableScreenshots: Bool = false,
+        hideReactionPanelTail: Bool = false
     ) {
         self.context = context
         self.presentationData = presentationData
@@ -2541,6 +2544,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.gesture = gesture
         self.workaroundUseLegacyImplementation = workaroundUseLegacyImplementation
         self.disableScreenshots = disableScreenshots
+        self.hideReactionPanelTail = hideReactionPanelTail
         
         super.init(navigationBarPresentationData: nil)
         

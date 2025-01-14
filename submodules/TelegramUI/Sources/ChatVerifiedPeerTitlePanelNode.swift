@@ -84,7 +84,7 @@ final class ChatVerifiedPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
                 let _ = ApplicationSpecificNotice.setDisplayedPeerVerification(accountManager: self.context.sharedContext.accountManager, peerId: peer.id).start()
             }
 
-            let emojiStatus = PeerEmojiStatus(fileId: verification.iconFileId, expirationDate: nil)
+            let emojiStatus = PeerEmojiStatus(content: .emoji(fileId: verification.iconFileId), expirationDate: nil)
             let emojiStatusTextNode = self.emojiStatusTextNode
 
             let description = verification.description
