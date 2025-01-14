@@ -13682,3 +13682,6 @@ Sorry for the inconvenience.";
 "Gift.View.Context.Share" = "Share";
 "Gift.View.Context.CopyLink" = "Copy Link";
 "Gift.View.Context.Transfer" = "Transfer";
+
+"ChatListFilter.NameEnableAnimations" = "Enable Animations";
+"ChatListFilter.NameDisableAnimations" = "Disable Animations";

@@ -45,7 +45,7 @@ private func FFMpegLookaheadReader_readPacketCallback(userData: UnsafeMutableRaw
             memcpy(buffer, bytes, fetchedData.count)
         }
         let fetchedCount = Int32(fetchedData.count)
-        print("Fetched from \(context.readingOffset) (\(fetchedCount) bytes)")
+        //print("Fetched from \(context.readingOffset) (\(fetchedCount) bytes)")
         context.setReadingOffset(offset: context.readingOffset + Int64(fetchedCount))
         if fetchedCount == 0 {
             return FFMPEG_CONSTANT_AVERROR_EOF

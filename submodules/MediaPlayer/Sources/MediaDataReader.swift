@@ -163,6 +163,10 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
             var passthroughDecoder = true
             var useHardwareAcceleration = false
             
+            if (codecName == "h264" || codecName == "hevc") {
+                passthroughDecoder = false
+                useHardwareAcceleration = true
+            }
             if (codecName == "av1" || codecName == "av01") {
                 passthroughDecoder = false
                 useHardwareAcceleration = internal_isHardwareAv1Supported

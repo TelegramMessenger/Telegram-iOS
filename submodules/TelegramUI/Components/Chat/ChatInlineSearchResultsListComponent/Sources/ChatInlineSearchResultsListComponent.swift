@@ -303,6 +303,18 @@ public final class ChatInlineSearchResultsListComponent: Component {
             }
         }
         
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            guard let result = super.hitTest(point, with: event) else {
+                return nil
+            }
+            if result === self.listNode.view {
+                if self.backgroundColor == nil {
+                    return nil
+                }
+            }
+            return result
+        }
+        
         func update(component: ChatInlineSearchResultsListComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {

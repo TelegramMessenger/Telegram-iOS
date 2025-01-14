@@ -410,7 +410,7 @@ public final class TextFieldComponent: Component {
             }
             
             self.updateInputState { state in
-                if let characterLimit = component.characterLimit, state.inputText.length + text.length > characterLimit {
+                if let characterLimit = component.characterLimit, state.inputText.string.count + text.string.count > characterLimit {
                     return state
                 }
                 return state.insertText(text)
@@ -732,14 +732,21 @@ public final class TextFieldComponent: Component {
             }
             
             if let characterLimit = component.characterLimit {
-                let replacementString = text as NSString
                 let string = self.inputState.inputText.string as NSString
-                let deltaLength = replacementString.length - range.length
-                let resultingLength = string.length + deltaLength
+                let changingRangeString = string.substring(with: range)
+                
+                let deltaLength = text.count - changingRangeString.count
+                let resultingLength = (string as String).count + deltaLength
                 if resultingLength > characterLimit {
-                    let availableLength = characterLimit - string.length
+                    let availableLength = characterLimit - (string as String).count
                     if availableLength > 0 {
-                        var insertString = replacementString.substring(to: availableLength)
+                        var insertString = ""
+                        for i in 0 ..< availableLength {
+                            if text.count <= i {
+                                break
+                            }
+                            insertString.append(text[text.index(text.startIndex, offsetBy: i)])
+                        }
                         
                         switch component.emptyLineHandling {
                         case .allowed:

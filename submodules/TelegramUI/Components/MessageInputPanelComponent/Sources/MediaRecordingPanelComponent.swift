@@ -342,7 +342,7 @@ public final class MediaRecordingPanelComponent: Component {
             }
             
             self.cancelIconView.tintColor = UIColor(white: 1.0, alpha: 0.3)
-            self.vibrancyCancelIconView.tintColor = .white
+            self.vibrancyCancelIconView.tintColor = .black
             
             let cancelTextSize = self.cancelText.update(
                 transition: .immediate,
@@ -352,7 +352,7 @@ public final class MediaRecordingPanelComponent: Component {
             )
             let _ = self.vibrancyCancelText.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: component.strings.Conversation_SlideToCancel, font: Font.regular(15.0), color: .white)),
+                component: AnyComponent(Text(text: component.strings.Conversation_SlideToCancel, font: Font.regular(15.0), color: .black)),
                 environment: {},
                 containerSize: CGSize(width: max(30.0, availableSize.width - 100.0), height: 44.0)
             )
