@@ -1743,7 +1743,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                             strongSelf.onMutedSpeechActivityDetected?(value)
                         }
-                    }, encryptionKey: encryptionKey, isConference: self.isConference, sharedAudioDevice: self.sharedAudioDevice))
+                    }, encryptionKey: encryptionKey, isConference: self.isConference, isStream: self.isStream, sharedAudioDevice: self.sharedAudioDevice))
                 }
 
                 self.genericCallContext = genericCallContext
@@ -3112,7 +3112,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.hasScreencast = true
 
-        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in }, encryptionKey: nil, isConference: self.isConference, sharedAudioDevice: nil)
+        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in }, encryptionKey: nil, isConference: self.isConference, isStream: false, sharedAudioDevice: nil)
         self.screencastCallContext = screencastCallContext
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload

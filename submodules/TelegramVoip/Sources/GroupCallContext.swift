@@ -498,6 +498,7 @@ public final class OngoingGroupCallContext {
             onMutedSpeechActivityDetected: @escaping (Bool) -> Void,
             encryptionKey: Data?,
             isConference: Bool,
+            isStream: Bool,
             sharedAudioDevice: OngoingCallContext.AudioDevice?
         ) {
             self.queue = queue
@@ -508,7 +509,7 @@ public final class OngoingGroupCallContext {
             let tempStatsLogPath = self.tempStatsLogFile.path
             
 #if os(iOS)
-            if sharedAudioDevice == nil {
+            if sharedAudioDevice == nil && !isStream {
                 self.audioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
             } else {
                 self.audioDevice = sharedAudioDevice
@@ -1128,10 +1129,10 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?, isConference: Bool, sharedAudioDevice: OngoingCallContext.AudioDevice?) {
+    public init(inputDeviceId: String = "", outputDeviceId: String = "", audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, enableSystemMute: Bool, preferX264: Bool, logPath: String, onMutedSpeechActivityDetected: @escaping (Bool) -> Void, encryptionKey: Data?, isConference: Bool, isStream: Bool, sharedAudioDevice: OngoingCallContext.AudioDevice?) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey, isConference: isConference, sharedAudioDevice: sharedAudioDevice)
+            return Impl(queue: queue, inputDeviceId: inputDeviceId, outputDeviceId: outputDeviceId, audioSessionActive: audioSessionActive, video: video, requestMediaChannelDescriptions: requestMediaChannelDescriptions, rejoinNeeded: rejoinNeeded, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: videoContentType, enableNoiseSuppression: enableNoiseSuppression, disableAudioInput: disableAudioInput, enableSystemMute: enableSystemMute, preferX264: preferX264, logPath: logPath, onMutedSpeechActivityDetected: onMutedSpeechActivityDetected, encryptionKey: encryptionKey, isConference: isConference, isStream: isStream, sharedAudioDevice: sharedAudioDevice)
         })
     }
     
