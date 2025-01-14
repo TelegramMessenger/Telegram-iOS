@@ -1251,7 +1251,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let starsRevenueContextAndState = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> mapToSignal { peer -> Signal<(StarsRevenueStatsContext?, StarsRevenueStats?), NoError> in
                 var canViewStarsRevenue = false
-                if let peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) || context.sharedContext.applicationBindings.appBuildType == .internal {
+                if let peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) || context.sharedContext.applicationBindings.appBuildType == .internal || context.sharedContext.immediateExperimentalUISettings.devRequests {
                     canViewStarsRevenue = true
                 }
                 #if DEBUG
@@ -1276,7 +1276,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             )
             |> mapToSignal { peer, canViewRevenue -> Signal<(RevenueStatsContext?, RevenueStats?), NoError> in
                 var canViewRevenue = canViewRevenue
-                if let peer, case let .user(user) = peer, let _ = user.botInfo, context.sharedContext.applicationBindings.appBuildType == .internal {
+                if let peer, case let .user(user) = peer, let _ = user.botInfo, context.sharedContext.applicationBindings.appBuildType == .internal || context.sharedContext.immediateExperimentalUISettings.devRequests {
                     canViewRevenue = true
                 }
                 #if DEBUG

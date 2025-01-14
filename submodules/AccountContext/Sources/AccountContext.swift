@@ -805,7 +805,8 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func getPrivacySettings() -> Promise<AccountPrivacySettings?>?
     func openSettings()
     func openBirthdaySetup()
-    func openPhotoSetup()
+    func openPhotoSetup(completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?)
+    func openAvatars()
 }
 
 public protocol QuickReplySetupScreenInitialData: AnyObject {

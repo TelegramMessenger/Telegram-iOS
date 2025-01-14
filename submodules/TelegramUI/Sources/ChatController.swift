@@ -1221,7 +1221,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         controller.imageCompletion = { [weak self] image, commit in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfilePhoto(image, mode: .accept)
+                                                    settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }
@@ -1258,7 +1258,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }, imageCompletion: { [weak self] image in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfilePhoto(image, mode: .accept)
+                                                    settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
                                                 }
                                             }
                                         }, videoCompletion: { [weak self] image, url, adjustments in

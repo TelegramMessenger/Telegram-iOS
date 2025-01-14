@@ -1738,8 +1738,25 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else if let _ = item.content as? PlatformVideoContent {
                 disablePlayerControls = true
                 forceEnablePiP = true
-            } else if let _ = item.content as? HLSVideoContent {
+            } else if let content = item.content as? HLSVideoContent {
                 isAdaptive = true
+                
+                if let qualitySet = HLSQualitySet(baseFile: content.fileReference, codecConfiguration: HLSCodecConfiguration(isHardwareAv1Supported: false, isSoftwareAv1Supported: true)), let (quality, playlistFile) = qualitySet.playlistFiles.sorted(by: { $0.key < $1.key }).first, let dataFile = qualitySet.qualityFiles[quality] {
+                    var alternativeQualities: [(playlist: FileMediaReference, dataFile: FileMediaReference)] = []
+                    for (otherQuality, otherPlaylistFile) in qualitySet.playlistFiles {
+                        if otherQuality != quality, let otherDataFile = qualitySet.qualityFiles[otherQuality] {
+                            alternativeQualities.append((otherPlaylistFile, dataFile: otherDataFile))
+                        }
+                    }
+                    self.videoFramePreview = MediaPlayerFramePreviewHLS(
+                        postbox: item.context.account.postbox,
+                        userLocation: content.userLocation,
+                        userContentType: .video,
+                        playlistFile: playlistFile,
+                        mainDataFile: dataFile,
+                        alternativeQualities: alternativeQualities
+                    )
+                }
             }
             
             let _ = isAdaptive

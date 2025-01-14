@@ -8,39 +8,6 @@ import TelegramVoip
 import AVFoundation
 import LibYuvBinding
 
-private func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {
-    var maybeFormat: CMVideoFormatDescription?
-    let status = CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &maybeFormat)
-    if status != noErr {
-        return nil
-    }
-    guard let format = maybeFormat else {
-        return nil
-    }
-
-    var timingInfo = CMSampleTimingInfo(
-        duration: CMTimeMake(value: 1, timescale: 30),
-        presentationTimeStamp: CMTimeMake(value: 0, timescale: 30),
-        decodeTimeStamp: CMTimeMake(value: 0, timescale: 30)
-    )
-
-    var maybeSampleBuffer: CMSampleBuffer?
-    let bufferStatus = CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: format, sampleTiming: &timingInfo, sampleBufferOut: &maybeSampleBuffer)
-
-    if (bufferStatus != noErr) {
-        return nil
-    }
-    guard let sampleBuffer = maybeSampleBuffer else {
-        return nil
-    }
-
-    let attachments: NSArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: true)! as NSArray
-    let dict: NSMutableDictionary = attachments[0] as! NSMutableDictionary
-    dict[kCMSampleAttachmentKey_DisplayImmediately as NSString] = true as NSNumber
-
-    return sampleBuffer
-}
-
 private func copyI420BufferToNV12Buffer(buffer: OngoingGroupCallContext.VideoFrameData.I420Buffer, pixelBuffer: CVPixelBuffer) -> Bool {
     guard CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange else {
         return false

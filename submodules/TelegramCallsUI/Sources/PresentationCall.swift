@@ -918,8 +918,12 @@ public final class PresentationCallImpl: PresentationCall {
                 self.audioSessionShouldBeActive.set(false)
                 if wasActive {
                     let debugLogValue = Promise<String?>()
-                    self.ongoingContext?.stop(debugLogValue: debugLogValue)
-                    let _ = self.conferenceCall?.leave(terminateIfPossible: false).start()
+                    if let conferenceCall = self.conferenceCall {
+                        debugLogValue.set(conferenceCall.debugLog.get())
+                        let _ = conferenceCall.leave(terminateIfPossible: false).start()
+                    } else {
+                        self.ongoingContext?.stop(debugLogValue: debugLogValue)
+                    }
                 }
         }
         var terminating = false
@@ -1198,8 +1202,12 @@ public final class PresentationCallImpl: PresentationCall {
     public func hangUp() -> Signal<Bool, NoError> {
         let debugLogValue = Promise<String?>()
         self.callSessionManager.drop(internalId: self.internalId, reason: .hangUp, debugLog: debugLogValue.get())
-        self.ongoingContext?.stop(debugLogValue: debugLogValue)
-        let _ = self.conferenceCall?.leave(terminateIfPossible: false).start()
+        if let conferenceCall = self.conferenceCall {
+            debugLogValue.set(conferenceCall.debugLog.get())
+            let _ = conferenceCall.leave(terminateIfPossible: false).start()
+        } else {
+            self.ongoingContext?.stop(debugLogValue: debugLogValue)
+        }
         
         return self.hungUpPromise.get()
     }
@@ -1207,8 +1215,12 @@ public final class PresentationCallImpl: PresentationCall {
     public func rejectBusy() {
         self.callSessionManager.drop(internalId: self.internalId, reason: .busy, debugLog: .single(nil))
         let debugLog = Promise<String?>()
-        self.ongoingContext?.stop(debugLogValue: debugLog)
-        let _ = self.conferenceCall?.leave(terminateIfPossible: false).start()
+        if let conferenceCall = self.conferenceCall {
+            debugLog.set(conferenceCall.debugLog.get())
+            let _ = conferenceCall.leave(terminateIfPossible: false).start()
+        } else {
+            self.ongoingContext?.stop(debugLogValue: debugLog)
+        }
     }
     
     public func toggleIsMuted() {
@@ -1262,7 +1274,11 @@ public final class PresentationCallImpl: PresentationCall {
             guard let screencastCapturer = screencastCapturer else {
                 return
             }
-            screencastCapturer.injectPixelBuffer(screencastFrame.0, rotation: screencastFrame.1)
+            guard let sampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: screencastFrame.0) else {
+                return
+            }
+            
+            screencastCapturer.injectSampleBuffer(sampleBuffer, rotation: screencastFrame.1, completion: {})
         }))
         self.screencastAudioDataDisposable.set((screencastBufferServerContext.audioData
         |> deliverOnMainQueue).start(next: { [weak self] data in
@@ -1466,4 +1482,37 @@ public final class PresentationCallImpl: PresentationCall {
         self.useFrontCamera = !self.useFrontCamera
         self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
     }
+}
+
+func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {
+    var maybeFormat: CMVideoFormatDescription?
+    let status = CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &maybeFormat)
+    if status != noErr {
+        return nil
+    }
+    guard let format = maybeFormat else {
+        return nil
+    }
+
+    var timingInfo = CMSampleTimingInfo(
+        duration: CMTimeMake(value: 1, timescale: 30),
+        presentationTimeStamp: CMTimeMake(value: 0, timescale: 30),
+        decodeTimeStamp: CMTimeMake(value: 0, timescale: 30)
+    )
+
+    var maybeSampleBuffer: CMSampleBuffer?
+    let bufferStatus = CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: format, sampleTiming: &timingInfo, sampleBufferOut: &maybeSampleBuffer)
+
+    if (bufferStatus != noErr) {
+        return nil
+    }
+    guard let sampleBuffer = maybeSampleBuffer else {
+        return nil
+    }
+
+    let attachments: NSArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: true)! as NSArray
+    let dict: NSMutableDictionary = attachments[0] as! NSMutableDictionary
+    dict[kCMSampleAttachmentKey_DisplayImmediately as NSString] = true as NSNumber
+
+    return sampleBuffer
 }

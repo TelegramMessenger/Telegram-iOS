@@ -1994,6 +1994,11 @@ public final class ChatListNode: ListView {
                 starsSubscriptionsContextPromise.get()
             )
             |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, data, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in
+                #if DEBUG
+                var suggestions = suggestions
+                suggestions.insert(.setupPhoto, at: 0)
+                #endif
+                
                 let (accountPeer, birthday) = data
                 
                 if let newSessionReview = newSessionReviews.first {

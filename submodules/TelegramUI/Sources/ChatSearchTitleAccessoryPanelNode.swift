@@ -497,7 +497,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
         
         var isFirstUpdate = true
         self.itemsDisposable = (combineLatest(
-            context.engine.stickers.availableReactions(),
+            context.availableReactions,
             context.engine.stickers.savedMessageTagData(),
             tagsAndFiles
         )

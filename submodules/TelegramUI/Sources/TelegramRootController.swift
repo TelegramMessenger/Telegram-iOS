@@ -750,8 +750,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController?.openBirthdaySetup()
     }
     
-    public func openPhotoSetup() {
-        self.accountSettingsController?.openAvatarSetup()
+    public func openPhotoSetup(completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?) {
+        self.accountSettingsController?.openAvatarSetup(completedWithUploadingImage: completedWithUploadingImage)
+    }
+    
+    public func openAvatars() {
+        self.accountSettingsController?.openAvatars()
     }
 }
 
