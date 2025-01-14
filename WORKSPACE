@@ -45,6 +45,12 @@ http_file(
     sha256 = "89a287444b5b3e98f88a945afa50ce937b8ffd1dcc59c555ad9b1baf855298c9",
 )
 
+http_file(
+    name = "flatbuffers_zip",
+    urls = ["https://github.com/google/flatbuffers/archive/refs/tags/v24.12.23.zip"],
+    sha256 = "c5cd6a605ff20350c7faa19d8eeb599df6117ea4aabd16ac58a7eb5ba82df4e7",
+)
+
 http_archive(
     name = "appcenter_sdk",
     urls = ["https://github.com/microsoft/appcenter-sdk-apple/releases/download/4.1.1/AppCenter-SDK-Apple-4.1.1.zip"],
