@@ -19,164 +19,197 @@ import LegacyComponents
 import LegacyMediaPickerUI
 
 extension PeerInfoScreenImpl {
-//    func newopenAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
-//        guard let data = self.controllerNode.data, let peer = data.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: data.threadData) else {
-//            return
-//        }
-//        self.view.endEditing(true)
-//        
-//        let peerId = self.peerId
-//        var isForum = false
-//        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
-//            isForum = true
-//        }
-//        
-//        var currentIsVideo = false
-//        var emojiMarkup: TelegramMediaImage.EmojiMarkup?
-//        let item = self.controllerNode.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
-//        if let item = item, case let .image(_, _, videoRepresentations, _, _, emojiMarkupValue) = item {
-//            currentIsVideo = !videoRepresentations.isEmpty
-//            emojiMarkup = emojiMarkupValue
-//        }
-//        
-//        let _ = isForum
-//        let _ = currentIsVideo
-//        
-//        let _ = (self.context.engine.data.get(
-//            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-//        )
-//        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-//            guard let self, let peer else {
-//                return
-//            }
-//            
-//            let keyboardInputData = Promise<AvatarKeyboardInputData>()
-//            keyboardInputData.set(AvatarEditorScreen.inputData(context: self.context, isGroup: peer.id.namespace != Namespaces.Peer.CloudUser))
-//            
-//            var hasPhotos = false
-//            if !peer.profileImageRepresentations.isEmpty {
-//                hasPhotos = true
-//            }
-//
-//            var hasDeleteButton = false
-//            if case .generic = mode {
-//                hasDeleteButton = hasPhotos && !fromGallery
-//            } else if case .custom = mode {
-//                hasDeleteButton = peer.profileImageRepresentations.first?.isPersonal == true
-//            } else if case .fallback = mode {
-//                if let cachedData = data.cachedData as? CachedUserData, case let .known(photo) = cachedData.fallbackPhoto {
-//                    hasDeleteButton = photo != nil
-//                }
-//            }
-//            
-//            let _ = hasDeleteButton
-//            
-//            let parentController = (self.context.sharedContext.mainWindow?.viewController as? NavigationController)?.topViewController as? ViewController
-//            
-//            var dismissImpl: (() -> Void)?
-//            let mainController = self.context.sharedContext.makeAvatarMediaPickerScreen(context: self.context, getSourceRect: { return nil }, canDelete: hasDeleteButton, performDelete: { [weak self] in
-//                self?.openAvatarRemoval(mode: mode, peer: peer, item: item)
-//            }, completion: { result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
-//                let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
-//                if let asset = result as? PHAsset {
-//                    subject = .single(.asset(asset))
-//                } else if let image = result as? UIImage {
-//                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
-//                } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
-//                    subject = result
-//                    |> map { value -> MediaEditorScreenImpl.Subject? in
-//                        switch value {
-//                        case .pendingImage:
-//                            return nil
-//                        case let .image(image):
-//                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
-//                        case let .video(video):
-//                            return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: [], additionalVideoPosition: .topLeft)
-//                        default:
-//                            return nil
-//                        }
-//                    }
-//                } else {
-//                    let peerType: AvatarEditorScreen.PeerType
-//                    if mode == .suggest {
-//                        peerType = .suggest
-//                    } else if case .legacyGroup = peer {
-//                        peerType = .group
-//                    } else if case let .channel(channel) = peer {
-//                        if case .group = channel.info {
-//                            peerType = channel.flags.contains(.isForum) ? .forum : .group
-//                        } else {
-//                            peerType = .channel
-//                        }
-//                    } else {
-//                        peerType = .user
-//                    }
-//                    let controller = AvatarEditorScreen(context: self.context, inputData: keyboardInputData.get(), peerType: peerType, markup: emojiMarkup)
-//                    //controller.imageCompletion = imageCompletion
-//                    //controller.videoCompletion = videoCompletion
-//                    parentController?.push(controller)
-//                    //isFromEditor = true
-//                    return
-//                }
-//                
-//                let editorController = MediaEditorScreenImpl(
-//                    context: self.context,
-//                    mode: .avatarEditor,
-//                    subject: subject,
-//                    transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
-//                        MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
-//                            sourceView: $0,
-//                            sourceRect: transitionRect,
-//                            sourceImage: transitionImage
-//                        )
-//                    ) }),
-//                    transitionOut: { finished, isNew in
-//                        if !finished, let transitionView {
-//                            return MediaEditorScreenImpl.TransitionOut(
-//                                destinationView: transitionView,
-//                                destinationRect: transitionView.bounds,
-//                                destinationCornerRadius: 0.0
-//                            )
-//                        }
-//                        return nil
-//                    }, completion: { [weak self] result, commit in
-//                        dismissImpl?()
-//                       
-//                        switch result.media {
-//                        case let .image(image, _):
-//                            self?.updateProfilePhoto(image, mode: mode)
-//                            commit({})
-//                        case let .video(video, coverImage, values, _, _):
-//                            if let coverImage {
-//                                self?.updateProfileVideo(coverImage, asset: video, adjustments: values, mode: mode)
-//                            }
-//                            commit({})
-//                        default:
-//                            break
-//                        }
-//                    } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
-//                )
-//                editorController.cancelled = { _ in
-//                    cancelled()
-//                }
-//                self.push(editorController)
-//            }, dismissed: {
-//                
-//            })
-//            dismissImpl = { [weak mainController] in
-//                if let mainController, let navigationController = mainController.navigationController {
-//                    var viewControllers = navigationController.viewControllers
-//                    viewControllers = viewControllers.filter { c in
-//                        return !(c is CameraScreen) && c !== mainController
-//                    }
-//                    navigationController.setViewControllers(viewControllers, animated: false)
-//                }
-//            }
-//            mainController.navigationPresentation = .flatModal
-//            mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-//            self.push(mainController)
-//        })
-//    }
+    func newopenAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }, completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView? = { _, _ in nil }) {
+        guard let data = self.controllerNode.data, let peer = data.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: data.threadData) else {
+            return
+        }
+        self.view.endEditing(true)
+        
+        let peerId = self.peerId
+        var isForum = false
+        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+            isForum = true
+        }
+        
+        var currentIsVideo = false
+        var emojiMarkup: TelegramMediaImage.EmojiMarkup?
+        let item = self.controllerNode.headerNode.avatarListNode.listContainerNode.currentItemNode?.item
+        if let item = item, case let .image(_, _, videoRepresentations, _, _, emojiMarkupValue) = item {
+            currentIsVideo = !videoRepresentations.isEmpty
+            emojiMarkup = emojiMarkupValue
+        }
+        
+        let _ = isForum
+        let _ = currentIsVideo
+        
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            
+            let keyboardInputData = Promise<AvatarKeyboardInputData>()
+            keyboardInputData.set(AvatarEditorScreen.inputData(context: self.context, isGroup: peer.id.namespace != Namespaces.Peer.CloudUser))
+            
+            var hasPhotos = false
+            if !peer.profileImageRepresentations.isEmpty {
+                hasPhotos = true
+            }
+
+            var hasDeleteButton = false
+            if case .generic = mode {
+                hasDeleteButton = hasPhotos && !fromGallery
+            } else if case .custom = mode {
+                hasDeleteButton = peer.profileImageRepresentations.first?.isPersonal == true
+            } else if case .fallback = mode {
+                if let cachedData = data.cachedData as? CachedUserData, case let .known(photo) = cachedData.fallbackPhoto {
+                    hasDeleteButton = photo != nil
+                }
+            }
+            
+            let _ = hasDeleteButton
+            
+            let parentController = (self.context.sharedContext.mainWindow?.viewController as? NavigationController)?.topViewController as? ViewController
+            
+            var dismissImpl: (() -> Void)?
+            let mainController = self.context.sharedContext.makeAvatarMediaPickerScreen(context: self.context, getSourceRect: { return nil }, canDelete: hasDeleteButton, performDelete: { [weak self] in
+                self?.openAvatarRemoval(mode: mode, peer: peer, item: item)
+            }, completion: { result, transitionView, transitionRect, transitionImage, fromCamera, transitionOut, cancelled in
+                let subject: Signal<MediaEditorScreenImpl.Subject?, NoError>
+                if let asset = result as? PHAsset {
+                    subject = .single(.asset(asset))
+                } else if let image = result as? UIImage {
+                    subject = .single(.image(image: image, dimensions: PixelDimensions(image.size), additionalImage: nil, additionalImagePosition: .bottomRight))
+                } else if let result = result as? Signal<CameraScreenImpl.Result, NoError> {
+                    subject = result
+                    |> map { value -> MediaEditorScreenImpl.Subject? in
+                        switch value {
+                        case .pendingImage:
+                            return nil
+                        case let .image(image):
+                            return .image(image: image.image, dimensions: PixelDimensions(image.image.size), additionalImage: nil, additionalImagePosition: .topLeft)
+                        case let .video(video):
+                            return .video(videoPath: video.videoPath, thumbnail: video.coverImage, mirror: video.mirror, additionalVideoPath: nil, additionalThumbnail: nil, dimensions: video.dimensions, duration: video.duration, videoPositionChanges: [], additionalVideoPosition: .topLeft)
+                        default:
+                            return nil
+                        }
+                    }
+                } else {
+                    let peerType: AvatarEditorScreen.PeerType
+                    if mode == .suggest {
+                        peerType = .suggest
+                    } else if case .legacyGroup = peer {
+                        peerType = .group
+                    } else if case let .channel(channel) = peer {
+                        if case .group = channel.info {
+                            peerType = channel.flags.contains(.isForum) ? .forum : .group
+                        } else {
+                            peerType = .channel
+                        }
+                    } else {
+                        peerType = .user
+                    }
+                    let controller = AvatarEditorScreen(context: self.context, inputData: keyboardInputData.get(), peerType: peerType, markup: emojiMarkup)
+                    //controller.imageCompletion = imageCompletion
+                    //controller.videoCompletion = videoCompletion
+                    parentController?.push(controller)
+                    //isFromEditor = true
+                    return
+                }
+                
+                var resultImage: UIImage?
+                let uploadStatusPromise = Promise<PeerInfoAvatarUploadStatus>(.progress(0.0))
+                let editorController = MediaEditorScreenImpl(
+                    context: self.context,
+                    mode: .avatarEditor,
+                    subject: subject,
+                    transitionIn: fromCamera ? .camera : transitionView.flatMap({ .gallery(
+                        MediaEditorScreenImpl.TransitionIn.GalleryTransitionIn(
+                            sourceView: $0,
+                            sourceRect: transitionRect,
+                            sourceImage: transitionImage
+                        )
+                    ) }),
+                    transitionOut: { finished, isNew in
+                        if !finished {
+                            if let transitionView {
+                                return MediaEditorScreenImpl.TransitionOut(
+                                    destinationView: transitionView,
+                                    destinationRect: transitionView.bounds,
+                                    destinationCornerRadius: 0.0
+                                )
+                            }
+                        } else if let resultImage, let transitionOutView = completedWithUploadingImage(resultImage, uploadStatusPromise.get()) {
+                            transitionOutView.isHidden = true
+                            return MediaEditorScreenImpl.TransitionOut(
+                                destinationView: transitionOutView,
+                                destinationRect: transitionOutView.bounds,
+                                destinationCornerRadius: transitionOutView.bounds.height * 0.5,
+                                completion: { [weak transitionOutView] in
+                                    transitionOutView?.isHidden = false
+                                }
+                            )
+                        }
+                        return nil
+                    }, completion: { [weak self] result, commit in
+                        switch result.media {
+                        case let .image(image, _):
+                            resultImage = image
+                            self?.updateProfilePhoto(image, mode: mode, uploadStatus: uploadStatusPromise)
+                            commit({})
+                        case let .video(video, coverImage, values, _, _):
+                            if let coverImage {
+                                let _ = values
+                                //TODO:release
+                                resultImage = coverImage
+                                self?.updateProfileVideo(coverImage, asset: video, adjustments: nil, mode: mode)
+                            }
+                            commit({})
+                        default:
+                            break
+                        }
+                        
+                        dismissImpl?()
+                    } as (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
+                )
+                editorController.cancelled = { _ in
+                    cancelled()
+                }
+                if self.navigationController != nil {
+                    self.push(editorController)
+                } else {
+                    self.parentController?.pushViewController(editorController)
+                }
+            }, dismissed: {
+                
+            })
+            dismissImpl = { [weak self, weak mainController] in
+                if let mainController, let navigationController = mainController.navigationController {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { c in
+                        return !(c is CameraScreen) && c !== mainController
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }
+                if let self, let navigationController = self.parentController, let mainController {
+                    var viewControllers = navigationController.viewControllers
+                    viewControllers = viewControllers.filter { c in
+                        return !(c is CameraScreen) && c !== mainController
+                    }
+                    navigationController.setViewControllers(viewControllers, animated: false)
+                }
+            }
+            mainController.navigationPresentation = .flatModal
+            mainController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+            if self.navigationController != nil {
+                self.push(mainController)
+            } else {
+                self.parentController?.pushViewController(mainController)
+            }
+        })
+    }
     
     func openAvatarRemoval(mode: PeerInfoAvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil, completion: @escaping () -> Void = {}) {
         let proceed = { [weak self] in
@@ -251,8 +284,9 @@ extension PeerInfoScreenImpl {
         (self.navigationController?.topViewController as? ViewController)?.present(actionSheet, in: .window(.root))
     }
     
-    public func updateProfilePhoto(_ image: UIImage, mode: PeerInfoAvatarEditingMode) {
+    public func updateProfilePhoto(_ image: UIImage, mode: PeerInfoAvatarEditingMode, uploadStatus: Promise<PeerInfoAvatarUploadStatus>?) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
+            uploadStatus?.set(.single(.done))
             return
         }
 
@@ -328,8 +362,10 @@ extension PeerInfoScreenImpl {
             }
             switch result {
             case .complete:
+                uploadStatus?.set(.single(.done))
                 strongSelf.controllerNode.state = strongSelf.controllerNode.state.withUpdatingAvatar(nil).withAvatarUploadProgress(nil)
             case let .progress(value):
+                uploadStatus?.set(.single(.progress(value)))
                 strongSelf.controllerNode.state = strongSelf.controllerNode.state.withAvatarUploadProgress(.value(CGFloat(value)))
             }
             if let (layout, navigationHeight) = strongSelf.controllerNode.validLayout {

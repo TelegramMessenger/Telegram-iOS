@@ -64,6 +64,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var autoBenchmarkReflectors: Bool?
     public var conferenceCalls: Bool
     public var playerV2: Bool
+    public var devRequests: Bool
+    public var fakeAds: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -105,7 +107,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
             enableLocalTranslation: false,
             autoBenchmarkReflectors: nil,
             conferenceCalls: false,
-            playerV2: false
+            playerV2: false,
+            devRequests: false,
+            fakeAds: false
         )
     }
     
@@ -148,7 +152,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         enableLocalTranslation: Bool,
         autoBenchmarkReflectors: Bool?,
         conferenceCalls: Bool,
-        playerV2: Bool
+        playerV2: Bool,
+        devRequests: Bool,
+        fakeAds: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -189,6 +195,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.autoBenchmarkReflectors = autoBenchmarkReflectors
         self.conferenceCalls = conferenceCalls
         self.playerV2 = playerV2
+        self.devRequests = devRequests
+        self.fakeAds = fakeAds
     }
     
     public init(from decoder: Decoder) throws {
@@ -233,6 +241,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.autoBenchmarkReflectors = try container.decodeIfPresent(Bool.self, forKey: "autoBenchmarkReflectors")
         self.conferenceCalls = try container.decodeIfPresent(Bool.self, forKey: "conferenceCalls") ?? false
         self.playerV2 = try container.decodeIfPresent(Bool.self, forKey: "playerV2") ?? false
+        self.devRequests = try container.decodeIfPresent(Bool.self, forKey: "devRequests") ?? false
+        self.fakeAds = try container.decodeIfPresent(Bool.self, forKey: "fakeAds") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -277,6 +287,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.autoBenchmarkReflectors, forKey: "autoBenchmarkReflectors")
         try container.encodeIfPresent(self.conferenceCalls, forKey: "conferenceCalls")
         try container.encodeIfPresent(self.playerV2, forKey: "playerV2")
+        try container.encodeIfPresent(self.devRequests, forKey: "devRequests")
+        try container.encodeIfPresent(self.fakeAds, forKey: "fakeAds")
     }
 }
 

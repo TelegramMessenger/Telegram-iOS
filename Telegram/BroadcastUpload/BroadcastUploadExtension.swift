@@ -6,26 +6,60 @@ import SwiftSignalKit
 import BuildConfig
 import BroadcastUploadHelpers
 import AudioToolbox
+import Postbox
+import CoreMedia
+import AVFoundation
 
 private func rootPathForBasePath(_ appGroupPath: String) -> String {
     return appGroupPath + "/telegram-data"
 }
 
-@available(iOS 10.0, *)
-@objc(BroadcastUploadSampleHandler) class BroadcastUploadSampleHandler: RPBroadcastSampleHandler {
+private protocol BroadcastUploadImpl: AnyObject {
+    func initialize(rootPath: String)
+    func processVideoSampleBuffer(sampleBuffer: CMSampleBuffer)
+    func processAudioSampleBuffer(data: Data)
+}
+
+private final class InProcessBroadcastUploadImpl: BroadcastUploadImpl {
+    private weak var extensionContext: RPBroadcastSampleHandler?
     private var screencastBufferClientContext: IpcGroupCallBufferBroadcastContext?
     private var statusDisposable: Disposable?
-    private var audioConverter: CustomAudioConverter?
-
+    
+    init(extensionContext: RPBroadcastSampleHandler) {
+        self.extensionContext = extensionContext
+    }
+    
     deinit {
         self.statusDisposable?.dispose()
     }
+    
+    func initialize(rootPath: String) {
+        let screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: rootPath + "/broadcast-coordination")
+        self.screencastBufferClientContext = screencastBufferClientContext
 
-    public override func beginRequest(with context: NSExtensionContext) {
-        super.beginRequest(with: context)
+        var wasRunning = false
+        self.statusDisposable = (screencastBufferClientContext.status
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            switch status {
+            case .active:
+                wasRunning = true
+            case let .finished(reason):
+                if wasRunning {
+                    self.finish(with: .screencastEnded)
+                } else {
+                    self.finish(with: reason)
+                }
+            }
+        })
     }
-
+    
     private func finish(with reason: IpcGroupCallBufferBroadcastContext.Status.FinishReason) {
+        guard let extensionContext = self.extensionContext else {
+            return
+        }
         var errorString: String?
         switch reason {
             case .callEnded:
@@ -39,16 +73,247 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
             let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
                 NSLocalizedDescriptionKey: errorString
             ])
-            finishBroadcastWithError(error)
+            extensionContext.finishBroadcastWithError(error)
         } else {
-            finishBroadcastGracefully(self)
+            finishBroadcastGracefully(extensionContext)
         }
     }
+    
+    func processVideoSampleBuffer(sampleBuffer: CMSampleBuffer) {
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
+        }
+        var orientation = CGImagePropertyOrientation.up
+        if #available(iOS 11.0, *) {
+            if let orientationAttachment = CMGetAttachment(sampleBuffer, key: RPVideoSampleOrientationKey as CFString, attachmentModeOut: nil) as? NSNumber {
+                orientation = CGImagePropertyOrientation(rawValue: orientationAttachment.uint32Value) ?? .up
+            }
+        }
+        if let data = serializePixelBuffer(buffer: pixelBuffer) {
+            self.screencastBufferClientContext?.setCurrentFrame(data: data, orientation: orientation)
+        }
+    }
+    
+    func processAudioSampleBuffer(data: Data) {
+        self.screencastBufferClientContext?.writeAudioData(data: data)
+    }
+}
 
+private final class EmbeddedBroadcastUploadImpl: BroadcastUploadImpl {
+    private weak var extensionContext: RPBroadcastSampleHandler?
+    
+    private var clientContext: IpcGroupCallEmbeddedBroadcastContext?
+    private var statusDisposable: Disposable?
+    
+    private var callContextId: UInt32?
+    private var callContextDidSetJoinResponse: Bool = false
+    private var callContext: OngoingGroupCallContext?
+    private let screencastCapturer: OngoingCallVideoCapturer
+    
+    private var joinPayloadDisposable: Disposable?
+    
+    private var sampleBuffers: [CMSampleBuffer] = []
+    private var lastAcceptedTimestamp: Double?
+    
+    init(extensionContext: RPBroadcastSampleHandler) {
+        self.extensionContext = extensionContext
+        
+        self.screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
+    }
+    
+    deinit {
+        self.joinPayloadDisposable?.dispose()
+    }
+    
+    func initialize(rootPath: String) {
+        let clientContext = IpcGroupCallEmbeddedBroadcastContext(basePath: rootPath + "/embedded-broadcast-coordination")
+        self.clientContext = clientContext
+        
+        var wasRunning = false
+        self.statusDisposable = (clientContext.status
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let self else {
+                return
+            }
+            switch status {
+            case let .active(id, joinResponse):
+                wasRunning = true
+                
+                if self.callContextId != id {
+                    if let callContext = self.callContext {
+                        self.callContext = nil
+                        self.callContextId = nil
+                        self.callContextDidSetJoinResponse = false
+                        self.joinPayloadDisposable?.dispose()
+                        self.joinPayloadDisposable = nil
+                        callContext.stop(account: nil, reportCallId: nil, debugLog: Promise())
+                    }
+                }
+                
+                if let id {
+                    if self.callContext == nil {
+                        self.callContextId = id
+                        let callContext = OngoingGroupCallContext(
+                            audioSessionActive: .single(true),
+                            video: self.screencastCapturer,
+                            requestMediaChannelDescriptions: { _, _ in EmptyDisposable },
+                            rejoinNeeded: { },
+                            outgoingAudioBitrateKbit: nil,
+                            videoContentType: .screencast,
+                            enableNoiseSuppression: false,
+                            disableAudioInput: true,
+                            enableSystemMute: false,
+                            preferX264: false,
+                            logPath: "",
+                            onMutedSpeechActivityDetected: { _ in },
+                            encryptionKey: nil,
+                            isConference: false,
+                            sharedAudioDevice: nil
+                        )
+                        self.callContext = callContext
+                        self.joinPayloadDisposable = (callContext.joinPayload
+                        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
+                            guard let self else {
+                                return
+                            }
+                            if self.callContextId != id {
+                                return
+                            }
+                            self.clientContext?.joinPayload = IpcGroupCallEmbeddedAppContext.JoinPayload(
+                                id: id,
+                                data: joinPayload.0,
+                                ssrc: joinPayload.1
+                            )
+                        })
+                    }
+                    
+                    if let callContext = self.callContext {
+                        if let joinResponse, !self.callContextDidSetJoinResponse {
+                            self.callContextDidSetJoinResponse = true
+                            callContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
+                            callContext.setJoinResponse(payload: joinResponse.data)
+                        }
+                    }
+                }
+            case let .finished(reason):
+                if wasRunning {
+                    self.finish(with: .screencastEnded)
+                } else {
+                    self.finish(with: reason)
+                }
+            }
+        })
+    }
+    
+    private func finish(with reason: IpcGroupCallEmbeddedBroadcastContext.Status.FinishReason) {
+        guard let extensionContext = self.extensionContext else {
+            return
+        }
+        var errorString: String?
+        switch reason {
+            case .callEnded:
+                errorString = "You're not in a voice chat"
+            case .error:
+                errorString = "Finished"
+            case .screencastEnded:
+                break
+        }
+        if let errorString = errorString {
+            let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: errorString
+            ])
+            extensionContext.finishBroadcastWithError(error)
+        } else {
+            finishBroadcastGracefully(extensionContext)
+        }
+    }
+    
+    func processVideoSampleBuffer(sampleBuffer: CMSampleBuffer) {
+        let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer).seconds
+        if let lastAcceptedTimestamp = self.lastAcceptedTimestamp {
+            if lastAcceptedTimestamp + 1.0 / 30.0 > timestamp {
+                return
+            }
+        }
+        self.lastAcceptedTimestamp = timestamp
+        
+        guard let sourceImageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
+            return
+        }
+        let sourcePixelBuffer: CVPixelBuffer = sourceImageBuffer as CVPixelBuffer
+        
+        let width = CVPixelBufferGetWidth(sourcePixelBuffer)
+        let height = CVPixelBufferGetHeight(sourcePixelBuffer)
+        let sourceBytesPerRow = CVPixelBufferGetBytesPerRow(sourcePixelBuffer)
+        
+        var outputPixelBuffer: CVPixelBuffer?
+        let pixelFormat = CVPixelBufferGetPixelFormatType(sourcePixelBuffer)
+        CVPixelBufferCreate(nil, width, height, pixelFormat, nil, &outputPixelBuffer)
+        guard let outputPixelBuffer else {
+            return
+        }
+        CVPixelBufferLockBaseAddress(sourcePixelBuffer, [])
+        CVPixelBufferLockBaseAddress(outputPixelBuffer, [])
+        
+        let outputBytesPerRow = CVPixelBufferGetBytesPerRow(outputPixelBuffer)
+        
+        let sourceBaseAddress = CVPixelBufferGetBaseAddress(sourcePixelBuffer)
+        let outputBaseAddress = CVPixelBufferGetBaseAddress(outputPixelBuffer)
+        
+        if outputBytesPerRow == sourceBytesPerRow {
+            memcpy(outputBaseAddress!, sourceBaseAddress!, height * outputBytesPerRow)
+        } else {
+            for y in 0 ..< height {
+                memcpy(outputBaseAddress!.advanced(by: y * outputBytesPerRow), sourceBaseAddress!.advanced(by: y * sourceBytesPerRow), min(sourceBytesPerRow, outputBytesPerRow))
+            }
+        }
+        
+        defer {
+            CVPixelBufferUnlockBaseAddress(sourcePixelBuffer, [])
+            CVPixelBufferUnlockBaseAddress(outputPixelBuffer, [])
+        }
+        
+        var orientation = CGImagePropertyOrientation.up
+        if #available(iOS 11.0, *) {
+            if let orientationAttachment = CMGetAttachment(sampleBuffer, key: RPVideoSampleOrientationKey as CFString, attachmentModeOut: nil) as? NSNumber {
+                orientation = CGImagePropertyOrientation(rawValue: orientationAttachment.uint32Value) ?? .up
+            }
+        }
+        
+        if let outputSampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: outputPixelBuffer) {
+            let semaphore = DispatchSemaphore(value: 0)
+            self.screencastCapturer.injectSampleBuffer(outputSampleBuffer, rotation: orientation, completion: {
+                //semaphore.signal()
+            })
+            let _ = semaphore.wait(timeout: DispatchTime.now() + 1.0 / 30.0)
+        }
+    }
+    
+    func processAudioSampleBuffer(data: Data) {
+        self.callContext?.addExternalAudioData(data: data)
+    }
+}
+
+@available(iOS 10.0, *)
+@objc(BroadcastUploadSampleHandler) class BroadcastUploadSampleHandler: RPBroadcastSampleHandler {
+    private var impl: BroadcastUploadImpl?
+    private var audioConverter: CustomAudioConverter?
+
+    public override func beginRequest(with context: NSExtensionContext) {
+        super.beginRequest(with: context)
+    }
+    
+    private func finishWithError() {
+        let errorString = "Finished"
+        let error = NSError(domain: "BroadcastUploadExtension", code: 1, userInfo: [
+            NSLocalizedDescriptionKey: errorString
+        ])
+        self.finishBroadcastWithError(error)
+    }
 
     override public func broadcastStarted(withSetupInfo setupInfo: [String : NSObject]?) {
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
-            self.finish(with: .error)
+            self.finishWithError()
             return
         }
 
@@ -58,35 +323,32 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
 
         guard let appGroupUrl = maybeAppGroupUrl else {
-            self.finish(with: .error)
+            self.finishWithError()
             return
         }
 
         let rootPath = rootPathForBasePath(appGroupUrl.path)
+        
+        TempBox.initializeShared(basePath: rootPath, processType: "share", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
 
         let logsPath = rootPath + "/logs/broadcast-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
-        let screencastBufferClientContext = IpcGroupCallBufferBroadcastContext(basePath: rootPath + "/broadcast-coordination")
-        self.screencastBufferClientContext = screencastBufferClientContext
-
-        var wasRunning = false
-        self.statusDisposable = (screencastBufferClientContext.status
-        |> deliverOnMainQueue).start(next: { [weak self] status in
-            guard let strongSelf = self else {
-                return
-            }
-            switch status {
-            case .active:
-                wasRunning = true
-            case let .finished(reason):
-                if wasRunning {
-                    strongSelf.finish(with: .screencastEnded)
-                } else {
-                    strongSelf.finish(with: reason)
-                }
-            }
-        })
+        let embeddedBroadcastImplementationTypePath = rootPath + "/broadcast-coordination-type"
+        
+        var useIPCContext = false
+        if let typeData = try? Data(contentsOf: URL(fileURLWithPath: embeddedBroadcastImplementationTypePath)), let type = String(data: typeData, encoding: .utf8) {
+            useIPCContext = type == "ipc"
+        }
+        
+        let impl: BroadcastUploadImpl
+        if useIPCContext {
+            impl = EmbeddedBroadcastUploadImpl(extensionContext: self)
+        } else {
+            impl = InProcessBroadcastUploadImpl(extensionContext: self)
+        }
+        self.impl = impl
+        impl.initialize(rootPath: rootPath)
     }
 
     override public func broadcastPaused() {
@@ -112,18 +374,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
     }
 
     private func processVideoSampleBuffer(sampleBuffer: CMSampleBuffer) {
-        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
-            return
-        }
-        var orientation = CGImagePropertyOrientation.up
-        if #available(iOS 11.0, *) {
-            if let orientationAttachment = CMGetAttachment(sampleBuffer, key: RPVideoSampleOrientationKey as CFString, attachmentModeOut: nil) as? NSNumber {
-                orientation = CGImagePropertyOrientation(rawValue: orientationAttachment.uint32Value) ?? .up
-            }
-        }
-        if let data = serializePixelBuffer(buffer: pixelBuffer) {
-            self.screencastBufferClientContext?.setCurrentFrame(data: data, orientation: orientation)
-        }
+        self.impl?.processVideoSampleBuffer(sampleBuffer: sampleBuffer)
     }
 
     private func processAudioSampleBuffer(sampleBuffer: CMSampleBuffer) {
@@ -133,9 +384,6 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         guard let asbd = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
             return
         }
-        /*guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else {
-            return
-        }*/
 
         let format = CustomAudioConverter.Format(
             numChannels: Int(asbd.pointee.mChannelsPerFrame),
@@ -146,7 +394,7 @@ private func rootPathForBasePath(_ appGroupPath: String) -> String {
         }
         if let audioConverter = self.audioConverter {
             if let data = audioConverter.convert(sampleBuffer: sampleBuffer), !data.isEmpty {
-                self.screencastBufferClientContext?.writeAudioData(data: data)
+                self.impl?.processAudioSampleBuffer(data: data)
             }
         }
     }
@@ -286,4 +534,37 @@ private func converterComplexInputDataProc(inAudioConverter: AudioConverterRef, 
     instance.currentBufferOffset += numPacketsToRead * currentInputDescription.pointee.mBytesPerPacket
 
     return 0
+}
+
+private func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {
+    var maybeFormat: CMVideoFormatDescription?
+    let status = CMVideoFormatDescriptionCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescriptionOut: &maybeFormat)
+    if status != noErr {
+        return nil
+    }
+    guard let format = maybeFormat else {
+        return nil
+    }
+
+    var timingInfo = CMSampleTimingInfo(
+        duration: CMTimeMake(value: 1, timescale: 30),
+        presentationTimeStamp: CMTimeMake(value: 0, timescale: 30),
+        decodeTimeStamp: CMTimeMake(value: 0, timescale: 30)
+    )
+
+    var maybeSampleBuffer: CMSampleBuffer?
+    let bufferStatus = CMSampleBufferCreateReadyWithImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, formatDescription: format, sampleTiming: &timingInfo, sampleBufferOut: &maybeSampleBuffer)
+
+    if (bufferStatus != noErr) {
+        return nil
+    }
+    guard let sampleBuffer = maybeSampleBuffer else {
+        return nil
+    }
+
+    let attachments: NSArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: true)! as NSArray
+    let dict: NSMutableDictionary = attachments[0] as! NSMutableDictionary
+    dict[kCMSampleAttachmentKey_DisplayImmediately as NSString] = true as NSNumber
+
+    return sampleBuffer
 }

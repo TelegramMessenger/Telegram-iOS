@@ -3947,38 +3947,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             
-            let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
-            let galleryController = AvatarGalleryController(context: strongSelf.context, peer: EnginePeer(peer), sourceCorners: .round, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
-            })
-            galleryController.openAvatarSetup = { [weak self] completion in
-                self?.controller?.openAvatarForEditing(fromGallery: true, completion: { _ in
-                    completion()
-                })
-            }
-            galleryController.avatarPhotoEditCompletion = { [weak self] image in
-                self?.controller?.updateProfilePhoto(image, mode: .generic)
-            }
-            galleryController.avatarVideoEditCompletion = { [weak self] image, asset, adjustments in
-                self?.controller?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: .generic)
-            }
-            galleryController.removedEntry = { [weak self] entry in
-                if let item = PeerInfoAvatarListItem(entry: entry) {
-                    let _ = self?.headerNode.avatarListNode.listContainerNode.deleteItem(item)
-                }
-            }
-            strongSelf.hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).startStrict(next: { entry in
-                self?.headerNode.updateAvatarIsHidden(entry: entry)
-            }))
-            strongSelf.view.endEditing(true)
-            strongSelf.controller?.present(galleryController, in: .window(.root), with: AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                if let transitionNode = self?.headerNode.avatarTransitionArguments(entry: entry) {
-                    return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { view in
-                        self?.headerNode.addToAvatarTransitionSurface(view: view)
-                    })
-                } else {
-                    return nil
-                }
-            }))
+            strongSelf.openAvatarGallery(peer: EnginePeer(peer), entries: entries, centralEntry: centralEntry, animateTransition: true)
             
             Queue.mainQueue().after(0.4) {
                 strongSelf.resetHeaderExpansion()
@@ -9766,7 +9735,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
                     completion(image)
-                    self?.controller?.updateProfilePhoto(image, mode: mode)
+                    self?.controller?.updateProfilePhoto(image, mode: mode, uploadStatus: nil)
                 }
             }
             mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
@@ -12260,6 +12229,47 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     func cancelItemSelection() {
         self.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
     }
+    
+    func openAvatarGallery(peer: EnginePeer, entries: [AvatarGalleryEntry], centralEntry: AvatarGalleryEntry?, animateTransition: Bool) {
+        let entriesPromise = Promise<[AvatarGalleryEntry]>(entries)
+        let galleryController = AvatarGalleryController(context: self.context, peer: peer, sourceCorners: .round, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
+        })
+        galleryController.openAvatarSetup = { [weak self] completion in
+            self?.controller?.openAvatarForEditing(fromGallery: true, completion: { _ in
+                completion()
+            })
+        }
+        galleryController.avatarPhotoEditCompletion = { [weak self] image in
+            self?.controller?.updateProfilePhoto(image, mode: .generic, uploadStatus: nil)
+        }
+        galleryController.avatarVideoEditCompletion = { [weak self] image, asset, adjustments in
+            self?.controller?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: .generic)
+        }
+        galleryController.removedEntry = { [weak self] entry in
+            if let item = PeerInfoAvatarListItem(entry: entry) {
+                let _ = self?.headerNode.avatarListNode.listContainerNode.deleteItem(item)
+            }
+        }
+        self.hiddenAvatarRepresentationDisposable.set((galleryController.hiddenMedia |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
+            self?.headerNode.updateAvatarIsHidden(entry: entry)
+        }))
+        self.view.endEditing(true)
+        let arguments = AvatarGalleryControllerPresentationArguments(transitionArguments: { [weak self] _ in
+            if animateTransition, let entry = centralEntry, let transitionNode = self?.headerNode.avatarTransitionArguments(entry: entry) {
+                return GalleryTransitionArguments(transitionNode: transitionNode, addToTransitionSurface: { view in
+                    self?.headerNode.addToAvatarTransitionSurface(view: view)
+                })
+            } else {
+                return nil
+            }
+        })
+        if self.controller?.navigationController != nil {
+            self.controller?.present(galleryController, in: .window(.root), with: arguments)
+        } else {
+            galleryController.presentationArguments = arguments
+            self.context.sharedContext.mainWindow?.present(galleryController, on: .root)
+        }
+    }
 }
 
 public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortcutResponder {
@@ -12760,9 +12770,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
-    public func openAvatarSetup() {
+    public func openAvatarSetup(completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?) {
         let proceed = { [weak self] in
-            self?.openAvatarForEditing()
+            self?.newopenAvatarForEditing(completedWithUploadingImage: completedWithUploadingImage)
         }
         if !self.isNodeLoaded {
             self.loadDisplayNode()
@@ -12772,6 +12782,18 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         } else {
             proceed()
         }
+    }
+    
+    public func openAvatars() {
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)
+        )
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+            guard let self, let peer else {
+                return
+            }
+            self.controllerNode.openAvatarGallery(peer: peer, entries: self.controllerNode.headerNode.avatarListNode.listContainerNode.galleryEntries, centralEntry: nil, animateTransition: false)
+        })
     }
     
     func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {

@@ -209,10 +209,10 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 - (void)setOnFatalError:(dispatch_block_t _Nullable)onError;
 - (void)setOnPause:(void (^ _Nullable)(bool))onPause;
-- (void)setOnIsActiveUpdated:(void (^_Nonnull)(bool))onIsActiveUpdated;
+- (void)setOnIsActiveUpdated:(void (^ _Nonnull)(bool))onIsActiveUpdated;
 
 #if TARGET_OS_IOS
-- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation;
+- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation completion:(void (^_Nonnull)())completion;
 #endif
 
 - (GroupCallDisposable * _Nonnull)addVideoOutput:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;

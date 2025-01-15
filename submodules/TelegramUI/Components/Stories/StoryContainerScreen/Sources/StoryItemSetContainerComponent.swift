@@ -1908,6 +1908,10 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
+        func inFocusUpdated(isInFocus: Bool) {
+            self.updateIsProgressPaused()
+        }
+        
         func activateInput() -> Bool {
             guard let component = self.component else {
                 return false
@@ -5205,6 +5209,7 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 navigationController.setViewControllers(viewControllers, animated: true)
             }
+            self.updateIsProgressPaused()
         }
         
         func navigateToPeer(peer: EnginePeer, chat: Bool, subject: ChatControllerSubject? = nil) {

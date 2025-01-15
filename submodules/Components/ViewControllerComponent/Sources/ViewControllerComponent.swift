@@ -218,6 +218,16 @@ open class ViewControllerComponentContainer: ViewController {
             }
             self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: transition)
         }
+        
+        override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let result = super.hitTest(point, with: event) {
+                if result === self.view {
+                    return nil
+                }
+                return result
+            }
+            return nil
+        }
     }
     
     public var node: Node {

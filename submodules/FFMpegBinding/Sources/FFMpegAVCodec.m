@@ -36,6 +36,40 @@
                 return [[FFMpegAVCodec alloc] initWithImpl:codec];
             }
         }
+    } else if (preferHardwareAccelerationCapable && codecId == AV_CODEC_ID_H264) {
+        void *codecIterationState = nil;
+        while (true) {
+            AVCodec const *codec = av_codec_iterate(&codecIterationState);
+            if (!codec) {
+                break;
+            }
+            if (!av_codec_is_decoder(codec)) {
+                continue;
+            }
+            if (codec->id != codecId) {
+                continue;
+            }
+            if (strncmp(codec->name, "h264", 2) == 0) {
+                return [[FFMpegAVCodec alloc] initWithImpl:codec];
+            }
+        }
+    } else if (preferHardwareAccelerationCapable && codecId == AV_CODEC_ID_HEVC) {
+        void *codecIterationState = nil;
+        while (true) {
+            AVCodec const *codec = av_codec_iterate(&codecIterationState);
+            if (!codec) {
+                break;
+            }
+            if (!av_codec_is_decoder(codec)) {
+                continue;
+            }
+            if (codec->id != codecId) {
+                continue;
+            }
+            if (strncmp(codec->name, "hevc", 2) == 0) {
+                return [[FFMpegAVCodec alloc] initWithImpl:codec];
+            }
+        }
     }
     
     AVCodec const *codec = avcodec_find_decoder(codecId);

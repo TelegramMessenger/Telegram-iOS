@@ -51,9 +51,14 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
             button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
             transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: canBeExpanded ? -8.0 : 0.0, y: 0.0))
         }
+        
+        var accumulatedRightButtonOffset: CGFloat = canBeExpanded ? 16.0 : 0.0
         for (_, button) in self.rightButtonNodes {
             button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
-            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: canBeExpanded ? 16.0 : 0.0, y: 0.0))
+            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: accumulatedRightButtonOffset, y: 0.0))
+            if self.backgroundContentColor.alpha != 0.0 {
+                accumulatedRightButtonOffset -= 6.0
+            }
         }
     }
     
@@ -171,8 +176,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
         if self.currentRightButtons != rightButtons || presentationData.strings !== self.presentationData?.strings {
             self.currentRightButtons = rightButtons
             
-            var nextRegularButtonOrigin = size.width - sideInset
-            var nextExpandedButtonOrigin = size.width - sideInset
+            var nextRegularButtonOrigin = size.width - sideInset - 8.0
+            var nextExpandedButtonOrigin = size.width - sideInset - 8.0
             for spec in rightButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
@@ -248,8 +253,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
             }
         } else {
-            var nextRegularButtonOrigin = size.width - sideInset
-            var nextExpandedButtonOrigin = size.width - sideInset
+            var nextRegularButtonOrigin = size.width - sideInset - 8.0
+            var nextExpandedButtonOrigin = size.width - sideInset - 8.0
                         
             for spec in rightButtons.reversed() {
                 var key = spec.key

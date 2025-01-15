@@ -201,6 +201,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var baseRate: Double = 1.0
     private var isSoundEnabled: Bool
     private var isMuted: Bool
+    private var isAmbientMode: Bool
     
     private var seekId: Int = 0
     private var seekTimestamp: Double = 0.0
@@ -251,6 +252,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         
         self.isSoundEnabled = enableSound
         self.isMuted = soundMuted
+        self.isAmbientMode = ambient
         self.baseRate = baseRate
         
         self.renderSynchronizer = AVSampleBufferRenderSynchronizer()
@@ -317,7 +319,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         if self.isSoundEnabled && self.hasSound {
             if self.audioSessionDisposable == nil {
                 self.audioSessionDisposable = self.audioSessionManager.push(params: ManagedAudioSessionClientParams(
-                    audioSessionType: .play(mixWithOthers: false),
+                    audioSessionType: self.isAmbientMode ? .ambient : .play(mixWithOthers: false),
                     activateImmediately: false,
                     manualActivate: { [weak self] control in
                         control.setupAndActivate(synchronous: false, { state in
@@ -775,6 +777,22 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     }
 
     public func continueWithOverridingAmbientMode(isAmbient: Bool) {
+        if self.isAmbientMode != isAmbient {
+            self.isAmbientMode = isAmbient
+            
+            self.hasAudioSession = false
+            self.updateInternalState()
+            self.audioSessionDisposable?.dispose()
+            self.audioSessionDisposable = nil
+            
+            let currentTimestamp: CMTime
+            if let pendingSeekTimestamp = self.pendingSeekTimestamp {
+                currentTimestamp = CMTimeMakeWithSeconds(pendingSeekTimestamp, preferredTimescale: 44000)
+            } else {
+                currentTimestamp = self.renderSynchronizer.currentTime()
+            }
+            self.seek(timestamp: currentTimestamp.seconds, play: nil)
+        }
     }
 
     public func continuePlayingWithoutSound(seek: MediaPlayerSeek) {
@@ -877,6 +895,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         self.loadedPartsMediaData.with { [weak self] loadedPartsMediaData in
             loadedPartsMediaData.parts.removeAll()
             loadedPartsMediaData.seekFromMinTimestamp = timestamp
+            loadedPartsMediaData.directMediaData = nil
+            loadedPartsMediaData.directReaderId = nil
             
             Queue.mainQueue().async {
                 guard let self else {
@@ -1050,6 +1070,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             continue outer
                         }
                     }
+                    /*if isVideo {
+                        print("Enqueue video \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value)")
+                    }*/
                     /*if !isVideo {
                         print("Enqueue audio \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value) next: \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value + 1024)")
                     }*/

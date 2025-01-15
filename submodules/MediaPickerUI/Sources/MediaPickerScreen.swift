@@ -651,6 +651,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 self.gridNode.scrollView.addSubview(cameraView)
                 self.gridNode.addSubnode(self.cameraActivateAreaNode)
             } else if useModernCamera, !Camera.isIpad {
+                #if !targetEnvironment(simulator)
                 var cameraPosition: Camera.Position = .back
                 if case .assets(nil, .createAvatar) = controller.subject {
                     cameraPosition = .front
@@ -703,6 +704,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 } else {
                     setupCamera()
                 }
+                #endif
             } else {
                 self.containerNode.clipsToBounds = true
             }

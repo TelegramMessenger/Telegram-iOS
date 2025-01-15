@@ -785,7 +785,87 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             if peerId.namespace == Namespaces.Peer.CloudUser {
                 adMessages = .single((nil, []))
             } else {
-                adMessages = adMessagesContext.state
+                if context.sharedContext.immediateExperimentalUISettings.fakeAds {
+                    adMessages = context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> map { peer -> (interPostInterval: Int32?, messages: [Message]) in
+                        let fakeAdMessages: [Message] = (0 ..< 10).map { i -> Message in
+                            var attributes: [MessageAttribute] = []
+                            
+                            let mappedMessageType: AdMessageAttribute.MessageType = .sponsored
+                            attributes.append(AdMessageAttribute(opaqueId: "fake_ad_\(i)".data(using: .utf8)!, messageType: mappedMessageType, url: "t.me/telegram", buttonText: "VIEW", sponsorInfo: nil, additionalInfo: nil, canReport: false, hasContentMedia: false))
+                            
+                            var messagePeers = SimpleDictionary<PeerId, Peer>()
+                            
+                            if let peer {
+                                messagePeers[peer.id] = peer._asPeer()
+                            }
+                            
+                            let author: Peer = TelegramChannel(
+                                id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1)),
+                                accessHash: nil,
+                                title: "Fake Ad",
+                                username: nil,
+                                photo: [],
+                                creationDate: 0,
+                                version: 0,
+                                participationStatus: .left,
+                                info: .broadcast(TelegramChannelBroadcastInfo(flags: [])),
+                                flags: [],
+                                restrictionInfo: nil,
+                                adminRights: nil,
+                                bannedRights: nil,
+                                defaultBannedRights: nil,
+                                usernames: [],
+                                storiesHidden: nil,
+                                nameColor: .blue,
+                                backgroundEmojiId: nil,
+                                profileColor: nil,
+                                profileBackgroundEmojiId: nil,
+                                emojiStatus: nil,
+                                approximateBoostLevel: nil,
+                                subscriptionUntilDate: nil,
+                                verificationIconFileId: nil
+                            )
+                            messagePeers[author.id] = author
+                            
+                            let messageText = "Fake Ad N\(i)"
+                            let messageHash = (messageText.hashValue &+ 31 &* peerId.hashValue) &* 31 &+ author.id.hashValue
+                            let messageStableVersion = UInt32(bitPattern: Int32(truncatingIfNeeded: messageHash))
+                            
+                            return Message(
+                                stableId: 0,
+                                stableVersion: messageStableVersion,
+                                id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
+                                globallyUniqueId: nil,
+                                groupingKey: nil,
+                                groupInfo: nil,
+                                threadId: nil,
+                                timestamp: Int32.max - 1,
+                                flags: [.Incoming],
+                                tags: [],
+                                globalTags: [],
+                                localTags: [],
+                                customTags: [],
+                                forwardInfo: nil,
+                                author: author,
+                                text: messageText,
+                                attributes: attributes,
+                                media: [],
+                                peers: messagePeers,
+                                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                                associatedMessageIds: [],
+                                associatedMedia: [:],
+                                associatedThreadInfo: nil,
+                                associatedStories: [:]
+                            )
+                        }
+                        return (10, fakeAdMessages)
+                    }
+                } else {
+                    adMessages = adMessagesContext.state
+                }
             }
         } else {
             self.adMessagesContext = nil
@@ -2444,6 +2524,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             var insertionTimestamp: Int32?
             if self.currentPrefetchDirectionIsToLater {
                 outer: for i in selectedRange.0 ... selectedRange.1 {
+                    if historyView.originalView.laterId == nil && i >= historyView.filteredEntries.count - 4 {
+                        break
+                    }
+                    
                     switch historyView.filteredEntries[i] {
                     case let .MessageEntry(message, _, _, _, _, _):
                         if message.id.namespace == Namespaces.Message.Cloud {

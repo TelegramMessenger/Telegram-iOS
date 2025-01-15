@@ -667,8 +667,11 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 }
 
 #if TARGET_OS_IOS
-- (void)submitPixelBuffer:(CVPixelBufferRef _Nonnull)pixelBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation {
-    if (!pixelBuffer) {
+- (void)submitSampleBuffer:(CMSampleBufferRef _Nonnull)sampleBuffer rotation:(OngoingCallVideoOrientationWebrtc)rotation completion:(void (^_Nonnull)())completion {
+    if (!sampleBuffer) {
+        if (completion) {
+            completion();
+        }
         return;
     }
     
@@ -688,19 +691,30 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
         break;
     }
 
-    if (_isProcessingCustomSampleBuffer.value) {
+    /*if (_isProcessingCustomSampleBuffer.value) {
+        if (completion) {
+            completion();
+        }
         return;
-    }
+    }*/
     _isProcessingCustomSampleBuffer.value = true;
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
+    void (^capturedCompletion)() = [completion copy];
+    
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, sampleBuffer = CFRetain(sampleBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer, capturedCompletion]() {
         auto capture = GetVideoCaptureAssumingSameThread(interface.get());
         auto source = capture->source();
         if (source) {
-            [CustomExternalCapturer passPixelBuffer:(CVPixelBufferRef)pixelBuffer rotation:videoRotation toSource:source croppingBuffer:*croppingBuffer];
+            CVImageBufferRef pixelBuffer = CMSampleBufferGetImageBuffer((CMSampleBufferRef)sampleBuffer);
+            
+            [CustomExternalCapturer passPixelBuffer:pixelBuffer sampleBufferReference:(CMSampleBufferRef)sampleBuffer rotation:videoRotation toSource:source croppingBuffer:*croppingBuffer];
         }
-        CFRelease(pixelBuffer);
+        CFRelease(sampleBuffer);
         isProcessingCustomSampleBuffer.value = false;
+        
+        if (capturedCompletion) {
+            capturedCompletion();
+        }
     });
 }
 

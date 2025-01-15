@@ -78,7 +78,7 @@ public final class ForwardInfoPanelComponent: Component {
             self.blurBackgroundView.clipsToBounds = true
             
             self.backgroundView = UIImageView()
-            self.backgroundView.image = generateStretchableFilledCircleImage(radius: 4.0, color: UIColor(white: 1.0, alpha: 0.4))
+            self.backgroundView.image = generateStretchableFilledCircleImage(radius: 4.0, color: UIColor(white: 0.0, alpha: 0.4))
             
             self.blockView = MessageInlineBlockBackgroundView()
             
