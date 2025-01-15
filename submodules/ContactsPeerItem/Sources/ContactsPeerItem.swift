@@ -1508,7 +1508,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     transition: .immediate,
                                     component: AnyComponent(credibilityIconComponent),
                                     environment: {},
-                                    containerSize: CGSize(width: 20.0, height: 20.0)
+                                    containerSize: CGSize(width: 16.0, height: 16.0)
                                 )
                                 
                                 nextIconX += 4.0

@@ -307,7 +307,9 @@ public final class GiftCompositionComponent: Component {
                         backgroundView.isUserInteractionEnabled = false
                         self.insertSubview(backgroundView, at: 0)
                         
-                        backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        if previousComponent != nil {
+                            backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
                     }
                     backgroundTransition.setFrame(view: backgroundView, frame: CGRect(origin: .zero, size: availableSize))
                 }

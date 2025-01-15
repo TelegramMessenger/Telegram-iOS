@@ -668,59 +668,78 @@ func managedStarGiftsUpdates(postbox: Postbox, network: Network) -> Signal<Never
     return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
 }
 
-func _internal_convertStarGift(account: Account, messageId: EngineMessage.Id) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.payments.convertStarGift(msgId: messageId.id))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-        return .single(nil)
+func _internal_convertStarGift(account: Account, reference: StarGiftReference) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction in
+        return reference.apiStarGiftReference(transaction: transaction)
     }
-    |> mapToSignal { result in
-        if let result, case .boolTrue = result {
-            return account.postbox.transaction { transaction -> Void in
-                transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
-                    if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
-                        var updatedData = cachedData
-                        updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
-                        return updatedData
-                    } else {
-                        return cachedData
-                    }
-                })
-            }
+    |> mapToSignal { starGift in
+        guard let starGift else {
+            return .complete()
         }
-        return .complete()
+        return account.network.request(Api.functions.payments.convertStarGift(stargift: starGift))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result in
+            if let result, case .boolTrue = result {
+                return account.postbox.transaction { transaction -> Void in
+                    transaction.updatePeerCachedData(peerIds: Set([account.peerId]), update: { _, cachedData -> CachedPeerData? in
+                        if let cachedData = cachedData as? CachedUserData, let starGiftsCount = cachedData.starGiftsCount {
+                            var updatedData = cachedData
+                            updatedData = updatedData.withUpdatedStarGiftsCount(max(0, starGiftsCount - 1))
+                            return updatedData
+                        } else {
+                            return cachedData
+                        }
+                    })
+                }
+            }
+            return .complete()
+        }
+        |> ignoreValues
     }
-    |> ignoreValues
 }
 
-func _internal_updateStarGiftAddedToProfile(account: Account, messageId: EngineMessage.Id, added: Bool) -> Signal<Never, NoError> {
+func _internal_updateStarGiftAddedToProfile(account: Account, reference: StarGiftReference, added: Bool) -> Signal<Never, NoError> {
     var flags: Int32 = 0
     if !added {
         flags |= (1 << 0)
     }
-    return account.network.request(Api.functions.payments.saveStarGift(flags: flags, msgId: messageId.id))
-    |> map(Optional.init)
-    |> `catch` { _ -> Signal<Api.Bool?, NoError> in
-        return .single(nil)
+    return account.postbox.transaction { transaction in
+        return reference.apiStarGiftReference(transaction: transaction)
     }
-    |> ignoreValues
+    |> mapToSignal { starGift in
+        guard let starGift else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.saveStarGift(flags: flags, stargift: starGift))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> ignoreValues
+    }
 }
 
 public enum TransferStarGiftError {
     case generic
 }
 
-func _internal_transferStarGift(account: Account, prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
-    return account.postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser)
+func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+    return account.postbox.transaction { transaction -> (Api.InputUser, Api.InputSavedStarGift)? in
+        guard let inputUser = transaction.getPeer(peerId).flatMap(apiInputUser), let starGift = reference.apiStarGiftReference(transaction: transaction) else {
+            return nil
+        }
+        return (inputUser, starGift)
     }
     |> castError(TransferStarGiftError.self)
-    |> mapToSignal { inputUser -> Signal<Never, TransferStarGiftError> in
-        guard let inputUser else {
+    |> mapToSignal { inputUserAndStarGift -> Signal<Never, TransferStarGiftError> in
+        guard let (inputUser, starGift) = inputUserAndStarGift else {
             return .complete()
         }
         if prepaid {
-            return account.network.request(Api.functions.payments.transferStarGift(msgId: messageId.id, toId: inputUser))
+            return account.network.request(Api.functions.payments.transferStarGift(stargift: starGift, toId: inputUser))
             |> mapError { _ -> TransferStarGiftError in
                 return .generic
             }
@@ -730,7 +749,7 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, messageId: Engi
             }
             |> ignoreValues
         } else {
-            let source: BotPaymentInvoiceSource = .starGiftTransfer(messageId: messageId, toPeerId: peerId)
+            let source: BotPaymentInvoiceSource = .starGiftTransfer(reference: reference, toPeerId: peerId)
             return _internal_fetchBotPaymentForm(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, source: source, themeParams: nil)
             |> map(Optional.init)
             |> `catch` { error -> Signal<BotPaymentForm?, TransferStarGiftError> in
@@ -747,7 +766,7 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, messageId: Engi
                     }
                     |> ignoreValues
                 } else {
-                    return _internal_transferStarGift(account: account, prepaid: true, messageId: messageId, peerId: peerId)
+                    return _internal_transferStarGift(account: account, prepaid: true, reference: reference, peerId: peerId)
                 }
             }
         }
@@ -758,9 +777,9 @@ public enum UpgradeStarGiftError {
     case generic
 }
 
-func _internal_upgradeStarGift(account: Account, formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
     if let formId {
-        let source: BotPaymentInvoiceSource = .starGiftUpgrade(keepOriginalInfo: keepOriginalInfo, messageId: messageId)
+        let source: BotPaymentInvoiceSource = .starGiftUpgrade(keepOriginalInfo: keepOriginalInfo, reference: reference)
         return _internal_sendStarsPaymentForm(account: account, formId: formId, source: source)
         |> mapError { _ -> UpgradeStarGiftError in
             return .generic
@@ -777,41 +796,51 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, messageId: Engi
         if keepOriginalInfo {
             flags |= (1 << 0)
         }
-        return account.network.request(Api.functions.payments.upgradeStarGift(flags: flags, msgId: messageId.id))
-        |> mapError { _ -> UpgradeStarGiftError in
-            return .generic
+        return account.postbox.transaction { transaction in
+            return reference.apiStarGiftReference(transaction: transaction)
         }
-        |> mapToSignal { updates in
-            account.stateManager.addUpdates(updates)
-            for update in updates.allUpdates {
-                switch update {
-                case let .updateNewMessage(message, _, _):
-                    if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
-                        for media in message.media {
-                            if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
-                                return .single(ProfileGiftsContext.State.StarGift(
-                                    gift: gift,
-                                    fromPeer: nil,
-                                    date: message.timestamp,
-                                    text: nil,
-                                    entities: nil,
-                                    messageId: messageId,
-                                    nameHidden: false,
-                                    savedToProfile: savedToProfile,
-                                    convertStars: nil,
-                                    canUpgrade: false,
-                                    canExportDate: canExportDate,
-                                    upgradeStars: nil,
-                                    transferStars: transferStars
-                                ))
+        |> castError(UpgradeStarGiftError.self)
+        |> mapToSignal { starGift in
+            guard let starGift else {
+                return .fail(.generic)
+            }
+            return account.network.request(Api.functions.payments.upgradeStarGift(flags: flags, stargift: starGift))
+            |> mapError { _ -> UpgradeStarGiftError in
+                return .generic
+            }
+            |> mapToSignal { updates in
+                account.stateManager.addUpdates(updates)
+                for update in updates.allUpdates {
+                    switch update {
+                    case let .updateNewMessage(message, _, _):
+                        if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
+                            for media in message.media {
+                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
+                                    let _ = messageId
+                                    return .single(ProfileGiftsContext.State.StarGift(
+                                        gift: gift,
+                                        reference: reference,
+                                        fromPeer: nil,
+                                        date: message.timestamp,
+                                        text: nil,
+                                        entities: nil,
+                                        nameHidden: false,
+                                        savedToProfile: savedToProfile,
+                                        convertStars: nil,
+                                        canUpgrade: false,
+                                        canExportDate: canExportDate,
+                                        upgradeStars: nil,
+                                        transferStars: transferStars
+                                    ))
+                                }
                             }
                         }
+                    default:
+                        break
                     }
-                default:
-                    break
                 }
+                return .fail(.generic)
             }
-            return .fail(.generic)
         }
     }
 }
@@ -937,16 +966,17 @@ private final class ProfileGiftsContextImpl {
             self.dataState = .loading
             self.pushState()
         
-            let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> = self.account.postbox.transaction { transaction -> Api.InputUser? in
-                return transaction.getPeer(peerId).flatMap(apiInputUser)
+            let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { inputUser -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
-                guard let inputUser else {
+            |> mapToSignal { inputPeer -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
+                guard let inputPeer else {
                     return .single(([], 0, nil))
                 }
-                return network.request(Api.functions.payments.getUserStarGifts(userId: inputUser, offset: initialNextOffset ?? "", limit: 32))
+                let flags: Int32 = 0
+                return network.request(Api.functions.payments.getSavedStarGifts(flags: flags, peer: inputPeer, offset: initialNextOffset ?? "", limit: 32))
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.payments.UserStarGifts?, NoError> in
+                |> `catch` { _ -> Signal<Api.payments.SavedStarGifts?, NoError> in
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
@@ -955,11 +985,11 @@ private final class ProfileGiftsContextImpl {
                     }
                     return postbox.transaction { transaction -> ([ProfileGiftsContext.State.StarGift], Int32, String?) in
                         switch result {
-                        case let .userStarGifts(_, count, apiGifts, nextOffset, users):
-                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                        case let .savedStarGifts(_, count, apiGifts, nextOffset, chats, users):
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             
-                            let gifts = apiGifts.compactMap { ProfileGiftsContext.State.StarGift(apiUserStarGift: $0, transaction: transaction) }
+                            let gifts = apiGifts.compactMap { ProfileGiftsContext.State.StarGift(apiSavedStarGift: $0, peerId: peerId, transaction: transaction) }
                             return (gifts, count, nextOffset)
                         }
                     }
@@ -993,50 +1023,50 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
-    func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) {
+    func updateStarGiftAddedToProfile(reference: StarGiftReference, added: Bool) {
         self.actionDisposable.set(
-            _internal_updateStarGiftAddedToProfile(account: self.account, messageId: messageId, added: added).startStrict()
+            _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: added).startStrict()
         )
-        if let index = self.gifts.firstIndex(where: { $0.messageId == messageId }) {
+        if let index = self.gifts.firstIndex(where: { $0.reference == reference }) {
             self.gifts[index] = self.gifts[index].withSavedToProfile(added)
         }
         self.pushState()
     }
     
-    func convertStarGift(messageId: EngineMessage.Id) {
+    func convertStarGift(reference: StarGiftReference) {
         self.actionDisposable.set(
-            _internal_convertStarGift(account: self.account, messageId: messageId).startStrict()
+            _internal_convertStarGift(account: self.account, reference: reference).startStrict()
         )
         if let count = self.count {
             self.count = max(0, count - 1)
         }
-        self.gifts.removeAll(where: { $0.messageId == messageId })
+        self.gifts.removeAll(where: { $0.reference == reference })
         self.pushState()
     }
     
-    func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) {
+    func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
         self.actionDisposable.set(
-            _internal_transferStarGift(account: self.account, prepaid: prepaid, messageId: messageId, peerId: peerId).startStrict()
+            _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId).startStrict()
         )
         if let count = self.count {
             self.count = max(0, count - 1)
         }
-        self.gifts.removeAll(where: { $0.messageId == messageId })
+        self.gifts.removeAll(where: { $0.reference == reference })
         self.pushState()
     }
     
-    func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+    func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
         return Signal { [weak self] subscriber in
             guard let self else {
                 return EmptyDisposable
             }
             let disposable = MetaDisposable()
             disposable.set(
-                _internal_upgradeStarGift(account: self.account, formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo).startStrict(next: { [weak self] result in
+                _internal_upgradeStarGift(account: self.account, formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo).startStrict(next: { [weak self] result in
                     guard let self else {
                         return
                     }
-                    if let index = self.gifts.firstIndex(where: { $0.messageId == messageId }) {
+                    if let index = self.gifts.firstIndex(where: { $0.reference == reference }) {
                         self.gifts[index] = result
                         self.pushState()
                     }
@@ -1062,6 +1092,7 @@ public final class ProfileGiftsContext {
         public struct StarGift: Equatable, Codable {
             enum CodingKeys: String, CodingKey {
                 case gift
+                case reference
                 case fromPeerId
                 case date
                 case text
@@ -1077,11 +1108,11 @@ public final class ProfileGiftsContext {
             }
             
             public let gift: TelegramCore.StarGift
+            public let reference: StarGiftReference
             public let fromPeer: EnginePeer?
             public let date: Int32
             public let text: String?
             public let entities: [MessageTextEntity]?
-            public let messageId: EngineMessage.Id?
             public let nameHidden: Bool
             public let savedToProfile: Bool
             public let convertStars: Int64?
@@ -1092,13 +1123,17 @@ public final class ProfileGiftsContext {
             
             fileprivate let _fromPeerId: EnginePeer.Id?
             
+            public enum DecodingError: Error {
+                case generic
+            }
+            
             public init (
                 gift: TelegramCore.StarGift,
+                reference: StarGiftReference,
                 fromPeer: EnginePeer?,
                 date: Int32,
                 text: String?,
                 entities: [MessageTextEntity]?,
-                messageId: EngineMessage.Id?,
                 nameHidden: Bool,
                 savedToProfile: Bool,
                 convertStars: Int64?,
@@ -1108,12 +1143,12 @@ public final class ProfileGiftsContext {
                 transferStars: Int64?
             ) {
                 self.gift = gift
+                self.reference = reference
                 self.fromPeer = fromPeer
                 self._fromPeerId = fromPeer?.id
                 self.date = date
                 self.text = text
                 self.entities = entities
-                self.messageId = messageId
                 self.nameHidden = nameHidden
                 self.savedToProfile = savedToProfile
                 self.convertStars = convertStars
@@ -1127,12 +1162,18 @@ public final class ProfileGiftsContext {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 
                 self.gift = try container.decode(TelegramCore.StarGift.self, forKey: .gift)
+                if let reference = try container.decodeIfPresent(StarGiftReference.self, forKey: .reference) {
+                    self.reference = reference
+                } else if let messageId = try container.decodeIfPresent(EngineMessage.Id.self, forKey: .messageId) {
+                    self.reference = .message(messageId: messageId)
+                } else {
+                    throw DecodingError.generic
+                }
                 self.fromPeer = nil
                 self._fromPeerId = try container.decodeIfPresent(EnginePeer.Id.self, forKey: .fromPeerId)
                 self.date = try container.decode(Int32.self, forKey: .date)
                 self.text = try container.decodeIfPresent(String.self, forKey: .text)
                 self.entities = try container.decodeIfPresent([MessageTextEntity].self, forKey: .entities)
-                self.messageId = try container.decodeIfPresent(EngineMessage.Id.self, forKey: .messageId)
                 self.nameHidden = try container.decode(Bool.self, forKey: .nameHidden)
                 self.savedToProfile = try container.decode(Bool.self, forKey: .savedToProfile)
                 self.convertStars = try container.decodeIfPresent(Int64.self, forKey: .convertStars)
@@ -1146,11 +1187,11 @@ public final class ProfileGiftsContext {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 
                 try container.encode(self.gift, forKey: .gift)
+                try container.encode(self.reference, forKey: .reference)
                 try container.encodeIfPresent(self.fromPeer?.id, forKey: .fromPeerId)
                 try container.encode(self.date, forKey: .date)
                 try container.encodeIfPresent(self.text, forKey: .text)
                 try container.encodeIfPresent(self.entities, forKey: .entities)
-                try container.encodeIfPresent(self.messageId, forKey: .messageId)
                 try container.encode(self.nameHidden, forKey: .nameHidden)
                 try container.encode(self.savedToProfile, forKey: .savedToProfile)
                 try container.encodeIfPresent(self.convertStars, forKey: .convertStars)
@@ -1163,11 +1204,11 @@ public final class ProfileGiftsContext {
             public func withSavedToProfile(_ savedToProfile: Bool) -> StarGift {
                 return StarGift(
                     gift: self.gift,
+                    reference: self.reference,
                     fromPeer: self.fromPeer,
                     date: self.date,
                     text: self.text,
                     entities: self.entities,
-                    messageId: self.messageId,
                     nameHidden: self.nameHidden,
                     savedToProfile: savedToProfile,
                     convertStars: self.convertStars,
@@ -1181,11 +1222,11 @@ public final class ProfileGiftsContext {
             fileprivate func withFromPeer(_ fromPeer: EnginePeer?) -> StarGift {
                 return StarGift(
                     gift: self.gift,
+                    reference: self.reference,
                     fromPeer: fromPeer,
                     date: self.date,
                     text: self.text,
                     entities: self.entities,
-                    messageId: self.messageId,
                     nameHidden: self.nameHidden,
                     savedToProfile: savedToProfile,
                     convertStars: self.convertStars,
@@ -1237,29 +1278,29 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) {
+    public func updateStarGiftAddedToProfile(reference: StarGiftReference, added: Bool) {
         self.impl.with { impl in
-            impl.updateStarGiftAddedToProfile(messageId: messageId, added: added)
+            impl.updateStarGiftAddedToProfile(reference: reference, added: added)
         }
     }
     
-    public func convertStarGift(messageId: EngineMessage.Id) {
+    public func convertStarGift(reference: StarGiftReference) {
         self.impl.with { impl in
-            impl.convertStarGift(messageId: messageId)
+            impl.convertStarGift(reference: reference)
         }
     }
     
-    public func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) {
+    public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
         self.impl.with { impl in
-            impl.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+            impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
         }
     }
     
-    public func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+    public func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
-                disposable.set(impl.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo).start(next: { value in
+                disposable.set(impl.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo).start(next: { value in
                     subscriber.putNext(value)
                 }, error: { error in
                     subscriber.putError(error)
@@ -1281,9 +1322,9 @@ public final class ProfileGiftsContext {
 }
 
 extension ProfileGiftsContext.State.StarGift {
-    init?(apiUserStarGift: Api.UserStarGift, transaction: Transaction) {
-        switch apiUserStarGift {
-        case let .userStarGift(flags, fromId, date, apiGift, message, msgId, convertStars, upgradeStars, canExportDate, transferStars):
+    init?(apiSavedStarGift: Api.SavedStarGift, peerId: EnginePeer.Id, transaction: Transaction) {
+        switch apiSavedStarGift {
+        case let .savedStarGift(flags, fromId, date, apiGift, message, msgId, savedId, convertStars, upgradeStars, canExportDate, transferStars):
             guard let gift = StarGift(apiStarGift: apiGift) else {
                 return nil
             }
@@ -1306,16 +1347,18 @@ extension ProfileGiftsContext.State.StarGift {
                 self.text = nil
                 self.entities = nil
             }
-            if let msgId {
+            if let savedId {
+                self.reference = .peer(peerId: peerId, id: savedId)
+            } else if let msgId {
                 if let fromPeer = self.fromPeer {
-                    self.messageId = EngineMessage.Id(peerId: fromPeer.id, namespace: Namespaces.Message.Cloud, id: msgId)
+                    self.reference = .message(messageId: EngineMessage.Id(peerId: fromPeer.id, namespace: Namespaces.Message.Cloud, id: msgId))
                 } else if case .unique = gift {
-                    self.messageId = EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Cloud, id: msgId)
+                    self.reference = .message(messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Cloud, id: msgId))
                 } else {
-                    self.messageId = nil
+                    return nil
                 }
             } else {
-                self.messageId = nil
+                return nil
             }
             self.nameHidden = (flags & (1 << 0)) != 0
             self.savedToProfile = (flags & (1 << 5)) == 0
@@ -1377,6 +1420,64 @@ func _internal_getUniqueStarGift(account: Account, slug: String) -> Signal<StarG
             }
         } else {
             return .single(nil)
+        }
+    }
+}
+
+public enum StarGiftReference: Equatable, Hashable, Codable {
+    enum CodingKeys: String, CodingKey {
+        case type
+        case messageId
+        case peerId
+        case id
+    }
+    
+    case message(messageId: EngineMessage.Id)
+    case peer(peerId: EnginePeer.Id, id: Int64)
+    
+    public enum DecodingError: Error {
+        case generic
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let type = try container.decode(Int32.self, forKey: .type)
+        switch type {
+        case 0:
+            self = .message(messageId: try container.decode(EngineMessage.Id.self, forKey: .messageId))
+        case 1:
+            self = .peer(peerId: try container.decode(EnginePeer.Id.self, forKey: .peerId), id: try container.decode(Int64.self, forKey: .id))
+        default:
+            throw DecodingError.generic
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        switch self {
+        case let .message(messageId):
+            try container.encode(0 as Int32, forKey: .type)
+            try container.encode(messageId, forKey: .messageId)
+        case let .peer(peerId, id):
+            try container.encode(1 as Int32, forKey: .type)
+            try container.encode(peerId, forKey: .peerId)
+            try container.encode(id, forKey: .id)
+        }
+    }
+}
+
+extension StarGiftReference {
+    func apiStarGiftReference(transaction: Transaction) -> Api.InputSavedStarGift? {
+        switch self {
+        case let .message(messageId):
+            return .inputSavedStarGiftUser(msgId: messageId.id)
+        case let .peer(peerId, id):
+            guard let inputPeer = transaction.getPeer(peerId).flatMap({ apiInputPeer($0) }) else {
+                return nil
+            }
+            return .inputSavedStarGiftChat(peer: inputPeer, savedId: id)
         }
     }
 }

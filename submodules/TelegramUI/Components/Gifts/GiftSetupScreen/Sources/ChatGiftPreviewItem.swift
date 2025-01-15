@@ -29,9 +29,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     
-    let accountPeer: EnginePeer?
+    let peers: [EnginePeer]
     let subject: ChatGiftPreviewItem.Subject
-    let isSelf: Bool
+    let chatPeerId: EnginePeer.Id?
     let text: String
     let entities: [MessageTextEntity]
     let upgradeStars: Int64?
@@ -47,9 +47,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         wallpaper: TelegramWallpaper,
         dateTimeFormat: PresentationDateTimeFormat,
         nameDisplayOrder: PresentationPersonNameOrder,
-        accountPeer: EnginePeer?,
+        peers: [EnginePeer],
         subject: ChatGiftPreviewItem.Subject,
-        isSelf: Bool,
+        chatPeerId: EnginePeer.Id?,
         text: String,
         entities: [MessageTextEntity],
         upgradeStars: Int64?
@@ -64,9 +64,9 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         self.wallpaper = wallpaper
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
-        self.accountPeer = accountPeer
+        self.peers = peers
         self.subject = subject
-        self.isSelf = isSelf
+        self.chatPeerId = chatPeerId
         self.text = text
         self.entities = entities
         self.upgradeStars = upgradeStars
@@ -137,7 +137,7 @@ final class ChatGiftPreviewItem: ListViewItem, ItemListItem, ListItemComponentAd
         if lhs.nameDisplayOrder != rhs.nameDisplayOrder {
             return false
         }
-        if lhs.accountPeer != rhs.accountPeer {
+        if lhs.peers != rhs.peers {
             return false
         }
         if lhs.text != rhs.text {
@@ -209,10 +209,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
             let separatorHeight = UIScreenPixel
             
             let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1))
-            var chatPeerId = peerId
-            if item.isSelf {
-                chatPeerId = item.accountPeer?.id ?? chatPeerId
-            }
+            let chatPeerId = item.chatPeerId ?? peerId
             
             var items: [ListViewItem] = []
             for _ in 0 ..< 1 {
@@ -221,7 +218,9 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 var peers = SimpleDictionary<PeerId, Peer>()
                 let messages = SimpleDictionary<MessageId, Message>()
                 
-                peers[authorPeerId] = item.accountPeer?._asPeer()
+                for peer in item.peers {
+                    peers[peer.id] = peer._asPeer()
+                }
                 
                 let media: [Media]
                 switch item.subject {
@@ -234,7 +233,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.upgradeStars, isRefunded: false, upgradeMessageId: nil)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.upgradeStars, isRefunded: false, upgradeMessageId: nil, peerId: nil, senderId: nil)
                         )
                     ]
                 }

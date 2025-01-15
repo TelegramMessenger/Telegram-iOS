@@ -260,6 +260,12 @@ public enum PeerNameColor: Hashable {
 }
 
 public struct PeerEmojiStatus: Equatable, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case fileId
+        case content
+        case expirationDate
+    }
+    
     public enum Content: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case discriminator
@@ -317,6 +323,26 @@ public struct PeerEmojiStatus: Equatable, Codable {
     public init(content: Content, expirationDate: Int32?) {
         self.content = content
         self.expirationDate = expirationDate
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        if let content = try container.decodeIfPresent(Content.self, forKey: .content) {
+            self.content = content
+        } else if let fileId = try container.decodeIfPresent(Int64.self, forKey: .fileId) {
+            self.content = .emoji(fileId: fileId)
+        } else {
+            self.content = .emoji(fileId: 0)
+        }
+        self.expirationDate = try container.decodeIfPresent(Int32.self, forKey: .expirationDate)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.content, forKey: .content)
+        try container.encodeIfPresent(self.expirationDate, forKey: .expirationDate)
     }
 }
 

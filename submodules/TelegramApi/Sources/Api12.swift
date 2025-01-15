@@ -365,6 +365,68 @@ public extension Api {
     }
 }
 public extension Api {
+    indirect enum InputSavedStarGift: TypeConstructorDescription {
+        case inputSavedStarGiftChat(peer: Api.InputPeer, savedId: Int64)
+        case inputSavedStarGiftUser(msgId: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputSavedStarGiftChat(let peer, let savedId):
+                    if boxed {
+                        buffer.appendInt32(-251549057)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt64(savedId, buffer: buffer, boxed: false)
+                    break
+                case .inputSavedStarGiftUser(let msgId):
+                    if boxed {
+                        buffer.appendInt32(1764202389)
+                    }
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputSavedStarGiftChat(let peer, let savedId):
+                return ("inputSavedStarGiftChat", [("peer", peer as Any), ("savedId", savedId as Any)])
+                case .inputSavedStarGiftUser(let msgId):
+                return ("inputSavedStarGiftUser", [("msgId", msgId as Any)])
+    }
+    }
+    
+        public static func parse_inputSavedStarGiftChat(_ reader: BufferReader) -> InputSavedStarGift? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputSavedStarGift.inputSavedStarGiftChat(peer: _1!, savedId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputSavedStarGiftUser(_ reader: BufferReader) -> InputSavedStarGift? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputSavedStarGift.inputSavedStarGiftUser(msgId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputSecureFile: TypeConstructorDescription {
         case inputSecureFile(id: Int64, accessHash: Int64)
         case inputSecureFileUploaded(id: Int64, parts: Int32, md5Checksum: String, fileHash: Buffer, secret: Buffer)

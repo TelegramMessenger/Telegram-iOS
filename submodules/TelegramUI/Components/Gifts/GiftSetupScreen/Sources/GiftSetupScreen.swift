@@ -481,6 +481,7 @@ final class GiftSetupScreenComponent: Component {
             
             let peerName = self.peerMap[component.peerId]?.compactDisplayTitle ?? ""
             let isSelfGift = component.peerId == component.context.account.peerId
+            let isChannelGift = component.peerId.namespace == Namespaces.Peer.CloudChannel
             
             if self.component == nil {
                 if isSelfGift {
@@ -636,11 +637,20 @@ final class GiftSetupScreenComponent: Component {
             }
             
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    
+                             
+            let navigationTitleString: String
+            if isSelfGift {
+                navigationTitleString = environment.strings.Gift_SendSelf_Title
+            } else if isChannelGift {
+                //TODO:localize
+                navigationTitleString = "Gift Preview"
+            } else {
+                navigationTitleString = environment.strings.Gift_Send_TitleTo(peerName).string
+            }
             let navigationTitleSize = self.navigationTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: isSelfGift ? environment.strings.Gift_SendSelf_Title : environment.strings.Gift_Send_TitleTo(peerName).string, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: navigationTitleString, font: Font.semibold(17.0), textColor: environment.theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -823,6 +833,11 @@ final class GiftSetupScreenComponent: Component {
                     upgradeStars = gift.upgradeStars
                 }
                 
+                var peers: [EnginePeer] = [accountPeer]
+                if let peer = self.peerMap[component.peerId] {
+                    peers.append(peer)
+                }
+                
                 let introContentSize = self.introContent.update(
                     transition: transition,
                     component: AnyComponent(
@@ -838,9 +853,9 @@ final class GiftSetupScreenComponent: Component {
                                 wallpaper: presentationData.chatWallpaper,
                                 dateTimeFormat: environment.dateTimeFormat,
                                 nameDisplayOrder: presentationData.nameDisplayOrder,
-                                accountPeer: accountPeer,
+                                peers: peers,
                                 subject: subject,
-                                isSelf: component.peerId == component.context.account.peerId,
+                                chatPeerId: component.peerId,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text),
                                 upgradeStars: self.includeUpgrade ? upgradeStars : nil
@@ -865,7 +880,13 @@ final class GiftSetupScreenComponent: Component {
     
             if case let .starGift(gift) = component.subject {
                 if let upgradeStars = gift.upgradeStars, component.peerId != component.context.account.peerId {
-                    let parsedString = parseMarkdownIntoAttributedString(environment.strings.Gift_Send_Upgrade_Info(peerName).string, attributes: MarkdownAttributes(
+                    let upgradeFooterRawString: String
+                    if isChannelGift {
+                        upgradeFooterRawString = "Enable this to let the admins of \(peerName) turn your gift into a unique collectible. [Learn More >]()"
+                    } else {
+                        upgradeFooterRawString = environment.strings.Gift_Send_Upgrade_Info(peerName).string
+                    }
+                    let parsedString = parseMarkdownIntoAttributedString(upgradeFooterRawString, attributes: MarkdownAttributes(
                         body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
                         bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
                         link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
@@ -963,6 +984,15 @@ final class GiftSetupScreenComponent: Component {
                     contentHeight += sectionSpacing
                 }
                 
+                let hideSectionFooterString: String
+                if isSelfGift {
+                    hideSectionFooterString = environment.strings.Gift_SendSelf_HideMyName_Info
+                } else if isChannelGift {
+                    //TODO:localize
+                    hideSectionFooterString = "Hide my name and message from visitors of this channel. The channel admins will still see them."
+                } else {
+                    hideSectionFooterString = environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string
+                }
                 let hideSectionSize = self.hideSection.update(
                     transition: transition,
                     component: AnyComponent(ListSectionComponent(
@@ -970,7 +1000,7 @@ final class GiftSetupScreenComponent: Component {
                         header: nil,
                         footer: AnyComponent(MultilineTextComponent(
                             text: .plain(NSAttributedString(
-                                string: isSelfGift ? environment.strings.Gift_SendSelf_HideMyName_Info : environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string,
+                                string: hideSectionFooterString,
                                 font: Font.regular(presentationData.listsFontSize.itemListBaseHeaderFontSize),
                                 textColor: environment.theme.list.freeTextColor
                             )),

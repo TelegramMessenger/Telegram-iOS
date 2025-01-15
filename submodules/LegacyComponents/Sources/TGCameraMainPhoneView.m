@@ -157,6 +157,17 @@
             _counterOffset = 7.0f;
             shutterButtonWidth = 72.0f;
         }
+        else if (widescreenWidth == 874.0f)
+        {
+            _topPanelOffset = 48.0f;
+            _topPanelHeight = 44.0f;
+            _bottomPanelOffset = 63.0f;
+            _bottomPanelHeight = 128.0f;
+            _modeControlOffset = -1.0f;
+            _modeControlHeight = 51.0f;
+            _counterOffset = 7.0f;
+            shutterButtonWidth = 72.0f;
+        }
         else if (widescreenWidth == 852.0f)
         {
             _topPanelOffset = 48.0f;

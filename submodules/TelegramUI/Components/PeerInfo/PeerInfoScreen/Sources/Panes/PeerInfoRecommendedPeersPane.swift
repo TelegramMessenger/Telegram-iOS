@@ -37,50 +37,54 @@ private enum RecommendedPeersListEntry: Comparable, Identifiable {
         
     var stableId: RecommendedPeersListEntryStableId {
         switch self {
-            case let .peer(_, _, peer, _):
-                return .peer(peer.id)
+        case let .peer(_, _, peer, _):
+            return .peer(peer.id)
         }
     }
     
     static func ==(lhs: RecommendedPeersListEntry, rhs: RecommendedPeersListEntry) -> Bool {
         switch lhs {
-            case let .peer(lhsTheme, lhsIndex, lhsPeer, lhsSubscribers):
-                if case let .peer(rhsTheme, rhsIndex, rhsPeer, rhsSubscribers) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsPeer == rhsPeer, lhsSubscribers == rhsSubscribers {
-                    return true
-                } else {
-                    return false
-                }
+        case let .peer(lhsTheme, lhsIndex, lhsPeer, lhsSubscribers):
+            if case let .peer(rhsTheme, rhsIndex, rhsPeer, rhsSubscribers) = rhs, lhsTheme === rhsTheme, lhsIndex == rhsIndex, lhsPeer == rhsPeer, lhsSubscribers == rhsSubscribers {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
     static func <(lhs: RecommendedPeersListEntry, rhs: RecommendedPeersListEntry) -> Bool {
         switch lhs {
-            case let .peer(_, lhsIndex, _, _):
-                switch rhs {
-                    case let .peer(_, rhsIndex, _, _):
-                        return lhsIndex < rhsIndex
-                }
+        case let .peer(_, lhsIndex, _, _):
+            switch rhs {
+            case let .peer(_, rhsIndex, _, _):
+                return lhsIndex < rhsIndex
+            }
         }
     }
     
     func item(context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> ListViewItem {
         switch self {
-            case let .peer(_, _, peer, subscribers):
-                let text: ItemListPeerItemText
-                if subscribers > 0 {
-                    text = .text(presentationData.strings.Conversation_StatusSubscribers(subscribers), .secondary)
-                } else if let addressName = peer.addressName {
-                    text = .text("@\(addressName)", .secondary)
+        case let .peer(_, _, peer, subscribers):
+            let text: ItemListPeerItemText
+            if subscribers > 0 {
+                if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                    text = .text(presentationData.strings.SharedMedia_SimilarChannel_Subscribers(subscribers), .secondary)
                 } else {
-                    text = .none
+                    text = .text(presentationData.strings.SharedMedia_SimilarBot_Users(subscribers), .secondary)
                 }
+            } else if let addressName = peer.addressName {
+                text = .text("@\(addressName)", .secondary)
+            } else {
+                text = .none
+            }
             return ItemListPeerItem(presentationData: ItemListPresentationData(presentationData), dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, context: context, peer: peer, presence: nil, text: text, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: 0, action: {
-                    action(peer)
-                }, setPeerIdWithRevealedOptions: { _, _ in
-                }, removePeer: { _ in
-                }, contextAction: { node, gesture in
-                    openPeerContextAction(peer._asPeer(), node, gesture)
-                }, hasTopStripe: false, noInsets: true, noCorners: true, style: .plain, disableInteractiveTransitionIfNecessary: true)
+                action(peer)
+            }, setPeerIdWithRevealedOptions: { _, _ in
+            }, removePeer: { _ in
+            }, contextAction: { node, gesture in
+                openPeerContextAction(peer._asPeer(), node, gesture)
+            }, hasTopStripe: false, noInsets: true, noCorners: true, style: .plain, disableInteractiveTransitionIfNecessary: true)
         }
     }
 }
