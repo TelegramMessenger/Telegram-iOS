@@ -1108,7 +1108,7 @@ public final class ProfileGiftsContext {
             }
             
             public let gift: TelegramCore.StarGift
-            public let reference: StarGiftReference
+            public let reference: StarGiftReference?
             public let fromPeer: EnginePeer?
             public let date: Int32
             public let text: String?
@@ -1129,7 +1129,7 @@ public final class ProfileGiftsContext {
             
             public init (
                 gift: TelegramCore.StarGift,
-                reference: StarGiftReference,
+                reference: StarGiftReference?,
                 fromPeer: EnginePeer?,
                 date: Int32,
                 text: String?,
@@ -1167,7 +1167,7 @@ public final class ProfileGiftsContext {
                 } else if let messageId = try container.decodeIfPresent(EngineMessage.Id.self, forKey: .messageId) {
                     self.reference = .message(messageId: messageId)
                 } else {
-                    throw DecodingError.generic
+                    self.reference = nil
                 }
                 self.fromPeer = nil
                 self._fromPeerId = try container.decodeIfPresent(EnginePeer.Id.self, forKey: .fromPeerId)
@@ -1187,7 +1187,7 @@ public final class ProfileGiftsContext {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 
                 try container.encode(self.gift, forKey: .gift)
-                try container.encode(self.reference, forKey: .reference)
+                try container.encodeIfPresent(self.reference, forKey: .reference)
                 try container.encodeIfPresent(self.fromPeer?.id, forKey: .fromPeerId)
                 try container.encode(self.date, forKey: .date)
                 try container.encodeIfPresent(self.text, forKey: .text)
@@ -1355,10 +1355,10 @@ extension ProfileGiftsContext.State.StarGift {
                 } else if case .unique = gift {
                     self.reference = .message(messageId: EngineMessage.Id(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), namespace: Namespaces.Message.Cloud, id: msgId))
                 } else {
-                    return nil
+                    self.reference = nil
                 }
             } else {
-                return nil
+                self.reference = nil
             }
             self.nameHidden = (flags & (1 << 0)) != 0
             self.savedToProfile = (flags & (1 << 5)) == 0
