@@ -691,6 +691,8 @@ public final class CachedChannelData: CachedPeerData {
             self.emojiPack = nil
         }
         
+        self.starGiftsCount = decoder.decodeOptionalInt32ForKey("starGiftsCount")
+        
         self.verification = decoder.decodeCodable(PeerVerification.self, forKey: "vf")
         
         self.peerIds = peerIds
@@ -880,6 +882,12 @@ public final class CachedChannelData: CachedPeerData {
             encoder.encodeCodable(verification, forKey: "vf")
         } else {
             encoder.encodeNil(forKey: "vf")
+        }
+        
+        if let starGiftsCount = self.starGiftsCount {
+            encoder.encodeInt32(starGiftsCount, forKey: "starGiftsCount")
+        } else {
+            encoder.encodeNil(forKey: "starGiftsCount")
         }
     }
     
