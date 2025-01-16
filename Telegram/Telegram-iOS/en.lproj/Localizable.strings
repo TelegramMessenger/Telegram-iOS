@@ -13067,6 +13067,7 @@ Sorry for the inconvenience.";
 
 "Notification.StarGift.Title" = "Gift from %@";
 "Notification.StarGift.Subtitle" = "Display this gift on your page or convert it to %@.";
+"Notification.StarGift.Subtitle.Channel" = "Display this gift in channel's Gifts or convert it to %@.";
 "Notification.StarGift.Subtitle.Stars_1" = "%@ Star";
 "Notification.StarGift.Subtitle.Stars_any" = "%@ Stars";
 "Notification.StarGift.Subtitle.Other" = "%1$@ can keep this gift on their page or convert it to %2$@.";
@@ -13672,16 +13673,26 @@ Sorry for the inconvenience.";
 
 "SharedMedia.SimilarChannelCount_1" = "%@ channel";
 "SharedMedia.SimilarChannelCount_any" = "%@ channels";
+"SharedMedia.SimilarChannel.Subscribers_1" = "%@ subscriber";
+"SharedMedia.SimilarChannel.Subscribers_any" = "%@ subscribers";
 
 "SharedMedia.SimilarBotCount_1" = "%@ bot";
 "SharedMedia.SimilarBotCount_any" = "%@ bots";
+"SharedMedia.SimilarBot.Users_1" = "%@ monthly user";
+"SharedMedia.SimilarBot.Users_any" = "%@ monthly users";
 
 "PeerInfo.SimilarBots.ShowMore" = "Show More Bots";
 "PeerInfo.SimilarBots.ShowMoreInfo" = "Subscribe to [Telegram Premium]()\nto unlock up to **100** similar bots.";
 
+"PeerInfo.VerifyAccounts" = "Verify Accounts";
+
 "Gift.View.Context.Share" = "Share";
 "Gift.View.Context.CopyLink" = "Copy Link";
 "Gift.View.Context.Transfer" = "Transfer";
+
+"Gift.Withdraw.Title" = "Manage with Fragment";
+"Gift.Withdraw.Text" = "You can use Fragment, a third-party service, to transfer **%@** to your TON account. After that, you can manage it as an NFT with any TON wallet outside Telegram.\n\nYou can also move such NFTs back to your Telegram account via Fragment.";
+"Gift.Withdraw.Proceed" = "Open Fragment";
 
 "ChatListFilter.NameEnableAnimations" = "Enable Animations";
 "ChatListFilter.NameDisableAnimations" = "Disable Animations";

@@ -151,7 +151,7 @@ private enum ChatTitleCredibilityIcon: Equatable {
     case scam
     case verified
     case premium
-    case emojiStatus(PeerEmojiStatus)
+    case emojiStatus(PeerEmojiStatus, Int32?)
 }
 
 public final class ChatTitleView: UIView, NavigationBarTitleView {
@@ -275,7 +275,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
                                     } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
-                                        titleStatusIcon = .emojiStatus(emojiStatus)
+                                        titleStatusIcon = .emojiStatus(emojiStatus, emojiStatus.color)
                                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .premium
                                     }
@@ -284,7 +284,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .verified
                                     }
                                     if let verificationIconFileId = peer.verificationIconFileId {
-                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(content: .emoji(fileId: verificationIconFileId), expirationDate: nil))
+                                        titleVerifiedIcon = .emojiStatus(PeerEmojiStatus(content: .emoji(fileId: verificationIconFileId), expirationDate: nil), nil)
                                     }
                                 }
                             }
@@ -839,7 +839,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleCredibilityContent = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_FakeAccount.uppercased())
         case .scam:
             titleCredibilityContent = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_ScamAccount.uppercased())
-        case let .emojiStatus(emojiStatus):
+        case let .emojiStatus(emojiStatus, _):
             titleCredibilityContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
         }
         
@@ -855,14 +855,18 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleVerifiedContent = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_FakeAccount.uppercased())
         case .scam:
             titleVerifiedContent = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_ScamAccount.uppercased())
-        case let .emojiStatus(emojiStatus):
+        case let .emojiStatus(emojiStatus, _):
             titleVerifiedContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
         }
         
         let titleStatusContent: EmojiStatusComponent.Content
+        var titleStatusParticleColor: UIColor?
         switch self.titleStatusIcon {
-        case let .emojiStatus(emojiStatus):
+        case let .emojiStatus(emojiStatus, color):
             titleStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
+            if let color {
+                titleStatusParticleColor = UIColor(rgb: UInt32(bitPattern: color))
+            }
         default:
             titleStatusContent = .none
         }
@@ -902,6 +906,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 animationCache: self.animationCache,
                 animationRenderer: self.animationRenderer,
                 content: titleStatusContent,
+                particleColor: titleStatusParticleColor,
                 isVisibleForAnimations: true,
                 action: nil
             )),

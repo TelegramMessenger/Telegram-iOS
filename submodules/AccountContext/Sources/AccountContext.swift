@@ -1102,7 +1102,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
     func makeGiftViewScreen(context: AccountContext, message: EngineMessage, shareStory: (() -> Void)?) -> ViewController
-    func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?) -> ViewController
+    func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?, dismissed: (() -> Void)?) -> ViewController
     
     func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController
     

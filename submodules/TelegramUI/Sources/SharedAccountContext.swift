@@ -2927,8 +2927,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return GiftViewScreen(context: context, subject: .message(message), shareStory: shareStory)
     }
     
-    public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?) -> ViewController {
-        return GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
+    public func makeGiftViewScreen(context: AccountContext, gift: StarGift.UniqueGift, shareStory: (() -> Void)?, dismissed: (() -> Void)?) -> ViewController {
+        let controller = GiftViewScreen(context: context, subject: .uniqueGift(gift), shareStory: shareStory)
+        controller.disposed = {
+            dismissed?()
+        }
+        return controller
     }
     
     public func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController {

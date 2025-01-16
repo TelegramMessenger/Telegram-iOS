@@ -1213,8 +1213,21 @@ func openResolvedUrlImpl(
             })
         case let .collectible(gift):
             if let gift {
-                let controller = context.sharedContext.makeGiftViewScreen(context: context, gift: gift, shareStory: nil)
+                var dismissedImpl: (() -> Void)?
+                if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                    let updateExternalController = storyProgressPauseContext.update
+                    dismissedImpl = {
+                        updateExternalController(nil)
+                    }
+                }
+                let controller = context.sharedContext.makeGiftViewScreen(context: context, gift: gift, shareStory: nil, dismissed: {
+                    dismissedImpl?()
+                })
                 navigationController?.pushViewController(controller)
+                
+                if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                    storyProgressPauseContext.update(controller)
+                }
             } else {
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }

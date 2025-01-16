@@ -226,29 +226,29 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     let controller = GiftViewScreen(
                                         context: self.context,
                                         subject: .profileGift(self.peerId, product),
-                                        updateSavedToProfile: { [weak self] messageId, added in
+                                        updateSavedToProfile: { [weak self] reference, added in
                                             guard let self else {
                                                 return
                                             }
-                                            self.profileGifts.updateStarGiftAddedToProfile(messageId: messageId, added: added)
+                                            self.profileGifts.updateStarGiftAddedToProfile(reference: reference, added: added)
                                         },
                                         convertToStars: { [weak self] in
-                                            guard let self, let messageId = product.messageId else {
+                                            guard let self else {
                                                 return
                                             }
-                                            self.profileGifts.convertStarGift(messageId: messageId)
+                                            self.profileGifts.convertStarGift(reference: product.reference)
                                         },
                                         transferGift: { [weak self] prepaid, peerId in
-                                            guard let self, let messageId = product.messageId else {
+                                            guard let self else {
                                                 return
                                             }
-                                            self.profileGifts.transferStarGift(prepaid: prepaid, messageId: messageId, peerId: peerId)
+                                            self.profileGifts.transferStarGift(prepaid: prepaid, reference: product.reference, peerId: peerId)
                                         },
                                         upgradeGift: { [weak self] formId, keepOriginalInfo in
-                                            guard let self, let messageId = product.messageId else {
+                                            guard let self else {
                                                 return .never()
                                             }
-                                            return self.profileGifts.upgradeStarGift(formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+                                            return self.profileGifts.upgradeStarGift(formId: formId, reference: product.reference, keepOriginalInfo: keepOriginalInfo)
                                         },
                                         shareStory: { [weak self] in
                                             guard let self, case let .unique(uniqueGift) = product.gift, let parentController = self.parentController else {

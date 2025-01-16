@@ -2018,7 +2018,7 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 if let cachedUserData = data.cachedData as? CachedUserData, let _ = cachedUserData.botInfo?.verifierSettings {
-                    items[.peerVerifySettings]!.append(PeerInfoScreenActionItem(id: ItemVerify, text: "Verify Accounts", icon: UIImage(bundleImageName: "Peer Info/BotVerify"), action: {
+                    items[.peerVerifySettings]!.append(PeerInfoScreenActionItem(id: ItemVerify, text: presentationData.strings.PeerInfo_VerifyAccounts, icon: UIImage(bundleImageName: "Peer Info/BotVerify"), action: {
                         interaction.editingOpenVerifyAccounts()
                     }))
                 }
@@ -4635,12 +4635,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 let sourceRect = sourceView.convert(sourceView.bounds, to: controller.view)
+                
+                let backgroundColor: UIColor
+                if !self.headerNode.isAvatarExpanded, let contentButtonBackgroundColor = self.headerNode.contentButtonBackgroundColor {
+                    backgroundColor = contentButtonBackgroundColor
+                } else {
+                    backgroundColor = UIColor(rgb: 0x000000, alpha: 0.65)
+                }
+                
                 let tooltipController = TooltipScreen(
                     context: self.context,
                     account: self.context.account,
                     sharedContext: self.context.sharedContext,
                     text: .attributedString(text: NSAttributedString(string: text, font: Font.semibold(11.0), textColor: .white)),
-                    style: .customBlur(UIColor(rgb: self.headerNode.isAvatarExpanded ? 0x000000 : 0x92c8de, alpha: 0.65), -4.0),
+                    style: .customBlur(backgroundColor, -4.0),
                     arrowStyle: .small,
                     location: .point(sourceRect, .bottom),
                     cornerRadius: 10.0,
@@ -4649,6 +4657,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 )
                 controller.present(tooltipController, in: .current)
+            }
+            
+            self.headerNode.openUniqueGift = { [weak self] slug in
+                guard let self else {
+                    return
+                }
+                self.openUrl(url: "https://t.me/nft/\(slug)", concealed: false, external: false)
             }
             
             self.headerNode.displayStatusPremiumIntro = { [weak self] in
@@ -6451,6 +6466,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
+                        if case .broadcast = channel.info {
+                            //TODO:localize
+                            items.append(.action(ContextMenuActionItem(text: "Send a Gift", badge: nil, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openPremiumGift()
+                            })))
+                        }
+                        
                         let boostTitle: String
                         var isNew = false
                         switch channel.info {
@@ -9767,9 +9793,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openPremiumGift() {
-        guard let premiumGiftOptions = self.data?.premiumGiftOptions else {
-            return
-        }
+        let premiumGiftOptions = self.data?.premiumGiftOptions ?? []
         let premiumOptions = premiumGiftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
         
         let controller = self.context.sharedContext.makeGiftOptionsController(
@@ -11875,6 +11899,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        cancelContextGestures(view: scrollView)
         self.canAddVelocity = true
         self.canOpenAvatarByDragging = self.headerNode.isAvatarExpanded
         self.paneContainerNode.currentPane?.node.cancelPreviewGestures()
@@ -14083,5 +14108,18 @@ private final class HeaderContextReferenceContentSource: ContextReferenceContent
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private func cancelContextGestures(view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for gesture in gestureRecognizers {
+            if let gesture = gesture as? ContextGesture {
+                gesture.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelContextGestures(view: subview)
     }
 }

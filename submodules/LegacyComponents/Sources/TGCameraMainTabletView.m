@@ -281,11 +281,10 @@ const CGFloat TGCameraTabletPanelViewWidth = 102.0f;
                                    _shutterButton.frame.origin.y + _shutterButton.frame.size.height + 20.0,
                                    _flipButton.frame.size.width, _flipButton.frame.size.height);
     
-    CGFloat flipButtonPosition = 0.0f;
+    
     CGFloat cancelButtonPosition = _panelView.frame.size.height - _cancelButton.frame.size.height - 7;
     if (!_doneButton.hidden)
     {
-        flipButtonPosition =  _panelView.frame.size.height / 8.0f - _flipButton.frame.size.height / 2.0f;
         cancelButtonPosition = 7.0f;
     }
 

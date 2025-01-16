@@ -890,12 +890,22 @@ private func createGiveawayControllerEntries(
             }
         }
         
+        let boostCount: Int32
+        switch state.mode {
+        case .giveaway:
+            boostCount = state.subscriptions * 4
+        case .gift:
+            boostCount = Int32(state.peers.count) * 4
+        case .starsGiveaway:
+            boostCount = Int32(state.stars) / 500
+        }
+        
         entries.append(.channelsHeader(presentationData.theme, isGroup ? presentationData.strings.BoostGift_GroupsAndChannelsTitle.uppercased() : presentationData.strings.BoostGift_ChannelsAndGroupsTitle.uppercased()))
         var index: Int32 = 0
         let channels = [peerId] + state.channels
         for channelId in channels {
             if let channel = peers[channelId] {
-                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions * 4 : nil, false))
+                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? boostCount : nil, false))
             }
             index += 1
         }

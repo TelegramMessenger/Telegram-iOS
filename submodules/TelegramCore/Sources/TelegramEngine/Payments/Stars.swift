@@ -1467,11 +1467,11 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                     } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
                                         resultGift = ProfileGiftsContext.State.StarGift(
                                             gift: gift,
+                                            reference: .message(messageId: messageId),
                                             fromPeer: nil,
                                             date: message.timestamp,
                                             text: nil,
                                             entities: nil,
-                                            messageId: messageId,
                                             nameHidden: false,
                                             savedToProfile: savedToProfile,
                                             convertStars: nil,

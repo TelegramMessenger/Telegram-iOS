@@ -1238,7 +1238,7 @@ public class VideoMessageCameraScreen: ViewController {
             
             if let controller = self.controller, let layout = self.validLayout {
                 let insets = layout.insets(options: .input)
-                if point.y > layout.size.height - insets.bottom - controller.inputPanelFrame.0.height {
+                if point.y > layout.size.height - max(insets.bottom, layout.additionalInsets.bottom) - controller.inputPanelFrame.0.height {
                     if layout.metrics.isTablet {
                         if point.x < layout.size.width * 0.33 {
                             return result

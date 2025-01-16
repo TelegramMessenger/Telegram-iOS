@@ -28,7 +28,8 @@ public final class GiftAvatarComponent: Component {
     let avatarSize: CGFloat
     let color: UIColor?
     let offset: CGFloat?
-    var hasLargeParticles: Bool
+    let hasLargeParticles: Bool
+    let action: (() -> Void)?
         
     public init(
         context: AccountContext,
@@ -41,7 +42,8 @@ public final class GiftAvatarComponent: Component {
         avatarSize: CGFloat = 100.0,
         color: UIColor? = nil,
         offset: CGFloat? = nil,
-        hasLargeParticles: Bool = false
+        hasLargeParticles: Bool = false,
+        action: (() -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
@@ -54,6 +56,7 @@ public final class GiftAvatarComponent: Component {
         self.color = color
         self.offset = offset
         self.hasLargeParticles = hasLargeParticles
+        self.action = action
     }
     
     public static func ==(lhs: GiftAvatarComponent, rhs: GiftAvatarComponent) -> Bool {
@@ -137,7 +140,11 @@ public final class GiftAvatarComponent: Component {
         
         private var delayTapsTill: Double?
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-            self.playAppearanceAnimation(velocity: nil, mirror: false, explode: true)
+            if let action = self.component?.action {
+                action()
+            } else {
+                self.playAppearanceAnimation(velocity: nil, mirror: false, explode: true)
+            }
         }
         
         private var didSetup = false

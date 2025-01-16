@@ -61,6 +61,7 @@ private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -
 public final class PeerInfoCoverComponent: Component {
     public enum Subject: Equatable {
         case peer(EnginePeer)
+        case status(PeerEmojiStatus)
         case custom(UIColor?, UIColor?, UIColor?, Int64?)
         
         func colors(context: AccountContext, isDark: Bool) -> (UIColor, UIColor)? {
@@ -73,6 +74,11 @@ public final class PeerInfoCoverComponent: Component {
                 } else {
                     return nil
                 }
+            case let .status(status):
+                if case let .starGift(_, _, _, _, _, innerColor, outerColor, _, _) = status.content {
+                    return (UIColor(rgb: UInt32(bitPattern: innerColor)), UIColor(rgb: UInt32(bitPattern: outerColor)))
+                }
+                return nil
             case let .custom(color, secondColor, _, _):
                 if let color {
                     if let secondColor {
@@ -90,6 +96,11 @@ public final class PeerInfoCoverComponent: Component {
             switch self {
             case let .peer(peer):
                 return peer.profileBackgroundEmojiId
+            case let .status(status):
+                if case let .starGift(_, _, _, _, patternFileId, _, _, _, _) = status.content {
+                    return patternFileId
+                }
+                return nil
             case let .custom(_, _, _, fileId):
                 return fileId
             }
@@ -218,6 +229,9 @@ public final class PeerInfoCoverComponent: Component {
             self.layer.addSublayer(self.avatarBackgroundPatternContentsLayer)
             
             self.addSubview(self.backgroundPatternContainer)
+            
+            self.layer.allowsGroupOpacity = true
+            self.backgroundView.layer.allowsGroupOpacity = true
         }
         
         required public init?(coder aDecoder: NSCoder) {
@@ -332,11 +346,7 @@ public final class PeerInfoCoverComponent: Component {
             let previousComponent = self.component
             self.component = component
             self.currentSize = availableSize
-            
-            if case .custom = component.subject {
-                self.layer.allowsGroupOpacity = true
-            }
-            
+                        
             if previousComponent?.subject?.fileId != component.subject?.fileId {
                 if let fileId = component.subject?.fileId, fileId != 0 {
                     if self.patternContentsTarget == nil {
@@ -399,6 +409,13 @@ public final class PeerInfoCoverComponent: Component {
                 self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
                 self.backgroundGradientLayer.type = .radial
                 self.backgroundGradientLayer.colors = [secondaryBackgroundColor.cgColor, backgroundColor.cgColor]
+            } else if case .status = component.subject {
+                gradientWidth = availableSize.width
+                self.backgroundView.backgroundColor = secondaryBackgroundColor
+                self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: component.avatarCenter.y / gradientHeight)
+                self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
+                self.backgroundGradientLayer.type = .radial
+                self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]
             } else {
                 gradientWidth = availableSize.width
                 self.backgroundView.backgroundColor = secondaryBackgroundColor
@@ -438,6 +455,13 @@ public final class PeerInfoCoverComponent: Component {
                     patternColor.withAlphaComponent(0.6).cgColor,
                     patternColor.withAlphaComponent(0.0).cgColor
                 ]
+            } else if case let .status(status) = component.subject, case let .starGift(_, _, _, _, _, _, _, patternColorValue, _) = status.content {
+                let patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
+                self.avatarBackgroundPatternContentsLayer.colors = [
+                    patternColor.withAlphaComponent(0.6).cgColor,
+                    patternColor.withAlphaComponent(0.0).cgColor
+                ]
             } else {
                 if component.subject?.colors(context: component.context, isDark: component.isDark) != nil {
                     self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
@@ -456,9 +480,10 @@ public final class PeerInfoCoverComponent: Component {
                 }
             }
             
-            if case .custom = component.subject {
+            switch component.subject {
+            case .custom, .status:
                 self.avatarBackgroundGradientLayer.isHidden = true
-            } else {
+            default:
                 self.avatarBackgroundGradientLayer.isHidden = component.subject?.colors(context: component.context, isDark: component.isDark) == nil
             }
             transition.setFrame(layer: self.avatarBackgroundGradientLayer, frame: CGSize(width: 300.0, height: 300.0).centered(around: component.avatarCenter))

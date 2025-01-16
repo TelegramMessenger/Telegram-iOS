@@ -1,4 +1,78 @@
 public extension Api.payments {
+    enum SavedStarGifts: TypeConstructorDescription {
+        case savedStarGifts(flags: Int32, count: Int32, gifts: [Api.SavedStarGift], nextOffset: String?, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedStarGifts(let flags, let count, let gifts, let nextOffset, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(1154859627)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(gifts.count))
+                    for item in gifts {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedStarGifts(let flags, let count, let gifts, let nextOffset, let chats, let users):
+                return ("savedStarGifts", [("flags", flags as Any), ("count", count as Any), ("gifts", gifts as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_savedStarGifts(_ reader: BufferReader) -> SavedStarGifts? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.SavedStarGift]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedStarGift.self)
+            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, gifts: _3!, nextOffset: _4, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.payments {
     enum StarGiftUpgradePreview: TypeConstructorDescription {
         case starGiftUpgradePreview(sampleAttributes: [Api.StarGiftAttribute])
     
@@ -416,70 +490,6 @@ public extension Api.payments {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.payments.UniqueStarGift.uniqueStarGift(gift: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum UserStarGifts: TypeConstructorDescription {
-        case userStarGifts(flags: Int32, count: Int32, gifts: [Api.UserStarGift], nextOffset: String?, users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .userStarGifts(let flags, let count, let gifts, let nextOffset, let users):
-                    if boxed {
-                        buffer.appendInt32(1801827607)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(gifts.count))
-                    for item in gifts {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .userStarGifts(let flags, let count, let gifts, let nextOffset, let users):
-                return ("userStarGifts", [("flags", flags as Any), ("count", count as Any), ("gifts", gifts as Any), ("nextOffset", nextOffset as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_userStarGifts(_ reader: BufferReader) -> UserStarGifts? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.UserStarGift]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.UserStarGift.self)
-            }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.payments.UserStarGifts.userStarGifts(flags: _1!, count: _2!, gifts: _3!, nextOffset: _4, users: _5!)
             }
             else {
                 return nil

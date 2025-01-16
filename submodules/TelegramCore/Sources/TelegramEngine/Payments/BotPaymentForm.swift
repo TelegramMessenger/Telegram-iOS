@@ -14,8 +14,8 @@ public enum BotPaymentInvoiceSource {
     case starsChatSubscription(hash: String)
     case starsGiveaway(stars: Int64, boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, showWinners: Bool, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, users: Int32)
     case starGift(hideName: Bool, includeUpgrade: Bool, peerId: EnginePeer.Id, giftId: Int64, text: String?, entities: [MessageTextEntity]?)
-    case starGiftUpgrade(keepOriginalInfo: Bool, messageId: EngineMessage.Id)
-    case starGiftTransfer(messageId: EngineMessage.Id, toPeerId: EnginePeer.Id)
+    case starGiftUpgrade(keepOriginalInfo: Bool, reference: StarGiftReference)
+    case starGiftTransfer(reference: StarGiftReference, toPeerId: EnginePeer.Id)
 }
 
 public struct BotPaymentInvoiceFields: OptionSet {
@@ -360,7 +360,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         }
         return .inputInvoiceStars(purpose: .inputStorePaymentStarsGiveaway(flags: flags, stars: stars, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, prizeDescription: prizeDescription, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount, users: users))
     case let .starGift(hideName, includeUpgrade, peerId, giftId, text, entities):
-        guard let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) else {
             return nil
         }
         var flags: Int32 = 0
@@ -375,18 +375,18 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
             flags |= (1 << 1)
             message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
-        return .inputInvoiceStarGift(flags: flags, userId: inputUser, giftId: giftId, message: message)
-    case let .starGiftUpgrade(keepOriginalInfo, messageId):
+        return .inputInvoiceStarGift(flags: flags, peer: inputPeer, giftId: giftId, message: message)
+    case let .starGiftUpgrade(keepOriginalInfo, reference):
         var flags: Int32 = 0
         if keepOriginalInfo {
             flags |= (1 << 0)
         }
-        return .inputInvoiceStarGiftUpgrade(flags: flags, msgId: messageId.id)
-    case let .starGiftTransfer(messageId, toPeerId):
-        guard let peer = transaction.getPeer(toPeerId), let inputUser = apiInputUser(peer) else {
+        return reference.apiStarGiftReference(transaction: transaction).flatMap { .inputInvoiceStarGiftUpgrade(flags: flags, stargift: $0) }
+    case let .starGiftTransfer(reference, toPeerId):
+        guard let peer = transaction.getPeer(toPeerId), let inputPeer = apiInputPeer(peer) else {
             return nil
         }
-        return .inputInvoiceStarGiftTransfer(msgId: messageId.id, toId: inputUser)
+        return reference.apiStarGiftReference(transaction: transaction).flatMap { .inputInvoiceStarGiftTransfer(stargift: $0, toId: inputPeer) }
     }
 }
 

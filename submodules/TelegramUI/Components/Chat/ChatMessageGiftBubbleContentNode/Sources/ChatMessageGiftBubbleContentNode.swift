@@ -469,12 +469,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                                 hasServiceMessage = false
                             }
-                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, isRefunded, _):
+                        case let .starGift(gift, convertStars, giftText, giftEntities, _, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, isRefunded, _, _, _):
                             if case let .generic(gift) = gift {
                                 isStarGift = true
                                 let authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 
                                 let isSelfGift = item.message.id.peerId == item.context.account.peerId
+                                let isChannelGift = item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel
                                 if isSelfGift {
                                     title = item.presentationData.strings.Notification_StarGift_Self_Title
                                 } else {
@@ -503,9 +504,13 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             }
                                         } else {
                                             if let convertStars, convertStars > 0 {
-                                                text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                                if isChannelGift {
+                                                    text = item.presentationData.strings.Notification_StarGift_Subtitle_Channel(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                                } else {
+                                                    text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                                }
                                             } else {
-                                                text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
+                                                text = item.presentationData.strings.Notification_StarGift_Bot_Subtitle
                                             }
                                         }
                                     } else {
