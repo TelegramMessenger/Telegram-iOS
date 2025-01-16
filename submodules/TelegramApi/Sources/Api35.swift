@@ -1,178 +1,4 @@
 public extension Api.payments {
-    enum SavedStarGifts: TypeConstructorDescription {
-        case savedStarGifts(flags: Int32, count: Int32, gifts: [Api.SavedStarGift], nextOffset: String?, chats: [Api.Chat], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .savedStarGifts(let flags, let count, let gifts, let nextOffset, let chats, let users):
-                    if boxed {
-                        buffer.appendInt32(1154859627)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(gifts.count))
-                    for item in gifts {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .savedStarGifts(let flags, let count, let gifts, let nextOffset, let chats, let users):
-                return ("savedStarGifts", [("flags", flags as Any), ("count", count as Any), ("gifts", gifts as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_savedStarGifts(_ reader: BufferReader) -> SavedStarGifts? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.SavedStarGift]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedStarGift.self)
-            }
-            var _4: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
-            var _5: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _6: [Api.User]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, gifts: _3!, nextOffset: _4, chats: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum StarGiftUpgradePreview: TypeConstructorDescription {
-        case starGiftUpgradePreview(sampleAttributes: [Api.StarGiftAttribute])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .starGiftUpgradePreview(let sampleAttributes):
-                    if boxed {
-                        buffer.appendInt32(377215243)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sampleAttributes.count))
-                    for item in sampleAttributes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .starGiftUpgradePreview(let sampleAttributes):
-                return ("starGiftUpgradePreview", [("sampleAttributes", sampleAttributes as Any)])
-    }
-    }
-    
-        public static func parse_starGiftUpgradePreview(_ reader: BufferReader) -> StarGiftUpgradePreview? {
-            var _1: [Api.StarGiftAttribute]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGiftAttribute.self)
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.payments.StarGiftUpgradePreview.starGiftUpgradePreview(sampleAttributes: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum StarGifts: TypeConstructorDescription {
-        case starGifts(hash: Int32, gifts: [Api.StarGift])
-        case starGiftsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .starGifts(let hash, let gifts):
-                    if boxed {
-                        buffer.appendInt32(-1877571094)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(gifts.count))
-                    for item in gifts {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .starGiftsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-1551326360)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .starGifts(let hash, let gifts):
-                return ("starGifts", [("hash", hash as Any), ("gifts", gifts as Any)])
-                case .starGiftsNotModified:
-                return ("starGiftsNotModified", [])
-    }
-    }
-    
-        public static func parse_starGifts(_ reader: BufferReader) -> StarGifts? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.StarGift]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StarGift.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.StarGifts.starGifts(hash: _1!, gifts: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_starGiftsNotModified(_ reader: BufferReader) -> StarGifts? {
-            return Api.payments.StarGifts.starGiftsNotModified
-        }
-    
-    }
-}
-public extension Api.payments {
     enum StarsRevenueAdsAccountUrl: TypeConstructorDescription {
         case starsRevenueAdsAccountUrl(url: String)
     
@@ -1872,6 +1698,296 @@ public extension Api.stats {
             else {
                 return nil
             }
+        }
+    
+    }
+}
+public extension Api.stats {
+    enum PublicForwards: TypeConstructorDescription {
+        case publicForwards(flags: Int32, count: Int32, forwards: [Api.PublicForward], nextOffset: String?, chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .publicForwards(let flags, let count, let forwards, let nextOffset, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-1828487648)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(forwards.count))
+                    for item in forwards {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .publicForwards(let flags, let count, let forwards, let nextOffset, let chats, let users):
+                return ("publicForwards", [("flags", flags as Any), ("count", count as Any), ("forwards", forwards as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_publicForwards(_ reader: BufferReader) -> PublicForwards? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.PublicForward]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PublicForward.self)
+            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _5: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _6: [Api.User]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stats.PublicForwards.publicForwards(flags: _1!, count: _2!, forwards: _3!, nextOffset: _4, chats: _5!, users: _6!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.stats {
+    enum StoryStats: TypeConstructorDescription {
+        case storyStats(viewsGraph: Api.StatsGraph, reactionsByEmotionGraph: Api.StatsGraph)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyStats(let viewsGraph, let reactionsByEmotionGraph):
+                    if boxed {
+                        buffer.appendInt32(1355613820)
+                    }
+                    viewsGraph.serialize(buffer, true)
+                    reactionsByEmotionGraph.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyStats(let viewsGraph, let reactionsByEmotionGraph):
+                return ("storyStats", [("viewsGraph", viewsGraph as Any), ("reactionsByEmotionGraph", reactionsByEmotionGraph as Any)])
+    }
+    }
+    
+        public static func parse_storyStats(_ reader: BufferReader) -> StoryStats? {
+            var _1: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            var _2: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.stats.StoryStats.storyStats(viewsGraph: _1!, reactionsByEmotionGraph: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.stickers {
+    enum SuggestedShortName: TypeConstructorDescription {
+        case suggestedShortName(shortName: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .suggestedShortName(let shortName):
+                    if boxed {
+                        buffer.appendInt32(-2046910401)
+                    }
+                    serializeString(shortName, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .suggestedShortName(let shortName):
+                return ("suggestedShortName", [("shortName", shortName as Any)])
+    }
+    }
+    
+        public static func parse_suggestedShortName(_ reader: BufferReader) -> SuggestedShortName? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stickers.SuggestedShortName.suggestedShortName(shortName: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.storage {
+    enum FileType: TypeConstructorDescription {
+        case fileGif
+        case fileJpeg
+        case fileMov
+        case fileMp3
+        case fileMp4
+        case filePartial
+        case filePdf
+        case filePng
+        case fileUnknown
+        case fileWebp
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .fileGif:
+                    if boxed {
+                        buffer.appendInt32(-891180321)
+                    }
+                    
+                    break
+                case .fileJpeg:
+                    if boxed {
+                        buffer.appendInt32(8322574)
+                    }
+                    
+                    break
+                case .fileMov:
+                    if boxed {
+                        buffer.appendInt32(1258941372)
+                    }
+                    
+                    break
+                case .fileMp3:
+                    if boxed {
+                        buffer.appendInt32(1384777335)
+                    }
+                    
+                    break
+                case .fileMp4:
+                    if boxed {
+                        buffer.appendInt32(-1278304028)
+                    }
+                    
+                    break
+                case .filePartial:
+                    if boxed {
+                        buffer.appendInt32(1086091090)
+                    }
+                    
+                    break
+                case .filePdf:
+                    if boxed {
+                        buffer.appendInt32(-1373745011)
+                    }
+                    
+                    break
+                case .filePng:
+                    if boxed {
+                        buffer.appendInt32(172975040)
+                    }
+                    
+                    break
+                case .fileUnknown:
+                    if boxed {
+                        buffer.appendInt32(-1432995067)
+                    }
+                    
+                    break
+                case .fileWebp:
+                    if boxed {
+                        buffer.appendInt32(276907596)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .fileGif:
+                return ("fileGif", [])
+                case .fileJpeg:
+                return ("fileJpeg", [])
+                case .fileMov:
+                return ("fileMov", [])
+                case .fileMp3:
+                return ("fileMp3", [])
+                case .fileMp4:
+                return ("fileMp4", [])
+                case .filePartial:
+                return ("filePartial", [])
+                case .filePdf:
+                return ("filePdf", [])
+                case .filePng:
+                return ("filePng", [])
+                case .fileUnknown:
+                return ("fileUnknown", [])
+                case .fileWebp:
+                return ("fileWebp", [])
+    }
+    }
+    
+        public static func parse_fileGif(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileGif
+        }
+        public static func parse_fileJpeg(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileJpeg
+        }
+        public static func parse_fileMov(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileMov
+        }
+        public static func parse_fileMp3(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileMp3
+        }
+        public static func parse_fileMp4(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileMp4
+        }
+        public static func parse_filePartial(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.filePartial
+        }
+        public static func parse_filePdf(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.filePdf
+        }
+        public static func parse_filePng(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.filePng
+        }
+        public static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileUnknown
+        }
+        public static func parse_fileWebp(_ reader: BufferReader) -> FileType? {
+            return Api.storage.FileType.fileWebp
         }
     
     }

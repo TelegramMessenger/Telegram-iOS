@@ -605,10 +605,10 @@ extension StarGift {
                 return nil
             }
             self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
-        case let .starGiftUnique(_, id, title, slug, num, ownerId, ownerName, attributes, availabilityIssued, availabilityTotal):
+        case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, attributes, availabilityIssued, availabilityTotal):
             let owner: StarGift.UniqueGift.Owner
-            if let ownerId {
-                owner = .peerId(EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(ownerId)))
+            if let ownerId = ownerPeerId?.peerId {
+                owner = .peerId(ownerId)
             } else if let ownerName {
                 owner = .name(ownerName)
             } else {

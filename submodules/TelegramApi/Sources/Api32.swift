@@ -1,118 +1,4 @@
 public extension Api.messages {
-    enum ArchivedStickers: TypeConstructorDescription {
-        case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .archivedStickers(let count, let sets):
-                    if boxed {
-                        buffer.appendInt32(1338747336)
-                    }
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(sets.count))
-                    for item in sets {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .archivedStickers(let count, let sets):
-                return ("archivedStickers", [("count", count as Any), ("sets", sets as Any)])
-    }
-    }
-    
-        public static func parse_archivedStickers(_ reader: BufferReader) -> ArchivedStickers? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.StickerSetCovered]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.ArchivedStickers.archivedStickers(count: _1!, sets: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum AvailableEffects: TypeConstructorDescription {
-        case availableEffects(hash: Int32, effects: [Api.AvailableEffect], documents: [Api.Document])
-        case availableEffectsNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .availableEffects(let hash, let effects, let documents):
-                    if boxed {
-                        buffer.appendInt32(-1109696146)
-                    }
-                    serializeInt32(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(effects.count))
-                    for item in effects {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .availableEffectsNotModified:
-                    if boxed {
-                        buffer.appendInt32(-772957605)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .availableEffects(let hash, let effects, let documents):
-                return ("availableEffects", [("hash", hash as Any), ("effects", effects as Any), ("documents", documents as Any)])
-                case .availableEffectsNotModified:
-                return ("availableEffectsNotModified", [])
-    }
-    }
-    
-        public static func parse_availableEffects(_ reader: BufferReader) -> AvailableEffects? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: [Api.AvailableEffect]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AvailableEffect.self)
-            }
-            var _3: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.AvailableEffects.availableEffects(hash: _1!, effects: _2!, documents: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_availableEffectsNotModified(_ reader: BufferReader) -> AvailableEffects? {
-            return Api.messages.AvailableEffects.availableEffectsNotModified
-        }
-    
-    }
-}
-public extension Api.messages {
     enum AvailableReactions: TypeConstructorDescription {
         case availableReactions(hash: Int32, reactions: [Api.AvailableReaction])
         case availableReactionsNotModified
@@ -1430,6 +1316,142 @@ public extension Api.messages {
             let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
                 return Api.messages.ForumTopics.forumTopics(flags: _1!, count: _2!, topics: _3!, messages: _4!, chats: _5!, users: _6!, pts: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum FoundStickerSets: TypeConstructorDescription {
+        case foundStickerSets(hash: Int64, sets: [Api.StickerSetCovered])
+        case foundStickerSetsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .foundStickerSets(let hash, let sets):
+                    if boxed {
+                        buffer.appendInt32(-1963942446)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .foundStickerSetsNotModified:
+                    if boxed {
+                        buffer.appendInt32(223655517)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundStickerSets(let hash, let sets):
+                return ("foundStickerSets", [("hash", hash as Any), ("sets", sets as Any)])
+                case .foundStickerSetsNotModified:
+                return ("foundStickerSetsNotModified", [])
+    }
+    }
+    
+        public static func parse_foundStickerSets(_ reader: BufferReader) -> FoundStickerSets? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.StickerSetCovered]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSetCovered.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.FoundStickerSets.foundStickerSets(hash: _1!, sets: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_foundStickerSetsNotModified(_ reader: BufferReader) -> FoundStickerSets? {
+            return Api.messages.FoundStickerSets.foundStickerSetsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum FoundStickers: TypeConstructorDescription {
+        case foundStickers(flags: Int32, nextOffset: Int32?, hash: Int64, stickers: [Api.Document])
+        case foundStickersNotModified(flags: Int32, nextOffset: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .foundStickers(let flags, let nextOffset, let hash, let stickers):
+                    if boxed {
+                        buffer.appendInt32(-2100698480)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextOffset!, buffer: buffer, boxed: false)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stickers.count))
+                    for item in stickers {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .foundStickersNotModified(let flags, let nextOffset):
+                    if boxed {
+                        buffer.appendInt32(1611711796)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextOffset!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .foundStickers(let flags, let nextOffset, let hash, let stickers):
+                return ("foundStickers", [("flags", flags as Any), ("nextOffset", nextOffset as Any), ("hash", hash as Any), ("stickers", stickers as Any)])
+                case .foundStickersNotModified(let flags, let nextOffset):
+                return ("foundStickersNotModified", [("flags", flags as Any), ("nextOffset", nextOffset as Any)])
+    }
+    }
+    
+        public static func parse_foundStickers(_ reader: BufferReader) -> FoundStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.FoundStickers.foundStickers(flags: _1!, nextOffset: _2, hash: _3!, stickers: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_foundStickersNotModified(_ reader: BufferReader) -> FoundStickers? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.FoundStickers.foundStickersNotModified(flags: _1!, nextOffset: _2)
             }
             else {
                 return nil

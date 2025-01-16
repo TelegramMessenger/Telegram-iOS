@@ -575,7 +575,7 @@ public extension Api {
 public extension Api {
     enum StarGift: TypeConstructorDescription {
         case starGift(flags: Int32, id: Int64, sticker: Api.Document, stars: Int64, availabilityRemains: Int32?, availabilityTotal: Int32?, convertStars: Int64, firstSaleDate: Int32?, lastSaleDate: Int32?, upgradeStars: Int64?)
-        case starGiftUnique(flags: Int32, id: Int64, title: String, slug: String, num: Int32, ownerId: Int64?, ownerName: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32)
+        case starGiftUnique(flags: Int32, id: Int64, title: String, slug: String, num: Int32, ownerId: Api.Peer?, ownerName: String?, attributes: [Api.StarGiftAttribute], availabilityIssued: Int32, availabilityTotal: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -596,14 +596,14 @@ public extension Api {
                     break
                 case .starGiftUnique(let flags, let id, let title, let slug, let num, let ownerId, let ownerName, let attributes, let availabilityIssued, let availabilityTotal):
                     if boxed {
-                        buffer.appendInt32(880997154)
+                        buffer.appendInt32(-1145732050)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeInt32(num, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(ownerId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 0) != 0 {ownerId!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(ownerName!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(attributes.count))
@@ -676,8 +676,10 @@ public extension Api {
             _4 = parseString(reader)
             var _5: Int32?
             _5 = reader.readInt32()
-            var _6: Int64?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt64() }
+            var _6: Api.Peer?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
             var _7: String?
             if Int(_1!) & Int(1 << 1) != 0 {_7 = parseString(reader) }
             var _8: [Api.StarGiftAttribute]?

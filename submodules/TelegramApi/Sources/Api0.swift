@@ -390,7 +390,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-122978821] = { return Api.InputMedia.parse_inputMediaContact($0) }
     dict[-428884101] = { return Api.InputMedia.parse_inputMediaDice($0) }
     dict[1946579745] = { return Api.InputMedia.parse_inputMediaDocument($0) }
-    dict[-78455655] = { return Api.InputMedia.parse_inputMediaDocumentExternal($0) }
+    dict[-149933938] = { return Api.InputMedia.parse_inputMediaDocumentExternal($0) }
     dict[-1771768449] = { return Api.InputMedia.parse_inputMediaEmpty($0) }
     dict[-750828557] = { return Api.InputMedia.parse_inputMediaGame($0) }
     dict[-1759532989] = { return Api.InputMedia.parse_inputMediaGeoLive($0) }
@@ -587,7 +587,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
     dict[1348510708] = { return Api.MessageAction.parse_messageActionSetChatWallPaper($0) }
     dict[1007897979] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
-    dict[178478442] = { return Api.MessageAction.parse_messageActionStarGift($0) }
+    dict[-1555785491] = { return Api.MessageAction.parse_messageActionStarGift($0) }
     dict[638024601] = { return Api.MessageAction.parse_messageActionStarGiftUnique($0) }
     dict[1474192222] = { return Api.MessageAction.parse_messageActionSuggestProfilePhoto($0) }
     dict[228168278] = { return Api.MessageAction.parse_messageActionTopicCreate($0) }
@@ -914,7 +914,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[46953416] = { return Api.StarGift.parse_starGift($0) }
-    dict[880997154] = { return Api.StarGift.parse_starGiftUnique($0) }
+    dict[-1145732050] = { return Api.StarGift.parse_starGiftUnique($0) }
     dict[-1809377438] = { return Api.StarGiftAttribute.parse_starGiftAttributeBackdrop($0) }
     dict[970559507] = { return Api.StarGiftAttribute.parse_starGiftAttributeModel($0) }
     dict[-1070837941] = { return Api.StarGiftAttribute.parse_starGiftAttributeOriginalDetails($0) }
@@ -1137,7 +1137,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1301765052] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
-    dict[844641761] = { return Api.UserStarGift.parse_userStarGift($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
     dict[1703516023] = { return Api.UserStatus.parse_userStatusLastMonth($0) }
     dict[1410997530] = { return Api.UserStatus.parse_userStatusLastWeek($0) }
@@ -2167,8 +2166,6 @@ public extension Api {
             case let _1 as Api.UserFull:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.UserProfilePhoto:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.UserStarGift:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.UserStatus:
                 _1.serialize(buffer, boxed)

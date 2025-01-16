@@ -433,7 +433,7 @@ public extension Api {
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaDice(emoticon: String)
         case inputMediaDocument(flags: Int32, id: Api.InputDocument, videoCover: Api.InputPhoto?, ttlSeconds: Int32?, query: String?)
-        case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?)
+        case inputMediaDocumentExternal(flags: Int32, url: String, ttlSeconds: Int32?, videoCover: Api.InputPhoto?)
         case inputMediaEmpty
         case inputMediaGame(id: Api.InputGame)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
@@ -476,13 +476,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(query!, buffer: buffer, boxed: false)}
                     break
-                case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds):
+                case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds, let videoCover):
                     if boxed {
-                        buffer.appendInt32(-78455655)
+                        buffer.appendInt32(-149933938)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(url, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlSeconds!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {videoCover!.serialize(buffer, true)}
                     break
                 case .inputMediaEmpty:
                     if boxed {
@@ -644,8 +645,8 @@ public extension Api {
                 return ("inputMediaDice", [("emoticon", emoticon as Any)])
                 case .inputMediaDocument(let flags, let id, let videoCover, let ttlSeconds, let query):
                 return ("inputMediaDocument", [("flags", flags as Any), ("id", id as Any), ("videoCover", videoCover as Any), ("ttlSeconds", ttlSeconds as Any), ("query", query as Any)])
-                case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds):
-                return ("inputMediaDocumentExternal", [("flags", flags as Any), ("url", url as Any), ("ttlSeconds", ttlSeconds as Any)])
+                case .inputMediaDocumentExternal(let flags, let url, let ttlSeconds, let videoCover):
+                return ("inputMediaDocumentExternal", [("flags", flags as Any), ("url", url as Any), ("ttlSeconds", ttlSeconds as Any), ("videoCover", videoCover as Any)])
                 case .inputMediaEmpty:
                 return ("inputMediaEmpty", [])
                 case .inputMediaGame(let id):
@@ -742,11 +743,16 @@ public extension Api {
             _2 = parseString(reader)
             var _3: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            var _4: Api.InputPhoto?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.InputPhoto
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.InputMedia.inputMediaDocumentExternal(flags: _1!, url: _2!, ttlSeconds: _3)
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.InputMedia.inputMediaDocumentExternal(flags: _1!, url: _2!, ttlSeconds: _3, videoCover: _4)
             }
             else {
                 return nil
