@@ -50,14 +50,27 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
         self.isVideo = isVideo
         
         let source: FFMpegFileReader.SourceDescription
-        var seek: (streamIndex: Int, pts: Int64)?
+        var seek: FFMpegFileReader.Seek?
         var maxReadablePts: (streamIndex: Int, pts: Int64, isEnded: Bool)?
         switch content {
         case let .tempFile(tempFile):
             source = .file(tempFile.file.path)
         case let .directStream(directStream):
-            source = .resource(mediaBox: directStream.mediaBox, resource: directStream.resource, size: directStream.size)
-            seek = (directStream.seek.streamIndex, directStream.seek.pts)
+            let mappedRanges: [Range<Int64>]
+            #if DEBUG && false
+            var mappedRangesValue: [Range<Int64>] = []
+            var testOffset: Int64 = 0
+            while testOffset < directStream.size {
+                let testBlock: Int64 = min(3 * 1024 + 1, directStream.size - testOffset)
+                mappedRangesValue.append(testOffset ..< (testOffset + testBlock))
+                testOffset += testBlock
+            }
+            mappedRanges = mappedRangesValue
+            #else
+            mappedRanges = [0 ..< directStream.size]
+            #endif
+            source = .resource(mediaBox: directStream.mediaBox, resource: directStream.resource, resourceSize: directStream.size, mappedRanges: mappedRanges)
+            seek = .stream(streamIndex: directStream.seek.streamIndex, pts: directStream.seek.pts)
             maxReadablePts = directStream.maxReadablePts
         }
         
@@ -65,6 +78,10 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
             var passthroughDecoder = true
             var useHardwareAcceleration = false
             
+            if (codecName == "h264" || codecName == "hevc") {
+                passthroughDecoder = false
+                useHardwareAcceleration = true
+            }
             if (codecName == "av1" || codecName == "av01") {
                 passthroughDecoder = false
                 useHardwareAcceleration = internal_isHardwareAv1Supported

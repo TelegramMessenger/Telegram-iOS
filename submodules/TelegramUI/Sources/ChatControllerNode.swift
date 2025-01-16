@@ -54,6 +54,7 @@ final class VideoNavigationControllerDropContentItem: NavigationControllerDropCo
 }
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider {
+    weak var node: ChatControllerNode?
     var inputAccessoryHeight: (() -> CGFloat)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     
@@ -65,7 +66,17 @@ private final class ChatControllerNodeView: UITracingLayerView, WindowInputAcces
         if let result = self.hitTestImpl?(point, event) {
             return result
         }
-        return super.hitTest(point, with: event)
+        guard let result = super.hitTest(point, with: event) else {
+            return nil
+        }
+        if let node = self.node {
+            if result === node.historyNodeContainer.view {
+                if node.historyNode.alpha == 0.0 {
+                    return nil
+                }
+            }
+        }
+        return result
     }
 }
 
@@ -172,7 +183,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private(set) var validLayout: (ContainerViewLayout, CGFloat)?
     private var visibleAreaInset = UIEdgeInsets()
     
-    private var searchNavigationNode: ChatSearchNavigationContentNode?
+    private(set) var searchNavigationNode: ChatSearchNavigationContentNode?
     
     private var navigationModalFrame: NavigationModalFrame?
     
@@ -726,6 +737,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         self.setViewBlock({
             return ChatControllerNodeView()
         })
+        
+        (self.view as? ChatControllerNodeView)?.node = self
         
         (self.view as? ChatControllerNodeView)?.inputAccessoryHeight = { [weak self] in
             if let strongSelf = self {

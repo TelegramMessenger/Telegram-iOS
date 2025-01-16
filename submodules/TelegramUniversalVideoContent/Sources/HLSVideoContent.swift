@@ -230,7 +230,7 @@ public final class HLSVideoContent: UniversalVideoContent {
     
     public let id: AnyHashable
     public let nativeId: NativeVideoContentId
-    let userLocation: MediaResourceUserLocation
+    public let userLocation: MediaResourceUserLocation
     public let fileReference: FileMediaReference
     public let dimensions: CGSize
     public let duration: Double

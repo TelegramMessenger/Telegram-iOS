@@ -3,11 +3,6 @@ import SwiftSignalKit
 import CoreMedia
 import ImageIO
 
-private struct PayloadDescription: Codable {
-    var id: UInt32
-    var timestamp: Int32
-}
-
 private struct JoinPayload: Codable {
     var id: UInt32
     var string: String
@@ -16,11 +11,6 @@ private struct JoinPayload: Codable {
 private struct JoinResponsePayload: Codable {
     var id: UInt32
     var string: String
-}
-
-private struct KeepaliveInfo: Codable {
-    var id: UInt32
-    var timestamp: Int32
 }
 
 private struct CutoffPayload: Codable {
@@ -370,6 +360,16 @@ private final class MappedFile {
 }
 
 public final class IpcGroupCallBufferAppContext {
+    struct KeepaliveInfo: Codable {
+        var id: UInt32
+        var timestamp: Int32
+    }
+    
+    struct PayloadDescription: Codable {
+        var id: UInt32
+        var timestamp: Int32
+    }
+    
     private let basePath: String
     private var audioServer: NamedPipeReader?
 
@@ -460,7 +460,7 @@ public final class IpcGroupCallBufferAppContext {
 
     private func updateCallIsActive() {
         let timestamp = Int32(Date().timeIntervalSince1970)
-        let payloadDescription = PayloadDescription(
+        let payloadDescription = IpcGroupCallBufferAppContext.PayloadDescription(
             id: self.id,
             timestamp: timestamp
         )
@@ -477,7 +477,7 @@ public final class IpcGroupCallBufferAppContext {
         guard let keepaliveInfoData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
             return
         }
-        guard let keepaliveInfo = try? JSONDecoder().decode(KeepaliveInfo.self, from: keepaliveInfoData) else {
+        guard let keepaliveInfo = try? JSONDecoder().decode(IpcGroupCallBufferAppContext.KeepaliveInfo.self, from: keepaliveInfoData) else {
             return
         }
         if keepaliveInfo.id != self.id {
@@ -587,7 +587,7 @@ public final class IpcGroupCallBufferBroadcastContext {
             return
         }
 
-        guard let payloadDescription = try? JSONDecoder().decode(PayloadDescription.self, from: payloadDescriptionData) else {
+        guard let payloadDescription = try? JSONDecoder().decode(IpcGroupCallBufferAppContext.PayloadDescription.self, from: payloadDescriptionData) else {
             self.statusPromise.set(.single(.finished(.error)))
             return
         }
@@ -646,7 +646,7 @@ public final class IpcGroupCallBufferBroadcastContext {
         guard let currentId = self.currentId else {
             preconditionFailure()
         }
-        let keepaliveInfo = KeepaliveInfo(
+        let keepaliveInfo = IpcGroupCallBufferAppContext.KeepaliveInfo(
             id: currentId,
             timestamp: Int32(Date().timeIntervalSince1970)
         )
@@ -793,5 +793,321 @@ public func deserializePixelBuffer(data: Data) -> CVPixelBuffer? {
         } else {
             return nil
         }
+    }
+}
+
+public final class IpcGroupCallEmbeddedAppContext {
+    public struct JoinPayload: Codable, Equatable {
+        public var id: UInt32
+        public var data: String
+        public var ssrc: UInt32
+    
+        public init(id: UInt32, data: String, ssrc: UInt32) {
+            self.id = id
+            self.data = data
+            self.ssrc = ssrc
+        }
+    }
+    
+    public struct JoinResponse: Codable, Equatable {
+        public var data: String
+        
+        public init(data: String) {
+            self.data = data
+        }
+    }
+    
+    struct KeepaliveInfo: Codable {
+        var id: UInt32
+        var timestamp: Int32
+        var joinPayload: JoinPayload?
+        
+        init(id: UInt32, timestamp: Int32, joinPayload: JoinPayload?) {
+            self.id = id
+            self.timestamp = timestamp
+            self.joinPayload = joinPayload
+        }
+    }
+    
+    struct PayloadDescription: Codable {
+        var id: UInt32
+        var timestamp: Int32
+        var activeRequestId: UInt32?
+        var joinResponse: JoinResponse?
+        
+        init(id: UInt32, timestamp: Int32, activeRequestId: UInt32?, joinResponse: JoinResponse?) {
+            self.id = id
+            self.timestamp = timestamp
+            self.activeRequestId = activeRequestId
+            self.joinResponse = joinResponse
+        }
+    }
+    
+    private let basePath: String
+
+    private let id: UInt32
+
+    private let isActivePromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var isActive: Signal<Bool, NoError> {
+        return self.isActivePromise.get()
+    }
+    private var isActiveCheckTimer: SwiftSignalKit.Timer?
+
+    private var joinPayloadValue: JoinPayload? {
+        didSet {
+            if let joinPayload = self.joinPayloadValue, joinPayload != oldValue {
+                self.joinPayloadPromise.set(.single(joinPayload))
+            }
+        }
+    }
+    private let joinPayloadPromise = Promise<JoinPayload>()
+    public var joinPayload: Signal<JoinPayload, NoError> {
+        return self.joinPayloadPromise.get()
+    }
+    
+    private var nextActiveRequestId: UInt32 = 0
+    private var activeRequestId: UInt32? {
+        didSet {
+            if self.activeRequestId != oldValue {
+                self.updateCallIsActive()
+            }
+        }
+    }
+    
+    public var joinResponse: JoinResponse? {
+        didSet {
+            if self.joinResponse != oldValue {
+                self.updateCallIsActive()
+            }
+        }
+    }
+
+    private var callActiveInfoTimer: SwiftSignalKit.Timer?
+
+    public init(basePath: String) {
+        self.basePath = basePath
+        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+
+        self.id = UInt32.random(in: 0 ..< UInt32.max)
+
+        self.updateCallIsActive()
+
+        let callActiveInfoTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.updateCallIsActive()
+        }, queue: .mainQueue())
+        self.callActiveInfoTimer = callActiveInfoTimer
+        callActiveInfoTimer.start()
+
+        let isActiveCheckTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.updateKeepaliveInfo()
+        }, queue: .mainQueue())
+        self.isActiveCheckTimer = isActiveCheckTimer
+        isActiveCheckTimer.start()
+    }
+
+    deinit {
+        self.callActiveInfoTimer?.invalidate()
+        self.isActiveCheckTimer?.invalidate()
+    }
+
+    private func updateCallIsActive() {
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        let payloadDescription = IpcGroupCallEmbeddedAppContext.PayloadDescription(
+            id: self.id,
+            timestamp: timestamp,
+            activeRequestId: self.activeRequestId,
+            joinResponse: self.joinResponse
+        )
+        guard let payloadDescriptionData = try? JSONEncoder().encode(payloadDescription) else {
+            return
+        }
+        guard let _ = try? payloadDescriptionData.write(to: URL(fileURLWithPath: payloadDescriptionPath(basePath: self.basePath)), options: .atomic) else {
+            return
+        }
+    }
+
+    private func updateKeepaliveInfo() {
+        let filePath = keepaliveInfoPath(basePath: self.basePath)
+        guard let keepaliveInfoData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
+            return
+        }
+        guard let keepaliveInfo = try? JSONDecoder().decode(KeepaliveInfo.self, from: keepaliveInfoData) else {
+            return
+        }
+        if keepaliveInfo.id != self.id {
+            self.isActivePromise.set(false)
+            return
+        }
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        if keepaliveInfo.timestamp < timestamp - Int32(keepaliveTimeout) {
+            self.isActivePromise.set(false)
+            return
+        }
+
+        self.isActivePromise.set(true)
+        
+        self.joinPayloadValue = keepaliveInfo.joinPayload
+    }
+    
+    public func startScreencast() -> UInt32? {
+        if self.activeRequestId == nil {
+            let id = self.nextActiveRequestId
+            self.nextActiveRequestId += 1
+            self.activeRequestId = id
+            return id
+        } else {
+            return nil
+        }
+    }
+    
+    public func stopScreencast() {
+        self.activeRequestId = nil
+        
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        let cutoffPayload = CutoffPayload(
+            id: self.id,
+            timestamp: timestamp
+        )
+        guard let cutoffPayloadData = try? JSONEncoder().encode(cutoffPayload) else {
+            return
+        }
+        guard let _ = try? cutoffPayloadData.write(to: URL(fileURLWithPath: cutoffPayloadPath(basePath: self.basePath)), options: .atomic) else {
+            return
+        }
+    }
+}
+
+public final class IpcGroupCallEmbeddedBroadcastContext {
+    public enum Status {
+        public enum FinishReason {
+            case screencastEnded
+            case callEnded
+            case error
+        }
+        case active(id: UInt32?, joinResponse: IpcGroupCallEmbeddedAppContext.JoinResponse?)
+        case finished(FinishReason)
+    }
+
+    private let basePath: String
+    private var timer: SwiftSignalKit.Timer?
+
+    private let statusPromise = Promise<Status>()
+    public var status: Signal<Status, NoError> {
+        return self.statusPromise.get()
+    }
+
+    private var currentId: UInt32?
+
+    private var callActiveInfoTimer: SwiftSignalKit.Timer?
+    private var keepaliveInfoTimer: SwiftSignalKit.Timer?
+    private var screencastCutoffTimer: SwiftSignalKit.Timer?
+    
+    public var joinPayload: IpcGroupCallEmbeddedAppContext.JoinPayload? {
+        didSet {
+            if self.joinPayload != oldValue {
+                self.writeKeepaliveInfo()
+            }
+        }
+    }
+    
+    public init(basePath: String) {
+        self.basePath = basePath
+        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+
+        let callActiveInfoTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.updateCallIsActive()
+        }, queue: .mainQueue())
+        self.callActiveInfoTimer = callActiveInfoTimer
+        callActiveInfoTimer.start()
+        
+        let screencastCutoffTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+            self?.updateScreencastCutoff()
+        }, queue: .mainQueue())
+        self.screencastCutoffTimer = screencastCutoffTimer
+        screencastCutoffTimer.start()
+    }
+
+    deinit {
+        self.endActiveIndication()
+
+        self.callActiveInfoTimer?.invalidate()
+        self.keepaliveInfoTimer?.invalidate()
+        self.screencastCutoffTimer?.invalidate()
+    }
+
+    private func updateScreencastCutoff() {
+        let filePath = cutoffPayloadPath(basePath: self.basePath)
+        guard let cutoffPayloadData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
+            return
+        }
+        
+        guard let cutoffPayload = try? JSONDecoder().decode(CutoffPayload.self, from: cutoffPayloadData) else {
+            return
+        }
+        
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        if let currentId = self.currentId, currentId == cutoffPayload.id && cutoffPayload.timestamp > timestamp - 10 {
+            self.statusPromise.set(.single(.finished(.screencastEnded)))
+            return
+        }
+    }
+    
+    private func updateCallIsActive() {
+        let filePath = payloadDescriptionPath(basePath: self.basePath)
+        guard let payloadDescriptionData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
+            self.statusPromise.set(.single(.finished(.error)))
+            return
+        }
+
+        guard let payloadDescription = try? JSONDecoder().decode(IpcGroupCallEmbeddedAppContext.PayloadDescription.self, from: payloadDescriptionData) else {
+            self.statusPromise.set(.single(.finished(.error)))
+            return
+        }
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        if payloadDescription.timestamp < timestamp - 4 {
+            self.statusPromise.set(.single(.finished(.callEnded)))
+            return
+        }
+
+        if let currentId = self.currentId {
+            if currentId != payloadDescription.id {
+                self.statusPromise.set(.single(.finished(.callEnded)))
+            } else {
+                self.statusPromise.set(.single(.active(id: payloadDescription.activeRequestId, joinResponse: payloadDescription.joinResponse)))
+            }
+        } else {
+            self.currentId = payloadDescription.id
+
+            self.writeKeepaliveInfo()
+
+            let keepaliveInfoTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                self?.writeKeepaliveInfo()
+            }, queue: .mainQueue())
+            self.keepaliveInfoTimer = keepaliveInfoTimer
+            keepaliveInfoTimer.start()
+
+            self.statusPromise.set(.single(.active(id: payloadDescription.activeRequestId, joinResponse: payloadDescription.joinResponse)))
+        }
+    }
+
+    private func writeKeepaliveInfo() {
+        guard let currentId = self.currentId else {
+            preconditionFailure()
+        }
+        let keepaliveInfo = IpcGroupCallEmbeddedAppContext.KeepaliveInfo(
+            id: currentId,
+            timestamp: Int32(Date().timeIntervalSince1970),
+            joinPayload: self.joinPayload
+        )
+        guard let keepaliveInfoData = try? JSONEncoder().encode(keepaliveInfo) else {
+            preconditionFailure()
+        }
+        guard let _ = try? keepaliveInfoData.write(to: URL(fileURLWithPath: keepaliveInfoPath(basePath: self.basePath)), options: .atomic) else {
+            preconditionFailure()
+        }
+    }
+
+    private func endActiveIndication() {
+        let _ = try? FileManager.default.removeItem(atPath: keepaliveInfoPath(basePath: self.basePath))
     }
 }

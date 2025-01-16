@@ -321,12 +321,12 @@ private extension CurrentImpl {
         }
     }
     
-    func stop(account: Account, reportCallId: CallId?) {
+    func stop(account: Account, reportCallId: CallId?, debugLog: Promise<String?>) {
         switch self {
         case let .call(callContext):
-            callContext.stop(account: account, reportCallId: reportCallId)
+            callContext.stop(account: account, reportCallId: reportCallId, debugLog: debugLog)
         case .mediaStream, .externalMediaStream:
-            break
+            debugLog.set(.single(nil))
         }
     }
     
@@ -464,6 +464,138 @@ public func allocateCallLogPath(account: Account) -> String {
     let name = "log-\(Date())".replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
     
     return "\(path)/\(name).log"
+}
+
+private protocol ScreencastIPCContext: AnyObject {
+    var isActive: Signal<Bool, NoError> { get }
+    
+    func requestScreencast() -> Signal<(String, UInt32), NoError>?
+    func setJoinResponse(clientParams: String)
+    func disableScreencast(account: Account)
+}
+
+private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
+    private let isConference: Bool
+    
+    private let screencastBufferServerContext: IpcGroupCallBufferAppContext
+    private var screencastCallContext: ScreencastContext?
+    private let screencastCapturer: OngoingCallVideoCapturer
+    private var screencastFramesDisposable: Disposable?
+    private var screencastAudioDataDisposable: Disposable?
+    
+    var isActive: Signal<Bool, NoError> {
+        return self.screencastBufferServerContext.isActive
+    }
+    
+    init(basePath: String, isConference: Bool) {
+        self.isConference = isConference
+        
+        let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath + "/broadcast-coordination")
+        self.screencastBufferServerContext = screencastBufferServerContext
+        let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
+        self.screencastCapturer = screencastCapturer
+        self.screencastFramesDisposable = (screencastBufferServerContext.frames
+        |> deliverOnMainQueue).start(next: { [weak screencastCapturer] screencastFrame in
+            guard let screencastCapturer = screencastCapturer else {
+                return
+            }
+            guard let sampleBuffer = sampleBufferFromPixelBuffer(pixelBuffer: screencastFrame.0) else {
+                return
+            }
+            screencastCapturer.injectSampleBuffer(sampleBuffer, rotation: screencastFrame.1, completion: {})
+        })
+        self.screencastAudioDataDisposable = (screencastBufferServerContext.audioData
+        |> deliverOnMainQueue).start(next: { [weak self] data in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                self.screencastCallContext?.addExternalAudioData(data: data)
+            }
+        })
+    }
+    
+    deinit {
+        self.screencastFramesDisposable?.dispose()
+        self.screencastAudioDataDisposable?.dispose()
+    }
+    
+    func requestScreencast() -> Signal<(String, UInt32), NoError>? {
+        if self.screencastCallContext == nil {
+            let screencastCallContext = InProcessScreencastContext(
+                context: OngoingGroupCallContext(
+                    audioSessionActive: .single(true),
+                    video: self.screencastCapturer,
+                    requestMediaChannelDescriptions: { _, _ in EmptyDisposable },
+                    rejoinNeeded: { },
+                    outgoingAudioBitrateKbit: nil,
+                    videoContentType: .screencast,
+                    enableNoiseSuppression: false,
+                    disableAudioInput: true,
+                    enableSystemMute: false,
+                    preferX264: false,
+                    logPath: "",
+                    onMutedSpeechActivityDetected: { _ in },
+                    encryptionKey: nil,
+                    isConference: self.isConference,
+                    sharedAudioDevice: nil
+                )
+            )
+            self.screencastCallContext = screencastCallContext
+            return screencastCallContext.joinPayload
+        } else {
+            return nil
+        }
+    }
+    
+    func setJoinResponse(clientParams: String) {
+        if let screencastCallContext = self.screencastCallContext {
+            screencastCallContext.setRTCJoinResponse(clientParams: clientParams)
+        }
+    }
+    
+    func disableScreencast(account: Account) {
+        if let screencastCallContext = self.screencastCallContext {
+            self.screencastCallContext = nil
+            screencastCallContext.stop(account: account, reportCallId: nil)
+            
+            self.screencastBufferServerContext.stopScreencast()
+        }
+    }
+}
+
+private final class ScreencastEmbeddedIPCContext: ScreencastIPCContext {
+    private let serverContext: IpcGroupCallEmbeddedAppContext
+    
+    var isActive: Signal<Bool, NoError> {
+        return self.serverContext.isActive
+    }
+    
+    init(basePath: String) {
+        self.serverContext = IpcGroupCallEmbeddedAppContext(basePath: basePath + "/embedded-broadcast-coordination")
+    }
+    
+    func requestScreencast() -> Signal<(String, UInt32), NoError>? {
+        if let id = self.serverContext.startScreencast() {
+            return self.serverContext.joinPayload
+            |> filter { joinPayload -> Bool in
+                return joinPayload.id == id
+            }
+            |> map { joinPayload -> (String, UInt32) in
+                return (joinPayload.data, joinPayload.ssrc)
+            }
+        } else {
+            return nil
+        }
+    }
+    
+    func setJoinResponse(clientParams: String) {
+        self.serverContext.joinResponse = IpcGroupCallEmbeddedAppContext.JoinResponse(data: clientParams)
+    }
+    
+    func disableScreencast(account: Account) {
+        self.serverContext.stopScreencast()
+    }
 }
 
 public final class PresentationGroupCallImpl: PresentationGroupCall {
@@ -629,9 +761,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     let externalMediaStream = Promise<DirectMediaStreamingContext>()
 
-    private var screencastCallContext: OngoingGroupCallContext?
-    private var screencastBufferServerContext: IpcGroupCallBufferAppContext?
-    private var screencastCapturer: OngoingCallVideoCapturer?
+    private var screencastIPCContext: ScreencastIPCContext?
 
     private struct SsrcMapping {
         var peerId: EnginePeer.Id
@@ -860,8 +990,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.isSpeakingPromise.get()
     }
     
-    private var screencastFramesDisposable: Disposable?
-    private var screencastAudioDataDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
     public let isStream: Bool
@@ -875,6 +1003,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var internal_isRemoteConnectedDisposable: Disposable?
     
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
+    
+    let debugLog = Promise<String?>()
     
     init(
         accountContext: AccountContext,
@@ -1149,26 +1279,24 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.requestCall(movingFromBroadcastToRtc: false)
         }
 
-        let basePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination"
-        let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath)
-        self.screencastBufferServerContext = screencastBufferServerContext
-        let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
-        self.screencastCapturer = screencastCapturer
-        self.screencastFramesDisposable = (screencastBufferServerContext.frames
-        |> deliverOnMainQueue).start(next: { [weak screencastCapturer] screencastFrame in
-            guard let screencastCapturer = screencastCapturer else {
-                return
-            }
-            screencastCapturer.injectPixelBuffer(screencastFrame.0, rotation: screencastFrame.1)
-        })
-        self.screencastAudioDataDisposable = (screencastBufferServerContext.audioData
-        |> deliverOnMainQueue).start(next: { [weak self] data in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.screencastCallContext?.addExternalAudioData(data: data)
-        })
-        self.screencastStateDisposable = (screencastBufferServerContext.isActive
+        var useIPCContext = "".isEmpty
+        if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_use_inprocess_screencast"] != nil {
+            useIPCContext = false
+        }
+        
+        let embeddedBroadcastImplementationTypePath = self.accountContext.sharedContext.basePath + "/broadcast-coordination-type"
+        
+        let screencastIPCContext: ScreencastIPCContext
+        if useIPCContext {
+            screencastIPCContext = ScreencastEmbeddedIPCContext(basePath: self.accountContext.sharedContext.basePath)
+            let _ = try? "ipc".write(toFile: embeddedBroadcastImplementationTypePath, atomically: true, encoding: .utf8)
+        } else {
+            screencastIPCContext = ScreencastInProcessIPCContext(basePath: self.accountContext.sharedContext.basePath, isConference: self.isConference)
+            let _ = try? "legacy".write(toFile: embeddedBroadcastImplementationTypePath, atomically: true, encoding: .utf8)
+        }
+        self.screencastIPCContext = screencastIPCContext
+        
+        self.screencastStateDisposable = (screencastIPCContext.isActive
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] isActive in
             guard let strongSelf = self else {
@@ -1228,8 +1356,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
 
         self.peerUpdatesSubscription?.dispose()
 
-        self.screencastFramesDisposable?.dispose()
-        self.screencastAudioDataDisposable?.dispose()
         self.screencastStateDisposable?.dispose()
         
         self.internal_isRemoteConnectedDisposable?.dispose()
@@ -2658,10 +2784,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         self.markedAsCanBeRemoved = true
 
-        self.genericCallContext?.stop(account: self.account, reportCallId: self.conferenceFromCallId)
-
-        //self.screencastIpcContext = nil
-        self.screencastCallContext?.stop(account: self.account, reportCallId: nil)
+        self.genericCallContext?.stop(account: self.account, reportCallId: self.conferenceFromCallId, debugLog: self.debugLog)
+        self.screencastIPCContext?.disableScreencast(account: self.account)
 
         self._canBeRemoved.set(.single(true))
         
@@ -3106,59 +3230,50 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func requestScreencast() {
-        guard let callInfo = self.internalState.callInfo, self.screencastCallContext == nil else {
+        guard let callInfo = self.internalState.callInfo else {
             return
         }
         
         self.hasScreencast = true
-
-        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, enableSystemMute: false, preferX264: false, logPath: "", onMutedSpeechActivityDetected: { _ in }, encryptionKey: nil, isConference: self.isConference, sharedAudioDevice: nil)
-        self.screencastCallContext = screencastCallContext
-
-        self.screencastJoinDisposable.set((screencastCallContext.joinPayload
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
-            guard let strongSelf = self else {
-                return
-            }
-
-            strongSelf.requestDisposable.set((strongSelf.accountContext.engine.calls.joinGroupCallAsScreencast(
-                callId: callInfo.id,
-                accessHash: callInfo.accessHash,
-                joinPayload: joinPayload.0
-            )
-            |> deliverOnMainQueue).start(next: { joinCallResult in
-                guard let strongSelf = self, let screencastCallContext = strongSelf.screencastCallContext else {
+        if let screencastIPCContext = self.screencastIPCContext, let joinPayload = screencastIPCContext.requestScreencast() {
+            self.screencastJoinDisposable.set((joinPayload
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] joinPayload in
+                guard let strongSelf = self else {
                     return
                 }
-                let clientParams = joinCallResult.jsonParams
 
-                screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
-                screencastCallContext.setJoinResponse(payload: clientParams)
-            }, error: { error in
-                guard let _ = self else {
-                    return
-                }
+                strongSelf.requestDisposable.set((strongSelf.accountContext.engine.calls.joinGroupCallAsScreencast(
+                    callId: callInfo.id,
+                    accessHash: callInfo.accessHash,
+                    joinPayload: joinPayload.0
+                )
+                |> deliverOnMainQueue).start(next: { joinCallResult in
+                    guard let strongSelf = self, let screencastIPCContext = strongSelf.screencastIPCContext else {
+                        return
+                    }
+                    screencastIPCContext.setJoinResponse(clientParams: joinCallResult.jsonParams)
+                    
+                }, error: { error in
+                    guard let _ = self else {
+                        return
+                    }
+                }))
             }))
-        }))
+        }
     }
 
     public func disableScreencast() {
         self.hasScreencast = false
-        if let screencastCallContext = self.screencastCallContext {
-            self.screencastCallContext = nil
-            screencastCallContext.stop(account: self.account, reportCallId: nil)
+        self.screencastIPCContext?.disableScreencast(account: self.account)
+        
+        let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
 
-            let maybeCallInfo: GroupCallInfo? = self.internalState.callInfo
-
-            if let callInfo = maybeCallInfo {
-                self.screencastJoinDisposable.set(self.accountContext.engine.calls.leaveGroupCallAsScreencast(
-                    callId: callInfo.id,
-                    accessHash: callInfo.accessHash
-                ).start())
-            }
-            
-            self.screencastBufferServerContext?.stopScreencast()
+        if let callInfo = maybeCallInfo {
+            self.screencastJoinDisposable.set(self.accountContext.engine.calls.leaveGroupCallAsScreencast(
+                callId: callInfo.id,
+                accessHash: callInfo.accessHash
+            ).start())
         }
     }
     
@@ -3606,5 +3721,36 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return EmptyDisposable
         }
         |> runOn(.mainQueue())
+    }
+}
+
+private protocol ScreencastContext: AnyObject {
+    func addExternalAudioData(data: Data)
+    func stop(account: Account, reportCallId: CallId?)
+    func setRTCJoinResponse(clientParams: String)
+}
+
+private final class InProcessScreencastContext: ScreencastContext {
+    private let context: OngoingGroupCallContext
+    
+    var joinPayload: Signal<(String, UInt32), NoError> {
+        return self.context.joinPayload
+    }
+    
+    init(context: OngoingGroupCallContext) {
+        self.context = context
+    }
+    
+    func addExternalAudioData(data: Data) {
+        self.context.addExternalAudioData(data: data)
+    }
+    
+    func stop(account: Account, reportCallId: CallId?) {
+        self.context.stop(account: account, reportCallId: reportCallId, debugLog: Promise())
+    }
+    
+    func setRTCJoinResponse(clientParams: String) {
+        self.context.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
+        self.context.setJoinResponse(payload: clientParams)
     }
 }

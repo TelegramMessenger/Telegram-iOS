@@ -1122,6 +1122,14 @@ private final class StoryContainerScreenComponent: Component {
             self.didAnimateOut = true
         }
         
+        func inFocusUpdated(isInFocus: Bool) {
+            for (_, itemSetView) in self.visibleItemSetViews {
+                if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                    itemSetComponentView.inFocusUpdated(isInFocus: isInFocus)
+                }
+            }
+        }
+        
         private func updateVolumeButtonMonitoring() {
             guard self.volumeButtonsListener == nil, let component = self.component else {
                 return
@@ -2124,6 +2132,14 @@ public class StoryContainerScreen: ViewControllerComponentContainer {
                 completion?()
                 self.dismiss(animated: false)
             }
+        }
+    }
+    
+    override public func inFocusUpdated(isInFocus: Bool) {
+        super.inFocusUpdated(isInFocus: isInFocus)
+        
+        if let componentView = self.node.hostView.componentView as? StoryContainerScreenComponent.View {
+            componentView.inFocusUpdated(isInFocus: isInFocus)
         }
     }
 }

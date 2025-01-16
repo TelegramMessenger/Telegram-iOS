@@ -457,7 +457,7 @@ public final class MessageInputPanelComponent: Component {
             
     public final class View: UIView {
         private let fieldBackgroundView: BlurredBackgroundView
-        private let vibrancyEffectView: UIVisualEffectView
+        private let fieldBackgroundTint: UIView
         private let gradientView: UIImageView
         private let bottomGradientView: UIView
         
@@ -522,12 +522,16 @@ public final class MessageInputPanelComponent: Component {
         }
         
         override init(frame: CGRect) {
-            self.fieldBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
-            
-            self.vibrancyEffectView = UIVisualEffectView(effect: UIVibrancyEffect(blurEffect: UIBlurEffect(style: .dark)))
+            self.fieldBackgroundView = BlurredBackgroundView(color: nil, enableBlur: true)
+            self.fieldBackgroundTint = UIView()
+            self.fieldBackgroundTint.backgroundColor = UIColor(white: 1.0, alpha: 0.1)
             
             self.mediaRecordingVibrancyContainer = UIView()
-            self.vibrancyEffectView.contentView.addSubview(self.mediaRecordingVibrancyContainer)
+            if let filter = CALayer.luminanceToAlpha() {
+                self.mediaRecordingVibrancyContainer.backgroundColor = .white
+                self.mediaRecordingVibrancyContainer.layer.filters = [filter]
+            }
+            self.fieldBackgroundTint.mask = self.mediaRecordingVibrancyContainer
             
             self.gradientView = UIImageView()
             self.bottomGradientView = UIView()
@@ -538,8 +542,8 @@ public final class MessageInputPanelComponent: Component {
             
             self.addSubview(self.bottomGradientView)
             self.addSubview(self.gradientView)
-            self.fieldBackgroundView.addSubview(self.vibrancyEffectView)
             self.addSubview(self.fieldBackgroundView)
+            self.addSubview(self.fieldBackgroundTint)
             self.addSubview(self.textClippingView)
             
             self.viewForOverlayContent = ViewForOverlayContent(
@@ -876,7 +880,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: placeholderTransition,
                 component: AnyComponent(AnimatedTextComponent(
                     font: Font.regular(17.0),
-                    color: .white,
+                    color: .black,
                     items: placeholderItems
                 )),
                 environment: {},
@@ -912,7 +916,7 @@ public final class MessageInputPanelComponent: Component {
                     if let headerView = headerView as? ForwardInfoPanelComponent.View {
                         if headerView.superview == nil {
                             self.addSubview(headerView)
-                            self.vibrancyEffectView.contentView.addSubview(headerView.backgroundView)
+                            self.mediaRecordingVibrancyContainer.addSubview(headerView.backgroundView)
                             
                             headerView.backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
                         }
@@ -965,11 +969,15 @@ public final class MessageInputPanelComponent: Component {
             let rawFieldBackgroundFrame = fieldBackgroundFrame
             fieldBackgroundFrame.size.height += headerHeight
                         
-            transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
-            self.vibrancyEffectView.isHidden = false // component.style == .media
+            //transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
             self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: headerHeight > 0.0 ? 18.0 : baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
+            transition.setFrame(view: self.fieldBackgroundTint, frame: fieldBackgroundFrame)
+            transition.setFrame(view: self.mediaRecordingVibrancyContainer, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
+            
+            //self.fieldBackgroundTint.backgroundColor = .blue
+            transition.setCornerRadius(layer: self.fieldBackgroundTint.layer, cornerRadius: headerHeight > 0.0 ? 18.0 : baseFieldHeight * 0.5)
             
             var textClippingFrame = rawFieldBackgroundFrame.offsetBy(dx: 0.0, dy: headerHeight)
             if component.style == .media, !isEditing {
@@ -993,7 +1001,7 @@ public final class MessageInputPanelComponent: Component {
             if let placeholderView = self.placeholder.view, let vibrancyPlaceholderView = self.vibrancyPlaceholder.view {
                 if vibrancyPlaceholderView.superview == nil {
                     vibrancyPlaceholderView.layer.anchorPoint = CGPoint()
-                    self.vibrancyEffectView.contentView.addSubview(vibrancyPlaceholderView)
+                    self.mediaRecordingVibrancyContainer.addSubview(vibrancyPlaceholderView)
                     
                     vibrancyPlaceholderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
                 }
@@ -1768,7 +1776,7 @@ public final class MessageInputPanelComponent: Component {
                 lightFieldColor = UIColor(white: 0.2, alpha: 0.45)
             } else if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
                 fieldBackgroundIsDark = true
-            } else if isEditing || component.style == .editor {
+            } else if isEditing || component.style == .story || component.style == .editor {
                 fieldBackgroundIsDark = true
             }
             self.fieldBackgroundView.updateColor(color: fieldBackgroundIsDark ? UIColor(white: 0.0, alpha: 0.5) : lightFieldColor, transition: transition.containedViewLayoutTransition)

@@ -535,6 +535,9 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
             return self.dim.view
         }
         if self.isFlat {
+            if result === self.container.view {
+                return nil
+            }
             return result
         }
         var currentParent: UIView? = result

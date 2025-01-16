@@ -423,7 +423,12 @@ public final class LocationMapNode: ASDisplayNode, MKMapViewDelegateTarget {
             self.mapView?.setRegion(region, animated: animated)
         } else {
             let mapRect = MKMapRect(region: region)
-            self.mapView?.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: offset.y + self.topPadding, left: offset.x, bottom: 0.0, right: 0.0), animated: animated)
+            var effectiveTopOffset: CGFloat = offset.y
+            if #available(iOS 18.0, *) {
+            } else {
+                effectiveTopOffset += self.topPadding
+            }
+            self.mapView?.setVisibleMapRect(mapRect, edgePadding: UIEdgeInsets(top: effectiveTopOffset, left: offset.x, bottom: 0.0, right: 0.0), animated: animated)
         }
         self.ignoreRegionChanges = false
         

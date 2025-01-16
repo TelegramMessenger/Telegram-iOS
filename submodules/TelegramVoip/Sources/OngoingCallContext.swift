@@ -7,13 +7,13 @@ import TelegramUIPreferences
 import TgVoip
 import TgVoipWebrtc
 
-private let debugUseLegacyVersionForReflectors: Bool = {
+private func debugUseLegacyVersionForReflectors() -> Bool {
     #if DEBUG && false
     return true
     #else
     return false
     #endif
-}()
+}
 
 private struct PeerTag: Hashable, CustomStringConvertible {
     var bytes: [UInt8] = Array<UInt8>(repeating: 0, count: 16)
@@ -510,21 +510,21 @@ public final class OngoingCallVideoCapturer {
         self.impl.setIsVideoEnabled(value)
     }
 
-    public func injectPixelBuffer(_ pixelBuffer: CVPixelBuffer, rotation: CGImagePropertyOrientation) {
+    public func injectSampleBuffer(_ sampleBuffer: CMSampleBuffer, rotation: CGImagePropertyOrientation, completion: @escaping () -> Void) {
         var videoRotation: OngoingCallVideoOrientation = .rotation0
         switch rotation {
-            case .up:
-                videoRotation = .rotation0
-            case .left:
-                videoRotation = .rotation90
-            case .right:
-                videoRotation = .rotation270
-            case .down:
-                videoRotation = .rotation180
-            default:
-                videoRotation = .rotation0
+        case .up:
+            videoRotation = .rotation0
+        case .left:
+            videoRotation = .rotation90
+        case .right:
+            videoRotation = .rotation270
+        case .down:
+            videoRotation = .rotation180
+        default:
+            videoRotation = .rotation0
         }
-        self.impl.submitPixelBuffer(pixelBuffer, rotation: videoRotation.orientation)
+        self.impl.submitSampleBuffer(sampleBuffer, rotation: videoRotation.orientation, completion: completion)
     }
 
     public func video() -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
@@ -819,7 +819,7 @@ public final class OngoingCallContext {
         }
         #endif
         
-        if debugUseLegacyVersionForReflectors {
+        if debugUseLegacyVersionForReflectors() {
             return [(OngoingCallThreadLocalContext.version(), true)]
         } else {
             var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
@@ -860,9 +860,9 @@ public final class OngoingCallContext {
                 var useModernImplementation = true
                 var version = version
                 var allowP2P = allowP2P
-                if debugUseLegacyVersionForReflectors {
+                if debugUseLegacyVersionForReflectors() {
                     useModernImplementation = true
-                    version = "5.0.0"
+                    version = "12.0.0"
                     allowP2P = false
                 } else {
                     useModernImplementation = version != OngoingCallThreadLocalContext.version()
@@ -879,7 +879,23 @@ public final class OngoingCallContext {
                         }
                     }
                     
-                    let unfilteredConnections = [connections.primary] + connections.alternatives
+                    var unfilteredConnections: [CallSessionConnection]
+                    unfilteredConnections = [connections.primary] + connections.alternatives
+                    
+                    if version == "12.0.0" {
+                        for connection in unfilteredConnections {
+                            if case let .reflector(reflector) = connection {
+                                unfilteredConnections.append(.reflector(CallSessionConnection.Reflector(
+                                    id: 123456,
+                                    ip: "91.108.9.38",
+                                    ipv6: "",
+                                    isTcp: true,
+                                    port: 595,
+                                    peerTag: reflector.peerTag
+                                )))
+                            }
+                        }
+                    }
                     
                     var reflectorIdList: [Int64] = []
                     for connection in unfilteredConnections {
@@ -911,11 +927,17 @@ public final class OngoingCallContext {
                         switch connection {
                         case let .reflector(reflector):
                             if reflector.isTcp {
-                                if signalingReflector == nil {
-                                    signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
+                                if version == "12.0.0" {
+                                    /*if signalingReflector == nil {
+                                        signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
+                                    }*/
+                                } else {
+                                    if signalingReflector == nil {
+                                        signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
+                                    }
+                                    
+                                    continue connectionsLoop
                                 }
-                                
-                                continue connectionsLoop
                             }
                         case .webRtcReflector:
                             break
@@ -962,21 +984,36 @@ public final class OngoingCallContext {
                         directConnection = nil
                     }
                     
-                    #if DEBUG && false
+                    #if DEBUG && true
                     var customParameters = customParameters
                     if let initialCustomParameters = try? JSONSerialization.jsonObject(with: (customParameters ?? "{}").data(using: .utf8)!) as? [String: Any] {
                         var customParametersValue: [String: Any]
                         customParametersValue = initialCustomParameters
-                        customParametersValue["network_standalone_reflectors"] = true as NSNumber
-                        customParametersValue["network_use_mtproto"] = true as NSNumber
-                        customParametersValue["network_skip_initial_ping"] = true as NSNumber
-                        customParameters = String(data: try! JSONSerialization.data(withJSONObject: customParametersValue), encoding: .utf8)!
+                        if version == "12.0.0" {
+                            customParametersValue["network_use_tcponly"] = true as NSNumber
+                            customParameters = String(data: try! JSONSerialization.data(withJSONObject: customParametersValue), encoding: .utf8)!
+                        }
                         
-                        if let reflector = filteredConnections.first(where: { $0.username == "reflector" && $0.reflectorId == 1 }) {
-                            filteredConnections = [reflector]
+                        if let value = customParametersValue["network_use_tcponly"] as? Bool, value {
+                            filteredConnections = filteredConnections.filter { connection in
+                                if connection.hasTcp {
+                                    return true
+                                }
+                                return false
+                            }
+                            allowP2P = false
                         }
                     }
                     #endif
+                    
+                    /*#if DEBUG
+                    if let initialCustomParameters = try? JSONSerialization.jsonObject(with: (customParameters ?? "{}").data(using: .utf8)!) as? [String: Any] {
+                        var customParametersValue: [String: Any]
+                        customParametersValue = initialCustomParameters
+                        customParametersValue["network_kcp_experiment"] = true as NSNumber
+                        customParameters = String(data: try! JSONSerialization.data(withJSONObject: customParametersValue), encoding: .utf8)!
+                    }
+                    #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(
                         version: version,

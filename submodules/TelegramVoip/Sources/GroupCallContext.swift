@@ -461,7 +461,6 @@ public final class OngoingGroupCallContext {
 #if os(iOS)
         let audioDevice: OngoingCallContext.AudioDevice?
 #endif
-        let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
         let joinPayload = Promise<(String, UInt32)>()
         let networkState = ValuePromise<NetworkState>(NetworkState(isConnected: false, isTransitioningFromBroadcastToRtc: false), ignoreRepeated: true)
@@ -507,14 +506,12 @@ public final class OngoingGroupCallContext {
             self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
             let tempStatsLogPath = self.tempStatsLogFile.path
             
-#if os(iOS)
-            if sharedAudioDevice == nil {
-                self.audioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
-            } else {
-                self.audioDevice = sharedAudioDevice
-            }
+            #if os(iOS)
+
+            self.audioDevice = sharedAudioDevice
             let audioDevice = self.audioDevice
-#endif
+            #endif
+            
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
             var activityUpdatedImpl: (([UInt32]) -> Void)?
@@ -882,7 +879,7 @@ public final class OngoingGroupCallContext {
             }
         }
         
-        func stop(account: Account, reportCallId: CallId?) {
+        func stop(account: Account?, reportCallId: CallId?, debugLog: Promise<String?>) {
             self.context.stop()
             
             let logPath = self.logPath
@@ -892,16 +889,18 @@ public final class OngoingGroupCallContext {
             }
             let tempStatsLogPath = self.tempStatsLogFile.path
             
+            debugLog.set(.single(nil))
+            
             let queue = self.queue
             self.context.stop({
                 queue.async {
-                    if !statsLogPath.isEmpty {
+                    if !statsLogPath.isEmpty, let account {
                         let logsPath = callLogsPath(account: account)
                         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
                         let _ = try? FileManager.default.moveItem(atPath: tempStatsLogPath, toPath: statsLogPath)
                     }
                     
-                    if let callId = reportCallId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
+                    if let callId = reportCallId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8), let account {
                         let engine = TelegramEngine(account: account)
                         let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
                             switch result {
@@ -1270,9 +1269,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func stop(account: Account, reportCallId: CallId?) {
+    public func stop(account: Account?, reportCallId: CallId?, debugLog: Promise<String?>) {
         self.impl.with { impl in
-            impl.stop(account: account, reportCallId: reportCallId)
+            impl.stop(account: account, reportCallId: reportCallId, debugLog: debugLog)
         }
     }
     

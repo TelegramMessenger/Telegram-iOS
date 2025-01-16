@@ -378,10 +378,9 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
         case .screenHeader:
             return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: "", animation: .newFolder, sectionId: self.section)
         case let .nameHeader(title, enableAnimations):
-            //TODO:localize
             var actionText: String?
             if let enableAnimations {
-                actionText = enableAnimations ? "Disable Animations" : "Enable Animations"
+                actionText = enableAnimations ? presentationData.strings.ChatListFilter_NameDisableAnimations : presentationData.strings.ChatListFilter_NameEnableAnimations
             }
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, actionText: actionText, action: {
                 arguments.toggleNameAnimations()

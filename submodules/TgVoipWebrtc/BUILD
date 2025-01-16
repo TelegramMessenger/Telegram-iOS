@@ -120,12 +120,15 @@ sources = glob([
     "tgcalls/tgcalls/v2/InstanceV2Impl.cpp",
     "tgcalls/tgcalls/v2/InstanceV2ReferenceImpl.cpp",
     "tgcalls/tgcalls/v2/NativeNetworkingImpl.cpp",
+    "tgcalls/tgcalls/v2/RawTcpSocket.cpp",
     "tgcalls/tgcalls/v2/ReflectorPort.cpp",
     "tgcalls/tgcalls/v2/ReflectorRelayPortFactory.cpp",
     "tgcalls/tgcalls/v2/Signaling.cpp",
     "tgcalls/tgcalls/v2/SignalingConnection.cpp",
     "tgcalls/tgcalls/v2/SignalingEncryption.cpp",
     "tgcalls/tgcalls/v2/SignalingSctpConnection.cpp",
+    "tgcalls/tgcalls/v2/SignalingKcpConnection.cpp",
+    "tgcalls/tgcalls/v2/ikcp.cpp",
 ]
 
 objc_library(
