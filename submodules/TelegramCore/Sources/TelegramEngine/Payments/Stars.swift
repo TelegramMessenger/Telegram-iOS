@@ -1464,7 +1464,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                         case .giftCode, .stars, .starsGift, .starsChatSubscription, .starGift, .starGiftUpgrade, .starGiftTransfer:
                                             receiptMessageId = nil
                                         }
-                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
+                                    } else if case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, _, _, _) = action.action, case let .Id(messageId) = message.id {
                                         resultGift = ProfileGiftsContext.State.StarGift(
                                             gift: gift,
                                             reference: .message(messageId: messageId),

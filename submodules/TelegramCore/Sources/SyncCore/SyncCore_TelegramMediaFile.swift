@@ -441,6 +441,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public let resource: TelegramMediaResource
     public let previewRepresentations: [TelegramMediaImageRepresentation]
     public let videoThumbnails: [TelegramMediaFile.VideoThumbnail]
+    public let videoCover: TelegramMediaImage?
     public let immediateThumbnailData: Data?
     public let mimeType: String
     public let size: Int64?
@@ -465,12 +466,25 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return result.isEmpty ? nil : result
     }
     
-    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int64?, attributes: [TelegramMediaFileAttribute], alternativeRepresentations: [Media]) {
+    public init(
+        fileId: MediaId,
+        partialReference: PartialMediaReference?,
+        resource: TelegramMediaResource,
+        previewRepresentations: [TelegramMediaImageRepresentation],
+        videoThumbnails: [TelegramMediaFile.VideoThumbnail],
+        videoCover: TelegramMediaImage? = nil,
+        immediateThumbnailData: Data?,
+        mimeType: String,
+        size: Int64?,
+        attributes: [TelegramMediaFileAttribute],
+        alternativeRepresentations: [Media]
+    ) {
         self.fileId = fileId
         self.partialReference = partialReference
         self.resource = resource
         self.previewRepresentations = previewRepresentations
         self.videoThumbnails = videoThumbnails
+        self.videoCover = videoCover
         self.immediateThumbnailData = immediateThumbnailData
         self.mimeType = mimeType
         self.size = size
@@ -484,6 +498,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.resource = decoder.decodeObjectForKey("r") as? TelegramMediaResource ?? EmptyMediaResource()
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
         self.videoThumbnails = decoder.decodeObjectArrayForKey("vr")
+        self.videoCover = decoder.decodeObjectForKey("cv", decoder: { TelegramMediaImage(decoder: $0) }) as? TelegramMediaImage
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
         if let size = decoder.decodeOptionalInt64ForKey("s64") {
@@ -515,6 +530,11 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         encoder.encodeObject(self.resource, forKey: "r")
         encoder.encodeObjectArray(self.previewRepresentations, forKey: "pr")
         encoder.encodeObjectArray(self.videoThumbnails, forKey: "vr")
+        if let videoCover = self.videoCover {
+            encoder.encodeObject(videoCover, forKey: "cv")
+        } else {
+            encoder.encodeNil(forKey: "cv")
+        }
         if let immediateThumbnailData = self.immediateThumbnailData {
             encoder.encodeData(immediateThumbnailData, forKey: "itd")
         } else {
@@ -544,6 +564,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.resource = object.resource
         self.previewRepresentations = object.previewRepresentations
         self.videoThumbnails = object.videoThumbnails
+        self.videoCover = object.videoCover
         self.immediateThumbnailData = object.immediateThumbnailData
         self.mimeType = object.mimeType
         self.size = object.size
@@ -805,6 +826,10 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return false
         }
         
+        if self.videoCover != other.videoCover {
+            return false
+        }
+        
         if self.immediateThumbnailData != other.immediateThumbnailData {
             return false
         }
@@ -879,23 +904,23 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public func withUpdatedPartialReference(_ partialReference: PartialMediaReference?) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, videoCover: self.videoCover, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
 
     public func withUpdatedResource(_ resource: TelegramMediaResource) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, videoCover: self.videoCover, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedSize(_ size: Int64?) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, videoCover: self.videoCover, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedPreviewRepresentations(_ previewRepresentations: [TelegramMediaImageRepresentation]) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: previewRepresentations, videoThumbnails: self.videoThumbnails, videoCover: self.videoCover, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
     
     public func withUpdatedAttributes(_ attributes: [TelegramMediaFileAttribute]) -> TelegramMediaFile {
-        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: attributes, alternativeRepresentations: self.alternativeRepresentations)
+        return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, videoCover: self.videoCover, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: attributes, alternativeRepresentations: self.alternativeRepresentations)
     }
 }
 

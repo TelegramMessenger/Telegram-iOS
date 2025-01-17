@@ -9632,9 +9632,9 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func transferStarGift(stargift: Api.InputSavedStarGift, toId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func transferStarGift(stargift: Api.InputSavedStarGift, toId: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-279379968)
+                    buffer.appendInt32(2132285290)
                     stargift.serialize(buffer, true)
                     toId.serialize(buffer, true)
                     return (FunctionDescription(name: "payments.transferStarGift", parameters: [("stargift", String(describing: stargift)), ("toId", String(describing: toId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in

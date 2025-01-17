@@ -144,16 +144,16 @@ public extension Api {
 }
 public extension Api {
     enum SavedStarGift: TypeConstructorDescription {
-        case savedStarGift(flags: Int32, fromId: Int64?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, savedId: Int64?, convertStars: Int64?, upgradeStars: Int64?, canExportAt: Int32?, transferStars: Int64?)
+        case savedStarGift(flags: Int32, fromId: Api.Peer?, date: Int32, gift: Api.StarGift, message: Api.TextWithEntities?, msgId: Int32?, savedId: Int64?, convertStars: Int64?, upgradeStars: Int64?, canExportAt: Int32?, transferStars: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .savedStarGift(let flags, let fromId, let date, let gift, let message, let msgId, let savedId, let convertStars, let upgradeStars, let canExportAt, let transferStars):
                     if boxed {
-                        buffer.appendInt32(1002989455)
+                        buffer.appendInt32(1616305061)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeInt64(fromId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {fromId!.serialize(buffer, true)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     gift.serialize(buffer, true)
                     if Int(flags) & Int(1 << 2) != 0 {message!.serialize(buffer, true)}
@@ -177,8 +177,10 @@ public extension Api {
         public static func parse_savedStarGift(_ reader: BufferReader) -> SavedStarGift? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt64() }
+            var _2: Api.Peer?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: Api.StarGift?

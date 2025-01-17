@@ -727,19 +727,19 @@ public enum TransferStarGiftError {
 }
 
 func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
-    return account.postbox.transaction { transaction -> (Api.InputUser, Api.InputSavedStarGift)? in
-        guard let inputUser = transaction.getPeer(peerId).flatMap(apiInputUser), let starGift = reference.apiStarGiftReference(transaction: transaction) else {
+    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputSavedStarGift)? in
+        guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer), let starGift = reference.apiStarGiftReference(transaction: transaction) else {
             return nil
         }
-        return (inputUser, starGift)
+        return (inputPeer, starGift)
     }
     |> castError(TransferStarGiftError.self)
-    |> mapToSignal { inputUserAndStarGift -> Signal<Never, TransferStarGiftError> in
-        guard let (inputUser, starGift) = inputUserAndStarGift else {
+    |> mapToSignal { inputPeerAndStarGift -> Signal<Never, TransferStarGiftError> in
+        guard let (inputPeer, starGift) = inputPeerAndStarGift else {
             return .complete()
         }
         if prepaid {
-            return account.network.request(Api.functions.payments.transferStarGift(stargift: starGift, toId: inputUser))
+            return account.network.request(Api.functions.payments.transferStarGift(stargift: starGift, toId: inputPeer))
             |> mapError { _ -> TransferStarGiftError in
                 return .generic
             }
@@ -815,7 +815,7 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                     case let .updateNewMessage(message, _, _):
                         if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
-                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _) = action.action, case let .Id(messageId) = message.id {
+                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, _, _, _) = action.action, case let .Id(messageId) = message.id {
                                     let _ = messageId
                                     return .single(ProfileGiftsContext.State.StarGift(
                                         gift: gift,
@@ -1329,7 +1329,7 @@ extension ProfileGiftsContext.State.StarGift {
                 return nil
             }
             self.gift = gift
-            if let fromPeerId = fromId.flatMap({ EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }) {
+            if let fromPeerId = fromId?.peerId {
                 self.fromPeer = transaction.getPeer(fromPeerId).flatMap(EnginePeer.init)
             } else {
                 self.fromPeer = nil
