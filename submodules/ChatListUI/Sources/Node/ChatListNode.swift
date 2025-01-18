@@ -1875,9 +1875,8 @@ public final class ChatListNode: ListView {
                 }))
             case .premiumGrace:
                 let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .gracePremium).startStandalone()
-//                self.present?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.ChatList_BirthdayInSettingsInfo, timeout: 5.0, customUndoText: nil), elevatedLayout: false, action: { _ in
-//                    return true
-//                }))
+            case .setupPhoto:
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPhoto).startStandalone()
             default:
                 break
             }
@@ -1993,12 +1992,7 @@ public final class ChatListNode: ListView {
                 context.account.stateManager.contactBirthdays,
                 starsSubscriptionsContextPromise.get()
             )
-            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, data, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in
-                #if DEBUG
-                var suggestions = suggestions
-                suggestions.insert(.setupPhoto, at: 0)
-                #endif
-                
+            |> mapToSignal { suggestions, dismissedSuggestions, configuration, newSessionReviews, data, birthdays, starsSubscriptionsContext -> Signal<ChatListNotice?, NoError> in                
                 let (accountPeer, birthday) = data
                 
                 if let newSessionReview = newSessionReviews.first {

@@ -864,7 +864,7 @@ final class MediaEditorScreenComponent: Component {
             case .storyEditor:
                 doneButtonTitle = isEditingStory ? environment.strings.Story_Editor_Done.uppercased() : environment.strings.Story_Editor_Next.uppercased()
                 doneButtonIcon = UIImage(bundleImageName: "Media Editor/Next")!
-            case .stickerEditor, .avatarEditor:
+            case .stickerEditor, .avatarEditor, .coverEditor:
                 doneButtonTitle = nil
                 doneButtonIcon = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Apply"), color: .white)!
             case .botPreview:
@@ -1060,9 +1060,14 @@ final class MediaEditorScreenComponent: Component {
             )
             
             var isAvatarEditor = false
+            var isCoverEditor = false
             if case .avatarEditor = controller.mode {
                 isAvatarEditor = true
-                
+            } else if case .coverEditor = controller.mode {
+                isCoverEditor = true
+            }
+            
+            if isAvatarEditor || isCoverEditor {
                 drawButtonFrame.origin.x = stickerButtonFrame.origin.x
                                 
                 if let rotateButtonView = self.rotateButton.view {
@@ -1104,7 +1109,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if !isAvatarEditor, let textButtonView = self.textButton.view {
+            if !isAvatarEditor && !isCoverEditor, let textButtonView = self.textButton.view {
                 if textButtonView.superview == nil {
                     self.addSubview(textButtonView)
                 }
@@ -1115,7 +1120,7 @@ final class MediaEditorScreenComponent: Component {
                 }
             }
             
-            if !isAvatarEditor, let stickerButtonView = self.stickerButton.view {
+            if !isAvatarEditor && !isCoverEditor, let stickerButtonView = self.stickerButton.view {
                 if stickerButtonView.superview == nil {
                     self.addSubview(stickerButtonView)
                 }
@@ -2688,6 +2693,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         case stickerEditor(mode: StickerEditorMode)
         case botPreview
         case avatarEditor
+        case coverEditor(dimensions: CGSize)
     }
     
     public enum TransitionIn {
@@ -2882,14 +2888,17 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
        
             var isStickerEditor = false
             var isAvatarEditor = false
+            var isCoverEditor = false
             if case .stickerEditor = controller.mode {
                 isStickerEditor = true
             } else if case .avatarEditor = controller.mode {
                 isAvatarEditor = true
+            } else if case .coverEditor = controller.mode {
+                isCoverEditor = true
             }
             
             self.entitiesContainerView = UIView(frame: CGRect(origin: .zero, size: storyDimensions))
-            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions, hasBin: !isStickerEditor && !isAvatarEditor, isStickerEditor: isStickerEditor)
+            self.entitiesView = DrawingEntitiesView(context: controller.context, size: storyDimensions, hasBin: !isStickerEditor && !isAvatarEditor && !isCoverEditor, isStickerEditor: isStickerEditor)
             self.entitiesView.getEntityCenterPosition = {
                 return CGPoint(x: storyDimensions.width / 2.0, y: storyDimensions.height / 2.0)
             }
@@ -2957,6 +2966,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let stickerBackgroundView = UIImageView()
                 self.stickerBackgroundView = stickerBackgroundView
                 self.previewContainerView.addSubview(stickerBackgroundView)
+            case .coverEditor:
+                let stickerBackgroundView = UIImageView()
+                self.stickerBackgroundView = stickerBackgroundView
+                self.previewContainerView.addSubview(stickerBackgroundView)
             default:
                 self.previewContainerView.addSubview(self.gradientView)
             }
@@ -2970,7 +2983,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             self.entitiesView.addSubview(self.drawingView)
             
             switch controller.mode {
-            case .stickerEditor, .avatarEditor:
+            case .stickerEditor, .avatarEditor, .coverEditor:
                 let stickerOverlayLayer = SimpleShapeLayer()
                 stickerOverlayLayer.fillColor = UIColor(rgb: 0x000000, alpha: 0.7).cgColor
                 stickerOverlayLayer.fillRule = .evenOdd
@@ -3174,7 +3187,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 } else {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 }
-            case .stickerEditor, .avatarEditor:
+            case .stickerEditor, .avatarEditor, .coverEditor:
                 if fittedSize.height > fittedSize.width {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 } else {
@@ -3215,6 +3228,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if case .stickerEditor = controller.mode {
                 mediaEditorMode = .sticker
             } else if case .avatarEditor = controller.mode {
+                mediaEditorMode = .avatar
+            } else if case .coverEditor = controller.mode {
                 mediaEditorMode = .avatar
             }
                
@@ -3367,7 +3382,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     }
                 } else if case let .gift(gift) = effectiveSubject {
                     isGift = true
-                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false))]
+                    let media: [Media] = [TelegramMediaAction(action: .starGiftUnique(gift: .unique(gift), isUpgrade: false, isTransferred: false, savedToProfile: false, canExportDate: nil, transferStars: nil, isRefunded: false, peerId: nil, senderId: nil, savedId: nil))]
                     let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: self.context.account.peerId, namespace: Namespaces.Message.Cloud, id: -1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], customTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: media, peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                     messages = .single([message])
                 } else {
@@ -3860,6 +3875,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             } else if case .avatarEditor = controller.mode {
                 hasSwipeToDismiss = false
                 hasSwipeToEnhance = false
+            } else if case .coverEditor = controller.mode {
+                hasSwipeToDismiss = false
+                hasSwipeToEnhance = false
             } else if self.isCollageTimelineOpen {
                 hasSwipeToEnhance = false
             }
@@ -4064,7 +4082,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 } else {
                     initialScale = self.previewContainerView.bounds.width / image.size.width
                 }
-            case .stickerEditor, .avatarEditor:
+            case .stickerEditor, .avatarEditor, .coverEditor:
                 if image.size.height > image.size.width {
                     initialScale = self.previewContainerView.bounds.width / image.size.width
                 } else {
@@ -5137,7 +5155,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 controller.requestStickerCompletion(animated: true)
             case .botPreview:
                 controller.requestStoryCompletion(animated: true)
-            case .avatarEditor:
+            case .avatarEditor, .coverEditor:
                 controller.requestStoryCompletion(animated: true)
             }
         }
@@ -5404,7 +5422,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     var hasInteractiveStickers = true
                                     if let controller = self.controller {
                                         switch controller.mode {
-                                        case .stickerEditor, .botPreview, .avatarEditor:
+                                        case .stickerEditor, .botPreview, .avatarEditor, .coverEditor:
                                             hasInteractiveStickers = false
                                         default:
                                             break
@@ -5885,7 +5903,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             if let stickerBackgroundView = self.stickerBackgroundView, let stickerOverlayLayer = self.stickerOverlayLayer, let stickerFrameLayer = self.stickerFrameLayer {
-                let stickerFrameWidth = floorToScreenPixels(previewSize.width * 0.97)
+                var stickerFrameFraction: CGFloat = 1.0
+                if case .avatarEditor = controller.mode {
+                    stickerFrameFraction = 0.97
+                }
+                let stickerFrameWidth = floorToScreenPixels(previewSize.width * stickerFrameFraction)
                 stickerOverlayLayer.frame = CGRect(origin: .zero, size: previewSize)
                 
                 let stickerFrameRect = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
@@ -5896,6 +5918,10 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 switch controller.mode {
                 case .avatarEditor:
                     overlayInnerRect = UIBezierPath(cgPath: CGPath(ellipseIn: stickerFrameRect, transform: nil))
+                    stickerFrameLayer.isHidden = true
+                case let .coverEditor(dimensions):
+                    let fittedSize = dimensions.aspectFilled(stickerFrameRect.size)
+                    overlayInnerRect = UIBezierPath(rect: fittedSize.centered(around: stickerFrameRect.center))
                     stickerFrameLayer.isHidden = true
                 default:
                     overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
@@ -6770,7 +6796,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         let context = self.context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, position: .top, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
+        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, position: .top, animateInAsReplacement: false, appearance: UndoOverlayController.Appearance(isBlurred: true), action: { [weak self] action in
             if case .info = action, let self {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
                 self.push(controller)
@@ -6884,7 +6910,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 save = presentationData.strings.Story_Editor_DraftKeepMedia
             }
             text = presentationData.strings.Story_Editor_DraftDiscaedText
-        case .stickerEditor, .botPreview, .avatarEditor:
+        case .stickerEditor, .botPreview, .avatarEditor, .coverEditor:
             title = presentationData.strings.Story_Editor_DraftDiscardMedia
             text = presentationData.strings.Story_Editor_DiscardText
         }

@@ -360,7 +360,7 @@
     [_dotImageView addGestureRecognizer:dotTapRecognizer];
     
     if ([self presentedForAvatarCreation] && _item.isVideo) {
-        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f)];
+        _scrubberView = [[TGMediaPickerGalleryVideoScrubber alloc] initWithFrame:CGRectMake(0.0f, 0.0, _portraitToolbarView.frame.size.width, 68.0f) cover: false];
         _scrubberView.minimumLength = 3.0;
         _scrubberView.layer.allowsGroupOpacity = true;
         _scrubberView.hasDotPicker = true;

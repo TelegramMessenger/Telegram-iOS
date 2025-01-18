@@ -11,6 +11,10 @@
 {
     UIButton *_leftSegmentView;
     UIButton *_rightSegmentView;
+    UIImageView *_borderView;
+    
+    UIImageView *_leftCapsuleView;
+    UIImageView *_rightCapsuleView;
     
     UILongPressGestureRecognizer *_startHandlePressGestureRecognizer;
     UILongPressGestureRecognizer *_endHandlePressGestureRecognizer;
@@ -34,19 +38,38 @@
     {
         self.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -25);
         
-        UIColor *normalColor = UIColorRGB(0x4d4d4d);
-        UIColor *accentColor = [TGPhotoEditorInterfaceAssets accentColor];
+        UIColor *normalColor = UIColorRGB(0xffffff);
+        UIColor *accentColor = UIColorRGB(0xf8d74a);
         
         static dispatch_once_t onceToken;
         static UIImage *handle;
+        static UIImage *border;
         dispatch_once(&onceToken, ^
         {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(12.0f, 36.0f), false, 0.0f);
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(12.0f, 40.0f), false, 0.0f);
+            CGContextRef context = UIGraphicsGetCurrentContext();
             
-            [normalColor setFill];
-            [[UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.0f, 0.0f, 12.0f, 36.0f) byRoundingCorners:UIRectCornerTopLeft | UIRectCornerBottomLeft cornerRadii:CGSizeMake(4.0f, 4.0f)] fill];
+            CGContextSetFillColorWithColor(context, normalColor.CGColor);
+            UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, 40, 40) cornerRadius:9.0];
+            CGContextAddPath(context, path.CGPath);
+            CGContextFillPath(context);
+            
+            CGContextSetBlendMode(context, kCGBlendModeClear);
+            
+            CGContextSetFillColorWithColor(context, [UIColor clearColor].CGColor);
+            path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(11.0f, 1.0f + TGSeparatorHeight(), 20, 40.0f - (1.0f + TGSeparatorHeight()) * 2.0) cornerRadius:2.0];
+            CGContextAddPath(context, path.CGPath);
+            CGContextFillPath(context);
             
             handle = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(1.0f, 40.0f), false, 0.0f);
+            context = UIGraphicsGetCurrentContext();
+            CGContextSetFillColorWithColor(context, normalColor.CGColor);
+            CGContextFillRect(context, CGRectMake(0, 0, 1, 1.0 + TGSeparatorHeight()));
+            CGContextFillRect(context, CGRectMake(0, 40.0 - 1.0 - TGSeparatorHeight(), 1, 1.0 + TGSeparatorHeight()));
+            border = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
         });
         
@@ -54,8 +77,9 @@
         UIImage *leftHighlightedImage = TGTintedImage(handle, accentColor);
         UIImage *rightImage = [UIImage imageWithCGImage:handle.CGImage scale:handle.scale orientation:UIImageOrientationUpMirrored];
         UIImage *rightHighlightedImage = [UIImage imageWithCGImage:leftHighlightedImage.CGImage scale:handle.scale orientation:UIImageOrientationUpMirrored];
+        UIImage *borderHighlightedImage = TGTintedImage(border, accentColor);
         
-        _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
+        _leftSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 40)];
         _leftSegmentView.adjustsImageWhenHighlighted = false;
         [_leftSegmentView setBackgroundImage:leftImage forState:UIControlStateNormal];
         [_leftSegmentView setBackgroundImage:leftHighlightedImage forState:UIControlStateSelected];
@@ -63,13 +87,29 @@
         _leftSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -25, -5, -10);
         [self addSubview:_leftSegmentView];
         
-        _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 36)];
+        _rightSegmentView = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 12, 40)];
         _rightSegmentView.adjustsImageWhenHighlighted = false;
         [_rightSegmentView setBackgroundImage:rightImage forState:UIControlStateNormal];
         [_rightSegmentView setBackgroundImage:rightHighlightedImage forState:UIControlStateSelected];
         [_rightSegmentView setBackgroundImage:rightHighlightedImage forState:UIControlStateSelected | UIControlStateHighlighted];
         _rightSegmentView.hitTestEdgeInsets = UIEdgeInsetsMake(-5, -10, -5, -25);
         [self addSubview:_rightSegmentView];
+        
+        _borderView = [[UIImageView alloc] initWithImage:border];
+        _borderView.highlightedImage = borderHighlightedImage;
+        [self addSubview:_borderView];
+        
+        _leftCapsuleView = [[UIImageView alloc] initWithFrame:CGRectMake(5.0 - TGSeparatorHeight(), 14.0 + TGSeparatorHeight(), 2.0, 11.0)];
+        _leftCapsuleView.backgroundColor = UIColorRGB(0x343436);
+        _leftCapsuleView.clipsToBounds = true;
+        _leftCapsuleView.layer.cornerRadius = 1.0;
+        [_leftSegmentView addSubview:_leftCapsuleView];
+        
+        _rightCapsuleView = [[UIImageView alloc] initWithFrame:CGRectMake(12.0 - 3.0 - 4.0 + TGSeparatorHeight(), 14.0 + TGSeparatorHeight(), 2.0, 11.0)];
+        _rightCapsuleView.backgroundColor = UIColorRGB(0x343436);
+        _rightCapsuleView.clipsToBounds = true;
+        _rightCapsuleView.layer.cornerRadius = 1.0;
+        [_rightSegmentView addSubview:_rightCapsuleView];
         
         _startHandlePressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleHandlePress:)];
         _startHandlePressGestureRecognizer.delegate = self;
@@ -98,8 +138,21 @@
     
     _leftSegmentView.hidden = !trimmingEnabled;
     _rightSegmentView.hidden = !trimmingEnabled;
+    _borderView.hidden = !trimmingEnabled;
     
     [self setNeedsLayout];
+}
+
+- (void)setTrimmingEnabled:(bool)trimmingEnabled animated:(bool)animated {
+    _trimmingEnabled = trimmingEnabled;
+    
+    CGFloat alpha = trimmingEnabled ? 1.0 : 0.0;
+    
+    [UIView animateWithDuration:0.2 animations:^{
+        _leftSegmentView.alpha = alpha;
+        _rightSegmentView.alpha = alpha;
+        _borderView.alpha = alpha;
+    }];
 }
 
 - (void)setTrimming:(bool)trimming animated:(bool)animated
@@ -108,14 +161,16 @@
     {
         [UIView animateWithDuration:0.15f animations:^
          {
-             [_leftSegmentView setSelected:trimming];
-             [_rightSegmentView setSelected:trimming];
-         }];
+            [_leftSegmentView setSelected:trimming];
+            [_rightSegmentView setSelected:trimming];
+            [_borderView setHighlighted:trimming];
+        }];
     }
     else
     {
         [_leftSegmentView setSelected:trimming];
         [_rightSegmentView setSelected:trimming];
+        [_borderView setHighlighted:trimming];
     }
 }
 
@@ -227,6 +282,7 @@
     
     _leftSegmentView.frame = CGRectMake(0, 0, handleWidth, self.frame.size.height);
     _rightSegmentView.frame = CGRectMake(self.frame.size.width - handleWidth, 0, handleWidth, self.frame.size.height);
+    _borderView.frame = CGRectMake(handleWidth, 0, self.frame.size.width - handleWidth * 2.0, self.frame.size.height);
 }
 
 @end

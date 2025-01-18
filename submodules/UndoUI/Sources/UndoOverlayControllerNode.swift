@@ -59,7 +59,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let dismiss: () -> Void
     
     private var content: UndoOverlayContent
-    private let blurred: Bool
+    private let appearance: UndoOverlayController.Appearance?
     
     private let additionalView: UndoOverlayControllerAdditionalView?
     
@@ -77,11 +77,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private var fetchResourceDisposable: Disposable?
     
-    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, placementPosition: UndoOverlayController.Position, blurred: Bool, additionalView: (() -> UndoOverlayControllerAdditionalView?)?, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, placementPosition: UndoOverlayController.Position, appearance: UndoOverlayController.Appearance?, additionalView: (() -> UndoOverlayControllerAdditionalView?)?, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
         self.presentationData = presentationData
         self.elevatedLayout = elevatedLayout
         self.placementPosition = placementPosition
-        self.blurred = blurred
+        self.appearance = appearance
         self.content = content
         
         self.additionalView = additionalView?()
@@ -1544,7 +1544,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.undoButtonNode = HighlightTrackingButtonNode()
         
         self.panelNode = ASDisplayNode()
-        if presentationData.theme.overallDarkAppearance && !self.blurred {
+        if presentationData.theme.overallDarkAppearance && !(self.appearance?.isBlurred == true) {
             self.panelNode.backgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
         } else {
             self.panelNode.backgroundColor = .clear
@@ -1904,7 +1904,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         let rightInset: CGFloat = 16.0
         var contentHeight: CGFloat = 20.0
         
-        let margin: CGFloat = 12.0
+        let margin: CGFloat = self.appearance?.sideInset ?? 12.0
         let leftMargin = margin + layout.insets(options: []).left
         
         let buttonTextSize = self.undoButtonTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
@@ -1964,7 +1964,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         case .top:
             break
         case .bottom:
-            if self.elevatedLayout {
+            if let bottomInset = self.appearance?.bottomInset {
+                insets.bottom += bottomInset
+            } else if self.elevatedLayout {
                 insets.bottom += 49.0
             }
         }

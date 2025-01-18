@@ -463,7 +463,15 @@ private final class PeerInfoPendingPane {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .gifts:
-            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, profileGifts: data.profileGiftsContext!)
+            var canManage = false
+            if let peer = data.peer {
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    if channel.hasPermission(.sendSomething) {
+                        canManage = true
+                    }
+                }
+            }
+            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, profileGifts: data.profileGiftsContext!, canManage: canManage)
         case .stories, .storyArchive, .botPreview:
             var canManage = false
             if let peer = data.peer {

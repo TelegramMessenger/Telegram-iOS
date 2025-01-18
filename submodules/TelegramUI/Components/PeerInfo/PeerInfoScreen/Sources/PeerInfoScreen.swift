@@ -6467,8 +6467,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
                         if case .broadcast = channel.info {
-                            //TODO:localize
-                            items.append(.action(ContextMenuActionItem(text: "Send a Gift", badge: nil, icon: { theme in
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Profile_SendGift, badge: nil, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
@@ -9597,7 +9596,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
     }
     
-    func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
+    func oldOpenAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
         guard let peer = self.data?.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: self.data?.threadData) else {
             return
         }
@@ -12772,7 +12771,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     public func openAvatarSetup(completedWithUploadingImage: @escaping (UIImage, Signal<PeerInfoAvatarUploadStatus, NoError>) -> UIView?) {
         let proceed = { [weak self] in
-            self?.newopenAvatarForEditing(completedWithUploadingImage: completedWithUploadingImage)
+            self?.openAvatarForEditing(completedWithUploadingImage: completedWithUploadingImage)
         }
         if !self.isNodeLoaded {
             self.loadDisplayNode()
@@ -12796,10 +12795,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         })
     }
     
-    func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
-        self.controllerNode.openAvatarForEditing(mode: mode, fromGallery: fromGallery, completion: completion)
-    }
-        
     static func openPeer(context: AccountContext, peerId: PeerId, navigation: ChatControllerInteractionNavigateToPeer, navigationController: NavigationController) {
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue).startStandalone(next: { peer in

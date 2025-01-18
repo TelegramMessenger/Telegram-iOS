@@ -1560,6 +1560,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
             }
             
+            let profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: peerId)
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, isMyProfile: false, chatLocationContextHolder: chatLocationContextHolder),
@@ -1599,6 +1601,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                                 availablePanesValue.insert(.savedMessages, at: 0)
                             }
                             availablePanes = availablePanesValue
+                        }
+                    }
+                    
+                    if availablePanes != nil, let cachedData = peerView.cachedData as? CachedChannelData {
+                        if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
+                            availablePanes?.insert(.gifts, at: hasStories ? 1 : 0)
                         }
                     }
                 } else {
@@ -1665,7 +1673,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     starsRevenueStatsContext: starsRevenueContextAndState.0,
                     revenueStatsState: revenueContextAndState.1,
                     revenueStatsContext: revenueContextAndState.0,
-                    profileGiftsContext: nil,
+                    profileGiftsContext: profileGiftsContext,
                     premiumGiftOptions: [],
                     webAppPermissions: nil
                 )

@@ -82,6 +82,18 @@ public final class UndoOverlayController: ViewController {
         case bottom
     }
     
+    public struct Appearance {
+        public var isBlurred: Bool?
+        public var sideInset: CGFloat?
+        public var bottomInset: CGFloat?
+        
+        public init(isBlurred: Bool? = nil, sideInset: CGFloat? = nil, bottomInset: CGFloat? = nil) {
+            self.isBlurred = isBlurred
+            self.sideInset = sideInset
+            self.bottomInset = bottomInset
+        }
+    }
+    
     private let presentationData: PresentationData
     public var content: UndoOverlayContent {
         didSet {
@@ -94,7 +106,7 @@ public final class UndoOverlayController: ViewController {
     private var action: (UndoOverlayAction) -> Bool
     private let additionalView: (() -> UndoOverlayControllerAdditionalView?)?
     
-    private let blurred: Bool
+    private let appearance: Appearance?
     private var didPlayPresentationAnimation = false
     private var dismissed = false
     
@@ -102,13 +114,13 @@ public final class UndoOverlayController: ViewController {
     
     public var tag: Any?
     
-    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, position: Position = .bottom, animateInAsReplacement: Bool = false, blurred: Bool = false, action: @escaping (UndoOverlayAction) -> Bool, additionalView: (() -> UndoOverlayControllerAdditionalView?)? = nil) {
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool = false, position: Position = .bottom, animateInAsReplacement: Bool = false, appearance: Appearance? = nil, action: @escaping (UndoOverlayAction) -> Bool, additionalView: (() -> UndoOverlayControllerAdditionalView?)? = nil) {
         self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
         self.position = position
         self.animateInAsReplacement = animateInAsReplacement
-        self.blurred = blurred
+        self.appearance = appearance
         self.action = action
         self.additionalView = additionalView
         
@@ -122,7 +134,7 @@ public final class UndoOverlayController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, blurred: self.blurred, additionalView: self.additionalView, action: { [weak self] value in
+        self.displayNode = UndoOverlayControllerNode(presentationData: self.presentationData, content: self.content, elevatedLayout: self.elevatedLayout, placementPosition: self.position, appearance: self.appearance, additionalView: self.additionalView, action: { [weak self] value in
             return self?.action(value) ?? false
         }, dismiss: { [weak self] in
             self?.dismiss()

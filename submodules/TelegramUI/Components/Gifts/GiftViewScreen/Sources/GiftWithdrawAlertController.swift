@@ -173,7 +173,8 @@ private final class GiftWithdrawAlertContentNode: AlertContentNode {
                     photo: nil,
                     media: [],
                     uniqueGift: nil,
-                    backgroundColor: .clear
+                    backgroundColor: .clear,
+                    size: avatarSize
                 )
             ),
             environment: {},

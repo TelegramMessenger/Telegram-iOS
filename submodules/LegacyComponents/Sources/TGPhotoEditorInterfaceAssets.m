@@ -123,11 +123,11 @@
     static UIImage *muteBackground;
     dispatch_once(&onceToken, ^
     {
-        CGRect rect = CGRectMake(0, 0, 39.0f, 39.0f);
+        CGRect rect = CGRectMake(0, 0, 40.0f, 40.0f);
         UIGraphicsBeginImageContextWithOptions(rect.size, false, 0);
         CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.3f).CGColor);
-        CGContextFillEllipseInRect(context, CGRectInset(rect, 3, 3));
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.5f).CGColor);
+        CGContextFillEllipseInRect(context, rect);
         
         muteBackground = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
@@ -173,7 +173,7 @@
     {
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
         CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.5f).CGColor);
         
         CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
         
@@ -198,7 +198,7 @@
     {
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
         CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.5f).CGColor);
         
         CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
         
@@ -358,7 +358,7 @@
     {
         UIGraphicsBeginImageContextWithOptions(CGSizeMake(30.0f, 30.0f), false, 0.0f);
         CGContextRef context = UIGraphicsGetCurrentContext();
-        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.7f).CGColor);
+        CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.5f).CGColor);
         
         UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0.5f, 0.5f, 29.0f, 29.0f) cornerRadius:8.5f];
         CGContextAddPath(context, path.CGPath);

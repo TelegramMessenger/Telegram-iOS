@@ -2450,26 +2450,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentExportAlertImpl = { [weak controller] in
-            guard let controller, case let .starGiftTransfer(_, _, _, _, canExportDate) = source, let canExportDate else {
+            guard let controller, case let .starGiftTransfer(_, _, gift, _, canExportDate) = source, let canExportDate else {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            let title: String
-            let text: String
-            if currentTime > canExportDate {
-                title = presentationData.strings.Gift_Transfer_UpdateRequired_Title
-                text = presentationData.strings.Gift_Transfer_UpdateRequired_Text
+            if currentTime > canExportDate || "".isEmpty {                
+                let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: {
+                    
+                })
+                controller.present(alertController, in: .window(.root))
             } else {
                 let delta = canExportDate - currentTime
                 let days: Int32 = Int32(ceil(Float(delta) / 86400.0))
                 let daysString = presentationData.strings.Gift_Transfer_UnlockPending_Text_Days(days)
-                title = presentationData.strings.Gift_Transfer_UnlockPending_Title
-                text = presentationData.strings.Gift_Transfer_UnlockPending_Text(daysString).string
+                let title = presentationData.strings.Gift_Transfer_UnlockPending_Title
+                let text = presentationData.strings.Gift_Transfer_UnlockPending_Text(daysString).string
+                let alertController = textAlertController(context: context, title: title, text: text, actions: [
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                ])
+                controller.present(alertController, in: .window(.root))
             }
-            let alertController = textAlertController(context: context, title: title, text: text, actions: [
-                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-            ])
-            controller.present(alertController, in: .window(.root))
         }
         
         presentTransferAlertImpl = { [weak controller] peer in
