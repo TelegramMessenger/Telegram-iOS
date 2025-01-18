@@ -1386,14 +1386,14 @@ extension StarGift.UniqueGift.Attribute {
             self = .pattern(name: name, file: file, rarity: rarityPermille)
         case let .starGiftAttributeBackdrop(name, centerColor, edgeColor, patternColor, textColor, rarityPermille):
             self = .backdrop(name: name, innerColor: centerColor, outerColor: edgeColor, patternColor: patternColor, textColor: textColor, rarity: rarityPermille)
-        case let .starGiftAttributeOriginalDetails(_, senderId, recipientId, date, message):
+        case let .starGiftAttributeOriginalDetails(_, sender, recipient, date, message):
             var text: String?
             var entities: [MessageTextEntity]?
             if case let .textWithEntities(textValue, entitiesValue) = message {
                 text = textValue
                 entities = messageTextEntitiesFromApiEntities(entitiesValue)
             }
-            self = .originalInfo(senderPeerId: senderId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }, recipientPeerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(recipientId)), date: date, text: text, entities: entities)
+            self = .originalInfo(senderPeerId: sender?.peerId, recipientPeerId: recipient.peerId, date: date, text: text, entities: entities)
         }
     }
 }
@@ -1480,4 +1480,114 @@ extension StarGiftReference {
             return .inputSavedStarGiftChat(peer: inputPeer, savedId: id)
         }
     }
+}
+
+
+public enum RequestStarGiftWithdrawalError : Equatable {
+    case generic
+    case twoStepAuthMissing
+    case twoStepAuthTooFresh(Int32)
+    case authSessionTooFresh(Int32)
+    case limitExceeded
+    case requestPassword
+    case invalidPassword
+    case serverProvided(text: String)
+}
+
+func _internal_checkStarGiftWithdrawalAvailability(account: Account, reference: StarGiftReference) -> Signal<Never, RequestStarGiftWithdrawalError> {
+    return account.postbox.transaction { transaction in
+        return reference.apiStarGiftReference(transaction: transaction)
+    }
+    |> castError(RequestStarGiftWithdrawalError.self)
+    |> mapToSignal { starGift in
+        guard let starGift else {
+            return .fail(.generic)
+        }
+        return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(stargift: starGift, password: .inputCheckPasswordEmpty))
+        |> mapError { error -> RequestStarGiftWithdrawalError in
+            if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                return .requestPassword
+            } else if error.errorDescription == "PASSWORD_MISSING" {
+                return .twoStepAuthMissing
+            } else if error.errorDescription.hasPrefix("PASSWORD_TOO_FRESH_") {
+                let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "PASSWORD_TOO_FRESH_".count)...])
+                if let value = Int32(timeout) {
+                    return .twoStepAuthTooFresh(value)
+                }
+            } else if error.errorDescription.hasPrefix("SESSION_TOO_FRESH_") {
+                let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "SESSION_TOO_FRESH_".count)...])
+                if let value = Int32(timeout) {
+                    return .authSessionTooFresh(value)
+                }
+            }
+            return .generic
+        }
+        |> ignoreValues
+    }
+}
+
+func _internal_requestStarGiftWithdrawalUrl(account: Account, reference: StarGiftReference, password: String) -> Signal<String, RequestStarGiftWithdrawalError> {
+    guard !password.isEmpty else {
+        return .fail(.invalidPassword)
+    }
+    
+    return account.postbox.transaction { transaction -> Signal<String, RequestStarGiftWithdrawalError> in
+        guard let starGift = reference.apiStarGiftReference(transaction: transaction) else {
+            return .fail(.generic)
+        }
+            
+        let checkPassword = _internal_twoStepAuthData(account.network)
+        |> mapError { error -> RequestStarGiftWithdrawalError in
+            if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                return .limitExceeded
+            } else {
+                return .generic
+            }
+        }
+        |> mapToSignal { authData -> Signal<Api.InputCheckPasswordSRP, RequestStarGiftWithdrawalError> in
+            if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
+                guard let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData) else {
+                    return .fail(.generic)
+                }
+                return .single(.inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1)))
+            } else {
+                return .fail(.twoStepAuthMissing)
+            }
+        }
+        
+        return checkPassword
+        |> mapToSignal { password -> Signal<String, RequestStarGiftWithdrawalError> in
+            return account.network.request(Api.functions.payments.getStarGiftWithdrawalUrl(stargift: starGift, password: password), automaticFloodWait: false)
+            |> mapError { error -> RequestStarGiftWithdrawalError in
+                if error.errorCode == 406 {
+                    return .serverProvided(text: error.errorDescription)
+                } else if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+                    return .limitExceeded
+                } else if error.errorDescription == "PASSWORD_HASH_INVALID" {
+                    return .invalidPassword
+                } else if error.errorDescription == "PASSWORD_MISSING" {
+                    return .twoStepAuthMissing
+                } else if error.errorDescription.hasPrefix("PASSWORD_TOO_FRESH_") {
+                    let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "PASSWORD_TOO_FRESH_".count)...])
+                    if let value = Int32(timeout) {
+                        return .twoStepAuthTooFresh(value)
+                    }
+                } else if error.errorDescription.hasPrefix("SESSION_TOO_FRESH_") {
+                    let timeout = String(error.errorDescription[error.errorDescription.index(error.errorDescription.startIndex, offsetBy: "SESSION_TOO_FRESH_".count)...])
+                    if let value = Int32(timeout) {
+                        return .authSessionTooFresh(value)
+                    }
+                }
+                return .generic
+            }
+            |> map { result -> String in
+                switch result {
+                case let .starGiftWithdrawalUrl(url):
+                    return url
+                }
+            }
+        }
+    }
+    |> mapError { _ -> RequestStarGiftWithdrawalError in }
+    |> switchToLatest
 }

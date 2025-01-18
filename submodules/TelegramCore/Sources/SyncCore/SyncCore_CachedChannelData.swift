@@ -24,6 +24,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let canViewRevenue = CachedChannelFlags(rawValue: 1 << 10)
     public static let paidMediaAllowed = CachedChannelFlags(rawValue: 1 << 11)
     public static let canViewStarsRevenue = CachedChannelFlags(rawValue: 1 << 12)
+    public static let starGiftsAvailable = CachedChannelFlags(rawValue: 1 << 13)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {

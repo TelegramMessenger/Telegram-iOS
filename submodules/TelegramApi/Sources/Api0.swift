@@ -917,7 +917,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1145732050] = { return Api.StarGift.parse_starGiftUnique($0) }
     dict[-1809377438] = { return Api.StarGiftAttribute.parse_starGiftAttributeBackdrop($0) }
     dict[970559507] = { return Api.StarGiftAttribute.parse_starGiftAttributeModel($0) }
-    dict[-1070837941] = { return Api.StarGiftAttribute.parse_starGiftAttributeOriginalDetails($0) }
+    dict[-524291476] = { return Api.StarGiftAttribute.parse_starGiftAttributeOriginalDetails($0) }
     dict[330104601] = { return Api.StarGiftAttribute.parse_starGiftAttributePattern($0) }
     dict[-586389774] = { return Api.StarRefProgram.parse_starRefProgram($0) }
     dict[-1145654109] = { return Api.StarsAmount.parse_starsAmount($0) }
@@ -1383,6 +1383,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-74456004] = { return Api.payments.SavedInfo.parse_savedInfo($0) }
     dict[1154859627] = { return Api.payments.SavedStarGifts.parse_savedStarGifts($0) }
     dict[377215243] = { return Api.payments.StarGiftUpgradePreview.parse_starGiftUpgradePreview($0) }
+    dict[-2069218660] = { return Api.payments.StarGiftWithdrawalUrl.parse_starGiftWithdrawalUrl($0) }
     dict[-1877571094] = { return Api.payments.StarGifts.parse_starGifts($0) }
     dict[-1551326360] = { return Api.payments.StarGifts.parse_starGiftsNotModified($0) }
     dict[961445665] = { return Api.payments.StarsRevenueAdsAccountUrl.parse_starsRevenueAdsAccountUrl($0) }
@@ -2472,6 +2473,8 @@ public extension Api {
             case let _1 as Api.payments.SavedStarGifts:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.StarGiftUpgradePreview:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.StarGiftWithdrawalUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.StarGifts:
                 _1.serialize(buffer, boxed)

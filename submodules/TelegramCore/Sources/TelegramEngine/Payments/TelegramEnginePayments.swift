@@ -136,5 +136,9 @@ public extension TelegramEngine {
         public func getUniqueStarGift(slug: String) -> Signal<StarGift.UniqueGift?, NoError> {
             return _internal_getUniqueStarGift(account: self.account, slug: slug)
         }
+        
+        public func checkStarGiftWithdrawalAvailability(reference: StarGiftReference) -> Signal<Never, RequestStarGiftWithdrawalError> {
+            return _internal_checkStarGiftWithdrawalAvailability(account: self.account, reference: reference)
+        }
     }
 }

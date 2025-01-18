@@ -415,7 +415,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
                 
                 if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
-                    if case .broadcast = peer.info {
+                    if case .broadcast = peer.info, interfaceState.starGiftsAvailable {
                         self.giftButton.isHidden = false
                         self.helpButton.isHidden = true
                         
@@ -438,7 +438,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         } else {
             self.giftButton.isHidden = true
             self.helpButton.isHidden = true
-            
+                        
             let availableWidth = min(600.0, width - leftInset - rightInset)
             let leftOffset = floor((width - availableWidth) / 2.0)
             self.button.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: floor(availableWidth / 2.0), height: panelHeight))
