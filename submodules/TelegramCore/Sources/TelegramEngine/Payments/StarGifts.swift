@@ -866,14 +866,17 @@ private final class CachedProfileGifts: Codable {
     enum CodingKeys: String, CodingKey {
         case gifts
         case count
+        case notificationsEnabled
     }
     
     var gifts: [ProfileGiftsContext.State.StarGift]
     let count: Int32
+    let notificationsEnabled: Bool?
     
-    init(gifts: [ProfileGiftsContext.State.StarGift], count: Int32) {
+    init(gifts: [ProfileGiftsContext.State.StarGift], count: Int32, notificationsEnabled: Bool?) {
         self.gifts = gifts
         self.count = count
+        self.notificationsEnabled = notificationsEnabled
     }
     
     init(from decoder: Decoder) throws {
@@ -881,6 +884,7 @@ private final class CachedProfileGifts: Codable {
 
         self.gifts = try container.decode([ProfileGiftsContext.State.StarGift].self, forKey: .gifts)
         self.count = try container.decode(Int32.self, forKey: .count)
+        self.notificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .notificationsEnabled)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -888,6 +892,7 @@ private final class CachedProfileGifts: Codable {
 
         try container.encode(self.gifts, forKey: .gifts)
         try container.encode(self.count, forKey: .count)
+        try container.encodeIfPresent(self.notificationsEnabled, forKey: .notificationsEnabled)
     }
     
     func render(transaction: Transaction) {
@@ -918,6 +923,7 @@ private final class ProfileGiftsContextImpl {
     private var gifts: [ProfileGiftsContext.State.StarGift] = []
     private var count: Int32?
     private var dataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
+    private var notificationsEnabled: Bool?
     
     var _state: ProfileGiftsContext.State?
     private let stateValue = Promise<ProfileGiftsContext.State>()
@@ -958,6 +964,7 @@ private final class ProfileGiftsContextImpl {
                     if case .loading = self.dataState {
                         self.gifts = cachedGifts.gifts
                         self.count = cachedGifts.count
+                        self.notificationsEnabled = cachedGifts.notificationsEnabled
                         self.pushState()
                     }
                 }))
@@ -966,12 +973,12 @@ private final class ProfileGiftsContextImpl {
             self.dataState = .loading
             self.pushState()
         
-            let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+            let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?), NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
                 return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { inputPeer -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
+            |> mapToSignal { inputPeer -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?), NoError> in
                 guard let inputPeer else {
-                    return .single(([], 0, nil))
+                    return .single(([], 0, nil, nil))
                 }
                 let flags: Int32 = 0
                 return network.request(Api.functions.payments.getSavedStarGifts(flags: flags, peer: inputPeer, offset: initialNextOffset ?? "", limit: 32))
@@ -979,25 +986,34 @@ private final class ProfileGiftsContextImpl {
                 |> `catch` { _ -> Signal<Api.payments.SavedStarGifts?, NoError> in
                     return .single(nil)
                 }
-                |> mapToSignal { result -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?), NoError> in
+                |> mapToSignal { result -> Signal<([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?), NoError> in
                     guard let result else {
-                        return .single(([], 0, nil))
+                        return .single(([], 0, nil, nil))
                     }
-                    return postbox.transaction { transaction -> ([ProfileGiftsContext.State.StarGift], Int32, String?) in
+                    return postbox.transaction { transaction -> ([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?) in
                         switch result {
-                        case let .savedStarGifts(_, count, apiGifts, nextOffset, chats, users):
+                        case let .savedStarGifts(_, count, apiNotificationsEnabled, apiGifts, nextOffset, chats, users):
                             let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             
+                            var notificationsEnabled: Bool?
+                            if let apiNotificationsEnabled {
+                                if case .boolTrue = apiNotificationsEnabled {
+                                    notificationsEnabled = true
+                                } else {
+                                    notificationsEnabled = false
+                                }
+                            }
+                            
                             let gifts = apiGifts.compactMap { ProfileGiftsContext.State.StarGift(apiSavedStarGift: $0, peerId: peerId, transaction: transaction) }
-                            return (gifts, count, nextOffset)
+                            return (gifts, count, nextOffset, notificationsEnabled)
                         }
                     }
                 }
             }
             
             self.disposable.set((signal
-            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, count, nextOffset) in
+            |> deliverOn(self.queue)).start(next: { [weak self] (gifts, count, nextOffset, notificationsEnabled) in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1005,7 +1021,7 @@ private final class ProfileGiftsContextImpl {
                     strongSelf.gifts = gifts
                     
                     strongSelf.cacheDisposable.set(strongSelf.account.postbox.transaction { transaction in
-                        if let entry = CodableEntry(CachedProfileGifts(gifts: gifts, count: count)) {
+                        if let entry = CodableEntry(CachedProfileGifts(gifts: gifts, count: count, notificationsEnabled: notificationsEnabled)) {
                             transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
                         }
                     }.start())
@@ -1018,6 +1034,7 @@ private final class ProfileGiftsContextImpl {
                 let updatedCount = max(Int32(strongSelf.gifts.count), count)
                 strongSelf.count = updatedCount
                 strongSelf.dataState = .ready(canLoadMore: count != 0 && updatedCount > strongSelf.gifts.count && nextOffset != nil, nextOffset: nextOffset)
+                strongSelf.notificationsEnabled = notificationsEnabled
                 strongSelf.pushState()
             }))
         }
@@ -1082,8 +1099,8 @@ private final class ProfileGiftsContextImpl {
     }
     
     private func pushState() {
-        self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)
-        self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState)))
+        self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)
+        self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)))
     }
 }
 
@@ -1246,6 +1263,7 @@ public final class ProfileGiftsContext {
         public var gifts: [ProfileGiftsContext.State.StarGift]
         public var count: Int32?
         public var dataState: ProfileGiftsContext.State.DataState
+        public var notificationsEnabled: Bool?
     }
     
     private let queue: Queue = .mainQueue()
@@ -1590,4 +1608,25 @@ func _internal_requestStarGiftWithdrawalUrl(account: Account, reference: StarGif
     }
     |> mapError { _ -> RequestStarGiftWithdrawalError in }
     |> switchToLatest
+}
+
+func _internal_toggleStarGiftsNotifications(account: Account, peerId: EnginePeer.Id, enabled: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer in
+        guard let inputPeer else {
+            return .complete()
+        }
+        var flags: Int32 = 0
+        if enabled {
+            flags |= (1 << 0)
+        }
+        return account.network.request(Api.functions.payments.toggleChatStarGiftNotifications(flags: flags, peer: inputPeer))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Bool?, NoError> in
+            return .single(nil)
+        }
+        |> ignoreValues
+    }
 }

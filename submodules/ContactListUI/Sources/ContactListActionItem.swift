@@ -20,9 +20,15 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
         case generic
     }
     
+    public enum Height {
+        case generic
+        case tall
+    }
+    
     let presentationData: ItemListPresentationData
     let title: String
     let subtitle: String?
+    let height: Height
     let icon: ContactListActionItemIcon
     let style: Style
     let highlight: ContactListActionItemHighlight
@@ -31,12 +37,13 @@ public class ContactListActionItem: ListViewItem, ListViewItemWithHeader {
     let action: () -> Void
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, style: Style = .accent, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, title: String, subtitle: String? = nil, icon: ContactListActionItemIcon, style: Style = .accent, height: Height = .generic, highlight: ContactListActionItemHighlight = .cell, clearHighlightAutomatically: Bool = true, accessible: Bool = true, header: ListViewItemHeader?, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.title = title
         self.subtitle = subtitle
         self.icon = icon
         self.style = style
+        self.height = height
         self.highlight = highlight
         self.header = header
         self.clearHighlightAutomatically = clearHighlightAutomatically
@@ -223,7 +230,9 @@ class ContactListActionItemNode: ListViewItemNode {
             
             let contentHeight: CGFloat
             let verticalInset: CGFloat = subtitleAttributedString != nil ? 6.0 : 12.0
-            if case .alpha = item.highlight {
+            if case .tall = item.height {
+                contentHeight = 50.0
+            } else if case .alpha = item.highlight {
                 contentHeight = 50.0
             } else {
                 contentHeight = verticalInset * 2.0 + titleLayout.size.height + subtitleHeightComponent

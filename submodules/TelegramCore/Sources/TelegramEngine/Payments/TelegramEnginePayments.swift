@@ -140,5 +140,13 @@ public extension TelegramEngine {
         public func checkStarGiftWithdrawalAvailability(reference: StarGiftReference) -> Signal<Never, RequestStarGiftWithdrawalError> {
             return _internal_checkStarGiftWithdrawalAvailability(account: self.account, reference: reference)
         }
+        
+        public func requestStarGiftWithdrawalUrl(reference: StarGiftReference, password: String) -> Signal<String, RequestStarGiftWithdrawalError> {
+            return _internal_requestStarGiftWithdrawalUrl(account: account, reference: reference, password: password)
+        }
+        
+        public func toggleStarGiftsNotifications(peerId: EnginePeer.Id, enabled: Bool) -> Signal<Never, NoError> {
+            return _internal_toggleStarGiftsNotifications(account: self.account, peerId: peerId, enabled: enabled)
+        }
     }
 }

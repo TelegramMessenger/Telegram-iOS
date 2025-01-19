@@ -2450,13 +2450,34 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentExportAlertImpl = { [weak controller] in
-            guard let controller, case let .starGiftTransfer(_, _, gift, _, canExportDate) = source, let canExportDate else {
+            guard let controller, case let .starGiftTransfer(_, reference, gift, _, canExportDate) = source, let canExportDate else {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             if currentTime > canExportDate || "".isEmpty {                
                 let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: {
-                    
+                    let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
+                    |> deliverOnMainQueue).start(error: { [weak controller] error in
+                        switch error {
+                        case .serverProvided:
+                            return
+                        case .requestPassword:
+                            let alertController = confirmGiftWithdrawalController(context: context, reference: reference, present: { [weak controller] c, a in
+                                controller?.present(c, in: .window(.root))
+                            }, completion: { url in
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                            })
+                            controller?.present(alertController, in: .window(.root))
+                        default:
+                            let alertController = giftWithdrawalController(context: context, reference: reference, initialError: error, present: { [weak controller] c, a in
+                                controller?.present(c, in: .window(.root))
+                            }, completion: { _ in
+                                
+                            })
+                            controller?.present(alertController, in: .window(.root))
+                        }
+                    })
                 })
                 controller.present(alertController, in: .window(.root))
             } else {

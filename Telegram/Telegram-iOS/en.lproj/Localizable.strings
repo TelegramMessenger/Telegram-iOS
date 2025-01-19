@@ -13743,3 +13743,12 @@ Sorry for the inconvenience.";
 "Media.ChooseFromGallery" = "Choose From Gallery";
 "Media.SelectFrame" = "Select Frame";
 "Media.SaveCover" = "Save Cover";
+
+"Gift.Withdraw.SecurityCheck" = "Security Check";
+"Gift.Withdraw.SecurityRequirements" = "Gift withdrawals are available if:\n\n• 2-Step verification was enabled for your account more than **7 days** ago.\n\n• You have logged in on this device more than **24 hours** ago.";
+"Gift.Withdraw.ComeBackLater" = "\n\nPlease come back later.";
+"Gift.Withdraw.SetupTwoStepAuth" = "Enable 2-Step Verification";
+
+"Gift.Withdraw.EnterPassword.Title" = "Enter Password";
+"Gift.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
+"Gift.Withdraw.EnterPassword.Done" = "Proceed";

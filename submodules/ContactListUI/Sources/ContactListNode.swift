@@ -145,13 +145,16 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 })
             case let .option(_, option, header, _, _):
                 let style: ContactListActionItem.Style
+                let height: ContactListActionItem.Height
                 switch option.style {
                 case .accent:
                     style = .accent
+                    height = .generic
                 case .generic:
                     style = .generic
+                    height = .tall
                 }
-                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, subtitle: option.subtitle, icon: option.icon, style: style, clearHighlightAutomatically: option.clearHighlightAutomatically, header: header, action: option.action)
+                return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, subtitle: option.subtitle, icon: option.icon, style: style, height: height, clearHighlightAutomatically: option.clearHighlightAutomatically, header: header, action: option.action)
             case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, hasMoreButton, enabled, storyData, requiresPremiumForMessaging, customSubtitle):
                 var status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer

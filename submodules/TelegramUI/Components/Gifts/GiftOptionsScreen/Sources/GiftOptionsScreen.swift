@@ -781,7 +781,7 @@ final class GiftOptionsScreenComponent: Component {
                                             ribbon: product.discount.flatMap {
                                                 GiftItemComponent.Ribbon(
                                                     text:  "-\($0)%",
-                                                    color: .red
+                                                    color: .purple
                                                 )
                                             },
                                             isLoading: self.inProgressPremiumGift == product.id

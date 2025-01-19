@@ -26,6 +26,7 @@ public final class GiftItemComponent: Component {
         public enum Color: Equatable {
             case red
             case blue
+            case purple
             case custom(Int32, Int32)
             
             func colors(theme: PresentationTheme) -> [UIColor] {
@@ -54,6 +55,11 @@ public final class GiftItemComponent: Component {
                             UIColor(rgb: 0x6fd3ff)
                         ]
                     }
+                case .purple:
+                    return [
+                        UIColor(rgb: 0x747bf6),
+                        UIColor(rgb: 0xe367d8)
+                    ]
                 case let .custom(topColor, _):
                     return [
                         UIColor(rgb: UInt32(bitPattern: topColor)).withMultiplied(hue: 0.97, saturation: 1.45, brightness: 0.89),
@@ -489,7 +495,7 @@ public final class GiftItemComponent: Component {
                     ribbonTextView.bounds = CGRect(origin: .zero, size: ribbonTextSize)
                     
                     if self.ribbon.image == nil || themeUpdated || previousComponent?.ribbon?.color != component.ribbon?.color {
-                        var direction: GradientImageDirection = .diagonal
+                        var direction: GradientImageDirection = .mirroredDiagonal
                         if case .custom = ribbon.color {
                             direction = .mirroredDiagonal
                         }
