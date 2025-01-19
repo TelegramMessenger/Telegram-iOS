@@ -170,7 +170,9 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                     automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                                 }
                             } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
-                                if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                                if let _ = telegramFile.videoCover {
+                                    automaticPlayback = false
+                                } else if NativeVideoContent.isHLSVideo(file: telegramFile) {
                                     automaticPlayback = true
                                 } else if case .full = automaticDownload {
                                     automaticPlayback = true
@@ -220,7 +222,9 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                                 automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
                             }
                         } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.context.sharedContext.energyUsageSettings.autoplayVideo {
-                            if NativeVideoContent.isHLSVideo(file: telegramFile) {
+                            if let _ = telegramFile.videoCover {
+                                automaticPlayback = false
+                            } else if NativeVideoContent.isHLSVideo(file: telegramFile) {
                                 automaticPlayback = true
                             } else if case .full = automaticDownload {
                                 automaticPlayback = true

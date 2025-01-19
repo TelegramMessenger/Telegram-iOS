@@ -866,7 +866,9 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     }
                 }
                 unboundSize = CGSize(width: floor(dimensions.cgSize.width * 0.5), height: floor(dimensions.cgSize.height * 0.5))
-                if file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
+                if let image = file.videoCover, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
+                    unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
+                } else if file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
                     isSticker = true
                 } else if file.isAnimated {
@@ -1181,7 +1183,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     let reloadMedia = mediaUpdated || isSendingUpdated || automaticPlaybackUpdated
                     if mediaUpdated || isSendingUpdated || automaticPlaybackUpdated || inlinePlaybackRangeUpdated {
                         var media = media
-                        
                         var extendedMedia: TelegramExtendedMedia?
                         if let invoice = media as? TelegramMediaInvoice, let selectedMedia = invoice.extendedMedia {
                             extendedMedia = selectedMedia
@@ -1472,7 +1473,14 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
                                 }
                             } else {
-                                if file.isAnimatedSticker {
+                                if let file = media as? TelegramMediaFile, let image = file.videoCover {
+                                    updateImageSignal = { synchronousLoad, highQuality in
+                                        return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
+                                    }
+                                    updateBlurredImageSignal = { synchronousLoad, _ in
+                                        return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true, synchronousLoad: true)
+                                    }
+                                } else if file.isAnimatedSticker {
                                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                                     updateImageSignal = { synchronousLoad, _ in
                                         return chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
