@@ -4587,8 +4587,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return sourceView
                     }
                 )
+                emojiStatusSelectionController.pushController = { [weak self] c in
+                    self?.controller?.push(c)
+                }
                 strongSelf.emojiStatusSelectionController = emojiStatusSelectionController
                 strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
+            }
+            
+            self.headerNode.openUniqueGift = { [weak self] sourceView, _ in
+                self?.headerNode.displayPremiumIntro?(sourceView, nil, .single(nil), false)
             }
         } else {
             if peerId == context.account.peerId {
@@ -4673,7 +4680,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 controller.present(tooltipController, in: .current)
             }
             
-            self.headerNode.openUniqueGift = { [weak self] slug in
+            self.headerNode.openUniqueGift = { [weak self] _, slug in
                 guard let self else {
                     return
                 }

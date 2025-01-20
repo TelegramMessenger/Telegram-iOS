@@ -2956,6 +2956,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
+    public func makeGiftWearPreviewScreen(context: AccountContext, gift: StarGift.UniqueGift) -> ViewController {
+        let controller = GiftViewScreen(context: context, subject: .wearPreview(gift))
+        return controller
+    }
+    
     public func makeStorySharingScreen(context: AccountContext, subject: StorySharingSubject, parentController: ViewController) -> ViewController {
         let editorSubject: Signal<MediaEditorScreenImpl.Subject?, NoError>
         switch subject {

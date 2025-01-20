@@ -16,6 +16,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/TelegramNotices",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",

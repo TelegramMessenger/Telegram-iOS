@@ -498,12 +498,19 @@ private final class GiftViewSheetContent: CombinedComponent {
                 showUpgradePreview = true
             }
             
+            var showWearPreview = false
+            if state.inWearPreview {
+                showWearPreview = true
+            } else if case .wearPreview = component.subject {
+                showWearPreview = true
+            }
+            
             let cancel = component.cancel
             let buttons = buttons.update(
                 component: ButtonsComponent(
                     theme: theme,
                     isOverlay: showUpgradePreview || uniqueGift != nil,
-                    showMoreButton: uniqueGift != nil && !state.inWearPreview,
+                    showMoreButton: uniqueGift != nil && !showWearPreview,
                     closePressed: { [weak state] in
                         guard let state else {
                             return
@@ -528,13 +535,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: context.transition
             )
-                                    
+                                                            
             var originY: CGFloat = 0.0
                         
             let headerHeight: CGFloat
             let headerSubject: GiftCompositionComponent.Subject?
             if let uniqueGift {
-                if state.inWearPreview {
+                if showWearPreview {
                     headerHeight = 200.0
                 } else if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
                     headerHeight = 314.0
@@ -557,7 +564,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             var wearPeerNameChild: _UpdatedChildComponent?
-            if state.inWearPreview, let uniqueGift {
+            if showWearPreview, let uniqueGift {
                 var peerName = ""
                 if let accountPeer = state.peerMap[component.context.account.peerId] {
                     peerName = accountPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
@@ -577,10 +584,17 @@ private final class GiftViewSheetContent: CombinedComponent {
                     transition: .immediate
                 )
                 
+                let giftTitle: String
+                if case .wearPreview = component.subject {
+                    giftTitle = uniqueGift.title
+                } else {
+                    giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
+                }
+                
                 let wearTitle = wearTitle.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: strings.Gift_Wear_Wear("\(uniqueGift.title) #\(uniqueGift.number)").string,
+                            string: strings.Gift_Wear_Wear(giftTitle).string,
                             font: Font.bold(24.0),
                             textColor: theme.actionSheet.primaryTextColor,
                             paragraphAlignment: .center
@@ -638,7 +652,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         subject: headerSubject,
                         animationOffset: animationOffset,
                         animationScale: animationScale,
-                        displayAnimationStars: state.inWearPreview,
+                        displayAnimationStars: showWearPreview,
                         externalState: giftCompositionExternalState,
                         requestUpdate: { [weak state] in
                             state?.updated()
@@ -660,22 +674,24 @@ private final class GiftViewSheetContent: CombinedComponent {
                 vibrantColor = UIColor.white.withAlphaComponent(0.6)
             }
             
-            if let wearPeerNameChild, let accountPeer = state.peerMap[component.context.account.peerId] {
-                let wearAvatar = wearAvatar.update(
-                    component: AvatarComponent(
-                        context: component.context,
-                        theme: theme,
-                        peer: accountPeer
-                    ),
-                    environment: {},
-                    availableSize: CGSize(width: 100.0, height: 100.0),
-                    transition: context.transition
-                )
-                context.add(wearAvatar
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 67.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
+            if let wearPeerNameChild {
+                if let accountPeer = state.peerMap[component.context.account.peerId] {
+                    let wearAvatar = wearAvatar.update(
+                        component: AvatarComponent(
+                            context: component.context,
+                            theme: theme,
+                            peer: accountPeer
+                        ),
+                        environment: {},
+                        availableSize: CGSize(width: 100.0, height: 100.0),
+                        transition: context.transition
+                    )
+                    context.add(wearAvatar
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: 67.0))
+                        .appear(.default(scale: true, alpha: true))
+                        .disappear(.default(scale: true, alpha: true))
+                    )
+                }
                 
                 let wearPeerStatus = wearPeerStatus.update(
                     component: MultilineTextComponent(
@@ -1772,7 +1788,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += table.size.height + 23.0
             }
             
-            if incoming && !converted && !upgraded && !showUpgradePreview && !state.inWearPreview {
+            if incoming && !converted && !upgraded && !showUpgradePreview && !showWearPreview {
                 let linkColor = theme.actionSheet.controlAccentColor
                 if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
                     state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
@@ -1838,7 +1854,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
             )
             let buttonChild: _UpdatedChildComponent
-            if state.inWearPreview, let uniqueGift {
+            if showWearPreview, let uniqueGift {
                 let buttonContent: AnyComponentWithIdentity<Empty>
                 if !component.context.isPremium {
                     buttonContent = AnyComponentWithIdentity(
@@ -1898,8 +1914,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     controller.present(tooltipController, in: .window(.root))
                                 } else {
                                     state.commitWear(uniqueGift)
-                                    Queue.mainQueue().after(0.2) {
-                                        component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                    if case .wearPreview = component.subject {
+                                        component.cancel(true)
+                                    } else {
+                                        Queue.mainQueue().after(0.2) {
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                        }
                                     }
                                 }
                             }
@@ -2212,6 +2232,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         case soldOutGift(StarGift.Gift)
         case upgradePreview([StarGift.UniqueGift.Attribute], String)
+        case wearPreview(StarGift.UniqueGift)
         
         var arguments: (peerId: EnginePeer.Id?, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, reference: StarGiftReference?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?, upgradeMessageId: Int32?)? {
             switch self {
@@ -2250,7 +2271,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         return nil
                     }
                 }
-            case let .uniqueGift(gift):
+            case let .uniqueGift(gift), let .wearPreview(gift):
                 return (nil, nil, nil, nil, nil, false, .unique(gift), 0, nil, nil, nil, false, false, false, false, false, nil, nil, nil, nil)
             case let .profileGift(peerId, gift):
                 var messageId: EngineMessage.Id?
