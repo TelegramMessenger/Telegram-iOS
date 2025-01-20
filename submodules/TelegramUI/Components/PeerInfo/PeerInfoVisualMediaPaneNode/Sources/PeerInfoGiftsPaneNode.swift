@@ -411,7 +411,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
                                     theme: checkTheme,
                                     size: CGSize(width: 22.0, height: 22.0),
-                                    selected: self.notify
+                                    selected: self.profileGifts.currentState?.notificationsEnabled ?? false
                                 ))),
                                 AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                     text: .plain(NSAttributedString(string: presentationData.strings.PeerInfo_Gifts_ChannelNotify, font: Font.regular(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor))
@@ -421,20 +421,23 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             )),
                             effectAlignment: .center,
                             action: { [weak self] in
-                                guard let self else {
+                                guard let self, let currentState = self.profileGifts.currentState else {
                                     return
                                 }
-                                self.notify = !self.notify
+                                let enabled = !(currentState.notificationsEnabled ?? false)
+                                self.profileGifts.toggleStarGiftsNotifications(enabled: enabled)
                                 
-                                if self.notify {
-                                    let controller = UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: ["__allcolors__": UIColor.white], title: nil, text: presentationData.strings.PeerInfo_Gifts_ChannelNotifyTooltip, customUndoText: nil, timeout: nil),
-                                        appearance: UndoOverlayController.Appearance(bottomInset: 53.0),
-                                        action: { _ in return true }
-                                    )
-                                    self.chatControllerInteraction.presentController(controller, nil)
-                                }
+                                let animation = enabled ? "anim_profileunmute" : "anim_profilemute"
+                                let text = enabled ? presentationData.strings.PeerInfo_Gifts_ChannelNotifyTooltip : presentationData.strings.PeerInfo_Gifts_ChannelNotifyDisabledTooltip
+                                
+                                let controller = UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .universal(animation: animation, scale: 0.075, colors: ["__allcolors__": UIColor.white], title: nil, text: text, customUndoText: nil, timeout: nil),
+                                    appearance: UndoOverlayController.Appearance(bottomInset: 53.0),
+                                    action: { _ in return true }
+                                )
+                                self.chatControllerInteraction.presentController(controller, nil)
+                              
                                 self.updateScrolling(transition: .immediate)
                             },
                             animateAlpha: false,

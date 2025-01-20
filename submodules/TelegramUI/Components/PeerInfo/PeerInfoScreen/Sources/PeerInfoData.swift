@@ -1579,9 +1579,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 hasSavedMessageTags,
                 isPremiumRequiredForStoryPosting,
                 starsRevenueContextAndState,
-                revenueContextAndState
+                revenueContextAndState,
+                profileGiftsContext.state
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting, starsRevenueContextAndState, revenueContextAndState -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels, hasSavedMessages, hasSavedMessagesChats, hasSavedMessageTags, isPremiumRequiredForStoryPosting, starsRevenueContextAndState, revenueContextAndState, profileGiftsState -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if let hasStories {
                     if hasStories {
@@ -1605,7 +1606,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     }
                     
                     if availablePanes != nil, let cachedData = peerView.cachedData as? CachedChannelData {
-                        if let starGiftsCount = cachedData.starGiftsCount, starGiftsCount > 0 {
+                        if (cachedData.starGiftsCount ?? 0) > 0 || (profileGiftsState.count ?? 0) > 0 {
                             availablePanes?.insert(.gifts, at: hasStories ? 1 : 0)
                         }
                     }

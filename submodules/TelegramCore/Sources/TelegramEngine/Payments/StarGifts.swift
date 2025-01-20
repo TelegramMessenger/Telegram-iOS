@@ -815,8 +815,13 @@ func _internal_upgradeStarGift(account: Account, formId: Int64?, reference: Star
                     case let .updateNewMessage(message, _, _):
                         if let message = StoreMessage(apiMessage: message, accountPeerId: account.peerId, peerIsForum: false) {
                             for media in message.media {
-                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, _, _, _) = action.action, case let .Id(messageId) = message.id {
-                                    let _ = messageId
+                                if let action = media as? TelegramMediaAction, case let .starGiftUnique(gift, _, _, savedToProfile, canExportDate, transferStars, _, peerId, _, savedId) = action.action, case let .Id(messageId) = message.id {
+                                    let reference: StarGiftReference
+                                    if let peerId, let savedId {
+                                        reference = .peer(peerId: peerId, id: savedId)
+                                    } else {
+                                        reference = .message(messageId: messageId)
+                                    }
                                     return .single(ProfileGiftsContext.State.StarGift(
                                         gift: gift,
                                         reference: reference,
@@ -1098,6 +1103,14 @@ private final class ProfileGiftsContextImpl {
         }
     }
     
+    func toggleStarGiftsNotifications(enabled: Bool) {
+        self.actionDisposable.set(
+            _internal_toggleStarGiftsNotifications(account: self.account, peerId: self.peerId, enabled: enabled).startStrict()
+        )
+        self.notificationsEnabled = enabled
+        self.pushState()
+    }
+    
     private func pushState() {
         self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)
         self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)))
@@ -1313,7 +1326,7 @@ public final class ProfileGiftsContext {
             impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
         }
     }
-    
+
     public func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -1327,6 +1340,12 @@ public final class ProfileGiftsContext {
                 }))
             }
             return disposable
+        }
+    }
+    
+    public func toggleStarGiftsNotifications(enabled: Bool) {
+        self.impl.with { impl in
+            impl.toggleStarGiftsNotifications(enabled: enabled)
         }
     }
     

@@ -13715,6 +13715,7 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.SendGift" = "Send Gift";
 "PeerInfo.Gifts.ChannelNotify" = "Notify About New Gifts";
 "PeerInfo.Gifts.ChannelNotifyTooltip" = "You will receive a message from Telegram when your channel receives a gift.";
+"PeerInfo.Gifts.ChannelNotifyDisabledTooltip" = "You will not receive a message from Telegram when your channel receives a gift.";
 
 "Notification.StarsGift.Channel.Sent" = "%1$@ sent a gift to %2$@ for %3$@";
 

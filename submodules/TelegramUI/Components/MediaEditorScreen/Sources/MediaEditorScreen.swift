@@ -3959,6 +3959,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                if case .avatarEditor = self.controller?.mode {
+                    return
+                }
                 switch subject {
                 case .message, .gift:
                     return
@@ -3979,6 +3982,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                if case .avatarEditor = self.controller?.mode {
+                    return
+                }
                 switch subject {
                 case .message, .gift:
                     return
@@ -3999,6 +4005,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
+                if case .avatarEditor = self.controller?.mode {
+                    return
+                }
                 switch subject {
                 case .message, .gift:
                     return
@@ -4168,19 +4177,20 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         let sourceAspectRatio = sourceLocalFrame.height / sourceLocalFrame.width
                         
                         let duration: Double = 0.4
+                        let timingFunction = kCAMediaTimingFunctionSpring
                         
-                        self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+                        self.previewContainerView.layer.animatePosition(from: sourceLocalFrame.center, to: self.previewContainerView.center, duration: duration, timingFunction: timingFunction, completion: { _ in
                             completion()
                         })
                         self.previewContainerView.layer.animateScale(from: sourceScale, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                        self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width * sourceAspectRatio) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width * sourceAspectRatio)), to: self.previewContainerView.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                        self.previewContainerView.layer.animateBounds(from: CGRect(origin: CGPoint(x: 0.0, y: (self.previewContainerView.bounds.height - self.previewContainerView.bounds.width * sourceAspectRatio) / 2.0), size: CGSize(width: self.previewContainerView.bounds.width, height: self.previewContainerView.bounds.width * sourceAspectRatio)), to: self.previewContainerView.bounds, duration: duration, timingFunction: timingFunction)
                         
                         self.backgroundDimView.isHidden = false
-                        self.backgroundDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        self.backgroundDimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.35)
                         
                         if let componentView = self.componentHost.view {
                             componentView.layer.animatePosition(from: sourceLocalFrame.center, to: componentView.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                            componentView.layer.animateScale(from: sourceScale, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            componentView.layer.animateScale(from: sourceScale, to: 1.0, duration: duration, timingFunction: timingFunction)
                             componentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                         }
                     }
@@ -5231,7 +5241,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let result = super.hitTest(point, with: event)
             if result == self.componentHost.view {
                 let point = self.view.convert(point, to: self.previewContainerView)
-                return self.previewContainerView.hitTest(point, with: event)
+                if let previewResult = self.previewContainerView.hitTest(point, with: event) {
+                    return previewResult
+                }
             }
             return result
         }
@@ -6189,7 +6201,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     fileprivate let transitionOut: (Bool, Bool?) -> TransitionOut?
         
     public var cancelled: (Bool) -> Void = { _ in }
-    public var completion: (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void = { _, _ in }
+    public var willComplete: (UIImage?, Bool, @escaping () -> Void) -> Void
+    public var completion: (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
     public var dismissed: () -> Void = { }
     public var willDismiss: () -> Void = { }
     public var sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
@@ -6222,6 +6235,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         initialLink: (url: String, name: String?)? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool, Bool?) -> TransitionOut?,
+        willComplete: @escaping (UIImage?, Bool, @escaping () -> Void) -> Void = { _, _, commit in commit() },
         completion: @escaping (MediaEditorScreenImpl.Result, @escaping (@escaping () -> Void) -> Void) -> Void
     ) {
         self.context = context
@@ -6238,6 +6252,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         self.initialLink = initialLink
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
+        self.willComplete = willComplete
         self.completion = completion
         
         self.storiesBlockedPeers = BlockedPeersContext(account: context.account, subject: .stories)
@@ -7401,13 +7416,18 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
 
                     makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: inputImage, dimensions: storyDimensions, values: mediaEditor.values, time: firstFrameTime, textScale: 2.0, completion: { [weak self] coverImage in
                         if let self {
-                            Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
-                            self.completion(MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
-                                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                    self?.dismiss()
-                                    Queue.mainQueue().justDispatch {
-                                        finished()
-                                    }
+                            self.willComplete(coverImage, true, { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                Logger.shared.log("MediaEditor", "Completed with video \(videoResult)")
+                                self.completion(MediaEditorScreenImpl.Result(media: .video(video: videoResult, coverImage: coverImage, values: mediaEditor.values, duration: duration, dimensions: mediaEditor.values.resultDimensions), mediaAreas: mediaAreas, caption: caption, coverTimestamp: mediaEditor.values.coverImageTimestamp, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                                    self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                                        self?.dismiss()
+                                        Queue.mainQueue().justDispatch {
+                                            finished()
+                                        }
+                                    })
                                 })
                             })
                         }
@@ -7430,18 +7450,23 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
                 makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: outputDimensions, values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                     if let self, let resultImage {
-                        Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
-                        self.completion(MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
-                            self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
-                                self?.dismiss()
-                                Queue.mainQueue().justDispatch {
-                                    finished()
-                                }
+                        self.willComplete(resultImage, false, { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            Logger.shared.log("MediaEditor", "Completed with image \(resultImage)")
+                            self.completion(MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size)), mediaAreas: mediaAreas, caption: caption, coverTimestamp: nil, options: self.state.privacy, stickers: stickers, randomId: randomId), { [weak self] finished in
+                                self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                                    self?.dismiss()
+                                    Queue.mainQueue().justDispatch {
+                                        finished()
+                                    }
+                                })
                             })
+                            if case let .draft(draft, id) = actualSubject, id == nil {
+                                removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
+                            }
                         })
-                        if case let .draft(draft, id) = actualSubject, id == nil {
-                            removeStoryDraft(engine: self.context.engine, path: draft.path, delete: true)
-                        }
                     }
                 })
             }

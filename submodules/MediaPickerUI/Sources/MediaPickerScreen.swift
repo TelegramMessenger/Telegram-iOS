@@ -1546,7 +1546,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             let itemSpacing: CGFloat = 1.0
             let itemWidth = floorToScreenPixels((width - itemSpacing * CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
             
-            var cutoutRect: CGRect?
+            var cutoutRects: [CGRect] = []
             var cameraRect: CGRect? = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth * 2.0 + 1.0))
             if self.cameraView == nil && self.modernCameraView == nil {
                 cameraRect = nil
@@ -1647,9 +1647,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             
             transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: bounds.height)))
             
-            cutoutRect = cameraRect
+            if let cameraRect {
+                cutoutRects.append(cameraRect)
+            }
             if let _ = self.avatarEditorPreviewView {
-                cutoutRect = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: 0.0), size: CGSize(width: cameraRect != nil ? itemWidth * 2.0 : itemWidth, height: itemWidth))
+                cutoutRects.append(CGRect(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0, width: itemWidth, height: itemWidth))
             }
             
             var itemHeight = itemWidth
@@ -1657,7 +1659,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 itemHeight = floor(itemWidth * 1.227)
             }
             let preloadSize: CGFloat = itemHeight// * 3.0
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: preloadSize, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cutoutRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: preloadSize, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemHeight), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutouts: cutoutRects), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1680,9 +1682,6 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             if let avatarEditorPreviewView = self.avatarEditorPreviewView {
                 avatarEditorPreviewView.frame = CGRect(origin: CGPoint(x: cameraRect != nil ? cameraRect!.maxX + itemSpacing : layout.safeInsets.left, y: 0.0), size: CGSize(width: itemWidth, height: itemWidth))
                 avatarEditorPreviewView.updateLayout(size: CGSize(width: itemWidth, height: itemWidth))
-                if self.gridNode.view.subviews.last !== avatarEditorPreviewView {
-                    self.gridNode.view.bringSubviewToFront(avatarEditorPreviewView)
-                }
             }
             
             if let selectionNode = self.selectionNode, let controller = self.controller {

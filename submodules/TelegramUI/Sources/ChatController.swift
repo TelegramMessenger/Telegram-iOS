@@ -1233,10 +1233,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 }
                                             }
                                         }
-                                        controller.videoCompletion = { [weak self] image, url, adjustments, commit in
+                                        controller.videoCompletion = { [weak self] image, url, values, markup, commit in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), values: values, markup: markup, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }
@@ -1271,7 +1271,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }, videoCompletion: { [weak self] image, url, adjustments in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                                    settingsController.oldUpdateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                 }
                                             }
                                         })

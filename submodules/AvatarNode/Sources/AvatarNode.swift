@@ -87,7 +87,7 @@ public func calculateAvatarColors(context: AccountContext?, explicitColorIndex: 
     }
     
     let colors: [UIColor]
-    if icon != .none && icon != .cameraIcon {
+    if icon != .none {
         if case .deletedIcon = icon {
             colors = AvatarNode.grayscaleColors
         } else if case .phoneIcon = icon {
@@ -120,6 +120,8 @@ public func calculateAvatarColors(context: AccountContext?, explicitColorIndex: 
                 backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
             }
             colors = [backgroundColors.1, backgroundColors.0]
+        } else if case .cameraIcon = icon {
+            colors = AvatarNode.repostColors
         } else {
             colors = AvatarNode.grayscaleColors
         }
@@ -288,7 +290,7 @@ public final class AvatarNode: ASDisplayNode {
     ]
     
     static let repostColors: [UIColor] = [
-        UIColor(rgb: 0x34C76F), UIColor(rgb: 0x3DA1FD)
+        UIColor(rgb: 0x3DA1FD), UIColor(rgb: 0x34C76F)
     ]
     
     public final class ContentNode: ASDisplayNode {
