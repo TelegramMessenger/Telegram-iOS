@@ -2306,11 +2306,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     Queue.mainQueue().after(0.2) {
                         backgroundCoverView.animateIn()
                     }
-                    Queue.mainQueue().after(0.44) {
+                    Queue.mainQueue().after(0.5) {
                         self.invokeDisplayGiftInfo()
                     }
                 } else {
-                    Queue.mainQueue().after(0.44) {
+                    Queue.mainQueue().after(0.5) {
                         self.invokeDisplayGiftInfo()
                     }
                 }

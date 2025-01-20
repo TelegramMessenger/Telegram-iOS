@@ -18,6 +18,7 @@ import AccountContext
 import Markdown
 import BalancedTextComponent
 import MultilineTextWithEntitiesComponent
+import ShimmerEffect
 
 public enum TooltipActiveTextItem {
     case url(String, Bool)
@@ -126,6 +127,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             }
         }
     }
+    private let isShimmering: Bool
     private let displayDuration: TooltipScreen.DisplayDuration
     private let shouldDismissOnTouch: (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch
     private let requestDismiss: () -> Void
@@ -148,6 +150,9 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let textView = ComponentView<Empty>()
     private var closeButtonNode: HighlightableButtonNode?
     private var actionButtonNode: HighlightableButtonNode?
+    
+    private var shimmerContainerView: UIView?
+    private var shimmerView: ShimmerEffectForegroundView?
     
     private var isArrowInverted: Bool = false
     
@@ -172,6 +177,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         displayDuration: TooltipScreen.DisplayDuration,
         inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
+        isShimmering: Bool = false,
         shouldDismissOnTouch: @escaping (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch, requestDismiss: @escaping () -> Void, openActiveTextItem: ((TooltipActiveTextItem, TooltipActiveTextAction) -> Void)?)
     {
         self.context = context
@@ -181,6 +187,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.action = action
         self.location = location
         self.displayDuration = displayDuration
+        self.isShimmering = isShimmering
         self.inset = inset
         self.shouldDismissOnTouch = shouldDismissOnTouch
         self.requestDismiss = requestDismiss
@@ -446,7 +453,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.actionButtonNode?.addTarget(self, action: #selector(self.actionPressed), forControlEvents: .touchUpInside)
         self.closeButtonNode?.addTarget(self, action: #selector(self.closePressed), forControlEvents: .touchUpInside)
     }
-    
+        
     @objc private func actionPressed() {
         if let action = self.action {
             action.action()
@@ -713,8 +720,8 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.backgroundMaskNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size).insetBy(dx: -10.0, dy: -10.0))
         transition.updateFrame(node: self.backgroundClipNode, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: backgroundFrame.size))
 
+        let effectFrame = CGRect(origin: CGPoint(), size: backgroundFrame.size).insetBy(dx: -10.0, dy: -10.0)
         if let effectNode = self.effectNode {
-            let effectFrame = CGRect(origin: CGPoint(), size: backgroundFrame.size).insetBy(dx: -10.0, dy: -10.0)
             transition.updateFrame(node: effectNode, frame: effectFrame)
             effectNode.update(size: effectFrame.size, transition: transition)
         }
@@ -842,6 +849,69 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             
             transition.updateFrame(node: avatarNode, frame: avatarFrame)
             avatarNode.updateSize(size: avatarFrame.size)
+        }
+        
+        if self.isShimmering {
+            let shimmerContainerView: UIView
+            let shimmerView: ShimmerEffectForegroundView
+            if let currentContainer = self.shimmerContainerView, let current = self.shimmerView {
+                shimmerContainerView = currentContainer
+                shimmerView = current
+            } else {
+                shimmerContainerView = UIView()
+                shimmerView = ShimmerEffectForegroundView()
+                
+                if let outerSnapshot = self.backgroundMaskNode.layer.snapshotContentTree(), let innerSnapshot = self.backgroundMaskNode.layer.snapshotContentTree() {
+                    outerSnapshot.backgroundColor = UIColor.black.cgColor
+                    
+                    func tintLayers(_ layer: CALayer, color: UIColor, scale: CGFloat) {
+                        if let sublayers = layer.sublayers {
+                            for layer in sublayers {
+                                if let shapeLayer = layer as? CAShapeLayer {
+                                    shapeLayer.fillColor = color.cgColor
+                                } else {
+                                    if layer.cornerRadius > 0.0 {
+                                        layer.backgroundColor = color.cgColor
+                                        layer.bounds = CGRect(origin: .zero, size: CGSize(width: layer.bounds.width * scale, height: layer.bounds.height))
+                                    }
+                                    tintLayers(layer, color: color, scale: scale)
+                                }
+                            }
+                        }
+                    }
+                    
+                    tintLayers(outerSnapshot, color: .white, scale: 1.0)
+                    tintLayers(innerSnapshot, color: .black, scale: 1.085)
+                    
+                    outerSnapshot.addSublayer(innerSnapshot)
+                    
+                    innerSnapshot.transform = CATransform3DMakeScale(0.9, 0.9, 1.0)
+                    innerSnapshot.position = innerSnapshot.position.offsetBy(dx: 10.0, dy: 10.0)
+                    
+                    if let filter = CALayer.luminanceToAlpha() {
+                        outerSnapshot.filters = [filter]
+                    }
+                    
+                    shimmerContainerView.layer.mask = outerSnapshot
+                }
+                
+                self.shimmerContainerView = shimmerContainerView
+                self.backgroundContainerNode.view.addSubview(shimmerContainerView)
+                
+                let shimmerFrame = effectFrame.insetBy(dx: -60.0, dy: 0.0)
+                shimmerView.frame = shimmerFrame
+                shimmerView.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.4), gradientSize: 60.0, globalTimeOffset: false, duration: 2.2, horizontal: true)
+                shimmerView.updateAbsoluteRect(shimmerFrame, within: shimmerFrame.size)
+                
+                shimmerContainerView.addSubview(shimmerView)
+            }
+            shimmerContainerView.frame = effectFrame.offsetBy(dx: 10.0, dy: 10.0)
+        } else if let shimmerContainerView = self.shimmerContainerView, let shimmerView = self.shimmerView {
+            self.shimmerContainerView = nil
+            self.shimmerView = nil
+            
+            shimmerContainerView.removeFromSuperview()
+            shimmerView.removeFromSuperview()
         }
     }
     
@@ -1064,6 +1134,7 @@ public final class TooltipScreen: ViewController {
             }
         }
     }
+    private let isShimmering: Bool
     private let displayDuration: DisplayDuration
     private let inset: CGFloat
     private let cornerRadius: CGFloat?
@@ -1098,6 +1169,7 @@ public final class TooltipScreen: ViewController {
         action: TooltipScreen.Action? = nil,
         location: TooltipScreen.Location,
         displayDuration: DisplayDuration = .default,
+        isShimmering: Bool = false,
         inset: CGFloat = 12.0,
         cornerRadius: CGFloat? = nil,
         shouldDismissOnTouch: @escaping (CGPoint, CGRect) -> TooltipScreen.DismissOnTouch,
@@ -1116,6 +1188,7 @@ public final class TooltipScreen: ViewController {
         self.action = action
         self.location = location
         self.displayDuration = displayDuration
+        self.isShimmering = isShimmering
         self.inset = inset
         self.cornerRadius = cornerRadius
         self.shouldDismissOnTouch = shouldDismissOnTouch
@@ -1177,7 +1250,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, constrainWidth: self.constrainWidth, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, constrainWidth: self.constrainWidth, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, isShimmering: self.isShimmering, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

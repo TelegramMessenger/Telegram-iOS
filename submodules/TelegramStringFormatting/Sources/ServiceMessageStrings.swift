@@ -1113,7 +1113,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, _, _, _):
                 if case let .unique(gift) = gift {
-                    if !forAdditionalServiceMessage {
+                    if !forAdditionalServiceMessage && !"".isEmpty {
                         attributedString = NSAttributedString(string: "\(gift.title) #\(gift.number)", font: titleFont, textColor: primaryTextColor)
                     } else if let messagePeer = message.peers[message.id.peerId] {
                         let peerName = EnginePeer(messagePeer).compactDisplayTitle

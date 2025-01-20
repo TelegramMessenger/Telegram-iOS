@@ -439,13 +439,7 @@ public final class PeerInfoCoverComponent: Component {
             
             let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -1000.0 + availableSize.height), size: CGSize(width: availableSize.width, height: 1000.0))
             transition.containedViewLayoutTransition.updateFrameAdditive(view: self.backgroundView, frame: backgroundFrame)
-            
-            /*let avatarBackgroundPatternContainerFrame = CGSize(width: 0.0, height: 0.0).centered(around: component.avatarCenter)
-            transition.containedViewLayoutTransition.updateFrameAdditive(view: self.avatarBackgroundPatternContainer, frame: avatarBackgroundPatternContainerFrame)
-            transition.containedViewLayoutTransition.updateSublayerTransformScaleAdditive(layer: self.avatarBackgroundPatternContainer.layer, scale: component.avatarScale)*/
-            
-            //transition.setFrame(view: self.avatarBackgroundPatternView, frame: CGSize(width: 200.0, height: 200.0).centered(around: CGPoint()))
-            
+                        
             let avatarPatternFrame = CGSize(width: 380.0, height: floor(component.defaultHeight * 1.0)).centered(around: component.avatarCenter)
             transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
             
@@ -457,7 +451,7 @@ public final class PeerInfoCoverComponent: Component {
                 ]
             } else if case let .status(status) = component.subject, case let .starGift(_, _, _, _, _, _, _, patternColorValue, _) = status.content {
                 let patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
-                self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
+                self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
                 self.avatarBackgroundPatternContentsLayer.colors = [
                     patternColor.withAlphaComponent(0.6).cgColor,
                     patternColor.withAlphaComponent(0.0).cgColor
@@ -469,7 +463,6 @@ public final class PeerInfoCoverComponent: Component {
                         UIColor(white: 0.0, alpha: 0.6).cgColor,
                         UIColor(white: 0.0, alpha: 0.0).cgColor
                     ]
-                    
                 } else {
                     self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
                     let baseWhite: CGFloat = component.isDark ? 0.5 : 0.3

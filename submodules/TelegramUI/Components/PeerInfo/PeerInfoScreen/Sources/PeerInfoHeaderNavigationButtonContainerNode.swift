@@ -21,6 +21,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case qrCode
     case moreToSearch
     case postStory
+    case sort
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {

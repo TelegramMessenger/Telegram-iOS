@@ -4430,14 +4430,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .search, .searchWithTags, .standaloneSearch:
                 strongSelf.activateSearch()
             case .more:
-                if let currentPaneKey = strongSelf.paneContainerNode.currentPaneKey, case .savedMessagesChats = currentPaneKey {
-                    if let controller = strongSelf.controller, let source {
-                        PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: source.view, gesture: gesture)
+                guard let source else {
+                    return
+                }
+                if let currentPaneKey = strongSelf.paneContainerNode.currentPaneKey {
+                    switch currentPaneKey {
+                    case .savedMessagesChats:
+                        if let controller = strongSelf.controller {
+                            PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: source.view, gesture: gesture)
+                        }
+                    default:
+                        break
                     }
                 } else {
-                    if let source = source {
-                        strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
-                    }
+                    strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
+                }
+            case .sort:
+                guard let source else {
+                    return
+                }
+                if let currentPaneKey = strongSelf.paneContainerNode.currentPaneKey, case .gifts = currentPaneKey {
+                    strongSelf.displayGiftsContextMenu(source: source, gesture: gesture)
                 }
             case .qrCode:
                 strongSelf.openQrCode()
@@ -4651,6 +4664,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     style: .customBlur(backgroundColor, -4.0),
                     arrowStyle: .small,
                     location: .point(sourceRect, .bottom),
+                    isShimmering: true,
                     cornerRadius: 10.0,
                     shouldDismissOnTouch: { _, _ in
                         return .dismiss(consume: false)
@@ -10883,6 +10897,126 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return .dismiss(consume: false)
         }), in: .current)
     }
+    
+    private func displayGiftsContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
+        guard let currentPaneKey = self.paneContainerNode.currentPaneKey, case .gifts = currentPaneKey else {
+            return
+        }
+        guard let controller = self.controller else {
+            return
+        }
+        guard let data = self.data, let channel = data.peer as? TelegramChannel, channel.hasPermission(.sendSomething), let giftsContext = data.profileGiftsContext else {
+            return
+        }
+                
+        let strings = self.presentationData.strings
+        let items: Signal<ContextController.Items, NoError> = giftsContext.state
+        |> map { state in
+            return (state.filter, state.sorting)
+        }
+        |> distinctUntilChanged(isEqual: { lhs, rhs -> Bool in
+            let filterEquals = lhs.0 == rhs.0
+            let sortingEquals = lhs.1 == rhs.1
+            return filterEquals && sortingEquals
+        })
+        |> map { [weak giftsContext] filter, sorting -> ContextController.Items in
+            var items: [ContextMenuItem] = []
+            
+            items.append(.action(ContextMenuActionItem(text: sorting == .date ? strings.PeerInfo_Gifts_SortByValue : strings.PeerInfo_Gifts_SortByDate, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: sorting == .date ? "Peer Info/SortValue" : "Peer Info/SortDate"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak giftsContext] _, f in
+                f(.default)
+                
+                giftsContext?.updateSorting(sorting == .date ? .value : .date)
+            })))
+            
+            items.append(.separator)
+            
+            let toggleFilter: (ProfileGiftsContext.Filters) -> Void = { [weak giftsContext] value in
+                var updatedFilter = filter
+                if updatedFilter.contains(value) {
+                    updatedFilter.remove(value)
+                } else {
+                    updatedFilter.insert(value)
+                }
+                giftsContext?.updateFilter(updatedFilter)
+            }
+            
+            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Unlimited, icon: { theme in
+                return filter.contains(.unlimited) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, f in
+                f(.default)
+                
+                toggleFilter(.unlimited)
+            })))
+            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Limited, icon: { theme in
+                return filter.contains(.limited) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, f in
+                f(.default)
+                
+                toggleFilter(.limited)
+            })))
+            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Unique, icon: { theme in
+                return filter.contains(.unique) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, f in
+                f(.default)
+                
+                toggleFilter(.unique)
+            })))
+            
+            items.append(.separator)
+            
+            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Displayed, icon: { theme in
+                return filter.contains(.displayed) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, f in
+                f(.default)
+                
+                toggleFilter(.displayed)
+            })))
+            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Hidden, icon: { theme in
+                return filter.contains(.hidden) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, f in
+                f(.default)
+                
+                toggleFilter(.hidden)
+            })))
+            
+            return ContextController.Items(content: .list(items))
+        }
+        
+        let contextController = ContextController(presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: source)), items: items, gesture: gesture)
+        contextController.passthroughTouchEvent = { [weak self] sourceView, point in
+            guard let strongSelf = self else {
+                return .ignore
+            }
+            
+            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                return .dismiss(consume: true, result: nil)
+            }
+            
+            var testView: UIView? = localResult
+            while true {
+                if let testViewValue = testView {
+                    if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
+                        node.isUserInteractionEnabled = false
+                        DispatchQueue.main.async {
+                            node.isUserInteractionEnabled = true
+                        }
+                        return .dismiss(consume: false, result: nil)
+                    } else {
+                        testView = testViewValue.superview
+                    }
+                } else {
+                    break
+                }
+            }
+            
+            return .dismiss(consume: true, result: nil)
+        }
+        self.mediaGalleryContextMenu = contextController
+        controller.presentInGlobalOverlay(contextController)
+    }
 
     private func displayMediaGalleryContextMenu(source: ContextReferenceContentNode, gesture: ContextGesture?) {
         let peerId = self.peerId
@@ -11872,6 +12006,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         case .botPreview:
                             if let data = self.data, data.hasBotPreviewItems, let user = data.peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
+                            }
+                        case .gifts:
+                            if let data = self.data, let channel = data.peer as? TelegramChannel, channel.hasPermission(.sendSomething) {
+                                rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .sort, isForExpandedView: true))
                             }
                         default:
                             break

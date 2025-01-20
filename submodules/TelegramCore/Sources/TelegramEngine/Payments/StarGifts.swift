@@ -925,7 +925,10 @@ private final class ProfileGiftsContextImpl {
     private let cacheDisposable = MetaDisposable()
     private let actionDisposable = MetaDisposable()
     
+    private var sorting: ProfileGiftsContext.Sorting = .date
+    private var filter: ProfileGiftsContext.Filters = ProfileGiftsContext.Filters.All
     private var gifts: [ProfileGiftsContext.State.StarGift] = []
+    private var filteredGifts: [ProfileGiftsContext.State.StarGift] = []
     private var count: Int32?
     private var dataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
     private var notificationsEnabled: Bool?
@@ -1111,13 +1114,47 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
+    func updateFilter(_ filter: ProfileGiftsContext.Filters) {
+        self.filter = filter
+        self.pushState()
+    }
+    
+    func updateSorting(_ sorting: ProfileGiftsContext.Sorting) {
+        self.sorting = sorting
+        self.pushState()
+    }
+        
     private func pushState() {
-        self._state = ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)
-        self.stateValue.set(.single(ProfileGiftsContext.State(gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)))
+        let state = ProfileGiftsContext.State(filter: self.filter, sorting: self.sorting, gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)
+        self._state = state
+        self.stateValue.set(.single(state))
     }
 }
 
 public final class ProfileGiftsContext {
+    public struct Filters: OptionSet {
+        public var rawValue: Int32
+        
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        
+        public static let unlimited = Filters(rawValue: 1 << 0)
+        public static let limited = Filters(rawValue: 1 << 1)
+        public static let unique = Filters(rawValue: 1 << 2)
+        public static let displayed = Filters(rawValue: 1 << 3)
+        public static let hidden = Filters(rawValue: 1 << 4)
+        
+        public static var All: Filters {
+            return [.unlimited, .limited, .unique, .displayed, .hidden]
+        }
+    }
+    
+    public enum Sorting: Equatable {
+        case date
+        case value
+    }
+    
     public struct State: Equatable {
         public struct StarGift: Equatable, Codable {
             enum CodingKeys: String, CodingKey {
@@ -1273,6 +1310,9 @@ public final class ProfileGiftsContext {
             case ready(canLoadMore: Bool, nextOffset: String?)
         }
         
+        
+        public var filter: Filters
+        public var sorting: Sorting
         public var gifts: [ProfileGiftsContext.State.StarGift]
         public var count: Int32?
         public var dataState: ProfileGiftsContext.State.DataState
@@ -1346,6 +1386,18 @@ public final class ProfileGiftsContext {
     public func toggleStarGiftsNotifications(enabled: Bool) {
         self.impl.with { impl in
             impl.toggleStarGiftsNotifications(enabled: enabled)
+        }
+    }
+    
+    public func updateFilter(_ filter: ProfileGiftsContext.Filters) {
+        self.impl.with { impl in
+            impl.updateFilter(filter)
+        }
+    }
+    
+    public func updateSorting(_ sorting: ProfileGiftsContext.Sorting) {
+        self.impl.with { impl in
+            impl.updateSorting(sorting)
         }
     }
     

@@ -31,6 +31,7 @@ import TooltipUI
 import GiftAnimationComponent
 import LottieComponent
 import ContextUI
+import TelegramNotices
 
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
@@ -284,6 +285,25 @@ private final class GiftViewSheetContent: CombinedComponent {
         func requestWearPreview() {
             self.inWearPreview = true
             self.updated(transition: .spring(duration: 0.4))
+        }
+        
+        func commitWear(_ uniqueGift: StarGift.UniqueGift) {
+            self.pendingWear = true
+            self.pendingTakeOff = false
+            self.inWearPreview = false
+            self.updated(transition: .spring(duration: 0.4))
+            
+            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+            
+            let _ = ApplicationSpecificNotice.incrementStarGiftWearTips(accountManager: self.context.sharedContext.accountManager).startStandalone()
+        }
+        
+        func commitTakeOff() {
+            self.pendingTakeOff = true
+            self.pendingWear = false
+            self.updated(transition: .spring(duration: 0.4))
+            
+            let _ = self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil).startStandalone()
         }
         
         func commitUpgrade() {
@@ -1117,6 +1137,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 if peer.id == component.context.account.peerId, peer.isPremium {
                                     let animationContent: EmojiStatusComponent.Content
                                     var color: UIColor?
+                                    var statusId: Int64 = 1
                                     if state.pendingWear {
                                         var fileId: Int64?
                                         for attribute in uniqueGift.attributes {
@@ -1128,6 +1149,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             }
                                         }
                                         if let fileId {
+                                            statusId = fileId
                                             animationContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: tableLinkColor, loopMode: .count(2))
                                         } else {
                                             animationContent = .premium(color: tableLinkColor)
@@ -1168,7 +1190,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                 ))
                                             ),
                                             AnyComponentWithIdentity(
-                                                id: AnyHashable(1),
+                                                id: AnyHashable(statusId),
                                                 component: AnyComponent(EmojiStatusComponent(
                                                     context: component.context,
                                                     animationCache: component.context.animationCache,
@@ -1351,17 +1373,26 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 action: { [weak state] in
                                     if let state {
                                         if isWearing {
-                                            state.pendingTakeOff = true
-                                            state.pendingWear = false
-                                            state.updated(transition: .spring(duration: 0.4))
-                                            
+                                            state.commitTakeOff()
+
                                             component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(uniqueGift.number)").string)
                                         } else {
                                             if let controller = controller() as? GiftViewScreen {
                                                 controller.dismissAllTooltips()
                                             }
                                             
-                                            state.requestWearPreview()
+                                            let _ = (ApplicationSpecificNotice.getStarGiftWearTips(accountManager: component.context.sharedContext.accountManager)
+                                            |> deliverOnMainQueue).start(next: { [weak state] count in
+                                                guard let state else {
+                                                    return
+                                                }
+                                                if !component.context.isPremium || count < 3 {
+                                                    state.requestWearPreview()
+                                                } else {
+                                                    state.commitWear(uniqueGift)
+                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                                }
+                                            })
                                         }
                                     }
                                 }
@@ -1731,7 +1762,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         items: tableItems
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
-                    transition: .immediate
+                    transition: context.transition
                 )
                 context.add(table
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -1866,13 +1897,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     )
                                     controller.present(tooltipController, in: .window(.root))
                                 } else {
-                                    state.pendingWear = true
-                                    state.pendingTakeOff = false
-                                    state.inWearPreview = false
-                                    state.updated(transition: .spring(duration: 0.4))
-                                    
-                                    let _ = component.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).start()
-                                    
+                                    state.commitWear(uniqueGift)
                                     Queue.mainQueue().after(0.2) {
                                         component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
                                     }

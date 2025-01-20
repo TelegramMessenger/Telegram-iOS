@@ -13753,3 +13753,11 @@ Sorry for the inconvenience.";
 "Gift.Withdraw.EnterPassword.Title" = "Enter Password";
 "Gift.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
 "Gift.Withdraw.EnterPassword.Done" = "Proceed";
+
+"PeerInfo.Gifts.SortByValue" = "Sort by Value";
+"PeerInfo.Gifts.SortByDate" = "Sort by Date";
+"PeerInfo.Gifts.Unlimited" = "Unlimited";
+"PeerInfo.Gifts.Limited" = "Limited";
+"PeerInfo.Gifts.Unique" = "Unique";
+"PeerInfo.Gifts.Displayed" = "Displayed";
+"PeerInfo.Gifts.Hidden" = "Hidden";

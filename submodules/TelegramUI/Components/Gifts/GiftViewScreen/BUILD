@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/PresentationDataUtils",
         "//submodules/Markdown",
+        "//submodules/TelegramNotices",
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/Components/ViewControllerComponent",

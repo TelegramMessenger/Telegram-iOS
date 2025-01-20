@@ -158,11 +158,11 @@ public func standaloneUploadedFile(postbox: Postbox, network: Network, peerId: P
                                         if let _ = thumbnailFile {
                                             flags |= 1 << 2
                                         }
-                                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, videoCover: nil, ttlSeconds: nil)))
+                                        return network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: inputFile, thumb: thumbnailFile, mimeType: mimeType, attributes: inputDocumentAttributesFromFileAttributes(attributes), stickers: nil, videoCover: nil, videoTimestamp: nil, ttlSeconds: nil)))
                                             |> mapError { _ -> StandaloneUploadMediaError in return .generic }
                                             |> mapToSignal { media -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                                 switch media {
-                                                case let .messageMediaDocument(_, document, altDocuments, _, _):
+                                                case let .messageMediaDocument(_, document, altDocuments, _, _, _):
                                                     if let document = document {
                                                         if let mediaFile = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments) {
                                                             return .single(.result(.media(.standalone(media: mediaFile))))
