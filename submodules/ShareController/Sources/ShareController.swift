@@ -524,7 +524,7 @@ public final class ShareController: ViewController {
                         self?.actionCompleted?()
                     })
                 }
-            case let .media(mediaReference):
+            case let .media(mediaReference, _):
                 var canSave = false
                 var isVideo = false
                 if mediaReference.media is TelegramMediaImage {
@@ -668,7 +668,12 @@ public final class ShareController: ViewController {
             fromPublicChannel = true
         }
         
-        self.displayNode = ShareControllerNode(controller: self, environment: self.environment, presentationData: self.presentationData, presetText: self.presetText, defaultAction: self.defaultAction, requestLayout: { [weak self] transition in
+        var mediaParameters: ShareControllerSubject.MediaParameters?
+        if case let .media(_, parameters) = self.subject {
+            mediaParameters = parameters
+        }
+        
+        self.displayNode = ShareControllerNode(controller: self, environment: self.environment, presentationData: self.presentationData, presetText: self.presetText, defaultAction: self.defaultAction, mediaParameters: mediaParameters, requestLayout: { [weak self] transition in
             self?.requestLayout(transition: transition)
         }, presentError: { [weak self] title, text in
             guard let strongSelf = self else {
@@ -765,7 +770,7 @@ public final class ShareController: ViewController {
                         return false
                     }
                 }
-            case let .media(mediaReference):
+            case let .media(mediaReference, _):
                 var sendTextAsCaption = false
                 if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
                     sendTextAsCaption = true
@@ -981,7 +986,7 @@ public final class ShareController: ViewController {
                     case let .image(representations):
                         let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: .standalone(media: media)))
-                    case let .media(mediaReference):
+                    case let .media(mediaReference, _):
                         collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: mediaReference))
                     case let .mapMedia(media):
                         let latLong = "\(media.latitude),\(media.longitude)"
@@ -1518,7 +1523,7 @@ public final class ShareController: ViewController {
                         messages: messages
                     ))
                 }
-            case let .media(mediaReference):
+            case let .media(mediaReference, _):
                 var sendTextAsCaption = false
                 if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
                     sendTextAsCaption = true
@@ -2041,7 +2046,7 @@ public final class ShareController: ViewController {
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: currentContext.context.account, peerId: peerId, messages: messages))
                 }
-            case let .media(mediaReference):
+            case let .media(mediaReference, mediaParameters):
                 var sendTextAsCaption = false
                 if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
                     sendTextAsCaption = true
@@ -2116,7 +2121,15 @@ public final class ShareController: ViewController {
                     if !text.isEmpty && !sendTextAsCaption {
                         messages.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
-                    messages.append(.message(text: sendTextAsCaption ? text : "", attributes: [], inlineStickers: [:], mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                    var attributes: [MessageAttribute] = []
+                    if let startAtTimestamp = mediaParameters?.startAtTimestamp, let startAtTimestampNode = strongSelf.controllerNode.startAtTimestampNode, startAtTimestampNode.value {
+                        attributes.append(ForwardVideoTimestampAttribute(timestamp: startAtTimestamp))
+                    }
+                    if case let .message(message, _) = mediaReference, let sourceMessageId = message.id, (sourceMessageId.peerId.namespace == Namespaces.Peer.CloudUser || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudGroup || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudChannel) {
+                        messages.append(.forward(source: sourceMessageId, threadId: threadId, grouping: .auto, attributes: attributes, correlationId: nil))
+                    } else {
+                        messages.append(.message(text: sendTextAsCaption ? text : "", attributes: attributes, inlineStickers: [:], mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
+                    }
                     messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: currentContext.context.account, peerId: peerId, messages: messages))
                 }

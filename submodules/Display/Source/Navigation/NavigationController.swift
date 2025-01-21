@@ -759,7 +759,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             let effectiveModalTransition: CGFloat
-            if visibleModalCount == 0 || navigationLayout.modal[i].isFlat {
+            if visibleModalCount == 0 || (navigationLayout.modal[i].isFlat && !navigationLayout.modal[i].flatReceivesModalTransition) {
                 effectiveModalTransition = 0.0
             } else if visibleModalCount == 1 {
                 effectiveModalTransition = 1.0 - topModalDismissProgress

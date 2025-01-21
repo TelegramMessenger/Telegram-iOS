@@ -23,9 +23,6 @@ extension VideoChatScreenComponent.View {
         guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
             return
         }
-        guard let peer = self.peer else {
-            return
-        }
         guard let callState = self.callState else {
             return
         }
@@ -34,7 +31,7 @@ extension VideoChatScreenComponent.View {
         
         var items: [ContextMenuItem] = []
         
-        if let displayAsPeers = self.displayAsPeers, displayAsPeers.count > 1 {
+        if self.peer != nil, let displayAsPeers = self.displayAsPeers, displayAsPeers.count > 1 {
             for peer in displayAsPeers {
                 if peer.peer.id == callState.myPeerId {
                     let avatarSize = CGSize(width: 28.0, height: 28.0)
@@ -98,7 +95,7 @@ extension VideoChatScreenComponent.View {
             })))
 
             var hasPermissions = true
-            if case let .channel(chatPeer) = peer {
+            if let peer = self.peer, case let .channel(chatPeer) = peer {
                 if case .broadcast = chatPeer.info {
                     hasPermissions = false
                 } else if chatPeer.flags.contains(.isGigagroup) {
@@ -152,54 +149,56 @@ extension VideoChatScreenComponent.View {
             }
         }
         
-        let qualityList: [(Int, String)] = [
-            (0, environment.strings.VideoChat_IncomingVideoQuality_AudioOnly),
-            (180, "180p"),
-            (360, "360p"),
-            (Int.max, "720p")
-        ]
-        
-        let videoQualityTitle = qualityList.first(where: { $0.0 == self.maxVideoQuality })?.1 ?? ""
-        items.append(.action(ContextMenuActionItem(text: environment.strings.VideoChat_IncomingVideoQuality_Title, textColor: .primary, textLayout: .secondLineWithValue(videoQualityTitle), icon: { _ in
-            return nil
-        }, action: { [weak self] c, _ in
-            guard let self else {
-                c?.dismiss(completion: nil)
-                return
-            }
+        if let members = self.members, members.participants.contains(where: { $0.videoDescription != nil || $0.presentationDescription != nil }) {
+            let qualityList: [(Int, String)] = [
+                (0, environment.strings.VideoChat_IncomingVideoQuality_AudioOnly),
+                (180, "180p"),
+                (360, "360p"),
+                (Int.max, "720p")
+            ]
             
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: environment.strings.Common_Back, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-            }, iconPosition: .left, action: { (c, _) in
-                c?.popItems()
-            })))
-            items.append(.separator)
-            
-            for (quality, title) in qualityList {
-                let isSelected = self.maxVideoQuality == quality
-                items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
-                    if isSelected {
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
-                    } else {
-                        return nil
-                    }
-                }, action: { [weak self] _, f in
-                    f(.default)
-                    
-                    guard let self else {
-                        return
-                    }
-                    
-                    if self.maxVideoQuality != quality {
-                        self.maxVideoQuality = quality
-                        self.state?.updated(transition: .immediate)
-                    }
+            let videoQualityTitle = qualityList.first(where: { $0.0 == self.maxVideoQuality })?.1 ?? ""
+            items.append(.action(ContextMenuActionItem(text: environment.strings.VideoChat_IncomingVideoQuality_Title, textColor: .primary, textLayout: .secondLineWithValue(videoQualityTitle), icon: { _ in
+                return nil
+            }, action: { [weak self] c, _ in
+                guard let self else {
+                    c?.dismiss(completion: nil)
+                    return
+                }
+                
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: environment.strings.Common_Back, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
+                }, iconPosition: .left, action: { (c, _) in
+                    c?.popItems()
                 })))
-            }
-            
-            c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
-        })))
+                items.append(.separator)
+                
+                for (quality, title) in qualityList {
+                    let isSelected = self.maxVideoQuality == quality
+                    items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
+                        if isSelected {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: .white)
+                        } else {
+                            return nil
+                        }
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        
+                        if self.maxVideoQuality != quality {
+                            self.maxVideoQuality = quality
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })))
+                }
+                
+                c?.pushItems(items: .single(ContextController.Items(content: .list(items))))
+            })))
+        }
         
         if callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
             if component.call.hasScreencast {

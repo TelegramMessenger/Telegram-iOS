@@ -49,12 +49,20 @@ public enum ShareControllerError {
 }
 
 public enum ShareControllerSubject {
+    public final class MediaParameters {
+        public let startAtTimestamp: Int32?
+        
+        public init(startAtTimestamp: Int32?) {
+            self.startAtTimestamp = startAtTimestamp
+        }
+    }
+    
     case url(String)
     case text(String)
     case quote(text: String, url: String)
     case messages([Message])
     case image([ImageRepresentationWithReference])
-    case media(AnyMediaReference)
+    case media(AnyMediaReference, MediaParameters?)
     case mapMedia(TelegramMediaMap)
     case fromExternal(([PeerId], [PeerId: Int64], String, ShareControllerAccountContext, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
 }

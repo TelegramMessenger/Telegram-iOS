@@ -80,6 +80,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         public var remoteVideo: VideoSource?
         public var isRemoteBatteryLow: Bool
         public var isEnergySavingEnabled: Bool
+        public var isConferencePossible: Bool
         
         public init(
             strings: PresentationStrings,
@@ -93,7 +94,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             localVideo: VideoSource?,
             remoteVideo: VideoSource?,
             isRemoteBatteryLow: Bool,
-            isEnergySavingEnabled: Bool
+            isEnergySavingEnabled: Bool,
+            isConferencePossible: Bool
         ) {
             self.strings = strings
             self.lifecycleState = lifecycleState
@@ -107,6 +109,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             self.remoteVideo = remoteVideo
             self.isRemoteBatteryLow = isRemoteBatteryLow
             self.isEnergySavingEnabled = isEnergySavingEnabled
+            self.isConferencePossible = isConferencePossible
         }
         
         public static func ==(lhs: State, rhs: State) -> Bool {
@@ -146,6 +149,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if lhs.isEnergySavingEnabled != rhs.isEnergySavingEnabled {
                 return false
             }
+            if lhs.isConferencePossible != rhs.isConferencePossible {
+                return false
+            }
             return true
         }
     }
@@ -178,6 +184,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
     private let avatarLayer: AvatarLayer
     private let titleView: TextView
     private let backButtonView: BackButtonView
+    private var conferenceButtonView: ConferenceButtonView?
     
     private var statusView: StatusView
     private var weakSignalView: WeakSignalView?
@@ -907,7 +914,53 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         transition.setFrame(view: self.backButtonView, frame: backButtonFrame)
         genericAlphaTransition.setAlpha(view: self.backButtonView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
         
-        if case let .active(activeState) = params.state.lifecycleState {
+        
+        var isConferencePossible = false
+        if case .active = params.state.lifecycleState, params.state.isConferencePossible {
+            isConferencePossible = true
+        }
+        
+        if isConferencePossible {
+            let conferenceButtonView: ConferenceButtonView
+            var conferenceButtonTransition = transition
+            if let current = self.conferenceButtonView {
+                conferenceButtonView = current
+            } else {
+                conferenceButtonTransition = conferenceButtonTransition.withAnimation(.none)
+                conferenceButtonView = ConferenceButtonView()
+                conferenceButtonView.alpha = 0.0
+                self.conferenceButtonView = conferenceButtonView
+                self.addSubview(conferenceButtonView)
+                
+                conferenceButtonView.pressAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.conferenceAddParticipant?()
+                }
+            }
+            
+            let conferenceButtonSize = CGSize(width: 40.0, height: 40.0)
+            conferenceButtonView.update(size: conferenceButtonSize, transition: conferenceButtonTransition)
+            
+            let conferenceButtonY: CGFloat
+            if currentAreControlsHidden {
+                conferenceButtonY = -conferenceButtonSize.height - 3.0
+            } else {
+                conferenceButtonY = params.insets.top + 3.0
+            }
+            let conferenceButtonFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 10.0 - conferenceButtonSize.width, y: conferenceButtonY), size: conferenceButtonSize)
+            
+            conferenceButtonTransition.setFrame(view: conferenceButtonView, frame: conferenceButtonFrame)
+            genericAlphaTransition.setAlpha(view: conferenceButtonView, alpha: 1.0)
+        } else {
+            if let conferenceButtonView = self.conferenceButtonView {
+                self.conferenceButtonView = nil
+                conferenceButtonView.removeFromSuperview()
+            }
+        }
+        
+        if !isConferencePossible, case let .active(activeState) = params.state.lifecycleState {
             let emojiView: KeyEmojiView
             var emojiTransition = transition
             var emojiAlphaTransition = genericAlphaTransition
@@ -923,13 +976,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                         return
                     }
                     if !self.isEmojiKeyExpanded {
-                        #if DEBUG
-                        self.conferenceAddParticipant?()
-                        #else
                         self.isEmojiKeyExpanded = true
                         self.displayEmojiTooltip = false
                         self.update(transition: .spring(duration: 0.4))
-                        #endif
                     }
                 }
             }

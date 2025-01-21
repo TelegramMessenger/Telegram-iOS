@@ -342,9 +342,16 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
         self.validLayout = layout
         
         var isStandaloneModal = false
-        if let controller = controllers.first, case .standaloneModal = controller.navigationPresentation {
-            isStandaloneModal = true
+        var flatReceivesModalTransition = false
+        if let controller = controllers.first {
+            if case .standaloneModal = controller.navigationPresentation {
+                isStandaloneModal = true
+            }
+            if controller.flatReceivesModalTransition {
+                flatReceivesModalTransition = true
+            }
         }
+        let _ = flatReceivesModalTransition
         
         transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.ignoreScrolling = true
@@ -378,7 +385,7 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
             } else {
                 self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             }
-            if isStandaloneModal || isLandscape || self.isFlat {
+            if isStandaloneModal || isLandscape || (self.isFlat && !flatReceivesModalTransition) {
                 self.container.cornerRadius = 0.0
             } else {
                 self.container.cornerRadius = 10.0
@@ -419,13 +426,19 @@ final class NavigationModalContainer: ASDisplayNode, ASScrollViewDelegate, ASGes
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
-                let maxScaledTopInset: CGFloat = topInset - 10.0
+                var maxScaledTopInset: CGFloat = topInset - 10.0
+                if flatReceivesModalTransition {
+                    maxScaledTopInset = 0.0
+                    if let statusBarHeight = layout.statusBarHeight {
+                        maxScaledTopInset += statusBarHeight
+                    }
+                }
                 let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
                 containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
             }
         } else {
             self.panRecognizer?.isEnabled = false
-            if self.isFlat {
+            if self.isFlat && !flatReceivesModalTransition {
                 self.dim.backgroundColor = .clear
                 self.container.clipsToBounds = true
                 self.container.cornerRadius = 0.0

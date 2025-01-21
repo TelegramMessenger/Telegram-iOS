@@ -57,6 +57,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var presentCallRating: ((CallId, Bool) -> Void)?
     var present: ((ViewController) -> Void)?
     var callEnded: ((Bool) -> Void)?
+    var willBeDismissedInteractively: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
     var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
@@ -178,7 +179,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             localVideo: nil,
             remoteVideo: nil,
             isRemoteBatteryLow: false,
-            isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency
+            isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
+            isConferencePossible: self.sharedContext.immediateExperimentalUISettings.conferenceCalls
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted
@@ -715,6 +717,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
                     self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
                     self.notifyDismissedInteractivelyOnPanGestureApply = true
+                    self.willBeDismissedInteractively?()
                     self.callScreen.beginPictureInPictureIfPossible()
                 }
                 

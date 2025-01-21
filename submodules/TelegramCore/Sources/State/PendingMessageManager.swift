@@ -822,6 +822,7 @@ public final class PendingMessageManager {
                 var replyQuote: EngineMessageReplyQuote?
                 var replyToStoryId: StoryId?
                 var scheduleTime: Int32?
+                var videoTimestamp: Int32?
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
                 var messageEffect: EffectMessageAttribute?
@@ -859,6 +860,8 @@ public final class PendingMessageManager {
                         messageEffect = attribute
                     } else if let _ = attribute as? InvertMediaMessageAttribute {
                         flags |= Int32(1 << 16)
+                    } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                        videoTimestamp = attribute.timestamp
                     }
                 }
                                 
@@ -872,6 +875,9 @@ public final class PendingMessageManager {
                     }
                     if hideCaptions {
                         flags |= (1 << 12)
+                    }
+                    if videoTimestamp != nil {
+                        flags |= Int32(1 << 20)
                     }
                     
                     var sendAsInputPeer: Api.InputPeer?
@@ -926,7 +932,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -1268,6 +1274,7 @@ public final class PendingMessageManager {
                 var replyQuote: EngineMessageReplyQuote?
                 var replyToStoryId: StoryId?
                 var scheduleTime: Int32?
+                var videoTimestamp: Int32?
                 var sendAsPeerId: PeerId?
                 var bubbleUpEmojiOrStickersets = false
                 var quickReply: OutgoingQuickReplyMessageAttribute?
@@ -1310,6 +1317,8 @@ public final class PendingMessageManager {
                         quickReply = attribute
                     } else if let attribute = attribute as? EffectMessageAttribute {
                         messageEffect = attribute
+                    } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                        videoTimestamp = attribute.timestamp
                     }
                 }
                 
@@ -1520,8 +1529,12 @@ public final class PendingMessageManager {
                             flags |= 1 << 17
                         }
                     
+                        if videoTimestamp != nil {
+                            flags |= 1 << 20
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))

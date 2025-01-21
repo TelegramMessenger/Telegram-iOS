@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ContextUI
+import CheckNode
 
 public final class ShareActionButtonNode: HighlightTrackingButtonNode {
     private let referenceNode: ContextReferenceContentNode
@@ -107,5 +108,76 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
         
         self.containerNode.frame = self.bounds
         self.referenceNode.frame = self.bounds
+    }
+}
+
+public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
+    private let checkNode: CheckNode
+    private let titleTextNode: TextNode
+    
+    public var titleTextColor: UIColor {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    public var checkNodeTheme: CheckNodeTheme {
+        didSet {
+            self.checkNode.theme = self.checkNodeTheme
+        }
+    }
+    
+    private let titleText: String
+    
+    public var value: Bool {
+        return self.checkNode.selected
+    }
+    
+    public init(titleText: String, titleTextColor: UIColor, checkNodeTheme: CheckNodeTheme) {
+        self.titleText = titleText
+        self.titleTextColor = titleTextColor
+        self.checkNodeTheme = checkNodeTheme
+        
+        self.checkNode = CheckNode(theme: checkNodeTheme, content: .check)
+        self.checkNode.isUserInteractionEnabled = false
+        
+        self.titleTextNode = TextNode()
+        self.titleTextNode.isUserInteractionEnabled = false
+        self.titleTextNode.displaysAsynchronously = false
+        
+        super.init()
+        
+        self.addSubnode(self.checkNode)
+        self.addSubnode(self.titleTextNode)
+        
+        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc private func pressed() {
+        self.checkNode.setSelected(!self.checkNode.selected, animated: true)
+    }
+    
+    override public func layout() {
+        super.layout()
+        
+        if self.bounds.width < 1.0 {
+            return
+        }
+        
+        let checkSize: CGFloat = 18.0
+        let checkSpacing: CGFloat = 10.0
+        
+        let (titleTextLayout, titleTextApply) = TextNode.asyncLayout(self.titleTextNode)(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.titleText, font: Font.regular(13.0), textColor: self.titleTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: self.bounds.width - 8.0 * 2.0 - checkSpacing - checkSize, height: 100.0), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
+        let _ = titleTextApply()
+        
+        let contentWidth = checkSize + checkSpacing + titleTextLayout.size.width
+        let checkFrame = CGRect(origin: CGPoint(x: floor((self.bounds.width - contentWidth) * 0.5), y: floor((self.bounds.height - checkSize) * 0.5)), size: CGSize(width: checkSize, height: checkSize))
+        
+        let isFirstTime = self.checkNode.bounds.isEmpty
+        self.checkNode.frame = checkFrame
+        if isFirstTime {
+            self.checkNode.setSelected(false, animated: false)
+        }
+            
+        self.titleTextNode.frame = CGRect(origin: CGPoint(x: checkFrame.maxX + checkSpacing, y: floor((self.bounds.height - titleTextLayout.size.height) * 0.5)), size: titleTextLayout.size)
     }
 }

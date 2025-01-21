@@ -188,7 +188,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 var actionCompletionText: String?
                 if let video = entry.videoRepresentations.last, let peerReference = PeerReference(peer._asPeer()) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [], preloadSize: nil, coverTime: nil, videoCodec: nil)], alternativeRepresentations: []))
-                    subject = .media(videoFileReference.abstract)
+                    subject = .media(videoFileReference.abstract, nil)
                     actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                 } else {
                     subject = .image(entry.representations)

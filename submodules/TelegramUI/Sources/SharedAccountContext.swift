@@ -1020,7 +1020,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                     
                     let statusBarContent: CallStatusBarNodeImpl.Content?
-                    if let call {
+                    if let call, !hasGroupCallOnScreen {
                         statusBarContent = .call(strongSelf, call.context.account, call)
                     } else if let groupCall = groupCall, !hasGroupCallOnScreen {
                         statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
@@ -1055,7 +1055,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     if callController.isNodeLoaded {
                         mainWindow.hostView.containerView.endEditing(true)
                         if callController.view.superview == nil {
-                            mainWindow.present(callController, on: .calls)
+                            if useFlatModalCallsPresentation(context: callController.call.context) {
+                                (mainWindow.viewController as? NavigationController)?.pushViewController(callController)
+                            } else {
+                                mainWindow.present(callController, on: .calls)
+                            }
                         } else {
                             callController.expandFromPipIfPossible()
                         }
@@ -1276,11 +1280,30 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     return
                 }
                 if callController.window == nil {
-                    self.mainWindow?.present(callController, on: .calls)
+                    if useFlatModalCallsPresentation(context: callController.call.context) {
+                        (self.mainWindow?.viewController as? NavigationController)?.pushViewController(callController)
+                    } else {
+                        self.mainWindow?.present(callController, on: .calls)
+                    }
                 }
                 completion(true)
             }
-            self.mainWindow?.present(callController, on: .calls)
+            callController.onViewDidAppear = { [weak self] in
+                if let self {
+                    self.hasGroupCallOnScreenPromise.set(true)
+                }
+            }
+            callController.onViewDidDisappear = { [weak self] in
+                if let self {
+                    self.hasGroupCallOnScreenPromise.set(false)
+                }
+            }
+            if useFlatModalCallsPresentation(context: callController.call.context) {
+                self.hasGroupCallOnScreenPromise.set(true)
+                (self.mainWindow?.viewController as? NavigationController)?.pushViewController(callController)
+            } else {
+                self.mainWindow?.present(callController, on: .calls)
+            }
         }
     }
     
@@ -1513,7 +1536,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if let callController = self.callController {
             if callController.isNodeLoaded && callController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
-                mainWindow.present(callController, on: .calls)
+                
+                if useFlatModalCallsPresentation(context: callController.call.context) {
+                    (mainWindow.viewController as? NavigationController)?.pushViewController(callController)
+                } else {
+                    mainWindow.present(callController, on: .calls)
+                }
             }
         } else if let groupCallController = self.groupCallController {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
@@ -3210,4 +3238,11 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }
     return nil
+}
+
+private func useFlatModalCallsPresentation(context: AccountContext) -> Bool {
+    if let data = context.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_modalcalls"] != nil {
+        return false
+    }
+    return true
 }

@@ -27,6 +27,7 @@ protocol CallControllerNodeProtocol: AnyObject {
     var presentCallRating: ((CallId, Bool) -> Void)? { get set }
     var present: ((ViewController) -> Void)? { get set }
     var callEnded: ((Bool) -> Void)? { get set }
+    var willBeDismissedInteractively: (() -> Void)? { get set }
     var dismissedInteractively: (() -> Void)? { get set }
     var dismissAllTooltips: (() -> Void)? { get set }
     
@@ -68,7 +69,7 @@ public final class CallController: ViewController {
     private var disposable: Disposable?
     
     private var callMutedDisposable: Disposable?
-    private var isMuted = false
+    private var isMuted: Bool = false
     
     private var presentedCallRating = false
     
@@ -82,6 +83,9 @@ public final class CallController: ViewController {
     public var onViewDidAppear: (() -> Void)?
     public var onViewDidDisappear: (() -> Void)?
     
+    private var isAnimatingDismiss: Bool = false
+    private var isDismissed: Bool = false
+    
     public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
@@ -91,6 +95,12 @@ public final class CallController: ViewController {
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        if let data = call.context.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_modalcalls"] != nil {
+        } else {
+            self.navigationPresentation = .flatModal
+            self.flatReceivesModalTransition = true
+        }
         
         self._ready.set(combineLatest(queue: .mainQueue(), self.isDataReady.get(), self.isContentsReady.get())
         |> map { a, b -> Bool in
@@ -336,12 +346,18 @@ public final class CallController: ViewController {
             }
         }
         
+        self.controllerNode.willBeDismissedInteractively = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.notifyDismissed()
+        }
         self.controllerNode.dismissedInteractively = { [weak self] in
             guard let self else {
                 return
             }
             self.didPlayPresentationAnimation = false
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.superDismiss()
         }
         
         let callPeerView: Signal<PeerView?, NoError>
@@ -376,6 +392,8 @@ public final class CallController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
+        self.isDismissed = false
+        
         if !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             
@@ -384,7 +402,9 @@ public final class CallController: ViewController {
         
         self.idleTimerExtensionDisposable.set(self.sharedContext.applicationBindings.pushIdleTimerExtension())
         
-        self.onViewDidAppear?()
+        DispatchQueue.main.async { [weak self] in
+            self?.onViewDidAppear?()
+        }
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -392,7 +412,16 @@ public final class CallController: ViewController {
         
         self.idleTimerExtensionDisposable.set(nil)
         
-        self.onViewDidDisappear?()
+        self.notifyDismissed()
+    }
+    
+    func notifyDismissed() {
+        if !self.isDismissed {
+            self.isDismissed = true
+            DispatchQueue.main.async {
+                self.onViewDidDisappear?()
+            }
+        }
     }
     
     final class AnimateOutToGroupChat {
@@ -422,47 +451,88 @@ public final class CallController: ViewController {
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.didPlayPresentationAnimation = false
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        if !self.isAnimatingDismiss {
+            self.notifyDismissed()
             
-            completion?()
-        })
+            self.isAnimatingDismiss = true
+            self.controllerNode.animateOut(completion: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isAnimatingDismiss = false
+                self.superDismiss()
+                completion?()
+            })
+        }
     }
     
     public func dismissWithoutAnimation() {
-        self.presentingViewController?.dismiss(animated: false, completion: nil)
+        self.superDismiss()
+    }
+    
+    private func superDismiss() {
+        self.didPlayPresentationAnimation = false
+        if self.navigationPresentation == .flatModal {
+            super.dismiss()
+        } else {
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
     }
     
     private func conferenceAddParticipant() {
-        if "".isEmpty {
-            let _ = self.call.upgradeToConference(completion: { _ in
-            })
-            return
-        }
-        
-        let controller = self.call.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(
+        //TODO:localize
+        let context = self.call.context
+        let callPeerId = self.call.peerId
+        let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
+        let controller = self.call.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
             context: self.call.context,
-            filter: [.onlyWriteable],
-            hasChatListSelector: true,
-            hasContactSelector: true,
-            hasGlobalSearch: true,
-            title: "Add Participant",
-            pretendPresentedInModal: false
+            updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
+            mode: .peerSelection(searchChatList: true, searchGroups: false, searchChannels: false),
+            isPeerEnabled: { peer in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                if user.id == context.account.peerId || user.id == callPeerId {
+                    return false
+                }
+                if user.botInfo != nil {
+                    return false
+                }
+                return true
+            }
         ))
-        controller.peerSelected = { [weak self, weak controller] peer, _ in
-            controller?.dismiss()
-            
+        controller.navigationPresentation = .modal
+        let _ = (controller.result |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] result in
             guard let self else {
+                controller?.dismiss()
                 return
             }
-            guard let call = self.call as? PresentationCallImpl else {
+            guard case let .result(peerIds, _) = result else {
+                controller?.dismiss()
                 return
             }
-            let _ = call.requestAddToConference(peerId: peer.id)
-        }
+            if peerIds.isEmpty {
+                controller?.dismiss()
+                return
+            }
+            
+            controller?.displayProgress = true
+            let _ = self.call.upgradeToConference(completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                
+                for peerId in peerIds {
+                    if case let .peer(peerId) = peerId {
+                        let _ = (self.call as? PresentationCallImpl)?.requestAddToConference(peerId: peerId)
+                    }
+                }
+                
+                controller?.dismiss()
+            })
+        })
         
-        self.present(controller, in: .current)
+        self.push(controller)
     }
     
     @objc private func backPressed() {

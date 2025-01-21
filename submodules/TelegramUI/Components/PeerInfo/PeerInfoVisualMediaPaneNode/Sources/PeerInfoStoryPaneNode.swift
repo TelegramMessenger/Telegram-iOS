@@ -2599,7 +2599,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, ASScr
                         
                         let shareController = ShareController(
                             context: self.context,
-                            subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: peer.id, id: item.id), isMention: false))),
+                            subject: .media(.story(peer: peerReference, id: item.id, media: TelegramMediaStory(storyId: StoryId(peerId: peer.id, id: item.id), isMention: false)), nil),
                             presetText: nil,
                             preferredAction: .default,
                             showInChat: nil,

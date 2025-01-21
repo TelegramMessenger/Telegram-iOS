@@ -147,7 +147,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
     
     @objc func actionButtonPressed() {
         if let shareMedia = self.shareMedia {
-            self.controllerInteraction?.presentController(ShareController(context: self.context, subject: .media(shareMedia), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false), nil)
+            self.controllerInteraction?.presentController(ShareController(context: self.context, subject: .media(shareMedia, nil), preferredAction: .saveToCameraRoll, showInChat: nil, externalShare: true, immediateExternalShare: false), nil)
         }
     }
 }

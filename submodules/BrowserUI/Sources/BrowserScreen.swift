@@ -569,10 +569,10 @@ public class BrowserScreen: ViewController, MinimizableController {
                     var isDocument = false
                     if let content = self.content.last {
                         if let documentContent = content as? BrowserDocumentContent {
-                            subject = .media(documentContent.file.abstract)
+                            subject = .media(documentContent.file.abstract, nil)
                             isDocument = true
                         } else if let documentContent = content as? BrowserPdfContent {
-                            subject = .media(documentContent.file.abstract)
+                            subject = .media(documentContent.file.abstract, nil)
                             isDocument = true
                         } else {
                             subject = .url(url)

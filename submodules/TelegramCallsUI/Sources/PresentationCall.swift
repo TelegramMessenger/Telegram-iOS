@@ -813,12 +813,6 @@ public final class PresentationCallImpl: PresentationCall {
                     }
                 })
                 
-                let upgradedToConferenceCompletions = self.upgradedToConferenceCompletions.copyItems()
-                self.upgradedToConferenceCompletions.removeAll()
-                for f in upgradedToConferenceCompletions {
-                    f(conferenceCall)
-                }
-                
                 let waitForLocalVideo = self.videoCapturer != nil
                 
                 let waitForRemotePeerId: EnginePeer.Id? = self.peerId
@@ -888,6 +882,12 @@ public final class PresentationCallImpl: PresentationCall {
                         return
                     }
                     self.hasConferenceValue = true
+                    
+                    let upgradedToConferenceCompletions = self.upgradedToConferenceCompletions.copyItems()
+                    self.upgradedToConferenceCompletions.removeAll()
+                    for f in upgradedToConferenceCompletions {
+                        f(conferenceCall)
+                    }
                 })
             }
         }

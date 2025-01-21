@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
         "//submodules/ChatPresentationInterfaceState",
+        "//submodules/CheckNode",
     ],
     visibility = [
         "//visibility:public",

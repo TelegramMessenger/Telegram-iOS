@@ -205,6 +205,7 @@ private var declaredEncodables: Void = {
     declareEncodable(WallpaperDataResource.self, f: { WallpaperDataResource(decoder: $0) })
     declareEncodable(ForwardOptionsMessageAttribute.self, f: { ForwardOptionsMessageAttribute(decoder: $0) })
     declareEncodable(SendAsMessageAttribute.self, f: { SendAsMessageAttribute(decoder: $0) })
+    declareEncodable(ForwardVideoTimestampAttribute.self, f: { ForwardVideoTimestampAttribute(decoder: $0) })
     declareEncodable(AudioTranscriptionMessageAttribute.self, f: { AudioTranscriptionMessageAttribute(decoder: $0) })
     declareEncodable(NonPremiumMessageAttribute.self, f: { NonPremiumMessageAttribute(decoder: $0) })
     declareEncodable(TelegramExtendedMedia.self, f: { TelegramExtendedMedia(decoder: $0) })

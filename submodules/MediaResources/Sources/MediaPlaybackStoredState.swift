@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
+import Postbox
 
 public final class MediaPlaybackStoredState: Codable {
     public let timestamp: Double
@@ -29,28 +30,28 @@ public final class MediaPlaybackStoredState: Codable {
 }
 
 public func mediaPlaybackStoredState(engine: TelegramEngine, messageId: EngineMessage.Id) -> Signal<MediaPlaybackStoredState?, NoError> {
-    let key = EngineDataBuffer(length: 20)
-    key.setInt32(0, value: messageId.namespace)
-    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
-    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
-    key.setInt32(16, value: messageId.id)
-    
-    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key))
-    |> map { entry -> MediaPlaybackStoredState? in
-        return entry?.get(MediaPlaybackStoredState.self)
+    return engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+    |> map { message -> MediaPlaybackStoredState? in
+        guard let message else {
+            return nil
+        }
+        for attribute in message.attributes {
+            if let attribute = attribute as? DerivedDataMessageAttribute {
+                return attribute.data["mps"]?.get(MediaPlaybackStoredState.self)
+            }
+        }
+        return nil
     }
 }
 
 public func updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine, messageId: EngineMessage.Id, state: MediaPlaybackStoredState?) -> Signal<Never, NoError> {
-    let key = EngineDataBuffer(length: 20)
-    key.setInt32(0, value: messageId.namespace)
-    key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
-    key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
-    key.setInt32(16, value: messageId.id)
-    
-    if let state = state {
-        return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key, item: state)
-    } else {
-        return engine.itemCache.remove(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, id: key)
-    }
+    return engine.messages.updateLocallyDerivedData(messageId: messageId, update: { data in
+        var data = data
+        if let state, let entry = CodableEntry(state) {
+            data["mps"] = entry
+        } else {
+            data.removeValue(forKey: "mps")
+        }
+        return data
+    })
 }
