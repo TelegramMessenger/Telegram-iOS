@@ -662,6 +662,15 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 peerIds.append(senderId)
             }
             return peerIds
+        case let .starGiftUnique(_, _, _, _, _, _, _, peerId, senderId, _):
+            var peerIds: [PeerId] = []
+            if let peerId {
+                peerIds.append(peerId)
+            }
+            if let senderId {
+                peerIds.append(senderId)
+            }
+            return peerIds
         default:
             return []
         }

@@ -24,6 +24,7 @@ import GiftViewScreen
 import SolidRoundedButtonNode
 import UndoUI
 import CheckComponent
+import LottieComponent
 
 public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -47,6 +48,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var panelButton: SolidRoundedButtonNode?
     private var panelCheck: ComponentView<Empty>?
     
+    private let emptyResultsAnimation = ComponentView<Empty>()
+    private let emptyResultsTitle = ComponentView<Empty>()
+    private let emptyResultsAction = ComponentView<Empty>()
+    
     private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
@@ -69,8 +74,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
             
     private var starsProducts: [ProfileGiftsContext.State.StarGift]?
-    
     private var starsItems: [AnyHashable: ComponentView<Empty>] = [:]
+    private var resultsAreFiltered = false
+    private var resultsAreEmpty = false
     
     public init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void, profileGifts: ProfileGiftsContext, canManage: Bool) {
         self.context = context
@@ -98,6 +104,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             self.statusPromise.set(.single(PeerInfoStatusData(text: presentationData.strings.SharedMedia_GiftCount(state.count ?? 0), isActivity: true, key: .gifts)))
             self.starsProducts = state.filteredGifts
             
+            self.resultsAreFiltered = state.filter != .All
+            self.resultsAreEmpty = state.filter != .All && state.filteredGifts.isEmpty
+        
             if !self.didSetReady {
                 self.didSetReady = true
                 self.ready.set(.single(true))
@@ -278,6 +287,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if let itemView = visibleItem.view {
                         if itemView.superview == nil {
                             self.scrollNode.view.addSubview(itemView)
+                            
+                            if !transition.animation.isImmediate {
+                                itemView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.25)
+                                itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                            }
                         }
                         itemTransition.setFrame(view: itemView, frame: itemFrame)
                     }
@@ -464,6 +478,114 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             panelBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
             transition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
+            
+            let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
+            if self.resultsAreEmpty {
+                let sideInset: CGFloat = 44.0
+                let emptyAnimationHeight = 148.0
+                let topInset: CGFloat = 0.0
+                let bottomInset: CGFloat = bottomPanelHeight
+                let visibleHeight = params.visibleHeight
+                let emptyAnimationSpacing: CGFloat = 20.0
+                let emptyTextSpacing: CGFloat = 18.0
+                
+                let emptyResultsTitleSize = self.emptyResultsTitle.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: presentationData.strings.PeerInfo_Gifts_NoResults, font: Font.semibold(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)),
+                            horizontalAlignment: .center
+                        )
+                    ),
+                    environment: {},
+                    containerSize: params.size
+                )
+                let emptyResultsActionSize = self.emptyResultsAction.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        PlainButtonComponent(
+                            content: AnyComponent(
+                                MultilineTextComponent(
+                                    text: .plain(NSAttributedString(string: presentationData.strings.PeerInfo_Gifts_NoResults_ViewAll, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)),
+                                    horizontalAlignment: .center,
+                                    maximumNumberOfLines: 0
+                                )
+                            ),
+                            effectAlignment: .center,
+                            action: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.profileGifts.updateFilter(.All)
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: params.size.width - sideInset * 2.0, height: visibleHeight)
+                )
+                let emptyResultsAnimationSize = self.emptyResultsAnimation.update(
+                    transition: .immediate,
+                    component: AnyComponent(LottieComponent(
+                        content: LottieComponent.AppBundleContent(name: "ChatListNoResults")
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: emptyAnimationHeight, height: emptyAnimationHeight)
+                )
+      
+                let emptyTotalHeight = emptyAnimationHeight + emptyAnimationSpacing + emptyResultsTitleSize.height + emptyResultsActionSize.height + emptyTextSpacing
+                let emptyAnimationY = topInset + floorToScreenPixels((visibleHeight - topInset - bottomInset - emptyTotalHeight) / 2.0)
+                
+                let emptyResultsAnimationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.size.width - emptyResultsAnimationSize.width) / 2.0), y: emptyAnimationY), size: emptyResultsAnimationSize)
+                
+                let emptyResultsTitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.size.width - emptyResultsTitleSize.width) / 2.0), y: emptyResultsAnimationFrame.maxY + emptyAnimationSpacing), size: emptyResultsTitleSize)
+                
+                let emptyResultsActionFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.size.width - emptyResultsActionSize.width) / 2.0), y: emptyResultsTitleFrame.maxY + emptyTextSpacing), size: emptyResultsActionSize)
+                
+                if let view = self.emptyResultsAnimation.view as? LottieComponent.View {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollNode.view.addSubview(view)
+                        view.playOnce()
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                }
+                if let view = self.emptyResultsTitle.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollNode.view.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                }
+                if let view = self.emptyResultsAction.view {
+                    if view.superview == nil {
+                        view.alpha = 0.0
+                        fadeTransition.setAlpha(view: view, alpha: 1.0)
+                        self.scrollNode.view.addSubview(view)
+                    }
+                    view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
+                    transition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                }
+            } else {
+                if let view = self.emptyResultsAnimation.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsTitle.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+                if let view = self.emptyResultsAction.view {
+                    fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        view.removeFromSuperview()
+                    })
+                }
+            }
             
             if self.peerId == self.context.account.peerId {
                 let footerText: ComponentView<Empty>
