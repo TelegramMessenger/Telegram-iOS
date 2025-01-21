@@ -47,7 +47,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var panelButton: SolidRoundedButtonNode?
     private var panelCheck: ComponentView<Empty>?
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -96,7 +96,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let isFirstTime = starsProducts == nil
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
             self.statusPromise.set(.single(PeerInfoStatusData(text: presentationData.strings.SharedMedia_GiftCount(state.count ?? 0), isActivity: true, key: .gifts)))
-            self.starsProducts = state.gifts
+            self.starsProducts = state.filteredGifts
             
             if !self.didSetReady {
                 self.didSetReady = true
@@ -313,7 +313,6 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             var bottomScrollInset: CGFloat = 0.0
             var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
             
-            
             let transition = ComponentTransition.immediate
             
             let size = params.size
@@ -327,6 +326,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let panelBackground: NavigationBackgroundNode
             let panelSeparator: ASDisplayNode
             let panelButton: SolidRoundedButtonNode
+            
+            let panelAlpha = params.expandProgress
             
             if let current = self.panelBackground {
                 panelBackground = current
@@ -382,6 +383,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
             
             transition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
+            transition.setAlpha(view: panelButton.view, alpha: panelAlpha)
             let _ = panelButton.updateLayout(width: buttonSize.width, transition: .immediate)
             
             if self.canManage {
@@ -452,13 +454,16 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.view.addSubview(panelCheckView)
                     }
                     panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - bottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
+                    transition.setAlpha(view: panelCheckView, alpha: panelAlpha)
                 }
                 panelButton.isHidden = true
             }
             
             transition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
+            transition.setAlpha(view: panelBackground.view, alpha: panelAlpha)
             panelBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
+            transition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
             
             if self.peerId == self.context.account.peerId {
                 let footerText: ComponentView<Empty>
@@ -529,7 +534,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, presentationData)
+        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor

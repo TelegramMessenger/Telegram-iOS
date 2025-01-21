@@ -927,10 +927,15 @@ private final class ProfileGiftsContextImpl {
     
     private var sorting: ProfileGiftsContext.Sorting = .date
     private var filter: ProfileGiftsContext.Filters = ProfileGiftsContext.Filters.All
+    
     private var gifts: [ProfileGiftsContext.State.StarGift] = []
-    private var filteredGifts: [ProfileGiftsContext.State.StarGift] = []
     private var count: Int32?
     private var dataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
+    
+    private var filteredGifts: [ProfileGiftsContext.State.StarGift] = []
+    private var filteredCount: Int32?
+    private var filteredDataState: ProfileGiftsContext.State.DataState = .ready(canLoadMore: true, nextOffset: nil)
+    
     private var notificationsEnabled: Bool?
     
     var _state: ProfileGiftsContext.State?
@@ -958,9 +963,15 @@ private final class ProfileGiftsContextImpl {
         let accountPeerId = self.account.peerId
         let network = self.account.network
         let postbox = self.account.postbox
+        let filter = self.filter
+        let sorting = self.sorting
         
-        if case let .ready(true, initialNextOffset) = self.dataState {
-            if self.gifts.isEmpty, initialNextOffset == nil {
+        let isFiltered = self.filter != .All || self.sorting != .date
+        
+        let dataState = isFiltered ? self.filteredDataState : self.dataState
+        
+        if case let .ready(true, initialNextOffset) = dataState {
+            if !isFiltered, self.gifts.isEmpty, initialNextOffset == nil {
                 self.cacheDisposable.set((self.account.postbox.transaction { transaction -> CachedProfileGifts? in
                     let cachedGifts = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedProfileGifts.self)
                     cachedGifts?.render(transaction: transaction)
@@ -978,7 +989,11 @@ private final class ProfileGiftsContextImpl {
                 }))
             }
             
-            self.dataState = .loading
+            if isFiltered {
+                self.filteredDataState = .loading
+            } else {
+                self.dataState = .loading
+            }
             self.pushState()
         
             let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?), NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
@@ -988,7 +1003,25 @@ private final class ProfileGiftsContextImpl {
                 guard let inputPeer else {
                     return .single(([], 0, nil, nil))
                 }
-                let flags: Int32 = 0
+                var flags: Int32 = 0
+                if case .value = sorting {
+                    flags |= (1 << 5)
+                }
+                if !filter.contains(.hidden) {
+                    flags |= (1 << 0)
+                }
+                if !filter.contains(.displayed) {
+                    flags |= (1 << 1)
+                }
+                if !filter.contains(.unlimited) {
+                    flags |= (1 << 2)
+                }
+                if !filter.contains(.limited) {
+                    flags |= (1 << 3)
+                }
+                if !filter.contains(.unique) {
+                    flags |= (1 << 4)
+                }
                 return network.request(Api.functions.payments.getSavedStarGifts(flags: flags, peer: inputPeer, offset: initialNextOffset ?? "", limit: 32))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.payments.SavedStarGifts?, NoError> in
@@ -1022,28 +1055,42 @@ private final class ProfileGiftsContextImpl {
             
             self.disposable.set((signal
             |> deliverOn(self.queue)).start(next: { [weak self] (gifts, count, nextOffset, notificationsEnabled) in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                if initialNextOffset == nil {
-                    strongSelf.gifts = gifts
-                    
-                    strongSelf.cacheDisposable.set(strongSelf.account.postbox.transaction { transaction in
-                        if let entry = CodableEntry(CachedProfileGifts(gifts: gifts, count: count, notificationsEnabled: notificationsEnabled)) {
-                            transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
+                if isFiltered {
+                    if initialNextOffset == nil {
+                        self.filteredGifts = gifts
+                    } else {
+                        for gift in gifts {
+                            self.filteredGifts.append(gift)
                         }
-                    }.start())
-                } else {
-                    for gift in gifts {
-                        strongSelf.gifts.append(gift)
                     }
+                    
+                    let updatedCount = max(Int32(self.filteredGifts.count), count)
+                    self.filteredCount = updatedCount
+                    self.filteredDataState = .ready(canLoadMore: count != 0 && updatedCount > self.filteredGifts.count && nextOffset != nil, nextOffset: nextOffset)
+                } else {
+                    if initialNextOffset == nil {
+                        self.gifts = gifts
+                        self.cacheDisposable.set(self.account.postbox.transaction { transaction in
+                            if let entry = CodableEntry(CachedProfileGifts(gifts: gifts, count: count, notificationsEnabled: notificationsEnabled)) {
+                                transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
+                            }
+                        }.start())
+                    } else {
+                        for gift in gifts {
+                            self.gifts.append(gift)
+                        }
+                    }
+                    
+                    let updatedCount = max(Int32(self.gifts.count), count)
+                    self.count = updatedCount
+                    self.dataState = .ready(canLoadMore: count != 0 && updatedCount > self.gifts.count && nextOffset != nil, nextOffset: nextOffset)
                 }
                 
-                let updatedCount = max(Int32(strongSelf.gifts.count), count)
-                strongSelf.count = updatedCount
-                strongSelf.dataState = .ready(canLoadMore: count != 0 && updatedCount > strongSelf.gifts.count && nextOffset != nil, nextOffset: nextOffset)
-                strongSelf.notificationsEnabled = notificationsEnabled
-                strongSelf.pushState()
+                self.notificationsEnabled = notificationsEnabled
+                self.pushState()
             }))
         }
     }
@@ -1116,16 +1163,36 @@ private final class ProfileGiftsContextImpl {
     
     func updateFilter(_ filter: ProfileGiftsContext.Filters) {
         self.filter = filter
+        self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()
+        
+        self.loadMore()
     }
     
     func updateSorting(_ sorting: ProfileGiftsContext.Sorting) {
         self.sorting = sorting
+        self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()
+        
+        self.loadMore()
     }
         
     private func pushState() {
-        let state = ProfileGiftsContext.State(filter: self.filter, sorting: self.sorting, gifts: self.gifts, count: self.count, dataState: self.dataState, notificationsEnabled: self.notificationsEnabled)
+        let useMainData = (self.filter == .All && self.sorting == .date) || self.filteredCount == nil
+        
+        let effectiveGifts = useMainData ? self.gifts : self.filteredGifts
+        let effectiveCount = useMainData ? self.count : self.filteredCount
+        let effectiveDataState = useMainData ? self.dataState : self.filteredDataState
+        
+        let state = ProfileGiftsContext.State(
+            filter: self.filter,
+            sorting: self.sorting,
+            gifts: self.gifts,
+            filteredGifts: effectiveGifts,
+            count: effectiveCount,
+            dataState: effectiveDataState,
+            notificationsEnabled: self.notificationsEnabled
+        )
         self._state = state
         self.stateValue.set(.single(state))
     }
@@ -1314,6 +1381,7 @@ public final class ProfileGiftsContext {
         public var filter: Filters
         public var sorting: Sorting
         public var gifts: [ProfileGiftsContext.State.StarGift]
+        public var filteredGifts: [ProfileGiftsContext.State.StarGift]
         public var count: Int32?
         public var dataState: ProfileGiftsContext.State.DataState
         public var notificationsEnabled: Bool?
