@@ -1121,7 +1121,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.messageActions.options.contains(.sendGift) {
+        if data.messageActions.options.contains(.sendGift), !message.id.peerId.isTelegramNotifications {
             let sendGiftTitle: String
             var isIncoming = message.effectivelyIncoming(context.account.peerId)
             for media in message.media {

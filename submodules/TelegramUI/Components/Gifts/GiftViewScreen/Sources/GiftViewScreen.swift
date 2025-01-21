@@ -927,7 +927,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     )
                     let keepInfoText: String
                     if let nameHidden = subject.arguments?.nameHidden, nameHidden {
-                        keepInfoText = strings.Gift_Upgrade_AddMyName
+                        keepInfoText = isChannelGift ? strings.Gift_Upgrade_AddChannelName : strings.Gift_Upgrade_AddMyName
                     } else {
                         keepInfoText = text != nil ? strings.Gift_Upgrade_AddNameAndComment : strings.Gift_Upgrade_AddName
                     }
@@ -2415,7 +2415,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             self.dismissAnimated()
             
-            let text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
+            let text: String
+            if arguments.peerId?.namespace == Namespaces.Peer.CloudChannel {
+                text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
+            } else {
+                text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
+            }
+            
             if let navigationController = self.navigationController as? NavigationController {
                 Queue.mainQueue().after(0.5) {
                     if let lastController = navigationController.viewControllers.last as? ViewController, let animationFile {
