@@ -13761,3 +13761,12 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.Unique" = "Unique";
 "PeerInfo.Gifts.Displayed" = "Displayed";
 "PeerInfo.Gifts.Hidden" = "Hidden";
+
+"PeerInfo.Gifts.NoResults" = "No Matching Gifts";
+"PeerInfo.Gifts.NoResults.ViewAll" = "View All Gifts";
+
+
+"Gift.Displayed.ChannelText" = "The gift is now shown on channel's Page.";
+"Gift.Hidden.ChannelText" = "The gift is removed from channel's Page.";
+
+"Gift.Upgrade.AddChannelName" = "Add channel name to the gift";
