@@ -753,9 +753,12 @@ public extension TelegramEngine.EngineData.Item {
                 }
                 if let cachedData = view.cachedPeerData as? CachedUserData {
                     return cachedData.starGiftsCount
-                }  else {
-                    return nil
                 }
+                if let cachedData = view.cachedPeerData as? CachedChannelData {
+                    return cachedData.starGiftsCount
+                }
+                return nil
+                
             }
         }
                 
