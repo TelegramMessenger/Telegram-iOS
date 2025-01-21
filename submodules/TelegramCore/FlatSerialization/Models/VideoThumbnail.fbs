@@ -1,0 +1,7 @@
+include "PixelDimensions.fbs";
+
+namespace TelegramCore;
+
+struct VideoThumbnail {
+    dimensions: PixelDimensions;
+}

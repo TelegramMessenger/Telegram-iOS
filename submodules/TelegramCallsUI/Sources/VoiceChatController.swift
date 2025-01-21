@@ -7148,12 +7148,6 @@ public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountConte
     }
 }
 
-public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any) -> VoiceChatController {
-    let useV2 = shouldUseV2VideoChatImpl(context: accountContext)
-    
-    if useV2 {
-        return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call)
-    } else {
-        return VoiceChatControllerImpl(sharedContext: sharedContext, accountContext: accountContext, call: call)
-    }
+public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall, initialData: Any, sourceCallController: CallController?) -> VoiceChatController {
+    return VideoChatScreenV2Impl(initialData: initialData as! VideoChatScreenV2Impl.InitialData, call: call, sourceCallController: sourceCallController)
 }

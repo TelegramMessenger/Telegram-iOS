@@ -194,7 +194,7 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
     
     private let audioLevelDisposable = MetaDisposable()
     private let stateDisposable = MetaDisposable()
-    private var didSetupData = false
+    private weak var didSetupDataForCall: AnyObject?
     
     private var currentSize: CGSize?
     private var currentContent: Content?
@@ -277,8 +277,16 @@ public class CallStatusBarNodeImpl: CallStatusBarNode {
         
         let wasEmpty = (self.titleNode.attributedText?.string ?? "").isEmpty
         
-        if !self.didSetupData {
-            self.didSetupData = true
+        let setupDataForCall: AnyObject?
+        switch content {
+        case let .call(_, _, call):
+            setupDataForCall = call
+        case let .groupCall(_, _, call):
+            setupDataForCall = call
+        }
+        
+        if self.didSetupDataForCall !== setupDataForCall {
+            self.didSetupDataForCall = setupDataForCall
             switch content {
                 case let .call(sharedContext, account, call):
                     self.presentationData = sharedContext.currentPresentationData.with { $0 }

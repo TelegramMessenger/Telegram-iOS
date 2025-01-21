@@ -1005,8 +1005,11 @@ private final class CallSessionManagerContext {
             if let internalId = self.contextIdByStableId[id] {
                 if let context = self.contexts[internalId] {
                     switch context.state {
-                        case .accepting, .active, .dropping, .requesting, .ringing, .terminated, .requested, .switchedToConference:
+                        case .accepting, .dropping, .requesting, .ringing, .terminated, .requested, .switchedToConference:
                             break
+                        case let .active(id, accessHash, beginTimestamp, key, keyId, keyVisualHash, connections, maxLayer, version, customParameters, allowsP2P, _):
+                            context.state = .active(id: id, accessHash: accessHash, beginTimestamp: beginTimestamp, key: key, keyId: keyId, keyVisualHash: keyVisualHash, connections: connections, maxLayer: maxLayer, version: version, customParameters: customParameters, allowsP2P: allowsP2P, conferenceCall: conferenceCall.flatMap(GroupCallReference.init))
+                            self.contextUpdated(internalId: internalId)
                         case let .awaitingConfirmation(_, accessHash, gAHash, b, config):
                             if let (key, calculatedKeyId, keyVisualHash) = self.makeSessionEncryptionKey(config: config, gAHash: gAHash, b: b, gA: gAOrB.makeData()) {
                                 if keyFingerprint == calculatedKeyId {

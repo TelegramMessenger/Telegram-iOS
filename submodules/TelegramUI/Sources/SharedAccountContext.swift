@@ -176,6 +176,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private let callState = Promise<PresentationCallState?>(nil)
     private var awaitingCallConnectionDisposable: Disposable?
     private var callPeerDisposable: Disposable?
+    private var callIsConferenceDisposable: Disposable?
     
     private var groupCallController: VoiceChatController?
     public var currentGroupCallController: ViewController? {
@@ -811,17 +812,40 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     self.callController?.dismiss()
                     self.callController = nil
                     self.hasOngoingCall.set(false)
+                    self.callState.set(.single(nil))
                     
                     self.notificationController?.setBlocking(nil)
                     
                     self.callPeerDisposable?.dispose()
                     self.callPeerDisposable = nil
+                    self.callIsConferenceDisposable?.dispose()
+                    self.callIsConferenceDisposable = nil
                     
                     if let call {
-                        self.callState.set(call.state
-                        |> map(Optional.init))
+                        if call.conferenceCall == nil {
+                            self.callState.set(call.state
+                            |> map(Optional.init))
+                        }
+                        
                         self.hasOngoingCall.set(true)
                         setNotificationCall(call)
+                        
+                        self.callIsConferenceDisposable = (call.hasConference
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            guard let call = self.call else {
+                                return
+                            }
+                            guard let callController = self.callController, callController.call === call else {
+                                return
+                            }
+                            if call.conferenceCall != nil {
+                                self.callState.set(.single(nil))
+                                self.presentControllerWithCurrentCall()
+                            }
+                        })
                         
                         if call.isOutgoing {
                             self.presentControllerWithCurrentCall()
@@ -921,7 +945,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                         return
                                     }
                                     
-                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData)
+                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData, sourceCallController: nil)
                                     groupCallController.onViewDidAppear = { [weak strongSelf] in
                                         if let strongSelf {
                                             strongSelf.hasGroupCallOnScreenPromise.set(true)
@@ -947,31 +971,34 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
             
-            let callSignal: Signal<PresentationCall?, NoError> = .single(nil)
+            let callSignal: Signal<(PresentationCall?, PresentationGroupCall?), NoError> = .single((nil, nil))
             |> then(
                 callManager.currentCallSignal
                 |> deliverOnMainQueue
-                |> mapToSignal { call -> Signal<PresentationCall?, NoError> in
+                |> mapToSignal { call -> Signal<(PresentationCall?, PresentationGroupCall?), NoError> in
                     guard let call else {
-                        return .single(nil)
+                        return .single((nil, nil))
                     }
-                    return call.state
-                    |> map { [weak call] state -> PresentationCall? in
+                    return combineLatest(call.state, call.hasConference)
+                    |> map { [weak call] state, _ -> (PresentationCall?, PresentationGroupCall?) in
                         guard let call else {
-                            return nil
+                            return (nil, nil)
+                        }
+                        if let conferenceCall = call.conferenceCall {
+                            return (nil, conferenceCall)
                         }
                         switch state.state {
                         case .ringing:
-                            return nil
+                            return (nil, nil)
                         case .terminating, .terminated:
-                            return nil
+                            return (nil, nil)
                         default:
-                            return call
+                            return (call, nil)
                         }
                     }
                 }
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
-                    return lhs === rhs
+                    return lhs.0 === rhs.0 && lhs.1 === rhs.1
                 })
             )
             let groupCallSignal: Signal<PresentationGroupCall?, NoError> = .single(nil)
@@ -985,8 +1012,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 self.hasGroupCallOnScreenPromise.get()
             ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
                 if let strongSelf = self {
+                    var (call, conferenceCall) = call
+                    var groupCall = groupCall
+                    if let conferenceCall {
+                        call = nil
+                        groupCall = conferenceCall
+                    }
+                    
                     let statusBarContent: CallStatusBarNodeImpl.Content?
-                    if let call = call {
+                    if let call {
                         statusBarContent = .call(strongSelf, call.context.account, call)
                     } else if let groupCall = groupCall, !hasGroupCallOnScreen {
                         statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
@@ -1179,30 +1213,75 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return
         }
         
-        if let currentCallController = self.callController {
-            if currentCallController.call == .call(call) {
-                self.navigateToCurrentCall()
-                return
-            } else {
+        if let conferenceCall = call.conferenceCall {
+            if let groupCallController = self.groupCallController {
+                if groupCallController.call === conferenceCall {
+                    return
+                }
+                groupCallController.dismiss(closing: true, manual: false)
+                self.groupCallController = nil
+            }
+            var transitioniongCallController: CallController?
+            if let callController = self.callController {
+                transitioniongCallController = callController
+                callController.dismissWithoutAnimation()
                 self.callController = nil
-                currentCallController.dismiss()
             }
+            
+            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: conferenceCall.accountContext, call: conferenceCall)
+            |> deliverOnMainQueue).start(next: { [weak self, weak transitioniongCallController] initialData in
+                guard let self else {
+                    return
+                }
+                guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
+                    return
+                }
+                guard let call = self.call, let conferenceCall = call.conferenceCall else {
+                    return
+                }
+                
+                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: conferenceCall.accountContext, call: conferenceCall, initialData: initialData, sourceCallController: transitioniongCallController)
+                groupCallController.onViewDidAppear = { [weak self] in
+                    if let self {
+                        self.hasGroupCallOnScreenPromise.set(true)
+                    }
+                }
+                groupCallController.onViewDidDisappear = { [weak self] in
+                    if let self {
+                        self.hasGroupCallOnScreenPromise.set(false)
+                    }
+                }
+                groupCallController.navigationPresentation = .flatModal
+                groupCallController.parentNavigationController = navigationController
+                self.groupCallController = groupCallController
+                navigationController.pushViewController(groupCallController)
+            })
+        } else {
+            if let currentCallController = self.callController {
+                if currentCallController.call === call {
+                    self.navigateToCurrentCall()
+                    return
+                } else {
+                    self.callController = nil
+                    currentCallController.dismiss()
+                }
+            }
+            
+            self.mainWindow?.hostView.containerView.endEditing(true)
+            let callController = CallController(sharedContext: self, account: call.context.account, call: call, easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+            self.callController = callController
+            callController.restoreUIForPictureInPicture = { [weak self, weak callController] completion in
+                guard let self, let callController else {
+                    completion(false)
+                    return
+                }
+                if callController.window == nil {
+                    self.mainWindow?.present(callController, on: .calls)
+                }
+                completion(true)
+            }
+            self.mainWindow?.present(callController, on: .calls)
         }
-        
-        self.mainWindow?.hostView.containerView.endEditing(true)
-        let callController = CallController(sharedContext: self, account: call.context.account, call: .call(call), easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
-        self.callController = callController
-        callController.restoreUIForPictureInPicture = { [weak self, weak callController] completion in
-            guard let self, let callController else {
-                completion(false)
-                return
-            }
-            if callController.window == nil {
-                self.mainWindow?.present(callController, on: .calls)
-            }
-            completion(true)
-        }
-        self.mainWindow?.present(callController, on: .calls)
     }
     
     public func updateNotificationTokensRegistration() {
