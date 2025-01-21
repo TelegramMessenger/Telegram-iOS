@@ -193,60 +193,60 @@
     }];
     [itemViews addObject:galleryItem];
     
-    if (!_signup) {
-        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SetEmoji") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-                                                   {
-            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            __strong TGMenuSheetController *strongController = weakController;
-            if (strongController == nil)
-                return;
-            
-            [strongController dismissAnimated:true];
-            if (strongSelf != nil && strongSelf.requestAvatarEditor) {
-                strongSelf.requestAvatarEditor(^(UIImage *image, void (^commit)(void)) {
-                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                    if (strongSelf == nil)
-                        return;
-                    
-                    if (strongSelf.willFinishWithImage != nil) {
-                        strongSelf.willFinishWithImage(image, ^{
-                            if (strongSelf.didFinishWithImage != nil)
-                                strongSelf.didFinishWithImage(image);
-                            
-                            commit();
-                        });
-                    } else {
-                        if (strongSelf.didFinishWithImage != nil)
-                            strongSelf.didFinishWithImage(image);
-                        
-                        commit();
-                    }
-                }, ^(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void (^commit)(void)) {
-                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
-                    if (strongSelf == nil)
-                        return;
-                    
-                    if (strongSelf.willFinishWithVideo != nil) {
-                        strongSelf.willFinishWithVideo(image, ^{
-                            if (strongSelf.didFinishWithVideo != nil)
-                                strongSelf.didFinishWithVideo(image, asset, adjustments);
-                            
-                            commit();
-                        });
-                    } else {
-                        if (strongSelf.didFinishWithVideo != nil)
-                            strongSelf.didFinishWithVideo(image, asset, adjustments);
-                        
-                        commit();
-                    }
-                });
-            }
-        }];
-        [itemViews addObject:viewItem];
-    }
+//    if (!_signup) {
+//        TGMenuSheetButtonItemView *viewItem = [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"ProfilePhoto.SetEmoji") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+//                                                   {
+//            __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//            if (strongSelf == nil)
+//                return;
+//            
+//            __strong TGMenuSheetController *strongController = weakController;
+//            if (strongController == nil)
+//                return;
+//            
+//            [strongController dismissAnimated:true];
+//            if (strongSelf != nil && strongSelf.requestAvatarEditor) {
+//                strongSelf.requestAvatarEditor(^(UIImage *image, void (^commit)(void)) {
+//                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//                    if (strongSelf == nil)
+//                        return;
+//                    
+//                    if (strongSelf.willFinishWithImage != nil) {
+//                        strongSelf.willFinishWithImage(image, ^{
+//                            if (strongSelf.didFinishWithImage != nil)
+//                                strongSelf.didFinishWithImage(image);
+//                            
+//                            commit();
+//                        });
+//                    } else {
+//                        if (strongSelf.didFinishWithImage != nil)
+//                            strongSelf.didFinishWithImage(image);
+//                        
+//                        commit();
+//                    }
+//                }, ^(UIImage *image, NSURL *asset, id adjustments, id markup, void (^commit)(void)) {
+//                    __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
+//                    if (strongSelf == nil)
+//                        return;
+//                    
+//                    if (strongSelf.willFinishWithVideo != nil) {
+//                        strongSelf.willFinishWithVideo(image, ^{
+//                            if (strongSelf.didFinishWithVideo != nil)
+//                                strongSelf.didFinishWithVideo(image, asset, adjustments);
+//                            
+//                            commit();
+//                        });
+//                    } else {
+//                        if (strongSelf.didFinishWithVideo != nil)
+//                            strongSelf.didFinishWithVideo(image, asset, adjustments);
+//                        
+//                        commit();
+//                    }
+//                });
+//            }
+//        }];
+//        [itemViews addObject:viewItem];
+//    }
     
 //    if (_hasSearchButton)
 //    {

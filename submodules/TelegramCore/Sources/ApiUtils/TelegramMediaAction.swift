@@ -171,7 +171,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .paymentRefunded(peerId: peer.peerId, currency: currency, totalAmount: totalAmount, payload: payload?.makeData(), transactionId: transactionId))
     case let .messageActionPrizeStars(flags, stars, transactionId, boostPeer, giveawayMsgId):
         return TelegramMediaAction(action: .prizeStars(amount: stars, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer.peerId, transactionId: transactionId, giveawayMessageId: MessageId(peerId: boostPeer.peerId, namespace: Namespaces.Message.Cloud, id: giveawayMsgId)))
-    case let .messageActionStarGift(flags, apiGift, message, convertStars, upgradeMessageId, upgradeStars):
+    case let .messageActionStarGift(flags, apiGift, message, convertStars, upgradeMessageId, upgradeStars, fromId, peer, savedId):
         let text: String?
         let entities: [MessageTextEntity]?
         switch message {
@@ -185,12 +185,12 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         guard let gift = StarGift(apiStarGift: apiGift) else {
             return nil
         }
-        return TelegramMediaAction(action: .starGift(gift: gift, convertStars: convertStars, text: text, entities: entities, nameHidden: (flags & (1 << 0)) != 0, savedToProfile: (flags & (1 << 2)) != 0, converted: (flags & (1 << 3)) != 0, upgraded: (flags & (1 << 5)) != 0, canUpgrade: (flags & (1 << 10)) != 0, upgradeStars: upgradeStars, isRefunded: (flags & (1 << 9)) != 0, upgradeMessageId: upgradeMessageId))
-    case let .messageActionStarGiftUnique(flags, apiGift, canExportAt, transferStars):
+        return TelegramMediaAction(action: .starGift(gift: gift, convertStars: convertStars, text: text, entities: entities, nameHidden: (flags & (1 << 0)) != 0, savedToProfile: (flags & (1 << 2)) != 0, converted: (flags & (1 << 3)) != 0, upgraded: (flags & (1 << 5)) != 0, canUpgrade: (flags & (1 << 10)) != 0, upgradeStars: upgradeStars, isRefunded: (flags & (1 << 9)) != 0, upgradeMessageId: upgradeMessageId, peerId: peer?.peerId, senderId: fromId?.peerId, savedId: savedId))
+    case let .messageActionStarGiftUnique(flags, apiGift, canExportAt, transferStars, fromId, peer, savedId):
         guard let gift = StarGift(apiStarGift: apiGift) else {
             return nil
         }
-        return TelegramMediaAction(action: .starGiftUnique(gift: gift, isUpgrade: (flags & (1 << 0)) != 0, isTransferred: (flags & (1 << 1)) != 0, savedToProfile: (flags & (1 << 2)) != 0, canExportDate: canExportAt, transferStars: transferStars, isRefunded: (flags & (1 << 5)) != 0))
+        return TelegramMediaAction(action: .starGiftUnique(gift: gift, isUpgrade: (flags & (1 << 0)) != 0, isTransferred: (flags & (1 << 1)) != 0, savedToProfile: (flags & (1 << 2)) != 0, canExportDate: canExportAt, transferStars: transferStars, isRefunded: (flags & (1 << 5)) != 0, peerId: peer?.peerId, senderId: fromId?.peerId, savedId: savedId))
     }
 }
 

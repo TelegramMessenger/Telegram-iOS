@@ -1,10 +1,10 @@
 import Foundation
-import UIKit
+
 import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
-import TelegramAudio
+
 
 public final class ChunkMediaPlayerPart {
     public enum Id: Hashable {
@@ -120,6 +120,11 @@ public final class ChunkMediaPlayerPartsState {
     }
 }
 
+#if os(iOS)
+
+import UIKit
+import TelegramAudio
+
 public protocol ChunkMediaPlayer: AnyObject {
     var status: Signal<MediaPlayerStatus, NoError> { get }
     var audioLevelEvents: Signal<Float, NoError> { get }
@@ -138,3 +143,5 @@ public protocol ChunkMediaPlayer: AnyObject {
     func seek(timestamp: Double, play: Bool?)
     func setBaseRate(_ baseRate: Double)
 }
+
+#endif

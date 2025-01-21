@@ -48,7 +48,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         {
             UIGraphicsBeginImageContextWithOptions(CGSizeMake(38.0f, 38.0f), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.3f).CGColor);
+            CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.5f).CGColor);
             
             CGContextFillEllipseInRect(context, CGRectMake(3.5f, 1.0f, 31.0f, 31.0f));
             
@@ -775,6 +775,121 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         _wrapperView.alpha = hidden ? 0.0f : 1.0f;
         self.userInteractionEnabled = !hidden;
     }
+}
+
+@end
+
+
+
+
+@interface TGMediaPickerCoverButton ()
+{
+    UIView *_wrapperView;
+    UIView *_backgroundView;
+    UIImageView *_iconView;
+    UIImageView *_thumbnailView;
+    UILabel *_label;
+    
+    bool _gallery;
+}
+
+@end
+
+@implementation TGMediaPickerCoverButton
+
+- (instancetype)initWithFrame:(CGRect)frame gallery:(bool)gallery
+{
+    self = [super initWithFrame:frame];
+    if (self != nil)
+    {
+        self.exclusiveTouch = true;
+        _gallery = gallery;
+        
+        CGFloat width = _gallery ? 168.0 : 98.0;
+        
+        _wrapperView = [[UIView alloc] initWithFrame:CGRectMake((120 - width) / 2.0, 0, width, 26)];
+        _wrapperView.userInteractionEnabled = false;
+        [self addSubview:_wrapperView];
+        
+        _backgroundView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0, width, 26)];
+        _backgroundView.clipsToBounds = true;
+        _backgroundView.layer.cornerRadius = 13.0;
+        _backgroundView.backgroundColor = UIColorRGBA(0x000000, 0.5f);
+        [_wrapperView addSubview:_backgroundView];
+        
+        _thumbnailView = [[UIImageView alloc] initWithFrame:CGRectMake(1.0, 1.0, 24.0, 24.0)];
+        _thumbnailView.clipsToBounds = true;
+        _thumbnailView.contentMode = UIViewContentModeScaleAspectFill;
+        _thumbnailView.layer.cornerRadius = 12.0f;
+        [_wrapperView addSubview:_thumbnailView];
+
+        _label = [[UILabel alloc] initWithFrame:CGRectZero];
+        _label.backgroundColor = [UIColor clearColor];
+        _label.font = [TGFont boldSystemFontOfSize:14];
+        _label.textColor = [UIColor whiteColor];
+        _label.text = _gallery ? TGLocalized(@"Media.ChooseFromGallery") : TGLocalized(@"Media.EditCover");
+        [_label sizeToFit];
+        _label.frame = CGRectMake(10.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
+        [_wrapperView addSubview:_label];
+        
+        _iconView = [[UIImageView alloc] initWithFrame:CGRectMake(CGRectGetMaxX(_label.frame) + 4.0, 7, 8, 12)];
+        _iconView.alpha = 0.3;
+        _iconView.contentMode = UIViewContentModeCenter;
+        _iconView.image = TGTintedImage([UIImage imageNamed:@"Editor/ArrowRight"], UIColorRGB(0xffffff));
+        [_wrapperView addSubview:_iconView];
+    }
+    return self;
+}
+
+- (void)setImage:(UIImage *)image {
+    if (image != nil) {
+        _thumbnailView.hidden = false;
+        _thumbnailView.image = image;
+                
+        _wrapperView.frame = CGRectMake(0, 0, 120, 26);
+        _backgroundView.frame = CGRectMake(0.0f, 0, 120, 26);
+        _label.frame = CGRectMake(10.0 + 22.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
+    } else {
+        _thumbnailView.hidden = true;
+        
+        CGFloat width = _gallery ? 168.0 : 98.0;
+        
+        _wrapperView.frame =  CGRectMake(11, 0, width, 26);
+        _backgroundView.frame = CGRectMake(0.0f, 0, width, 26);
+        _label.frame = CGRectMake(10.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
+    }
+    _iconView.frame = CGRectMake(CGRectGetMaxX(_label.frame) + 4.0, 7, 8, 12);
+}
+
+- (void)setWrapperScale:(CGFloat)scale animated:(bool)animated
+{
+    void (^change)(void) = ^
+    {
+        _wrapperView.transform = CGAffineTransformMakeScale(scale, scale);
+    };
+    
+    if (animated)
+        [UIView animateWithDuration:0.12 delay:0 options:UIViewAnimationOptionAllowAnimatedContent animations:change completion:nil];
+    else
+        change();
+}
+
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [super touchesBegan:touches withEvent:event];
+    [self setWrapperScale:0.85f animated:true];
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [super touchesEnded:touches withEvent:event];
+    [self setWrapperScale:1.0f animated:true];
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
+    [super touchesCancelled:touches withEvent:event];
+    [self setWrapperScale:1.0f animated:true];
 }
 
 @end

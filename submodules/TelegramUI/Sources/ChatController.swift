@@ -753,7 +753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false)
         
         if case let .customChatContents(customChatContents) = subject {
             switch customChatContents.kind {
@@ -1199,7 +1199,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return true
                         case .starGift, .starGiftUnique:
                             let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message), shareStory: { [weak self] in
-                                if let self, case let .starGiftUnique(gift, _, _, _, _, _, _) = action.action, case let .unique(uniqueGift) = gift {
+                                if let self, case let .starGiftUnique(gift, _, _, _, _, _, _, _, _, _) = action.action, case let .unique(uniqueGift) = gift {
                                     Queue.mainQueue().after(0.15) {
                                         let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: self)
                                         self.push(controller)
@@ -1233,10 +1233,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 }
                                             }
                                         }
-                                        controller.videoCompletion = { [weak self] image, url, adjustments, commit in
+                                        controller.videoCompletion = { [weak self] image, url, values, markup, commit in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), values: values, markup: markup, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }
@@ -1271,7 +1271,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }, videoCompletion: { [weak self] image, url, adjustments in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
+                                                    settingsController.oldUpdateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                 }
                                             }
                                         })
@@ -5696,10 +5696,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }
+                        var starGiftsAvailable = false
                         var peerDiscussionId: PeerId?
                         var peerGeoLocation: PeerGeoLocation?
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if case .broadcast = peer.info {
+                                starGiftsAvailable = cachedData.flags.contains(.starGiftsAvailable)
                                 if case let .known(value) = cachedData.linkedDiscussionPeerId {
                                     peerDiscussionId = value
                                 }
@@ -5945,6 +5947,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedBusinessIntro(businessIntro)
                              .updatedAdMessage(adMessage)
                              .updatedPeerVerification(peerVerification)
+                             .updatedStarGiftsAvailable(starGiftsAvailable)
                              .updatedInterfaceState { interfaceState in
                                  var interfaceState = interfaceState
                                  

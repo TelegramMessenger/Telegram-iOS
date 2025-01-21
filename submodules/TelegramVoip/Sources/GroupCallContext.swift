@@ -506,8 +506,11 @@ public final class OngoingGroupCallContext {
             self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
             let tempStatsLogPath = self.tempStatsLogFile.path
             
+            #if os(iOS)
+
             self.audioDevice = sharedAudioDevice
             let audioDevice = self.audioDevice
+            #endif
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
@@ -982,6 +985,55 @@ public final class OngoingGroupCallContext {
         func switchAudioOutput(_ deviceId: String) {
             self.context.switchAudioOutput(deviceId)
         }
+        
+        func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+            self.context.makeIncomingVideoView(withEndpointId: endpointId, requestClone: requestClone, completion: { mainView, cloneView in
+                if let mainView = mainView {
+                    #if os(macOS)
+                    let mainVideoView = OngoingCallContextPresentationCallVideoView(
+                        view: mainView,
+                        setOnFirstFrameReceived: { [weak mainView] f in
+                            mainView?.setOnFirstFrameReceived(f)
+                        },
+                        getOrientation: { [weak mainView] in
+                            if let mainView = mainView {
+                                return OngoingCallVideoOrientation(mainView.orientation)
+                            } else {
+                                return .rotation0
+                            }
+                        },
+                        getAspect: { [weak mainView] in
+                            if let mainView = mainView {
+                                return mainView.aspect
+                            } else {
+                                return 0.0
+                            }
+                        },
+                        setOnOrientationUpdated: { [weak mainView] f in
+                            mainView?.setOnOrientationUpdated { value, aspect in
+                                f?(OngoingCallVideoOrientation(value), aspect)
+                            }
+                        }, setVideoContentMode: { [weak mainView] mode in
+                            mainView?.setVideoContentMode(mode)
+                        },
+                        setOnIsMirroredUpdated: { [weak mainView] f in
+                            mainView?.setOnIsMirroredUpdated { value in
+                                f?(value)
+                            }
+                        }, setIsPaused: { [weak mainView] paused in
+                            mainView?.setIsPaused(paused)
+                        }, renderToSize: { [weak mainView] size, animated in
+                            mainView?.render(to: size, animated: animated)
+                        }
+                    )
+                    completion(mainVideoView, nil)
+                    #endif
+                } else {
+                    completion(nil, nil)
+                }
+            })
+        }
+
 
         func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
             let queue = self.queue
@@ -1033,7 +1085,9 @@ public final class OngoingGroupCallContext {
         }
         
         func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+            #if os(iOS)
             self.context.addRemoteConnectedEvent(isRemoteConntected)
+            #endif
         }
     }
     
@@ -1218,6 +1272,12 @@ public final class OngoingGroupCallContext {
     public func stop(account: Account?, reportCallId: CallId?, debugLog: Promise<String?>) {
         self.impl.with { impl in
             impl.stop(account: account, reportCallId: reportCallId, debugLog: debugLog)
+        }
+    }
+    
+    public func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+        self.impl.with { impl in
+            impl.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
         }
     }
 

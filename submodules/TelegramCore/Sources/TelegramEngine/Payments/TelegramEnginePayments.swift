@@ -113,20 +113,20 @@ public extension TelegramEngine {
             return _internal_keepCachedStarGiftsUpdated(postbox: self.account.postbox, network: self.account.network)
         }
         
-        public func convertStarGift(messageId: EngineMessage.Id) -> Signal<Never, NoError> {
-            return _internal_convertStarGift(account: self.account, messageId: messageId)
+        public func convertStarGift(reference: StarGiftReference) -> Signal<Never, NoError> {
+            return _internal_convertStarGift(account: self.account, reference: reference)
         }
         
-        public func updateStarGiftAddedToProfile(messageId: EngineMessage.Id, added: Bool) -> Signal<Never, NoError> {
-            return _internal_updateStarGiftAddedToProfile(account: self.account, messageId: messageId, added: added)
+        public func updateStarGiftAddedToProfile(reference: StarGiftReference, added: Bool) -> Signal<Never, NoError> {
+            return _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: added)
         }
         
-        public func transferStarGift(prepaid: Bool, messageId: EngineMessage.Id, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
-            return _internal_transferStarGift(account: self.account, prepaid: prepaid, messageId: messageId, peerId: peerId)
+        public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+            return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
         }
         
-        public func upgradeStarGift(formId: Int64?, messageId: EngineMessage.Id, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
-            return _internal_upgradeStarGift(account: self.account, formId: formId, messageId: messageId, keepOriginalInfo: keepOriginalInfo)
+        public func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
+            return _internal_upgradeStarGift(account: self.account, formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
         }
         
         public func starGiftUpgradePreview(giftId: Int64) -> Signal<[StarGift.UniqueGift.Attribute], NoError> {
@@ -135,6 +135,18 @@ public extension TelegramEngine {
         
         public func getUniqueStarGift(slug: String) -> Signal<StarGift.UniqueGift?, NoError> {
             return _internal_getUniqueStarGift(account: self.account, slug: slug)
+        }
+        
+        public func checkStarGiftWithdrawalAvailability(reference: StarGiftReference) -> Signal<Never, RequestStarGiftWithdrawalError> {
+            return _internal_checkStarGiftWithdrawalAvailability(account: self.account, reference: reference)
+        }
+        
+        public func requestStarGiftWithdrawalUrl(reference: StarGiftReference, password: String) -> Signal<String, RequestStarGiftWithdrawalError> {
+            return _internal_requestStarGiftWithdrawalUrl(account: account, reference: reference, password: password)
+        }
+        
+        public func toggleStarGiftsNotifications(peerId: EnginePeer.Id, enabled: Bool) -> Signal<Never, NoError> {
+            return _internal_toggleStarGiftsNotifications(account: self.account, peerId: peerId, enabled: enabled)
         }
     }
 }

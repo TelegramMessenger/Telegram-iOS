@@ -1123,7 +1123,15 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         if data.messageActions.options.contains(.sendGift) {
             let sendGiftTitle: String
-            if message.effectivelyIncoming(context.account.peerId) {
+            var isIncoming = message.effectivelyIncoming(context.account.peerId)
+            for media in message.media {
+                if let action = media as? TelegramMediaAction, case let .starGiftUnique(_, isUpgrade, _, _, _, _, _, _, _, _) = action.action {
+                    if isUpgrade && message.author?.id == context.account.peerId {
+                        isIncoming = true
+                    }
+                }
+            }
+            if isIncoming {
                 let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
                 sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendGiftTo(peerName).string
             } else {

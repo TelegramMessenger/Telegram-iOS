@@ -11,6 +11,8 @@
 - (void)layoutSubviews
 {
     _scrubberView.frame = CGRectMake(_safeAreaInset.left, _scrubberView.frame.origin.y, self.frame.size.width - _safeAreaInset.left - _safeAreaInset.right, _scrubberView.frame.size.height);
+    
+    _coverScrubberView.frame = CGRectMake(_safeAreaInset.left, _scrubberView.frame.origin.y + 16.0, self.frame.size.width - _safeAreaInset.left - _safeAreaInset.right, _scrubberView.frame.size.height);
 }
 
 @end

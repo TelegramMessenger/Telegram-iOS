@@ -419,8 +419,6 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let centralItemAttributesDisposable = DisposableSet();
     
     public var openAvatarSetup: ((@escaping () -> Void) -> Void)?
-    public var avatarPhotoEditCompletion: ((UIImage) -> Void)?
-    public var avatarVideoEditCompletion: ((UIImage, URL, TGVideoEditAdjustments?) -> Void)?
     
     public var removedEntry: ((AvatarGalleryEntry) -> Void)?
     

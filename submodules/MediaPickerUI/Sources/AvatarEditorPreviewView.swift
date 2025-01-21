@@ -83,18 +83,18 @@ final class AvatarEditorPreviewView: UIView {
         self.currentSize = size
         self.backgroundView.frame = CGRect(origin: .zero, size: size)
         
-        //TODO:localize
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let labelSize = self.label.update(
             transition: .immediate,
             component: AnyComponent(
                 MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "Use an Emoji",
-                        font: Font.semibold(14.0),
+                        string: presentationData.strings.MediaPicker_UseAnEmoji,
+                        font: Font.semibold(12.0),
                         textColor: .white
                     )),
-                    textShadowColor: UIColor(white: 0.0, alpha: 0.4),
-                    textShadowBlur: 4.0
+                    textShadowColor: UIColor(white: 0.0, alpha: 0.3),
+                    textShadowBlur: 3.0
                 )
             ),
             environment: {},
@@ -104,7 +104,7 @@ final class AvatarEditorPreviewView: UIView {
             if view.superview == nil {
                 self.addSubview(view)
             }
-            view.frame = CGRect(origin: CGPoint(x: floor((size.width - labelSize.width) / 2.0), y: size.height - labelSize.height - 20.0), size: labelSize)
+            view.frame = CGRect(origin: CGPoint(x: floor((size.width - labelSize.width) / 2.0), y: size.height - labelSize.height - 22.0), size: labelSize)
         }
         
         guard !self.files.isEmpty else {

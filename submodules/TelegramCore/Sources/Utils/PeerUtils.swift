@@ -281,6 +281,14 @@ public extension Peer {
     }
     
     var profileColor: PeerNameColor? {
+        if let emojiStatus {
+            switch emojiStatus.content {
+            case let .starGift(_, _, _, _, _, _, outerColor, _, _):
+                return PeerNameColor.other(outerColor)
+            default:
+                break
+            }
+        }
         switch self {
         case let user as TelegramUser:
             return user.profileColor
@@ -322,6 +330,14 @@ public extension Peer {
     }
     
     var profileBackgroundEmojiId: Int64? {
+        if let emojiStatus {
+            switch emojiStatus.content {
+            case let .starGift(_, _, _, _, patternFileId, _, _, _, _):
+                return patternFileId
+            default:
+                break
+            }
+        }
         switch self {
         case let user as TelegramUser:
             return user.profileBackgroundEmojiId

@@ -62,6 +62,10 @@
 - (void)setImage:(UIImage *)image thumbnailImage:(UIImage *)thumbnailImage forItem:(id<TGMediaEditableItem>)item synchronous:(bool)synchronous;
 - (void)setFullSizeImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item;
 
+- (SSignal *)coverImageSignalForItem:(NSObject<TGMediaEditableItem> *)item;
+- (void)setCoverImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item;
+- (UIImage *)coverImageForItem:(NSObject<TGMediaEditableItem> *)item;
+
 - (void)setTemporaryRep:(id)rep forItem:(id<TGMediaEditableItem>)item;
 
 - (SSignal *)fullSizeImageUrlForItem:(id<TGMediaEditableItem>)item;

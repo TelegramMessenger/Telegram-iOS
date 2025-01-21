@@ -13067,6 +13067,7 @@ Sorry for the inconvenience.";
 
 "Notification.StarGift.Title" = "Gift from %@";
 "Notification.StarGift.Subtitle" = "Display this gift on your page or convert it to %@.";
+"Notification.StarGift.Subtitle.Channel" = "Display this gift in channel's Gifts or convert it to %@.";
 "Notification.StarGift.Subtitle.Stars_1" = "%@ Star";
 "Notification.StarGift.Subtitle.Stars_any" = "%@ Stars";
 "Notification.StarGift.Subtitle.Other" = "%1$@ can keep this gift on their page or convert it to %2$@.";
@@ -13094,6 +13095,9 @@ Sorry for the inconvenience.";
 "Gift.Send.Remains_any" = "%@ left";
 "Gift.Send.Sold_1" = "%@ sold";
 "Gift.Send.Sold_any" = "%@ sold";
+"Gift.Send.Success" = "You sent a gift to **%1$@** for **%2$@**.";
+"Gift.Send.Success.Stars_1" = "%@ Star";
+"Gift.Send.Success.Stars_any" = "%@ Stars";
 
 "Gift.Send.ErrorUnknown" = "An error occurred. Please try again.";
 "Gift.Send.ErrorOutOfStock" = "Sorry, this gift is sold out. Please choose another gift.";
@@ -13666,22 +13670,94 @@ Sorry for the inconvenience.";
 "Gift.View.Header.TakeOff" = "take off";
 "Gift.View.Header.Share" = "share";
 
+"Gift.View.PutOn" = "You put on %@";
+"Gift.View.TookOff" = "You took off %@";
+
+"Gift.View.TooltipPremiumWearing" = "Subscribe to [Telegram Premium]() to wear collectibles.";
+
 "Conversation.AddToContactsLong" = "Add to Contacts";
 
 "PeerInfo.PaneRecommendedBots" = "Similar Bots";
 
 "SharedMedia.SimilarChannelCount_1" = "%@ channel";
 "SharedMedia.SimilarChannelCount_any" = "%@ channels";
+"SharedMedia.SimilarChannel.Subscribers_1" = "%@ subscriber";
+"SharedMedia.SimilarChannel.Subscribers_any" = "%@ subscribers";
 
 "SharedMedia.SimilarBotCount_1" = "%@ bot";
 "SharedMedia.SimilarBotCount_any" = "%@ bots";
+"SharedMedia.SimilarBot.Users_1" = "%@ monthly user";
+"SharedMedia.SimilarBot.Users_any" = "%@ monthly users";
 
 "PeerInfo.SimilarBots.ShowMore" = "Show More Bots";
 "PeerInfo.SimilarBots.ShowMoreInfo" = "Subscribe to [Telegram Premium]()\nto unlock up to **100** similar bots.";
+
+"PeerInfo.VerifyAccounts" = "Verify Accounts";
 
 "Gift.View.Context.Share" = "Share";
 "Gift.View.Context.CopyLink" = "Copy Link";
 "Gift.View.Context.Transfer" = "Transfer";
 
+"Gift.Withdraw.Title" = "Manage with Fragment";
+"Gift.Withdraw.Text" = "You can use Fragment, a third-party service, to transfer **%@** to your TON account. After that, you can manage it as an NFT with any TON wallet outside Telegram.\n\nYou can also move such NFTs back to your Telegram account via Fragment.";
+"Gift.Withdraw.Proceed" = "Open Fragment";
+
 "ChatListFilter.NameEnableAnimations" = "Enable Animations";
 "ChatListFilter.NameDisableAnimations" = "Disable Animations";
+
+"Chat.SendGiftTooltip" = "Tap here to send a gift";
+
+"ChannelBoost.Table.WearGift" = "Wear Unique Collectibles";
+
+"ChannelBoost.WearGift" = "Wear Item";
+"ChannelBoost.WearGiftLevelText" = "Your channel needs **Level %1$@** to wear collectibles.";
+
+"PeerInfo.Gifts.SendGift" = "Send Gift";
+"PeerInfo.Gifts.ChannelNotify" = "Notify About New Gifts";
+"PeerInfo.Gifts.ChannelNotifyTooltip" = "You will receive a message from Telegram when your channel receives a gift.";
+"PeerInfo.Gifts.ChannelNotifyDisabledTooltip" = "You will not receive a message from Telegram when your channel receives a gift.";
+
+"Notification.StarsGift.Channel.Sent" = "%1$@ sent a gift to %2$@ for %3$@";
+
+"Gift.View.Display.Channel" = "Display in Gifts";
+"Gift.View.DisplayedInfoHide.Channel" = "The item is visible in your channel's Gifts. [Hide >]()";
+"Gift.View.HiddenInfo.Channel" = "This item is hidden from visitors of your channel.";
+"Gift.View.HiddenInfoShow.Channel" = "This item is hidden from visitors of your channel. [Show >]()";
+
+"Gift.View.KeepOrConvertDescription.Channel" = "Your channel can keep this gift in your Profile or convert it to %@. [More About Stars >]()";
+"Gift.View.KeepUpgradeOrConvertDescription.Channel" = "Your channel can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
+
+"MediaPicker.UseAnEmoji" = "Use an Emoji";
+"MediaPicker.SetNewPhoto" = "Set new profile photo";
+"MediaPicker.ChooseCover" = "Choose Cover";
+"MediaPicker.RemovePhoto" = "Remove Photo";
+
+"EmojiInput.SectionTitleCollectibles" = "COLLECTIBLES";
+
+"Gift.Options.GiftChannel.Title" = "Send a Gift";
+"Gift.Options.GiftChannel.Text" = "Select a gift to show appreciation for **%@**.";
+
+"Gift.SendChannel.Title" = "Gift Preview";
+"Gift.SendChannel.HideMyName.Info" = "Hide my name and message from visitors of this channel. The channel admins will still see them.";
+
+"Media.EditCover" = "Edit Cover";
+"Media.ChooseFromGallery" = "Choose From Gallery";
+"Media.SelectFrame" = "Select Frame";
+"Media.SaveCover" = "Save Cover";
+
+"Gift.Withdraw.SecurityCheck" = "Security Check";
+"Gift.Withdraw.SecurityRequirements" = "Gift withdrawals are available if:\n\n• 2-Step verification was enabled for your account more than **7 days** ago.\n\n• You have logged in on this device more than **24 hours** ago.";
+"Gift.Withdraw.ComeBackLater" = "\n\nPlease come back later.";
+"Gift.Withdraw.SetupTwoStepAuth" = "Enable 2-Step Verification";
+
+"Gift.Withdraw.EnterPassword.Title" = "Enter Password";
+"Gift.Withdraw.EnterPassword.Text" = "Please enter your Two-Step Verification password to complete this action.";
+"Gift.Withdraw.EnterPassword.Done" = "Proceed";
+
+"PeerInfo.Gifts.SortByValue" = "Sort by Value";
+"PeerInfo.Gifts.SortByDate" = "Sort by Date";
+"PeerInfo.Gifts.Unlimited" = "Unlimited";
+"PeerInfo.Gifts.Limited" = "Limited";
+"PeerInfo.Gifts.Unique" = "Unique";
+"PeerInfo.Gifts.Displayed" = "Displayed";
+"PeerInfo.Gifts.Hidden" = "Hidden";

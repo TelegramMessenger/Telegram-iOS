@@ -491,6 +491,7 @@ final class GiftOptionsScreenComponent: Component {
             let _ = sectionSpacing
             
             let isSelfGift = component.peerId == component.context.account.peerId
+            let isChannelGift = component.peerId.namespace == Namespaces.Peer.CloudChannel
             
             var contentHeight: CGFloat = 0.0
             contentHeight += environment.navigationHeight - 56.0 + 188.0
@@ -505,7 +506,21 @@ final class GiftOptionsScreenComponent: Component {
                         isVisible: true,
                         hasIdleAnimations: true,
                         color: UIColor(rgb: 0xf9b004),
-                        hasLargeParticles: true
+                        hasLargeParticles: true,
+                        action: { [weak self] in
+                            guard let self, let component = self.component, let controller = controller(), let navigationController = controller.navigationController as? NavigationController else {
+                                return
+                            }
+                            let _ = (component.context.engine.data.get(
+                                TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId)
+                            )
+                            |> deliverOnMainQueue).start(next: { peer in
+                                guard let peer else {
+                                    return
+                                }
+                                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: component.context, chatLocation: .peer(peer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: true, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: nil, animated: true))
+                            })
+                        }
                     )
                 ),
                 environment: {},
@@ -623,10 +638,18 @@ final class GiftOptionsScreenComponent: Component {
                 balanceIconView.bounds = CGRect(origin: .zero, size: balanceIconSize)
             }
             
+            let premiumTitleString: String
+            if isSelfGift {
+                premiumTitleString = strings.Gift_Options_GiftSelf_Title
+            } else if isChannelGift {
+                premiumTitleString = strings.Gift_Options_GiftChannel_Title
+            } else {
+                premiumTitleString = strings.Gift_Options_Premium_Title
+            }
             let premiumTitleSize = self.premiumTitle.update(
                 transition: transition,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: isSelfGift ? strings.Gift_Options_GiftSelf_Title : strings.Gift_Options_Premium_Title, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
+                    text: .plain(NSAttributedString(string: premiumTitleString, font: Font.bold(28.0), textColor: theme.rootController.navigationBar.primaryTextColor)),
                     horizontalAlignment: .center
                 )),
                 environment: {},
@@ -647,7 +670,15 @@ final class GiftOptionsScreenComponent: Component {
             })
             let peerName = state.peer?.compactDisplayTitle ?? ""
             
-            let premiumDescriptionString = parseMarkdownIntoAttributedString(isSelfGift ? strings.Gift_Options_GiftSelf_Text : strings.Gift_Options_Premium_Text(peerName).string, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+            let premiumDescriptionRawString: String
+            if isSelfGift {
+                premiumDescriptionRawString = strings.Gift_Options_GiftSelf_Text
+            } else if isChannelGift {
+                premiumDescriptionRawString = strings.Gift_Options_GiftChannel_Text(peerName).string
+            } else {
+                premiumDescriptionRawString = strings.Gift_Options_Premium_Text(peerName).string
+            }
+            let premiumDescriptionString = parseMarkdownIntoAttributedString(premiumDescriptionRawString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
             if let range = premiumDescriptionString.string.range(of: ">"), let chevronImage = self.chevronImage?.0 {
                 premiumDescriptionString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: premiumDescriptionString.string))
             }
@@ -701,7 +732,7 @@ final class GiftOptionsScreenComponent: Component {
             let optionSpacing: CGFloat = 10.0
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
             
-            if isSelfGift {
+            if isSelfGift || isChannelGift {
                 contentHeight += 6.0
             } else {
                 if let premiumProducts = state.premiumProducts {
@@ -750,7 +781,7 @@ final class GiftOptionsScreenComponent: Component {
                                             ribbon: product.discount.flatMap {
                                                 GiftItemComponent.Ribbon(
                                                     text:  "-\($0)%",
-                                                    color: .red
+                                                    color: .purple
                                                 )
                                             },
                                             isLoading: self.inProgressPremiumGift == product.id

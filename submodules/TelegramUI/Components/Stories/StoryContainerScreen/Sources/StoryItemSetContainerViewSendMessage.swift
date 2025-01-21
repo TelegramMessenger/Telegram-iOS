@@ -274,7 +274,8 @@ final class StoryItemSetContainerSendMessage {
                 isGeneralThreadClosed: nil,
                 replyMessage: nil,
                 accountPeerColor: nil,
-                businessIntro: nil
+                businessIntro: nil,
+                starGiftsAvailable: false
             )
             
             let heightAndOverflow = inputMediaNode.updateLayout(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, bottomInset: bottomInset, standardInputHeight: deviceMetrics.standardInputHeight(inLandscape: false), inputHeight: inputHeight < 100.0 ? inputHeight - bottomContainerInset : inputHeight, maximumHeight: availableSize.height, inputPanelHeight: 0.0, transition: .immediate, interfaceState: presentationInterfaceState, layoutMetrics: metrics, deviceMetrics: deviceMetrics, isVisible: true, isExpanded: false)
@@ -2682,38 +2683,37 @@ final class StoryItemSetContainerSendMessage {
                     return
                 }
                 let context = component.context
-                controller.dismissWithoutTransitionOut(completion: {
-                    switch navigation {
-                    case let .chat(_, subject, peekData):
-                        if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
-                            context.sharedContext.navigateToForumChannel(context: context, peerId: peerId.id, navigationController: navigationController)
-                        } else {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak navigationController] chatController, animated, completion in
-                                Queue.mainQueue().justDispatch {
-                                    navigationController?.pushViewController(chatController)
-                                }
-                            }))
-                        }
-                    case .info:
-                        let _ = (context.account.postbox.loadedPeerWithId(peerId.id)
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
-                            if peer.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
-                                if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                                    navigationController?.pushViewController(infoController)
-                                }
+                switch navigation {
+                case let .chat(_, subject, peekData):
+                    if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                        controller.dismissWithoutTransitionOut()
+                        context.sharedContext.navigateToForumChannel(context: context, peerId: peerId.id, navigationController: navigationController)
+                    } else {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak navigationController] chatController, animated, completion in
+                            Queue.mainQueue().justDispatch {
+                                navigationController?.pushViewController(chatController)
                             }
-                        })
-                    case let .withBotStartPayload(startPayload):
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
-                    case let .withAttachBot(attachBotStart):
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
-                    case let .withBotApp(botAppStart):
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botAppStart: botAppStart))
-                    default:
-                        break
+                        }))
                     }
-                })
+                case .info:
+                    let _ = (context.account.postbox.loadedPeerWithId(peerId.id)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
+                        if peer.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil {
+                            if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                navigationController?.pushViewController(infoController)
+                            }
+                        }
+                    })
+                case let .withBotStartPayload(startPayload):
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
+                case let .withAttachBot(attachBotStart):
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
+                case let .withBotApp(botAppStart):
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botAppStart: botAppStart))
+                default:
+                    break
+                }
             },
             sendFile: nil,
             sendSticker: nil,
@@ -3342,14 +3342,14 @@ final class StoryItemSetContainerSendMessage {
             useGesturePosition = true
             let action = { [weak self, weak view, weak controller] in
                 let _ = ((context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: true))
-                          |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
+                |> mapToSignal { result -> Signal<Message?, GetMessagesError> in
                     if case let .result(messages) = result {
                         return .single(messages.first)
                     } else {
                         return .complete()
                     }
                 })
-                         |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view, weak controller] message in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view, weak controller] message in
                     guard let self, let view else {
                         return
                     }
@@ -3365,7 +3365,7 @@ final class StoryItemSetContainerSendMessage {
                     switch error {
                     case .privateChannel:
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-                                 |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] peer in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak view] peer in
                             guard let self, let view else {
                                 return
                             }

@@ -10,5 +10,6 @@
 @property (nonatomic, assign) bool trimmingEnabled;
 
 - (void)setTrimming:(bool)trimming animated:(bool)animated;
+- (void)setTrimmingEnabled:(bool)trimmingEnabled animated:(bool)animated;
 
 @end
