@@ -1948,7 +1948,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            var videoTimestamp: Int32?
+                            //TODO:wip-release
+                            /*var videoTimestamp: Int32?
                             var storedVideoTimestamp: Int32?
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ForwardVideoTimestampAttribute {
@@ -2035,7 +2036,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     strongSelf.videoTimestampForegroundLayer = nil
                                     videoTimestampForegroundLayer.removeFromSuperlayer()
                                 }
-                            }
+                            }*/
                             
                             if let animatedStickerNode = strongSelf.animatedStickerNode {
                                 animatedStickerNode.frame = imageFrame
