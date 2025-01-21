@@ -193,4 +193,10 @@ public struct PresentationResourcesRootController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddStoryIcon"), color: .white)
         })
     }
+    
+    public static func navigationSortIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationSortIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Peer Info/SortIcon"), color: .white)
+        })
+    }
 }

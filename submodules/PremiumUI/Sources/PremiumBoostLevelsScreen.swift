@@ -59,6 +59,8 @@ func requiredBoostSubjectLevel(subject: BoostSubject, group: Bool, context: Acco
         return configuration.minGroupEmojiPackLevel
     case .noAds:
         return configuration.minChannelRestrictAdsLevel
+    case .wearGift:
+        return configuration.minChannelWearGiftLevel
     }
 }
 
@@ -240,6 +242,7 @@ private final class LevelSectionComponent: CombinedComponent {
         case audioTranscription
         case emojiPack
         case noAds
+        case wearGift
         
         func title(strings: PresentationStrings, isGroup: Bool) -> String {
             switch self {
@@ -269,6 +272,8 @@ private final class LevelSectionComponent: CombinedComponent {
                 return strings.GroupBoost_Table_Group_EmojiPack
             case .noAds:
                 return strings.ChannelBoost_Table_NoAds
+            case .wearGift:
+                return strings.ChannelBoost_Table_WearGift
             }
         }
         
@@ -299,6 +304,8 @@ private final class LevelSectionComponent: CombinedComponent {
             case .emojiPack:
                 return "Premium/BoostPerk/EmojiPack"
             case .noAds:
+                return "Premium/BoostPerk/NoAds"
+            case .wearGift:
                 return "Premium/BoostPerk/NoAds"
             }
         }
@@ -638,6 +645,8 @@ private final class SheetContent: CombinedComponent {
                             textString = strings.GroupBoost_EnableEmojiPackLevelText("\(requiredLevel)").string
                         case .noAds:
                             textString = strings.ChannelBoost_EnableNoAdsLevelText("\(requiredLevel)").string
+                        case .wearGift:
+                            textString = strings.ChannelBoost_EnableNoAdsLevelText("\(requiredLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))
@@ -783,15 +792,6 @@ private final class SheetContent: CombinedComponent {
                     availableSize: CGSize(width: 90.0, height: 90.0),
                     transition: .immediate
                 )
-//                let icon = icon.update(
-//                    component: LottieComponent(
-//                        content: LottieComponent.AppBundleContent(name: iconName),
-//                        playOnce: state.playOnce
-//                    ),
-//                    availableSize: CGSize(width: 70, height: 70),
-//                    transition: .immediate
-//                )
-                
                 context.add(icon
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + iconBackground.size.height / 2.0))
                 )
@@ -1162,6 +1162,9 @@ private final class SheetContent: CombinedComponent {
                 if !isGroup && level >= requiredBoostSubjectLevel(subject: .noAds, group: isGroup, context: component.context, configuration: premiumConfiguration) {
                     perks.append(.noAds)
                 }
+//                if !isGroup && level >= requiredBoostSubjectLevel(subject: .wearGift, group: isGroup, context: component.context, configuration: premiumConfiguration) {
+//                    perks.append(.wearGift)
+//                }
                 
                 levelItems.append(
                     AnyComponentWithIdentity(
@@ -1461,6 +1464,8 @@ private final class BoostLevelsContainerComponent: CombinedComponent {
                             titleString = strings.GroupBoost_EmojiPack
                         case .noAds:
                             titleString = strings.ChannelBoost_NoAds
+                        case .wearGift:
+                            titleString = strings.ChannelBoost_WearGift
                         }
                     } else {
                         titleString = isGroup == true ? strings.GroupBoost_Title_Current : strings.ChannelBoost_Title_Current

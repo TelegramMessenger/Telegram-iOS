@@ -714,7 +714,7 @@ public extension Api {
     enum StarGiftAttribute: TypeConstructorDescription {
         case starGiftAttributeBackdrop(name: String, centerColor: Int32, edgeColor: Int32, patternColor: Int32, textColor: Int32, rarityPermille: Int32)
         case starGiftAttributeModel(name: String, document: Api.Document, rarityPermille: Int32)
-        case starGiftAttributeOriginalDetails(flags: Int32, senderId: Int64?, recipientId: Int64, date: Int32, message: Api.TextWithEntities?)
+        case starGiftAttributeOriginalDetails(flags: Int32, senderId: Api.Peer?, recipientId: Api.Peer, date: Int32, message: Api.TextWithEntities?)
         case starGiftAttributePattern(name: String, document: Api.Document, rarityPermille: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -740,11 +740,11 @@ public extension Api {
                     break
                 case .starGiftAttributeOriginalDetails(let flags, let senderId, let recipientId, let date, let message):
                     if boxed {
-                        buffer.appendInt32(-1070837941)
+                        buffer.appendInt32(-524291476)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(senderId!, buffer: buffer, boxed: false)}
-                    serializeInt64(recipientId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {senderId!.serialize(buffer, true)}
+                    recipientId.serialize(buffer, true)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {message!.serialize(buffer, true)}
                     break
@@ -820,10 +820,14 @@ public extension Api {
         public static func parse_starGiftAttributeOriginalDetails(_ reader: BufferReader) -> StarGiftAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
-            var _3: Int64?
-            _3 = reader.readInt64()
+            var _2: Api.Peer?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _3: Api.Peer?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Api.TextWithEntities?

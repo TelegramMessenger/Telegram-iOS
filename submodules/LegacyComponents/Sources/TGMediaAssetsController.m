@@ -1331,6 +1331,8 @@
                     CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
                     NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : asset.videoDuration;
                     
+                    UIImage *coverImage = [editingContext coverImageForItem:asset];
+                    
                     [signals addObject:[thumbnailSignal map:^id(UIImage *image)
                     {
                         NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
@@ -1341,6 +1343,7 @@
                         dict[@"adjustments"] = adjustments;
                         dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
                         dict[@"duration"] = @(duration);
+                        dict[@"coverImage"] = coverImage;
                         
                         if (adjustments.paintingData.stickers.count > 0)
                             dict[@"stickers"] = adjustments.paintingData.stickers;

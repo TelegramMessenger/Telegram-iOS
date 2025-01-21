@@ -31,6 +31,7 @@ import TooltipUI
 import GiftAnimationComponent
 import LottieComponent
 import ContextUI
+import TelegramNotices
 
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
@@ -286,6 +287,25 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.updated(transition: .spring(duration: 0.4))
         }
         
+        func commitWear(_ uniqueGift: StarGift.UniqueGift) {
+            self.pendingWear = true
+            self.pendingTakeOff = false
+            self.inWearPreview = false
+            self.updated(transition: .spring(duration: 0.4))
+            
+            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+            
+            let _ = ApplicationSpecificNotice.incrementStarGiftWearTips(accountManager: self.context.sharedContext.accountManager).startStandalone()
+        }
+        
+        func commitTakeOff() {
+            self.pendingTakeOff = true
+            self.pendingWear = false
+            self.updated(transition: .spring(duration: 0.4))
+            
+            let _ = self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil).startStandalone()
+        }
+        
         func commitUpgrade() {
             guard let arguments = self.subject.arguments, let peerId = arguments.peerId, let starsContext = self.context.starsContext, let starsState = starsContext.currentState else {
                 return
@@ -385,6 +405,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             let strings = environment.strings
             let dateTimeFormat = environment.dateTimeFormat
             let nameDisplayOrder = component.context.sharedContext.currentPresentationData.with { $0 }.nameDisplayOrder
+            let controller = environment.controller
             
             let state = context.state
             let subject = state.subject
@@ -410,6 +431,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var upgradeStars: Int64?
             var uniqueGift: StarGift.UniqueGift?
             var isSelfGift = false
+            var isChannelGift = false
             
             if case let .soldOutGift(gift) = subject {
                 animationFile = gift.file
@@ -444,7 +466,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                     uniqueGift = gift
                 }
                 savedToProfile = arguments.savedToProfile
-                incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
+                if let reference = arguments.reference, case .peer = reference {
+                    isChannelGift = true
+                    incoming = true
+                } else {
+                    incoming = arguments.incoming || arguments.peerId == component.context.account.peerId
+                }
                 nameHidden = arguments.nameHidden
                 
                 isSelfGift = arguments.messageId?.peerId == component.context.account.peerId
@@ -471,17 +498,27 @@ private final class GiftViewSheetContent: CombinedComponent {
                 showUpgradePreview = true
             }
             
+            var showWearPreview = false
+            if state.inWearPreview {
+                showWearPreview = true
+            } else if case .wearPreview = component.subject {
+                showWearPreview = true
+            }
+            
             let cancel = component.cancel
             let buttons = buttons.update(
                 component: ButtonsComponent(
                     theme: theme,
                     isOverlay: showUpgradePreview || uniqueGift != nil,
-                    showMoreButton: uniqueGift != nil && !state.inWearPreview,
+                    showMoreButton: uniqueGift != nil && !showWearPreview,
                     closePressed: { [weak state] in
                         guard let state else {
                             return
                         }
                         if state.inWearPreview {
+                            if let controller = controller() as? GiftViewScreen {
+                                controller.dismissAllTooltips()
+                            }
                             state.inWearPreview = false
                             state.updated(transition: .spring(duration: 0.4))
                         } else if state.inUpgradePreview {
@@ -498,13 +535,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                 availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: context.transition
             )
-                                    
+                                                            
             var originY: CGFloat = 0.0
                         
             let headerHeight: CGFloat
             let headerSubject: GiftCompositionComponent.Subject?
             if let uniqueGift {
-                if state.inWearPreview {
+                if showWearPreview {
                     headerHeight = 200.0
                 } else if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
                     headerHeight = 314.0
@@ -527,7 +564,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             var wearPeerNameChild: _UpdatedChildComponent?
-            if state.inWearPreview, let uniqueGift {
+            if showWearPreview, let uniqueGift {
                 var peerName = ""
                 if let accountPeer = state.peerMap[component.context.account.peerId] {
                     peerName = accountPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
@@ -547,10 +584,17 @@ private final class GiftViewSheetContent: CombinedComponent {
                     transition: .immediate
                 )
                 
+                let giftTitle: String
+                if case .wearPreview = component.subject {
+                    giftTitle = uniqueGift.title
+                } else {
+                    giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
+                }
+                
                 let wearTitle = wearTitle.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: strings.Gift_Wear_Wear("\(uniqueGift.title) #\(uniqueGift.number)").string,
+                            string: strings.Gift_Wear_Wear(giftTitle).string,
                             font: Font.bold(24.0),
                             textColor: theme.actionSheet.primaryTextColor,
                             paragraphAlignment: .center
@@ -608,7 +652,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         subject: headerSubject,
                         animationOffset: animationOffset,
                         animationScale: animationScale,
-                        displayAnimationStars: state.inWearPreview,
+                        displayAnimationStars: showWearPreview,
                         externalState: giftCompositionExternalState,
                         requestUpdate: { [weak state] in
                             state?.updated()
@@ -630,22 +674,24 @@ private final class GiftViewSheetContent: CombinedComponent {
                 vibrantColor = UIColor.white.withAlphaComponent(0.6)
             }
             
-            if let wearPeerNameChild, let accountPeer = state.peerMap[component.context.account.peerId] {
-                let wearAvatar = wearAvatar.update(
-                    component: AvatarComponent(
-                        context: component.context,
-                        theme: theme,
-                        peer: accountPeer
-                    ),
-                    environment: {},
-                    availableSize: CGSize(width: 100.0, height: 100.0),
-                    transition: context.transition
-                )
-                context.add(wearAvatar
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: 67.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
+            if let wearPeerNameChild {
+                if let accountPeer = state.peerMap[component.context.account.peerId] {
+                    let wearAvatar = wearAvatar.update(
+                        component: AvatarComponent(
+                            context: component.context,
+                            theme: theme,
+                            peer: accountPeer
+                        ),
+                        environment: {},
+                        availableSize: CGSize(width: 100.0, height: 100.0),
+                        transition: context.transition
+                    )
+                    context.add(wearAvatar
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: 67.0))
+                        .appear(.default(scale: true, alpha: true))
+                        .disappear(.default(scale: true, alpha: true))
+                    )
+                }
                 
                 let wearPeerStatus = wearPeerStatus.update(
                     component: MultilineTextComponent(
@@ -849,8 +895,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Tradable",
-                            iconColor: linkColor,
-                            badge: strings.Gift_Upgrade_Soon
+                            iconColor: linkColor
                         ))
                     )
                 )
@@ -937,9 +982,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                     } else if let convertStars, !upgraded {
                         if !converted {
                             if canUpgrade || upgradeStars != nil {
-                                descriptionText = strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                                descriptionText = isChannelGift ? strings.Gift_View_KeepUpgradeOrConvertDescription_Channel(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string : strings.Gift_View_KeepUpgradeOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
                             } else {
-                                descriptionText = strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
+                                descriptionText = isChannelGift ? strings.Gift_View_KeepOrConvertDescription_Channel(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string : strings.Gift_View_KeepOrConvertDescription(strings.Gift_View_KeepOrConvertDescription_Stars(Int32(convertStars))).string
                             }
                         } else {
                             descriptionText = strings.Gift_View_ConvertedDescription(strings.Gift_View_ConvertedDescription_Stars(Int32(convertStars))).string
@@ -1108,6 +1153,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 if peer.id == component.context.account.peerId, peer.isPremium {
                                     let animationContent: EmojiStatusComponent.Content
                                     var color: UIColor?
+                                    var statusId: Int64 = 1
                                     if state.pendingWear {
                                         var fileId: Int64?
                                         for attribute in uniqueGift.attributes {
@@ -1119,6 +1165,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             }
                                         }
                                         if let fileId {
+                                            statusId = fileId
                                             animationContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: tableLinkColor, loopMode: .count(2))
                                         } else {
                                             animationContent = .premium(color: tableLinkColor)
@@ -1152,14 +1199,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                     ),
                                                     action: {
                                                         component.openPeer(peer)
-                                                        Queue.mainQueue().after(1.0, {
+                                                        Queue.mainQueue().after(0.6, {
                                                             component.cancel(false)
                                                         })
                                                     }
                                                 ))
                                             ),
                                             AnyComponentWithIdentity(
-                                                id: AnyHashable(1),
+                                                id: AnyHashable(statusId),
                                                 component: AnyComponent(EmojiStatusComponent(
                                                     context: component.context,
                                                     animationCache: component.context.animationCache,
@@ -1188,7 +1235,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         ),
                                         action: {
                                             component.openPeer(peer)
-                                            Queue.mainQueue().after(1.0, {
+                                            Queue.mainQueue().after(0.6, {
                                                 component.cancel(false)
                                             })
                                         }
@@ -1215,7 +1262,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             isBot = true
                         }
                         let fromComponent: AnyComponent<Empty>
-                        if incoming && !peer.isDeleted && !isBot {
+                        if incoming && !peer.isDeleted && !isBot && !isChannelGift {
                             fromComponent = AnyComponent(
                                 HStack([
                                     AnyComponentWithIdentity(
@@ -1231,7 +1278,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             ),
                                             action: {
                                                 component.openPeer(peer)
-                                                Queue.mainQueue().after(1.0, {
+                                                Queue.mainQueue().after(0.6, {
                                                     component.cancel(false)
                                                 })
                                             }
@@ -1247,7 +1294,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             )),
                                             action: {
                                                 component.sendGift(peerId)
-                                                Queue.mainQueue().after(1.0, {
+                                                Queue.mainQueue().after(0.6, {
                                                     component.cancel(false)
                                                 })
                                             }
@@ -1267,7 +1314,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 ),
                                 action: {
                                     component.openPeer(peer)
-                                    Queue.mainQueue().after(1.0, {
+                                    Queue.mainQueue().after(0.6, {
                                         component.cancel(false)
                                     })
                                 }
@@ -1315,7 +1362,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 effectAlignment: .center,
                                 action: {
                                     component.transferGift()
-                                    Queue.mainQueue().after(1.0, {
+                                    Queue.mainQueue().after(0.6, {
                                         component.cancel(false)
                                     })
                                 }
@@ -1326,9 +1373,10 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                         context.add(transferButton
                             .position(CGPoint(x: sideInset + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .appear(.default(scale: true, alpha: true))
+                            .disappear(.default(scale: true, alpha: true))
                         )
                     
-                        let controller = environment.controller
                         let wearButton = wearButton.update(
                             component: PlainButtonComponent(
                                 content: AnyComponent(
@@ -1341,17 +1389,26 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 action: { [weak state] in
                                     if let state {
                                         if isWearing {
-                                            state.pendingTakeOff = true
-                                            state.pendingWear = false
-                                            state.updated(transition: .spring(duration: 0.4))
-                                            
-                                            component.showAttributeInfo(statusTag, "You took off \(uniqueGift.title) #\(uniqueGift.number)")
+                                            state.commitTakeOff()
+
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(uniqueGift.number)").string)
                                         } else {
                                             if let controller = controller() as? GiftViewScreen {
                                                 controller.dismissAllTooltips()
                                             }
                                             
-                                            state.requestWearPreview()
+                                            let _ = (ApplicationSpecificNotice.getStarGiftWearTips(accountManager: component.context.sharedContext.accountManager)
+                                            |> deliverOnMainQueue).start(next: { [weak state] count in
+                                                guard let state else {
+                                                    return
+                                                }
+                                                if !component.context.isPremium || count < 3 {
+                                                    state.requestWearPreview()
+                                                } else {
+                                                    state.commitWear(uniqueGift)
+                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                                }
+                                            })
                                         }
                                     }
                                 }
@@ -1362,6 +1419,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                         context.add(wearButton
                             .position(CGPoint(x: context.availableSize.width / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .appear(.default(scale: true, alpha: true))
+                            .disappear(.default(scale: true, alpha: true))
                         )
                         
                         let shareButton = shareButton.update(
@@ -1383,6 +1442,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                         )
                         context.add(shareButton
                             .position(CGPoint(x: context.availableSize.width - sideInset - buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .appear(.default(scale: true, alpha: true))
+                            .disappear(.default(scale: true, alpha: true))
                         )
                     }
                     
@@ -1506,7 +1567,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                 }
                                                 if let mention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention, let peer = state.peerMap[mention.peerId] {
                                                     component.openPeer(peer)
-                                                    Queue.mainQueue().after(1.0, {
+                                                    Queue.mainQueue().after(0.6, {
                                                         component.cancel(false)
                                                     })
                                                 }
@@ -1717,7 +1778,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         items: tableItems
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: .greatestFiniteMagnitude),
-                    transition: .immediate
+                    transition: context.transition
                 )
                 context.add(table
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: originY + table.size.height / 2.0))
@@ -1727,18 +1788,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += table.size.height + 23.0
             }
             
-            if incoming && !converted && !upgraded && !showUpgradePreview && !state.inWearPreview {
+            if incoming && !converted && !upgraded && !showUpgradePreview && !showWearPreview {
                 let linkColor = theme.actionSheet.controlAccentColor
                 if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
                     state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
                 }
                 let descriptionText: String
                 if savedToProfile {
-                    descriptionText = strings.Gift_View_DisplayedInfoHide
+                    descriptionText = isChannelGift ? strings.Gift_View_DisplayedInfoHide_Channel : strings.Gift_View_DisplayedInfoHide
                 } else if let upgradeStars, upgradeStars > 0 && !upgraded {
-                    descriptionText = strings.Gift_View_HiddenInfoShow
+                    descriptionText = isChannelGift ? strings.Gift_View_HiddenInfoShow_Channel : strings.Gift_View_HiddenInfoShow
                 } else {
-                    descriptionText = strings.Gift_View_HiddenInfo
+                    descriptionText = isChannelGift ? strings.Gift_View_HiddenInfo_Channel : strings.Gift_View_HiddenInfo
                 }
                 
                 let textFont = Font.regular(13.0)
@@ -1769,7 +1830,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         },
                         tapAction: { _, _ in
                             component.updateSavedToProfile(!savedToProfile)
-                            Queue.mainQueue().after(1.0, {
+                            Queue.mainQueue().after(0.6, {
                                 component.cancel(false)
                             })
                         }
@@ -1793,27 +1854,73 @@ private final class GiftViewSheetContent: CombinedComponent {
                 pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
             )
             let buttonChild: _UpdatedChildComponent
-            if state.inWearPreview, let uniqueGift {
+            if showWearPreview, let uniqueGift {
+                let buttonContent: AnyComponentWithIdentity<Empty>
+                if !component.context.isPremium {
+                    buttonContent = AnyComponentWithIdentity(
+                        id: AnyHashable("wear_locked"),
+                        component: AnyComponent(
+                            HStack([
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable("icon"),
+                                    component: AnyComponent(BundleIconComponent(name: "Chat/Stickers/Lock", tintColor: theme.list.itemCheckColors.foregroundColor))
+                                ),
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable("label"),
+                                    component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Wear_Start, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                                )
+                            ], spacing: 3.0)
+                        )
+                    )
+                } else {
+                    buttonContent = AnyComponentWithIdentity(
+                        id: AnyHashable("wear"),
+                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Wear_Start, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                    )
+                }
+                
                 buttonChild = button.update(
                     component: ButtonComponent(
                         background: buttonBackground,
-                        content: AnyComponentWithIdentity(
-                            id: AnyHashable("wear"),
-                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Wear_Start, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
-                        ),
+                        content: buttonContent,
                         isEnabled: true,
                         displaysProgress: false,
                         action: { [weak state] in
                             if let state {
-                                state.pendingWear = true
-                                state.pendingTakeOff = false
-                                state.inWearPreview = false
-                                state.updated(transition: .spring(duration: 0.4))
-                                
-                                let _ = component.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).start()
-                                
-                                Queue.mainQueue().after(0.2) {
-                                    component.showAttributeInfo(statusTag, "You put on \(uniqueGift.title) #\(uniqueGift.number)")
+                                let context = component.context
+                                if !context.isPremium, let controller = controller() as? GiftViewScreen {
+                                    controller.dismissAllTooltips()
+                                    
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                    let text = strings.Gift_View_TooltipPremiumWearing
+                                    let tooltipController = UndoOverlayController(
+                                        presentationData: presentationData,
+                                        content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
+                                        position: .bottom,
+                                        animateInAsReplacement: false,
+                                        appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                        action: { [weak controller] action in
+                                            if case .info = action {
+                                                controller?.dismissAllTooltips()
+                                                let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .messageEffects, forceDark: false, dismissed: nil)
+                                                controller?.push(premiumController)
+                                                Queue.mainQueue().after(0.6, {
+                                                    component.cancel(false)
+                                                })
+                                            }
+                                            return false
+                                        }
+                                    )
+                                    controller.present(tooltipController, in: .window(.root))
+                                } else {
+                                    state.commitWear(uniqueGift)
+                                    if case .wearPreview = component.subject {
+                                        component.cancel(true)
+                                    } else {
+                                        Queue.mainQueue().after(0.2) {
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                        }
+                                    }
                                 }
                             }
                         }),
@@ -1901,7 +2008,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     transition: context.transition
                 )
             } else if incoming && !converted && !savedToProfile {
-                let buttonTitle = savedToProfile ? strings.Gift_View_Hide : strings.Gift_View_Display
+                let buttonTitle = isChannelGift ? strings.Gift_View_Display_Channel : strings.Gift_View_Display
                 buttonChild = button.update(
                     component: ButtonComponent(
                         background: buttonBackground,
@@ -2125,15 +2232,28 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case profileGift(EnginePeer.Id, ProfileGiftsContext.State.StarGift)
         case soldOutGift(StarGift.Gift)
         case upgradePreview([StarGift.UniqueGift.Attribute], String)
+        case wearPreview(StarGift.UniqueGift)
         
         var arguments: (peerId: EnginePeer.Id?, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, reference: StarGiftReference?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?, upgradeMessageId: Int32?)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction {
                     switch action.action {
-                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _, upgradeMessageId, _, _):
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, .message(messageId: message.id), message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
-                    case let .starGiftUnique(gift, isUpgrade, isTransferred, savedToProfile, canExportDate, transferStars, _):
+                    case let .starGift(gift, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, _, upgradeMessageId, peerId, senderId, savedId):
+                        var reference: StarGiftReference
+                        if let peerId, let savedId {
+                            reference = .peer(peerId: peerId, id: savedId)
+                        } else {
+                            reference = .message(messageId: message.id)
+                        }
+                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
+                    case let .starGiftUnique(gift, isUpgrade, isTransferred, savedToProfile, canExportDate, transferStars, _, peerId, senderId, savedId):
+                        var reference: StarGiftReference
+                        if let peerId, let savedId {
+                            reference = .peer(peerId: peerId, id: savedId)
+                        } else {
+                            reference = .message(messageId: message.id)
+                        }
                         var incoming = false
                         if isUpgrade {
                             if message.author?.id != message.id.peerId {
@@ -2146,12 +2266,12 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         } else {
                             incoming = message.flags.contains(.Incoming)
                         }
-                        return (message.id.peerId, message.author?.id, message.author?.compactDisplayTitle, message.id, .message(messageId: message.id), incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate, nil)
+                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate, nil)
                     default:
                         return nil
                     }
                 }
-            case let .uniqueGift(gift):
+            case let .uniqueGift(gift), let .wearPreview(gift):
                 return (nil, nil, nil, nil, nil, false, .unique(gift), 0, nil, nil, nil, false, false, false, false, false, nil, nil, nil, nil)
             case let .profileGift(peerId, gift):
                 var messageId: EngineMessage.Id?
@@ -2545,7 +2665,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                         return
                                     }
                                     openPeerImpl?(peer)
-                                    Queue.mainQueue().after(1.0) {
+                                    Queue.mainQueue().after(0.6) {
                                         self?.dismiss(animated: false, completion: nil)
                                     }
                                 })
@@ -3398,13 +3518,16 @@ private final class GiftViewContextReferenceContentSource: ContextReferenceConte
 private final class HeaderButtonComponent: CombinedComponent {
     let title: String
     let iconName: String
+    let isLocked: Bool
     
     public init(
         title: String,
-        iconName: String
+        iconName: String,
+        isLocked: Bool = false
     ) {
         self.title = title
         self.iconName = iconName
+        self.isLocked = isLocked
     }
     
     static func ==(lhs: HeaderButtonComponent, rhs: HeaderButtonComponent) -> Bool {
@@ -3414,6 +3537,9 @@ private final class HeaderButtonComponent: CombinedComponent {
         if lhs.iconName != rhs.iconName {
             return false
         }
+        if lhs.isLocked != rhs.isLocked {
+            return false
+        }
         return true
     }
     
@@ -3421,6 +3547,7 @@ private final class HeaderButtonComponent: CombinedComponent {
         let background = Child(RoundedRectangle.self)
         let title = Child(MultilineTextComponent.self)
         let icon = Child(BundleIconComponent.self)
+        let lockIcon = Child(BundleIconComponent.self)
         
         return { context in
             let component = context.component
@@ -3448,7 +3575,7 @@ private final class HeaderButtonComponent: CombinedComponent {
             context.add(icon
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: 22.0))
             )
-                        
+            
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
@@ -3463,8 +3590,27 @@ private final class HeaderButtonComponent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - 16.0, height: context.availableSize.height),
                 transition: .immediate
             )
+            var totalTitleWidth = title.size.width
+            var titleOriginX = context.availableSize.width / 2.0 - totalTitleWidth / 2.0
+            if component.isLocked {
+                let titleSpacing: CGFloat = 2.0
+                let lockIcon = lockIcon.update(
+                    component: BundleIconComponent(
+                        name: "Chat List/StatusLockIcon",
+                        tintColor: UIColor.white
+                    ),
+                    availableSize: context.availableSize,
+                    transition: .immediate
+                )
+                totalTitleWidth += lockIcon.size.width + titleSpacing
+                titleOriginX = context.availableSize.width / 2.0 - totalTitleWidth / 2.0
+                context.add(lockIcon
+                    .position(CGPoint(x: titleOriginX + lockIcon.size.width / 2.0, y: 42.0))
+                )
+                titleOriginX += lockIcon.size.width + titleSpacing
+            }
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: 42.0))
+                .position(CGPoint(x: titleOriginX + title.size.width / 2.0, y: 42.0))
             )
             
             return context.availableSize

@@ -233,7 +233,7 @@ final class ChatGiftPreviewItemNode: ListViewItemNode {
                 case let .starGift(gift):
                     media = [
                         TelegramMediaAction(
-                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.upgradeStars, isRefunded: false, upgradeMessageId: nil, peerId: nil, senderId: nil)
+                            action: .starGift(gift: .generic(gift), convertStars: gift.convertStars, text: item.text, entities: item.entities, nameHidden: false, savedToProfile: false, converted: false, upgraded: false, canUpgrade: true, upgradeStars: item.upgradeStars, isRefunded: false, upgradeMessageId: nil, peerId: nil, senderId: nil, savedId: nil)
                         )
                     ]
                 }

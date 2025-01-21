@@ -120,6 +120,8 @@
 
 @property (nonatomic, copy) id<TGCaptionPanelView> _Nullable(^ _Nullable captionPanelView)(void);
 
+@property (nonatomic, copy) void (^ _Nullable editCover)(CGSize dimensions, void(^_Nonnull completion)(UIImage * _Nonnull));
+
 
 - (UIView<TGPhotoSolidRoundedButtonView> *_Nonnull)solidRoundedButton:(NSString *_Nonnull)title action:(void(^_Nonnull)(void))action;
 - (id<TGPhotoDrawingAdapter> _Nonnull)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isVideo:(bool)isVideo isAvatar:(bool)isAvatar entitiesView:(UIView<TGPhotoDrawingEntitiesView> * _Nullable)entitiesView;

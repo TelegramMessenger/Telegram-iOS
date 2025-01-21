@@ -642,8 +642,7 @@ final class GiftOptionsScreenComponent: Component {
             if isSelfGift {
                 premiumTitleString = strings.Gift_Options_GiftSelf_Title
             } else if isChannelGift {
-                //TODO:localize
-                premiumTitleString = "Send a Gift"
+                premiumTitleString = strings.Gift_Options_GiftChannel_Title
             } else {
                 premiumTitleString = strings.Gift_Options_Premium_Title
             }
@@ -675,8 +674,7 @@ final class GiftOptionsScreenComponent: Component {
             if isSelfGift {
                 premiumDescriptionRawString = strings.Gift_Options_GiftSelf_Text
             } else if isChannelGift {
-                //TODO:localize
-                premiumDescriptionRawString = "Select a gift to show appreciation for **\(peerName)**."
+                premiumDescriptionRawString = strings.Gift_Options_GiftChannel_Text(peerName).string
             } else {
                 premiumDescriptionRawString = strings.Gift_Options_Premium_Text(peerName).string
             }
@@ -783,7 +781,7 @@ final class GiftOptionsScreenComponent: Component {
                                             ribbon: product.discount.flatMap {
                                                 GiftItemComponent.Ribbon(
                                                     text:  "-\($0)%",
-                                                    color: .red
+                                                    color: .purple
                                                 )
                                             },
                                             isLoading: self.inProgressPremiumGift == product.id

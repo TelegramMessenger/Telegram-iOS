@@ -880,6 +880,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return sourceView
             }
         )
+        controller.pushController = { [weak self] c in
+            self?.push(c)
+        }
         self.emojiStatusSelectionController = controller
         self.present(controller, in: .window(.root))
     }

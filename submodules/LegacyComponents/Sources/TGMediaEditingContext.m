@@ -106,6 +106,8 @@
     TGMemoryImageCache *_originalImageCache;
     TGMemoryImageCache *_originalThumbnailImageCache;
     
+    TGMemoryImageCache *_coverImageCache;
+    
     TGModernCache *_diskCache;
     NSURL *_fullSizeResultsUrl;
     NSURL *_paintingDatasUrl;
@@ -119,6 +121,7 @@
     
     SPipe *_representationPipe;
     SPipe *_thumbnailImagePipe;
+    SPipe *_coverImagePipe;
     SPipe *_adjustmentsPipe;
     SPipe *_captionPipe;
     SPipe *_timerPipe;
@@ -166,6 +169,9 @@
         _originalThumbnailImageCache = [[TGMemoryImageCache alloc] initWithSoftMemoryLimit:[[self class] thumbnailImageSoftMemoryLimit]
                                                                            hardMemoryLimit:[[self class] thumbnailImageHardMemoryLimit]];
         
+        _coverImageCache = [[TGMemoryImageCache alloc] initWithSoftMemoryLimit:[[self class] thumbnailImageSoftMemoryLimit] * 10
+                                                              hardMemoryLimit:[[self class] thumbnailImageHardMemoryLimit] * 10];
+        
         NSString *diskCachePath = [[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:[[self class] diskCachePath]];
         _diskCache = [[TGModernCache alloc] initWithPath:diskCachePath size:[[self class] diskMemoryLimit]];
         
@@ -194,6 +200,7 @@
         _thumbnailImagePipe = [[SPipe alloc] init];
         _adjustmentsPipe = [[SPipe alloc] init];
         _captionPipe = [[SPipe alloc] init];
+        _coverImagePipe = [[SPipe alloc] init];
         _timerPipe = [[SPipe alloc] init];
         _spoilerPipe = [[SPipe alloc] init];
         _pricePipe = [[SPipe alloc] init];
@@ -908,6 +915,46 @@
         [_faces removeObjectForKey:itemId];
 }
 
+
+- (SSignal *)coverImageSignalForIdentifier:(NSString *)identifier
+{
+    NSString *itemId = [TGMediaEditingContext _coverImageUriForItemId:identifier];
+    if (itemId == nil)
+        return [SSignal fail:nil];
+    
+    SSignal *updateSignal = [[_coverImagePipe.signalProducer() filter:^bool(TGMediaImageUpdate *update)
+    {
+        return [update.item.uniqueIdentifier isEqualToString:identifier];
+    }] map:^id(TGMediaImageUpdate *update)
+    {
+        return update.representation;
+    }];
+    
+    return [[SSignal single:[_coverImageCache imageForKey:itemId attributes:NULL]]
+            then:updateSignal];
+}
+
+- (SSignal *)coverImageSignalForItem:(NSObject<TGMediaEditableItem> *)item {
+    return [self coverImageSignalForIdentifier:item.uniqueIdentifier];
+}
+
+- (UIImage *)coverImageForItem:(NSObject<TGMediaEditableItem> *)item {
+    NSString *itemId = [TGMediaEditingContext _coverImageUriForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return nil;
+    return [_coverImageCache imageForKey:itemId attributes:NULL];
+}
+
+- (void)setCoverImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item
+{
+    NSString *itemId = [TGMediaEditingContext _coverImageUriForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return;
+    
+    [_coverImageCache setImage:image forKey:itemId attributes:NULL];
+    _coverImagePipe.sink([TGMediaImageUpdate imageUpdateWithItem:item representation:image]);
+}
+
 - (void)setFullSizeImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item
 {
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
@@ -1165,6 +1212,11 @@
 + (NSString *)_thumbnailImageUriForItemId:(NSString *)itemId
 {
     return [NSString stringWithFormat:@"%@://%@", [self thumbnailImageUriScheme], itemId];
+}
+
++ (NSString *)_coverImageUriForItemId:(NSString *)itemId
+{
+    return [NSString stringWithFormat:@"%@://%@", @"photo-editor-cover", itemId];
 }
 
 #pragma mark - Constants

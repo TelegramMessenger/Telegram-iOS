@@ -168,7 +168,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
     var displayStatusPremiumIntro: (() -> Void)?
     var displayUniqueGiftInfo: ((UIView, String) -> Void)?
-    var openUniqueGift: ((String) -> Void)?
+    var openUniqueGift: ((UIView, String) -> Void)?
     
     var navigateToForum: (() -> Void)?
     
@@ -918,7 +918,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             return
                         }
                         if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(uniqueGiftSlug)
+                            strongSelf.openUniqueGift?(strongSelf.titleStatusIconView, uniqueGiftSlug)
                         } else {
                             strongSelf.displayPremiumIntro?(strongSelf.titleStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
                         }
@@ -979,7 +979,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             return
                         }
                         if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(uniqueGiftSlug)
+                            strongSelf.openUniqueGift?(strongSelf.titleExpandedStatusIconView, uniqueGiftSlug)
                         } else {
                             strongSelf.displayPremiumIntro?(strongSelf.titleExpandedStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
                         }
@@ -2266,7 +2266,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if let status = peer?.emojiStatus, case .starGift = status.content {
             backgroundCoverSubject = .status(status)
             if !self.didSetupBackgroundCover {
-                backgroundCoverAnimateIn = true
+                if !self.isSettings {
+                    backgroundCoverAnimateIn = true
+                }
                 self.didSetupBackgroundCover = true
             }
         } else if let peer {
@@ -2306,11 +2308,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     Queue.mainQueue().after(0.2) {
                         backgroundCoverView.animateIn()
                     }
-                    Queue.mainQueue().after(0.44) {
+                    Queue.mainQueue().after(0.5) {
                         self.invokeDisplayGiftInfo()
                     }
                 } else {
-                    Queue.mainQueue().after(0.44) {
+                    Queue.mainQueue().after(0.5) {
                         self.invokeDisplayGiftInfo()
                     }
                 }

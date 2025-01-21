@@ -1061,15 +1061,15 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 }))
                 presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }
-            mixin.requestAvatarEditor = { imageCompletion, videoCompletion in
-                guard let imageCompletion, let videoCompletion else {
-                    return
-                }
-                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: .group, markup: nil)
-                controller.imageCompletion = imageCompletion
-                controller.videoCompletion = videoCompletion
-                pushImpl?(controller)
-            }
+//            mixin.requestAvatarEditor = { imageCompletion, videoCompletion in
+//                guard let imageCompletion, let videoCompletion else {
+//                    return
+//                }
+//                let controller = AvatarEditorScreen(context: context, inputData: keyboardInputData.get(), peerType: .group, markup: nil)
+//                controller.imageCompletion = imageCompletion
+//                controller.videoCompletion = videoCompletion
+//                pushImpl?(controller)
+//            }
             mixin.didFinishWithImage = { image in
                 if let image = image {
                     completedGroupPhotoImpl(image)

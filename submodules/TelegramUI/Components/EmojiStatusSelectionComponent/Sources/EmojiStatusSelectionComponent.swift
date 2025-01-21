@@ -19,6 +19,7 @@ import AppBundle
 import GZip
 import EmojiStatusComponent
 import Postbox
+import TelegramNotices
 
 private func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
     return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
@@ -1322,23 +1323,25 @@ public final class EmojiStatusSelectionController: ViewController {
                 case .statusSelection:
                     animateOutToView = true
                 }
-                
-                if animateOutToView, item != nil, let destinationView = controller.destinationItemView() {
-                    if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
-                        snapshotView.frame = destinationView.frame
-                        destinationView.superview?.insertSubview(snapshotView, belowSubview: destinationView)
-                        snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
-                        })
-                    }
-                    destinationView.isHidden = true
-                }
-                
+                                
                 switch controller.mode {
                 case .statusSelection:
                     if let gift = item?.itemGift {
-                        let _ = (self.context.engine.accountData.setStarGiftStatus(starGift: gift, expirationDate: nil)
-                        |> deliverOnMainQueue).start()
+                        animateOutToView = false
+                        
+                        let _ = (ApplicationSpecificNotice.getStarGiftWearTips(accountManager: self.context.sharedContext.accountManager)
+                        |> deliverOnMainQueue).start(next: { [weak self] count in
+                            guard let self else {
+                                return
+                            }
+                            if !self.context.isPremium || count < 3, let pushController = controller.pushController {
+                                let controller = self.context.sharedContext.makeGiftWearPreviewScreen(context: self.context, gift: gift)
+                                pushController(controller)
+                            } else {
+                                let _ = (self.context.engine.accountData.setStarGiftStatus(starGift: gift, expirationDate: nil)
+                                |> deliverOnMainQueue).start()
+                            }
+                        })
                     } else {
                         let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
                         |> deliverOnMainQueue).start()
@@ -1370,6 +1373,17 @@ public final class EmojiStatusSelectionController: ViewController {
                     }
                     
                     completion()
+                }
+                
+                if animateOutToView, item != nil, let destinationView = controller.destinationItemView() {
+                    if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = destinationView.frame
+                        destinationView.superview?.insertSubview(snapshotView, belowSubview: destinationView)
+                        snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                    destinationView.isHidden = true
                 }
                 
                 if animateOutToView, let item = item, let destinationView = controller.destinationItemView() {
@@ -1444,7 +1458,7 @@ public final class EmojiStatusSelectionController: ViewController {
     private let color: UIColor?
     private let mode: Mode
     private let destinationItemView: () -> UIView?
-    
+        
     fileprivate let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self._ready
@@ -1453,6 +1467,8 @@ public final class EmojiStatusSelectionController: ViewController {
     override public var overlayWantsToBeBelowKeyboard: Bool {
         return true
     }
+    
+    public var pushController: ((ViewController) -> Void)?
     
     public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, color: UIColor? = nil, destinationItemView: @escaping () -> UIView?) {
         self.context = context

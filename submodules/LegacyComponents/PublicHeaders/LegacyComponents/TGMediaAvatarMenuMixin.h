@@ -26,7 +26,7 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 @property (nonatomic, copy) void (^requestSearchController)(TGMediaAssetsController *);
 @property (nonatomic, copy) CGRect (^sourceRect)(void);
 
-@property (nonatomic, copy) void (^requestAvatarEditor)(void (^)(UIImage *image, void(^commit)(void)), void (^)(UIImage *image, NSURL *asset, TGVideoEditAdjustments *adjustments, void(^commit)(void)));
+@property (nonatomic, copy) void (^requestAvatarEditor)(void (^)(UIImage *image, void(^commit)(void)), void (^)(UIImage *image, NSURL *asset, id adjustments, id markup, void(^commit)(void)));
 
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 

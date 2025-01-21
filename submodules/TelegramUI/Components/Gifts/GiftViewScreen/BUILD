@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AccountContext",
         "//submodules/PresentationDataUtils",
         "//submodules/Markdown",
+        "//submodules/TelegramNotices",
         "//submodules/ComponentFlow",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/Components/ViewControllerComponent",
@@ -44,6 +45,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Gifts/GiftItemComponent",
         "//submodules/MoreButtonNode",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/PasswordSetupUI",
+        "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
     ],
     visibility = [
         "//visibility:public",

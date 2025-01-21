@@ -34,6 +34,7 @@ import BlurredBackgroundComponent
 import ProgressNavigationButtonNode
 import Markdown
 import GiftViewScreen
+import UndoUI
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -321,7 +322,16 @@ final class GiftSetupScreenComponent: Component {
             guard let component = self.component, case let .starGift(starGift) = component.subject, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
                 return
             }
-                        
+            
+            let context = component.context
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let peerId = component.peerId
+            
+            var finalPrice = starGift.price
+            if self.includeUpgrade, let upgradeStars = starGift.upgradeStars  {
+                finalPrice += upgradeStars
+            }
+            
             let proceed = { [weak self] in
                 guard let self else {
                     return
@@ -331,7 +341,7 @@ final class GiftSetupScreenComponent: Component {
                 self.state?.updated()
                 
                 let entities = generateChatInputTextEntities(self.textInputState.text)
-                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: component.peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
+                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
                 
                 let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
                 |> map(Optional.init)
@@ -359,22 +369,43 @@ final class GiftSetupScreenComponent: Component {
                                 return
                             }
                             
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                    chatController.hintPlayNextOutgoingGift()
-                                    foundController = true
-                                    break
+                            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                                navigationController.setViewControllers(controllers, animated: true)
+                                
+                                let tooltipController = UndoOverlayController(
+                                    presentationData: presentationData,
+                                    content: .sticker(
+                                        context: context,
+                                        file: starGift.file,
+                                        loop: true,
+                                        title: nil,
+                                        text: presentationData.strings.Gift_Send_Success(self.peerMap[peerId]?.compactDisplayTitle ?? "", presentationData.strings.Gift_Send_Success_Stars(Int32(starGift.price))).string,
+                                        undoText: nil,
+                                        customAction: nil
+                                    ),
+                                    action: { _ in return true }
+                                )
+                                (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
+                            } else {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                        chatController.hintPlayNextOutgoingGift()
+                                        foundController = true
+                                        break
+                                    }
                                 }
+                                if !foundController {
+                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    chatController.hintPlayNextOutgoingGift()
+                                    controllers.append(chatController)
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
                             }
-                            if !foundController {
-                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                chatController.hintPlayNextOutgoingGift()
-                                controllers.append(chatController)
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
                         }
                         
                         starsContext.load(force: true)
@@ -403,7 +434,7 @@ final class GiftSetupScreenComponent: Component {
                 })
             }
             
-            if starsState.balance < StarsAmount(value: starGift.price, nanos: 0) {
+            if starsState.balance < StarsAmount(value: finalPrice, nanos: 0) {
                 let _ = (self.optionsPromise.get()
                 |> filter { $0 != nil }
                 |> take(1)
@@ -415,7 +446,7 @@ final class GiftSetupScreenComponent: Component {
                         context: component.context,
                         starsContext: starsContext,
                         options: options ?? [],
-                        purpose: .starGift(peerId: component.peerId, requiredStars: starGift.price),
+                        purpose: .starGift(peerId: component.peerId, requiredStars: finalPrice),
                         completion: { [weak self, weak starsContext] stars in
                             guard let self, let starsContext else {
                                 return
@@ -642,8 +673,7 @@ final class GiftSetupScreenComponent: Component {
             if isSelfGift {
                 navigationTitleString = environment.strings.Gift_SendSelf_Title
             } else if isChannelGift {
-                //TODO:localize
-                navigationTitleString = "Gift Preview"
+                navigationTitleString = environment.strings.Gift_SendChannel_Title
             } else {
                 navigationTitleString = environment.strings.Gift_Send_TitleTo(peerName).string
             }
@@ -988,8 +1018,7 @@ final class GiftSetupScreenComponent: Component {
                 if isSelfGift {
                     hideSectionFooterString = environment.strings.Gift_SendSelf_HideMyName_Info
                 } else if isChannelGift {
-                    //TODO:localize
-                    hideSectionFooterString = "Hide my name and message from visitors of this channel. The channel admins will still see them."
+                    hideSectionFooterString = environment.strings.Gift_SendChannel_HideMyName_Info
                 } else {
                     hideSectionFooterString = environment.strings.Gift_Send_HideMyName_Info(peerName, peerName).string
                 }
@@ -1413,7 +1442,8 @@ final class GiftSetupScreenComponent: Component {
                     isGeneralThreadClosed: nil,
                     replyMessage: nil,
                     accountPeerColor: nil,
-                    businessIntro: nil
+                    businessIntro: nil,
+                    starGiftsAvailable: false
                 )
                 
                 self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor

@@ -31,6 +31,9 @@
 - (void)prepareForEditing;
 - (void)returnFromEditing;
 
+- (void)prepareForCoverEditing;
+- (void)returnFromCoverEditing;
+
 - (UIImage *)screenImage;
 - (UIImage *)transitionImage;
 - (CGRect)editorTransitionViewRect;

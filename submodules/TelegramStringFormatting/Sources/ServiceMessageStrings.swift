@@ -1066,7 +1066,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = mutableString
             case .prizeStars:
                 attributedString = NSAttributedString(string: strings.Notification_StarsPrize, font: titleFont, textColor: primaryTextColor)
-            case let .starGift(gift, _, text, entities, _, _, _, _, _, upgradeStars, _, _, _, _):
+            case let .starGift(gift, _, text, entities, _, _, _, _, _, upgradeStars, _, _, peerId, senderId, _):
                 if !forAdditionalServiceMessage {
                     if let text {
                         let mutableAttributedString = NSMutableAttributedString(attributedString: stringWithAppliedEntities(text, entities: entities ?? [], baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false, message: message._asMessage()))
@@ -1090,15 +1090,30 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Self_Bought(starsPrice)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     } else if message.author?.id == accountPeerId {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_SentYou(starsPrice)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    } else if let peerId {
+                        peerIds = [(1, peerId)]
+                        var peerName = ""
+                        if let name = message.peers[peerId].flatMap(EnginePeer.init)?.compactDisplayTitle {
+                            peerName = name
+                        }
+                        if let senderId {
+                            peerIds.insert((0, senderId), at: 0)
+                            if let name = message.peers[senderId].flatMap(EnginePeer.init)?.compactDisplayTitle {
+                                authorName = name
+                            }
+                        }
+                        var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
+                        attributes[2] = boldAttributes
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Channel_Sent(authorName, peerName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     } else {
                         var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: peerIds)
                         attributes[1] = boldAttributes
                         attributedString = addAttributesToStringWithRanges(strings.Notification_StarsGift_Sent(authorName, starsPrice)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                     }
                 }
-            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _):
+            case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, _, _, _):
                 if case let .unique(gift) = gift {
-                    if !forAdditionalServiceMessage {
+                    if !forAdditionalServiceMessage && !"".isEmpty {
                         attributedString = NSAttributedString(string: "\(gift.title) #\(gift.number)", font: titleFont, textColor: primaryTextColor)
                     } else if let messagePeer = message.peers[message.id.peerId] {
                         let peerName = EnginePeer(messagePeer).compactDisplayTitle

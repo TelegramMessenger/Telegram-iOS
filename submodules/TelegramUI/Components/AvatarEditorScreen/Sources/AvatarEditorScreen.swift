@@ -1374,31 +1374,50 @@ final class AvatarEditorScreenComponent: Component {
                         }
                     }
                     
-                    let colors: [NSNumber] = state.selectedBackground.colors.map { Int32(bitPattern: $0) as NSNumber }
+                    let backgroundColors = state.selectedBackground.colors.map { Int32(bitPattern: $0) }
+                    guard let codableEntity = CodableDrawingEntity(entity: entity) else {
+                        return
+                    }
                     
-                    let entitiesData = DrawingEntitiesView.encodeEntitiesData([entity])
-                    
-                    let paintingData = TGPaintingData(
-                        drawing: nil,
-                        entitiesData: entitiesData,
-                        image: nil,
-                        stillImage: nil,
-                        hasAnimation: entity.isAnimated,
-                        stickers: []
-                    )
-                    
-                    let adjustments = PGPhotoEditorValues(
-                        originalSize: size,
+                    let values = MediaEditorValues(
+                        peerId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)),
+                        originalDimensions: PixelDimensions(size),
+                        cropOffset: .zero,
                         cropRect: CGRect(origin: .zero, size: size),
+                        cropScale: 1.0,
                         cropRotation: 0.0,
-                        cropOrientation: .up,
-                        cropLockedAspectRatio: 1.0,
-                        cropMirrored: false,
+                        cropMirroring: false,
+                        cropOrientation: nil,
+                        gradientColors: nil,
+                        videoTrimRange: nil,
+                        videoIsMuted: false,
+                        videoIsFullHd: false,
+                        videoIsMirrored: false,
+                        videoVolume: nil,
+                        additionalVideoPath: nil,
+                        additionalVideoIsDual: false,
+                        additionalVideoPosition: nil,
+                        additionalVideoScale: nil,
+                        additionalVideoRotation: nil,
+                        additionalVideoPositionChanges: [],
+                        additionalVideoTrimRange: nil,
+                        additionalVideoOffset: nil,
+                        additionalVideoVolume: nil,
+                        collage: [],
+                        nightTheme: false,
+                        drawing: nil,
+                        maskDrawing: nil,
+                        entities: [codableEntity],
                         toolValues: [:],
-                        paintingData: paintingData,
-                        sendAsGif: true
+                        audioTrack: nil,
+                        audioTrackTrimRange: nil,
+                        audioTrackOffset: nil,
+                        audioTrackVolume: nil,
+                        audioTrackSamples: nil,
+                        collageTrackSamples: nil,
+                        coverImageTimestamp: nil,
+                        qualityPreset: .profileHigh
                     )
-                    let preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetProfileHigh
                     
                     let combinedImage = generateImage(size, contextGenerator: { size, context in
                         let bounds = CGRect(origin: .zero, size: size)
@@ -1415,12 +1434,19 @@ final class AvatarEditorScreenComponent: Component {
                     }, opaque: false)!
                     
                     if entity.isAnimated {
+                        let markup: UploadPeerPhotoMarkup
                         if stickerPackId != 0 {
-                            controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, stickerPackId: stickerPackId, stickerPackAccessHash: stickerPackAccessHash, documentId: fileId, colors: colors), { [weak controller] in
+                            markup = .sticker(packReference: .id(id: stickerPackId, accessHash: stickerPackAccessHash), fileId: fileId, backgroundColors: backgroundColors)
+                        } else {
+                            markup = .emoji(fileId: fileId, backgroundColors: backgroundColors)
+                        }
+                        
+                        if stickerPackId != 0 {
+                            controller.videoCompletion(combinedImage, tempUrl, values, markup, { [weak controller] in
                                 controller?.dismiss()
                             })
                         } else {
-                            controller.videoCompletion(combinedImage, tempUrl, TGVideoEditAdjustments(photoEditorValues: adjustments, preset: preset, documentId: fileId, colors: colors), { [weak controller] in
+                            controller.videoCompletion(combinedImage, tempUrl, values, markup, { [weak controller] in
                                 controller?.dismiss()
                             })
                         }
@@ -1461,7 +1487,7 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
     }
     
     public var imageCompletion: (UIImage, @escaping () -> Void) -> Void = { _, _ in }
-    public var videoCompletion: (UIImage, URL, TGVideoEditAdjustments, @escaping () -> Void) -> Void = { _, _, _, _ in }
+    public var videoCompletion: (UIImage, URL, MediaEditorValues, UploadPeerPhotoMarkup, @escaping () -> Void) -> Void = { _, _, _, _, _ in }
         
     public static func inputData(context: AccountContext, isGroup: Bool) -> Signal<AvatarKeyboardInputData, NoError> {
         let emojiItems = EmojiPagerContentComponent.emojiInputData(

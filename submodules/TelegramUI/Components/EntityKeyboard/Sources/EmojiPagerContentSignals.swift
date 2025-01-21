@@ -328,7 +328,7 @@ public extension EmojiPagerContentComponent {
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
                         
-                        let title = context.sharedContext.currentPresentationData.with({ $0 }).strings.EmojiInput_TrendingEmoji
+                        let title = strings.EmojiInput_TrendingEmoji
                         itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: title, subtitle: nil, badge: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 0, isClearable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
@@ -614,7 +614,6 @@ public extension EmojiPagerContentComponent {
                 }
                 
                 if let uniqueGifts, !uniqueGifts.items.isEmpty {
-                    //TODO:localize
                     let groupId = "collectible"
                     let groupIndex: Int
                     if let current = itemGroupIndexById[groupId] {
@@ -622,7 +621,7 @@ public extension EmojiPagerContentComponent {
                     } else {
                         groupIndex = itemGroups.count
                         itemGroupIndexById[groupId] = groupIndex
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "COLLECTIBLES".uppercased(), subtitle: nil, badge: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 2, isClearable: false, headerItem: nil, items: []))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleCollectibles.uppercased(), subtitle: nil, badge: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 2, isClearable: false, headerItem: nil, items: []))
                     }
                     
                     for item in uniqueGifts.items {

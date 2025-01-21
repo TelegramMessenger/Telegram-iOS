@@ -83,11 +83,11 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                                 attributes.append(.documentAttributeVideo(flags: 0, duration: duration, w: dimensions.width, h: dimensions.height, preloadPrefixSize: nil, videoStartTs: nil, videoCodec: nil))
                             }
                             attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
-                            return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, videoCover: nil, ttlSeconds: nil)))
+                            return account.network.request(Api.functions.messages.uploadMedia(flags: 0, businessConnectionId: nil, peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: thumbnailFile, mimeType: mimeType, attributes: attributes, stickers: nil, videoCover: nil, videoTimestamp: nil, ttlSeconds: nil)))
                             |> mapError { _ -> UploadStickerError in return .generic }
                             |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                                 switch media {
-                                case let .messageMediaDocument(_, document, altDocuments, _, _):
+                                case let .messageMediaDocument(_, document, altDocuments, _, _, _):
                                     if let document = document, let file = telegramMediaFileFromApiDocument(document, altDocuments: altDocuments), let uploadedResource = file.resource as? CloudDocumentMediaResource {
                                         account.postbox.mediaBox.copyResourceData(from: resource.id, to: uploadedResource.id, synchronous: true)
                                         if let thumbnail, let previewRepresentation = file.previewRepresentations.first(where: { $0.dimensions == PixelDimensions(width: 320, height: 320) }) {

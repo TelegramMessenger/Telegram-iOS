@@ -464,7 +464,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 storeAttributedTextInPasteboard(text)
                 
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, blurred: true, action: { _ in true })
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, appearance: UndoOverlayController.Appearance(isBlurred: true), action: { _ in true })
                 
                 self.controllerInteraction?.presentController(undoController, nil)
             case .share:
