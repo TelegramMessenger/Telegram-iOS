@@ -218,19 +218,33 @@ private final class AvatarUploadToastScreenComponent: Component {
             let iconSize = CGSize(width: 30.0, height: 30.0)
             let iconProgressInset: CGFloat = 3.0
             
+            let uploadingString = environment.strings.AvatarUpload_StatusUploading
+            let doneString = environment.strings.AvatarUpload_StatusDone
+            
+            var commonPrefixLength = 0
+            for i in 0 ..< min(uploadingString.count, doneString.count) {
+                if uploadingString[uploadingString.index(uploadingString.startIndex, offsetBy: i)] != doneString[doneString.index(doneString.startIndex, offsetBy: i)] {
+                    break
+                }
+                commonPrefixLength = i
+            }
+            
             var textItems: [AnimatedTextComponent.Item] = []
-            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0), isUnbreakable: true, content: .text("Your photo is ")))
+            
+            if commonPrefixLength != 0 {
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0), isUnbreakable: true, content: .text(String(uploadingString[uploadingString.startIndex ..< uploadingString.index(uploadingString.startIndex, offsetBy: commonPrefixLength)]))))
+            }
             if isDone {
-                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), isUnbreakable: true, content: .text("now set.")))
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), isUnbreakable: true, content: .text(String(doneString[doneString.index(doneString.startIndex, offsetBy: commonPrefixLength)...]))))
             } else {
-                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), isUnbreakable: true, content: .text("uploading.")))
+                textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1), isUnbreakable: true, content: .text(String(uploadingString[uploadingString.index(uploadingString.startIndex, offsetBy: commonPrefixLength)...]))))
             }
             
             let actionButtonSize = self.actionButton.update(
                 transition: .immediate,
                 component: AnyComponent(PlainButtonComponent(
                     content: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: "View", font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)))
+                        text: .plain(NSAttributedString(string: environment.strings.AvatarUpload_ViewAction, font: Font.regular(17.0), textColor: environment.theme.list.itemAccentColor.withMultiplied(hue: 0.933, saturation: 0.61, brightness: 1.0)))
                     )),
                     effectAlignment: .center,
                     contentInsets: UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0),

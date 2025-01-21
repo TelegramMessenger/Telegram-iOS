@@ -13770,3 +13770,9 @@ Sorry for the inconvenience.";
 "Gift.Hidden.ChannelText" = "The gift is removed from channel's Page.";
 
 "Gift.Upgrade.AddChannelName" = "Add channel name to the gift";
+
+"AffiliateProgram.OpenBot" = "View %@";
+
+"AvatarUpload.StatusUploading" = "Your photo is uploading.";
+"AvatarUpload.StatusDone" = "Your photo is now set.";
+"AvatarUpload.ViewAction" = "View";

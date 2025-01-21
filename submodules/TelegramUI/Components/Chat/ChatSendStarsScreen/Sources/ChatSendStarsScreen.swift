@@ -2419,7 +2419,9 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             topPeers = Array(topPeers.prefix(3))
         }
         
-        let channelsForPublicReaction = context.engine.peers.channelsForPublicReaction(useLocalCache: true)
+        //TODO:wip-release
+        //let channelsForPublicReaction = context.engine.peers.channelsForPublicReaction(useLocalCache: true)
+        let channelsForPublicReaction: Signal<[EnginePeer], NoError> = .single([])
         let sendAsPeer: Signal<EnginePeer?, NoError> = .single(nil)
         
         return combineLatest(

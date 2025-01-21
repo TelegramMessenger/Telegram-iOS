@@ -1404,7 +1404,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         self.clipsToBounds = true
         
-        self.footerContentNode.shareMediaParameters = { [weak self] in
+        //TODO:wip-release
+        /*self.footerContentNode.shareMediaParameters = { [weak self] in
             guard let self, let playerStatusValue = self.playerStatusValue else {
                 return nil
             }
@@ -1413,7 +1414,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 return nil
             }
-        }
+        }*/
         
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         self.settingsBarButton.addTarget(self, action: #selector(self.settingsButtonPressed), forControlEvents: .touchUpInside)

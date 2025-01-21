@@ -833,7 +833,6 @@ private final class JoinAffiliateProgramScreenComponent: Component {
             self.navigationBackgroundView.update(size: navigationBackgroundFrame.size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
             transition.setFrame(layer: self.navigationBarSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
             
-            //TODO:localize
             var openBotComponents: [AnyComponentWithIdentity<Empty>] = []
             var openBotLeftInset: CGFloat = 12.0
             if case .active = component.mode {
@@ -847,7 +846,7 @@ private final class JoinAffiliateProgramScreenComponent: Component {
                     translation: CGPoint(x: 0.0, y: 1.0)))))
             }
             openBotComponents.append(AnyComponentWithIdentity(id: 1, component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: "View " + component.sourcePeer.compactDisplayTitle, font: Font.medium(15.0), textColor: environment.theme.list.itemInputField.primaryColor))
+                text: .plain(NSAttributedString(string: environment.strings.AffiliateProgram_OpenBot(component.sourcePeer.compactDisplayTitle).string, font: Font.medium(15.0), textColor: environment.theme.list.itemInputField.primaryColor))
             ))))
             openBotComponents.append(AnyComponentWithIdentity(id: 2, component: AnyComponent(TransformContents(
                 content: AnyComponent(BundleIconComponent(

@@ -755,7 +755,10 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     public func openAvatars() {
-        self.accountSettingsController?.openAvatars()
+        if let accountSettingsController = self.accountSettingsController {
+            self.rootTabController?.updateControllerLayout(controller: accountSettingsController)
+            accountSettingsController.openAvatars()
+        }
     }
 }
 

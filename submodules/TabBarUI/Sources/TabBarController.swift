@@ -454,6 +454,35 @@ open class TabBarControllerImpl: ViewController, TabBarController {
         }
     }
     
+    public func updateControllerLayout(controller: ViewController) {
+        guard let layout = self.validLayout else {
+            return
+        }
+        if self.controllers.contains(where: { $0 === controller }) {
+            let currentController = controller
+            currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+            
+            var updatedLayout = layout
+            
+            var tabBarHeight: CGFloat
+            var options: ContainerViewLayoutInsetOptions = []
+            if updatedLayout.metrics.widthClass == .regular {
+                options.insert(.input)
+            }
+            let bottomInset: CGFloat = updatedLayout.insets(options: options).bottom
+            if !updatedLayout.safeInsets.left.isZero {
+                tabBarHeight = 34.0 + bottomInset
+            } else {
+                tabBarHeight = 49.0 + bottomInset
+            }
+            if !self.tabBarControllerNode.tabBarHidden {
+                updatedLayout.intrinsicInsets.bottom = tabBarHeight
+            }
+            
+            currentController.containerLayoutUpdated(updatedLayout, transition: .immediate)
+        }
+    }
+    
     override open func navigationStackConfigurationUpdated(next: [ViewController]) {
         super.navigationStackConfigurationUpdated(next: next)
         for controller in self.controllers {

@@ -674,7 +674,6 @@ private func chatListFilterPresetControllerEntries(context: AccountContext, pres
         resolvedColor = context.peerNameColors.getChatFolderTag(tagColor, dark: presentationData.theme.overallDarkAppearance)
     }
     
-    //TODO:localize
     entries.append(.tagColorHeader(name: state.name, color: resolvedColor, isPremium: isPremium))
     entries.append(.tagColor(colors: context.peerNameColors, currentColor: tagColor, isPremium: isPremium))
     entries.append(.tagColorFooter)
