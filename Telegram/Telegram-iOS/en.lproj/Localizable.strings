@@ -13771,7 +13771,6 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.NoResults" = "No Matching Gifts";
 "PeerInfo.Gifts.NoResults.ViewAll" = "View All Gifts";
 
-
 "Gift.Displayed.ChannelText" = "The gift is now shown on the channel's Page.";
 "Gift.Hidden.ChannelText" = "The gift is removed from the channel's Page.";
 
@@ -13784,7 +13783,7 @@ Sorry for the inconvenience.";
 "AvatarUpload.ViewAction" = "View";
 
 "Notification.StarGift.TitleShort" = "Gift";
-
 "Notification.StarsGift.SentSomeone" = "Someone sent you a gift";
-
 "Notification.StarsGift.UpgradeChannel" = "A gift was turned into a unique collectible";
+
+"Gift.View.ViewTonAddressUrl" = "https://tonviewer.com/%@";

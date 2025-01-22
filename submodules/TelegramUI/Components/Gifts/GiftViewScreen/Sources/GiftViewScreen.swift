@@ -46,6 +46,7 @@ private final class GiftViewSheetContent: CombinedComponent {
     let subject: GiftViewScreen.Subject
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
+    let openAddress: (String) -> Void
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
@@ -64,6 +65,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         subject: GiftViewScreen.Subject,
         cancel: @escaping (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
+        openAddress: @escaping (String) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
@@ -81,6 +83,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.subject = subject
         self.cancel = cancel
         self.openPeer = openPeer
+        self.openAddress = openAddress
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
@@ -1161,6 +1164,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let tableItalicFont = Font.italic(15.0)
                 let tableBoldItalicFont = Font.semiboldItalic(15.0)
                 let tableMonospaceFont = Font.monospace(15.0)
+                let tableLargeMonospaceFont = Font.monospace(16.0)
                 
                 let tableTextColor = theme.list.itemPrimaryTextColor
                 let tableLinkColor = theme.list.itemAccentColor
@@ -1280,11 +1284,26 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 )
                             ))
                         case let .address(address):
+                            func formatAddress(_ str: String) -> String {
+                               var result = str
+                               let middleIndex = result.index(result.startIndex, offsetBy: str.count / 2)
+                               result.insert("\n", at: middleIndex)
+                               return result
+                            }
+                            
                             tableItems.append(.init(
                                 id: "address_owner",
                                 title: strings.Gift_Unique_Owner,
                                 component: AnyComponent(
-                                    MultilineTextComponent(text: .plain(NSAttributedString(string: address, font: tableMonospaceFont, textColor: tableLinkColor)))
+                                    Button(
+                                        content: AnyComponent(
+                                            MultilineTextComponent(text: .plain(NSAttributedString(string: formatAddress(address), font: tableLargeMonospaceFont, textColor: tableLinkColor)), maximumNumberOfLines: 2, lineSpacing: 0.2)
+                                        ),
+                                        action: {
+                                            component.openAddress(address)
+                                            component.cancel(true)
+                                        }
+                                    )
                                 )
                             ))
                         }
@@ -2171,6 +2190,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let context: AccountContext
     let subject: GiftViewScreen.Subject
     let openPeer: (EnginePeer) -> Void
+    let openAddress: (String) -> Void
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
@@ -2187,6 +2207,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         context: AccountContext,
         subject: GiftViewScreen.Subject,
         openPeer: @escaping (EnginePeer) -> Void,
+        openAddress: @escaping (String) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
@@ -2202,6 +2223,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.context = context
         self.subject = subject
         self.openPeer = openPeer
+        self.openAddress = openAddress
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
@@ -2253,6 +2275,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
                             }
                         },
                         openPeer: context.component.openPeer,
+                        openAddress: context.component.openAddress,
                         updateSavedToProfile: context.component.updateSavedToProfile,
                         convertToStars: context.component.convertToStars,
                         openStarsIntro: context.component.openStarsIntro,
@@ -2413,6 +2436,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         self.subject = subject
         
         var openPeerImpl: ((EnginePeer) -> Void)?
+        var openAddressImpl: ((String) -> Void)?
         var updateSavedToProfileImpl: ((Bool) -> Void)?
         var convertToStarsImpl: (() -> Void)?
         var openStarsIntroImpl: (() -> Void)?
@@ -2432,6 +2456,9 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 subject: subject,
                 openPeer: { peerId in
                     openPeerImpl?(peerId)
+                },
+                openAddress: { address in
+                    openAddressImpl?(address)
                 },
                 updateSavedToProfile: { added in
                     updateSavedToProfileImpl?(added)
@@ -2493,6 +2520,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        openAddressImpl = { [weak self] address in
+            if let navigationController = self?.navigationController as? NavigationController {
+                Queue.mainQueue().after(0.3) {
+                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Gift_View_ViewTonAddressUrl(address).string, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                }
+            }
+        }
         updateSavedToProfileImpl = { [weak self] added in
             guard let self, let arguments = self.subject.arguments, let reference = arguments.reference else {
                 return
