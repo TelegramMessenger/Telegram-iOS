@@ -570,7 +570,11 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 }
-                                title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                if item.message.id.peerId.isTelegramNotifications {
+                                    title = item.presentationData.strings.Notification_StarGift_TitleShort
+                                } else {
+                                    title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
+                                }
                                 text =  isStoryEntity ? "**Collectible #\(uniqueGift.number)**" : "**\(uniqueGift.title) #\(uniqueGift.number)**"
                                 ribbonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_Gift
                                 buttonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_View
