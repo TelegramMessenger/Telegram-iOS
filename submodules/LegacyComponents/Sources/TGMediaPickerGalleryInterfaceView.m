@@ -281,12 +281,7 @@
                 _selectedPhotosView.hidden = true;
                 [_wrapperView addSubview:_selectedPhotosView];
             }
-            
-            _photoCounterButton = [[TGMediaPickerPhotoCounterButton alloc] initWithFrame:CGRectMake(0, 0, 64, 38)];
-            [_photoCounterButton addTarget:self action:@selector(photoCounterButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            _photoCounterButton.userInteractionEnabled = false;
-            [_wrapperView addSubview:_photoCounterButton];
-            
+                        
             _selectionChangedDisposable = [[_selectionContext selectionChangedSignal] startStrictWithNext:^(id next)
                                            {
                 __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
@@ -428,6 +423,11 @@
         
         _headerWrapperView = [[UIView alloc] init];
         [_wrapperView addSubview:_headerWrapperView];
+        
+        _photoCounterButton = [[TGMediaPickerPhotoCounterButton alloc] initWithFrame:CGRectMake(0, 0, 64, 38)];
+        [_photoCounterButton addTarget:self action:@selector(photoCounterButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+        _photoCounterButton.userInteractionEnabled = false;
+        [_wrapperView addSubview:_photoCounterButton];
         
         TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : TGPhotoEditorDoneButtonSend;
         
@@ -1631,7 +1631,11 @@
 {
     UIView *view = [super hitTest:point withEvent:event];
     
-    if (_coverTitleLabel.hidden) {
+    bool editingCover = false;
+    if (_coverTitleLabel != nil && !_coverTitleLabel.isHidden) {
+        editingCover = true;
+    }
+    if (!editingCover) {
         if (view == _photoCounterButton
             || view == _checkButton
             || view == _muteButton
@@ -2007,9 +2011,9 @@
         {
             [UIView performWithoutAnimation:^
             {
-                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56 - _safeAreaInset.right, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 22 - _safeAreaInset.bottom - (hasHeaderView ? 64.0 : 0.0), 64, 38);
+                _photoCounterButton.frame = CGRectMake(screenEdges.right - 56 - _safeAreaInset.right, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - 40 - _safeAreaInset.bottom - (hasHeaderView ? 46.0 : 0.0), 64, 38);
                 
-                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 36 - _safeAreaInset.bottom - (hasHeaderView ? 64.0 : 0.0), self.frame.size.width - 4 * 2 - _safeAreaInset.right, photosViewSize);
+                _selectedPhotosView.frame = CGRectMake(screenEdges.left + 4, screenEdges.bottom - TGPhotoEditorToolbarSize - [_captionMixin.inputPanel baseHeight] - photosViewSize - 54 - _safeAreaInset.bottom - (hasHeaderView ? 46.0 : 0.0), self.frame.size.width - 4 * 2 - _safeAreaInset.right, photosViewSize);
             }];
             
             _landscapeToolbarView.frame = CGRectMake(_landscapeToolbarView.frame.origin.x, screenEdges.top, TGPhotoEditorToolbarSize, self.frame.size.height);

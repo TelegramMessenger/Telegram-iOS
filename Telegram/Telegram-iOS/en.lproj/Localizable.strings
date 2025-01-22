@@ -13727,6 +13727,9 @@ Sorry for the inconvenience.";
 "Gift.View.HiddenInfo.Channel" = "This item is hidden from visitors of your channel.";
 "Gift.View.HiddenInfoShow.Channel" = "This item is hidden from visitors of your channel. [Show >]()";
 
+"Gift.View.UniqueHiddenInfo" = "This gift is not displayed on your page.";
+"Gift.View.UniqueHiddenInfo.Channel" = "This item is not displayed in your channel's Gifts.";
+
 "Gift.View.KeepOrConvertDescription.Channel" = "Your channel can keep this gift in your Profile or convert it to %@. [More About Stars >]()";
 "Gift.View.KeepUpgradeOrConvertDescription.Channel" = "Your channel can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
 

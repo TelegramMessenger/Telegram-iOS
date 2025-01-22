@@ -1843,7 +1843,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                 } else if let upgradeStars, upgradeStars > 0 && !upgraded {
                     descriptionText = isChannelGift ? strings.Gift_View_HiddenInfoShow_Channel : strings.Gift_View_HiddenInfoShow
                 } else {
-                    descriptionText = isChannelGift ? strings.Gift_View_HiddenInfo_Channel : strings.Gift_View_HiddenInfo
+                    if let _ = uniqueGift {
+                        descriptionText = isChannelGift ? strings.Gift_View_UniqueHiddenInfo_Channel : strings.Gift_View_UniqueHiddenInfo
+                    } else {
+                        descriptionText = isChannelGift ? strings.Gift_View_HiddenInfo_Channel : strings.Gift_View_HiddenInfo
+                    }
                 }
                 
                 let textFont = Font.regular(13.0)
