@@ -144,6 +144,13 @@ public extension TelegramEngine {
                 return peers.map(EnginePeer.init)
             }
         }
+        
+        public func channelsForPublicReaction(useLocalCache: Bool) -> Signal<[EnginePeer], NoError> {
+            return _internal_channelsForPublicReaction(account: self.account, useLocalCache: useLocalCache)
+            |> map { peers -> [EnginePeer] in
+                return peers.map(EnginePeer.init)
+            }
+        }
 
         public func channelAddressNameAssignmentAvailability(peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
             return _internal_channelAddressNameAssignmentAvailability(account: self.account, peerId: peerId)

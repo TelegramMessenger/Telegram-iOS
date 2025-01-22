@@ -583,21 +583,25 @@ func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChann
 
 final class CachedStorySendAsPeers: Codable {
     public let peerIds: [PeerId]
+    public let timestamp: Double
     
-    public init(peerIds: [PeerId]) {
+    public init(peerIds: [PeerId], timestamp: Double) {
         self.peerIds = peerIds
+        self.timestamp = timestamp
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.peerIds = try container.decode([Int64].self, forKey: "l").map(PeerId.init)
+        self.timestamp = try container.decodeIfPresent(Double.self, forKey: "ts") ?? 0.0
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
         try container.encode(self.peerIds.map { $0.toInt64() }, forKey: "l")
+        try container.encode(self.timestamp, forKey: "ts")
     }
 }
 
@@ -644,7 +648,7 @@ func _internal_channelsForStories(account: Account) -> Signal<[Peer], NoError> {
                     }
                 }
                 
-                if let entry = CodableEntry(CachedStorySendAsPeers(peerIds: peers.map(\.id))) {
+                if let entry = CodableEntry(CachedStorySendAsPeers(peerIds: peers.map(\.id), timestamp: CFAbsoluteTimeGetCurrent())) {
                     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.storySendAsPeerIds, key: ValueBoxKey(length: 0)), entry: entry)
                 }
                 
@@ -654,6 +658,77 @@ func _internal_channelsForStories(account: Account) -> Signal<[Peer], NoError> {
         
         if let cachedPeers = cachedPeers {
             return .single(cachedPeers) |> then(remote)
+        } else {
+            return remote
+        }
+    }
+}
+
+func _internal_channelsForPublicReaction(account: Account, useLocalCache: Bool) -> Signal<[Peer], NoError> {
+    let accountPeerId = account.peerId
+    return account.postbox.transaction { transaction -> ([Peer], Double)? in
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.channelsForPublicReaction, key: ValueBoxKey(length: 0)))?.get(CachedStorySendAsPeers.self) {
+            return (entry.peerIds.compactMap(transaction.getPeer), entry.timestamp)
+        } else {
+            return nil
+        }
+    }
+    |> mapToSignal { cachedPeers in
+        let remote: Signal<[Peer], NoError> = account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: 0))
+        |> retryRequest
+        |> mapToSignal { result -> Signal<[Peer], NoError> in
+            return account.postbox.transaction { transaction -> [Peer] in
+                let chats: [Api.Chat]
+                let parsedPeers: AccumulatedPeers
+                switch result {
+                case let .chats(apiChats):
+                    chats = apiChats
+                case let .chatsSlice(_, apiChats):
+                    chats = apiChats
+                }
+                parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                var peers: [Peer] = []
+                for chat in chats {
+                    if let peer = transaction.getPeer(chat.peerId) {
+                        peers.append(peer)
+                        
+                        if case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _, _, _, _, _, _, _) = chat, let participantsCount = participantsCount {
+                            transaction.updatePeerCachedData(peerIds: Set([peer.id]), update: { _, current in
+                                var current = current as? CachedChannelData ?? CachedChannelData()
+                                var participantsSummary = current.participantsSummary
+                                
+                                participantsSummary.memberCount = participantsCount
+                                
+                                current = current.withUpdatedParticipantsSummary(participantsSummary)
+                                return current
+                            })
+                        }
+                    }
+                }
+                
+                if let entry = CodableEntry(CachedStorySendAsPeers(peerIds: peers.map(\.id), timestamp: CFAbsoluteTimeGetCurrent())) {
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.channelsForPublicReaction, key: ValueBoxKey(length: 0)), entry: entry)
+                }
+                
+                return peers
+            }
+        }
+        
+        if useLocalCache {
+            if let cachedPeers {
+                return .single(cachedPeers.0)
+            } else {
+                return .single([])
+            }
+        }
+        
+        if let cachedPeers {
+            if CFAbsoluteTimeGetCurrent() < cachedPeers.1 + 5 * 60 {
+                return .single(cachedPeers.0)
+            } else {
+                return .single(cachedPeers.0) |> then(remote)
+            }
         } else {
             return remote
         }

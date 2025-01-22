@@ -33,6 +33,7 @@ import WallpaperPreviewMedia
 import TextNodeWithEntities
 import RangeSet
 import GiftItemComponent
+import MediaResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -444,6 +445,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     public let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     
+    private var timestampContainerView: UIView?
+    private var timestampMaskView: UIImageView?
+    private var videoTimestampBackgroundLayer: SimpleLayer?
+    private var videoTimestampForegroundLayer: SimpleLayer?
+    
     private var extendedMediaOverlayNode: ExtendedMediaOverlayNode?
         
     private var context: AccountContext?
@@ -619,6 +625,13 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             if let statusNode = strongSelf.statusNode {
                 transition.updateAlpha(node: statusNode, alpha: 1.0 - factor)
             }
+        }
+        
+        self.imageNode.imageUpdated = { [weak self] image in
+            guard let self else {
+                return
+            }
+            self.timestampMaskView?.image = image
         }
     }
     
@@ -1936,6 +1949,96 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     videoNode.canAttachContent = false
                                 }
                             }
+                            
+                            //TODO:wip-release
+                            /*var videoTimestamp: Int32?
+                            var storedVideoTimestamp: Int32?
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                                    videoTimestamp = attribute.timestamp
+                                } else if let attribute = attribute as? DerivedDataMessageAttribute {
+                                    if let value = attribute.data["mps"]?.get(MediaPlaybackStoredState.self) {
+                                        storedVideoTimestamp = Int32(value.timestamp)
+                                    }
+                                }
+                            }
+                            if let storedVideoTimestamp {
+                                videoTimestamp = storedVideoTimestamp
+                            }
+                            
+                            if let videoTimestamp, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
+                                let timestampContainerView: UIView
+                                if let current = strongSelf.timestampContainerView {
+                                    timestampContainerView = current
+                                } else {
+                                    timestampContainerView = UIView()
+                                    timestampContainerView.isUserInteractionEnabled = false
+                                    strongSelf.timestampContainerView = timestampContainerView
+                                    strongSelf.view.addSubview(timestampContainerView)
+                                }
+                                
+                                let timestampMaskView: UIImageView
+                                if let current = strongSelf.timestampMaskView {
+                                    timestampMaskView = current
+                                } else {
+                                    timestampMaskView = UIImageView()
+                                    strongSelf.timestampMaskView = timestampMaskView
+                                    timestampContainerView.mask = timestampMaskView
+                                    
+                                    timestampMaskView.image = strongSelf.imageNode.image
+                                }
+                                
+                                let videoTimestampBackgroundLayer: SimpleLayer
+                                if let current = strongSelf.videoTimestampBackgroundLayer {
+                                    videoTimestampBackgroundLayer = current
+                                } else {
+                                    videoTimestampBackgroundLayer = SimpleLayer()
+                                    strongSelf.videoTimestampBackgroundLayer = videoTimestampBackgroundLayer
+                                    timestampContainerView.layer.addSublayer(videoTimestampBackgroundLayer)
+                                }
+                                
+                                let videoTimestampForegroundLayer: SimpleLayer
+                                if let current = strongSelf.videoTimestampForegroundLayer {
+                                    videoTimestampForegroundLayer = current
+                                } else {
+                                    videoTimestampForegroundLayer = SimpleLayer()
+                                    strongSelf.videoTimestampForegroundLayer = videoTimestampForegroundLayer
+                                    timestampContainerView.layer.addSublayer(videoTimestampForegroundLayer)
+                                }
+                                
+                                videoTimestampBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.5).cgColor
+                                videoTimestampForegroundLayer.backgroundColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.accentControlColor.cgColor : presentationData.theme.theme.chat.message.outgoing.accentControlColor.cgColor
+                                
+                                timestampContainerView.frame = imageFrame
+                                timestampMaskView.frame = imageFrame
+                                
+                                let videoTimestampBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: imageFrame.height - 3.0), size: CGSize(width: imageFrame.width, height: 3.0))
+                                videoTimestampBackgroundLayer.frame = videoTimestampBackgroundFrame
+                                
+                                var fraction = Double(videoTimestamp) / duration
+                                fraction = max(0.0, min(1.0, fraction))
+                                
+                                let foregroundWidth = round(fraction * videoTimestampBackgroundFrame.width)
+                                let videoTimestampForegroundFrame = CGRect(origin: CGPoint(x: videoTimestampBackgroundFrame.minX, y: videoTimestampBackgroundFrame.minY), size: CGSize(width: foregroundWidth, height: videoTimestampBackgroundFrame.height))
+                                videoTimestampForegroundLayer.frame = videoTimestampForegroundFrame
+                            } else {
+                                if let timestampContainerView = strongSelf.timestampContainerView {
+                                    strongSelf.timestampContainerView = nil
+                                    timestampContainerView.removeFromSuperview()
+                                }
+                                if let timestampMaskView = strongSelf.timestampMaskView {
+                                    strongSelf.timestampMaskView = nil
+                                    timestampMaskView.removeFromSuperview()
+                                }
+                                if let videoTimestampBackgroundLayer = strongSelf.videoTimestampBackgroundLayer {
+                                    strongSelf.videoTimestampBackgroundLayer = nil
+                                    videoTimestampBackgroundLayer.removeFromSuperlayer()
+                                }
+                                if let videoTimestampForegroundLayer = strongSelf.videoTimestampForegroundLayer {
+                                    strongSelf.videoTimestampForegroundLayer = nil
+                                    videoTimestampForegroundLayer.removeFromSuperlayer()
+                                }
+                            }*/
                             
                             if let animatedStickerNode = strongSelf.animatedStickerNode {
                                 animatedStickerNode.frame = imageFrame

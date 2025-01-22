@@ -363,7 +363,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentOffsetUpdated = f
     }
     
-    private func calculateMetrics(size: CGSize) -> (topInset: CGFloat, itemWidth: CGFloat) {
+    private func calculateMetrics(size: CGSize, additionalBottomInset: CGFloat) -> (topInset: CGFloat, itemWidth: CGFloat) {
         let itemCount = self.entries.count
         
         let itemInsets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 12.0)
@@ -384,7 +384,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         let initiallyRevealedRowCount = min(minimallyRevealedRowCount, CGFloat(rowCount))
         
-        let gridTopInset = max(0.0, size.height - floor(initiallyRevealedRowCount * itemWidth) - 14.0)
+        let gridTopInset = max(0.0, size.height - floor(initiallyRevealedRowCount * itemWidth) - 14.0 - additionalBottomInset)
         return (gridTopInset, itemWidth)
     }
     
@@ -572,7 +572,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             self.overrideGridOffsetTransition = nil
         }
         
-        let (gridTopInset, itemWidth) = self.calculateMetrics(size: size)
+        let (gridTopInset, itemWidth) = self.calculateMetrics(size: size, additionalBottomInset: bottomInset)
         
         var scrollToItem: GridNodeScrollToItem?
         if let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {

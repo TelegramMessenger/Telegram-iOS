@@ -19,6 +19,7 @@ swift_library(
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",
         "//submodules/FFMpegBinding",
         "//submodules/ManagedFile",
+        "//submodules/AppBundle",
     ],
     visibility = [
         "//visibility:public",

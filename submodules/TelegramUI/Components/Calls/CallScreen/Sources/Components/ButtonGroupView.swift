@@ -86,7 +86,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         return result
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, strings: PresentationStrings, buttons: [Button], notices: [Notice], transition: ComponentTransition) -> CGFloat {
+    func update(size: CGSize, insets: UIEdgeInsets, minWidth: CGFloat, controlsHidden: Bool, displayClose: Bool, strings: PresentationStrings, buttons: [Button], notices: [Notice], isAnimatedOutToGroupCall: Bool, transition: ComponentTransition) -> CGFloat {
         self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
@@ -95,7 +95,9 @@ final class ButtonGroupView: OverlayMaskContainerView {
         let buttonNoticeSpacing: CGFloat = 16.0
         let controlsHiddenNoticeSpacing: CGFloat = 0.0
         var nextNoticeY: CGFloat
-        if controlsHidden {
+        if isAnimatedOutToGroupCall {
+            nextNoticeY = size.height + 4.0
+        } else if controlsHidden {
             nextNoticeY = size.height - insets.bottom - 4.0
         } else {
             nextNoticeY = size.height - insets.bottom - 52.0 - buttonSize - buttonNoticeSpacing
@@ -130,9 +132,11 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 }
             }
             let noticeSize = noticeView.update(icon: notice.icon, text: notice.text, constrainedWidth: size.width - insets.left * 2.0 - 16.0 * 2.0, transition: noticeTransition)
-            let noticeFrame = CGRect(origin: CGPoint(x: floor((size.width - noticeSize.width) * 0.5), y: nextNoticeY - noticeSize.height), size: noticeSize)
+            let noticeFrame = CGRect(origin: CGPoint(x: floor((size.width - noticeSize.width) * 0.5), y: isAnimatedOutToGroupCall ? nextNoticeY : (nextNoticeY - noticeSize.height)), size: noticeSize)
             noticesHeight += noticeSize.height
-            nextNoticeY -= noticeSize.height + noticeSpacing
+            if !isAnimatedOutToGroupCall {
+                nextNoticeY -= noticeSize.height + noticeSpacing
+            }
             
             noticeTransition.setFrame(view: noticeView, frame: noticeFrame)
             if animateIn, !transition.animation.isImmediate {
@@ -141,6 +145,9 @@ final class ButtonGroupView: OverlayMaskContainerView {
         }
         if noticesHeight != 0.0 {
             noticesHeight += 5.0
+        }
+        if isAnimatedOutToGroupCall {
+            noticesHeight = 0.0
         }
         var removedNoticeIds: [AnyHashable] = []
         for (id, noticeView) in self.noticeViews {
@@ -161,7 +168,7 @@ final class ButtonGroupView: OverlayMaskContainerView {
         
         let buttonY: CGFloat
         let resultHeight: CGFloat
-        if controlsHidden {
+        if controlsHidden || isAnimatedOutToGroupCall {
             buttonY = size.height + 12.0
             resultHeight = insets.bottom + 4.0 + noticesHeight
         } else {

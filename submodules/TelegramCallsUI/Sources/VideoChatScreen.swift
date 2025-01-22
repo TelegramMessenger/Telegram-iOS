@@ -114,6 +114,8 @@ final class VideoChatScreenComponent: Component {
         var focusedSpeakerAutoSwitchDeadline: Double = 0.0
         var isTwoColumnSidebarHidden: Bool = false
         
+        var isAnimatedOutFromPrivateCall: Bool = false
+        
         let inviteDisposable = MetaDisposable()
         let currentAvatarMixin = Atomic<TGMediaAvatarMenuMixin?>(value: nil)
         let updateAvatarDisposable = MetaDisposable()
@@ -162,6 +164,76 @@ final class VideoChatScreenComponent: Component {
             
             self.verticalPanState = nil
             self.state?.updated(transition: .spring(duration: 0.5))
+        }
+        
+        func animateIn(sourceCallController: CallController) {
+            let sourceCallControllerView = sourceCallController.view
+            var isAnimationFinished = false
+            let animateOutData = sourceCallController.animateOutToGroupChat(completion: { [weak sourceCallControllerView] in
+                isAnimationFinished = true
+                sourceCallControllerView?.removeFromSuperview()
+            })
+            
+            var expandedPeer: (id: EnginePeer.Id, isPresentation: Bool)?
+            if let animateOutData, animateOutData.incomingVideoLayer != nil {
+                if let members = self.members, let participant = members.participants.first(where: { $0.peer.id == animateOutData.incomingPeerId }) {
+                    if let _ = participant.videoDescription {
+                        expandedPeer = (participant.peer.id, false)
+                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
+                    }
+                }
+            }
+            
+            self.isAnimatedOutFromPrivateCall = true
+            self.verticalPanState = nil
+            
+            self.state?.updated(transition: .immediate)
+            
+            if !isAnimationFinished {
+                if let participantsView = self.participants.view {
+                    self.containerView.insertSubview(sourceCallController.view, belowSubview: participantsView)
+                } else {
+                    self.containerView.addSubview(sourceCallController.view)
+                }
+            }
+            
+            let transition: ComponentTransition = .spring(duration: 0.4)
+            let alphaTransition: ComponentTransition = .easeInOut(duration: 0.25)
+            
+            self.isAnimatedOutFromPrivateCall = false
+            self.expandedParticipantsVideoState = nil
+            self.state?.updated(transition: transition)
+            
+            if let animateOutData, let expandedPeer, let incomingVideoLayer = animateOutData.incomingVideoLayer, let participantsView = self.participants.view as? VideoChatParticipantsComponent.View, let targetFrame = participantsView.itemFrame(peerId: expandedPeer.id, isPresentation: expandedPeer.isPresentation) {
+                if let incomingVideoPlaceholder = animateOutData.incomingVideoPlaceholder {
+                    participantsView.updateItemPlaceholder(peerId: expandedPeer.id, isPresentation: expandedPeer.isPresentation, placeholder: incomingVideoPlaceholder)
+                }
+                
+                let incomingVideoLayerFrame = incomingVideoLayer.convert(incomingVideoLayer.frame, to: sourceCallControllerView?.layer)
+                
+                let targetContainer = SimpleLayer()
+                targetContainer.masksToBounds = true
+                targetContainer.backgroundColor = UIColor.blue.cgColor
+                targetContainer.cornerRadius = 10.0
+                
+                self.containerView.layer.insertSublayer(targetContainer, above: participantsView.layer)
+                
+                targetContainer.frame = incomingVideoLayerFrame
+                
+                targetContainer.addSublayer(incomingVideoLayer)
+                incomingVideoLayer.position = CGRect(origin: CGPoint(), size: incomingVideoLayerFrame.size).center
+                let sourceFitScale = max(incomingVideoLayerFrame.width / incomingVideoLayerFrame.width, incomingVideoLayerFrame.height / incomingVideoLayerFrame.height)
+                incomingVideoLayer.transform = CATransform3DMakeScale(sourceFitScale, sourceFitScale, 1.0)
+                
+                let targetFrame = participantsView.convert(targetFrame, to: self)
+                let targetFitScale = min(incomingVideoLayerFrame.width / targetFrame.width, incomingVideoLayerFrame.height / targetFrame.height)
+                
+                transition.setFrame(layer: targetContainer, frame: targetFrame, completion: { [weak targetContainer] _ in
+                    targetContainer?.removeFromSuperlayer()
+                })
+                transition.setTransform(layer: incomingVideoLayer, transform: CATransform3DMakeScale(targetFitScale, targetFitScale, 1.0))
+                alphaTransition.setAlpha(layer: targetContainer, alpha: 0.0)
+            }
         }
         
         func animateOut(completion: @escaping () -> Void) {
@@ -1027,30 +1099,32 @@ final class VideoChatScreenComponent: Component {
                     self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                 })
                 
-                self.memberEventsDisposable = (component.call.memberEvents
-                |> deliverOnMainQueue).start(next: { [weak self] event in
-                    guard let self, let members = self.members, let component = self.component, let environment = self.environment else {
-                        return
-                    }
-                    if event.joined {
-                        var displayEvent = false
-                        if case let .channel(channel) = self.peer, case .broadcast = channel.info {
-                            displayEvent = false
+                if component.call.peerId != nil {
+                    self.memberEventsDisposable = (component.call.memberEvents
+                    |> deliverOnMainQueue).start(next: { [weak self] event in
+                        guard let self, let members = self.members, let component = self.component, let environment = self.environment else {
+                            return
                         }
-                        if members.totalCount < 40 {
-                            displayEvent = true
-                        } else if event.peer.isVerified {
-                            displayEvent = true
-                        } else if event.isContact || event.isInChatList {
-                            displayEvent = true
+                        if event.joined {
+                            var displayEvent = false
+                            if case let .channel(channel) = self.peer, case .broadcast = channel.info {
+                                displayEvent = false
+                            }
+                            if members.totalCount < 40 {
+                                displayEvent = true
+                            } else if event.peer.isVerified {
+                                displayEvent = true
+                            } else if event.isContact || event.isInChatList {
+                                displayEvent = true
+                            }
+                            
+                            if displayEvent {
+                                let text = environment.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                                self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: event.peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
+                            }
                         }
-                        
-                        if displayEvent {
-                            let text = environment.strings.VoiceChat_PeerJoinedText(event.peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
-                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: event.peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
-                        }
-                    }
-                })
+                    })
+                }
             }
             
             self.isPresentedValue.set(environment.isVisible)
@@ -1210,6 +1284,7 @@ final class VideoChatScreenComponent: Component {
                     self.containerView.addSubview(navigationLeftButtonView)
                 }
                 transition.setFrame(view: navigationLeftButtonView, frame: navigationLeftButtonFrame)
+                alphaTransition.setAlpha(view: navigationLeftButtonView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
             }
             
             let navigationRightButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - sideInset - navigationButtonAreaWidth + floor((navigationButtonAreaWidth - navigationRightButtonSize.width) * 0.5), y: topInset + floor((navigationBarHeight - navigationRightButtonSize.height) * 0.5)), size: navigationRightButtonSize)
@@ -1218,6 +1293,7 @@ final class VideoChatScreenComponent: Component {
                     self.containerView.addSubview(navigationRightButtonView)
                 }
                 transition.setFrame(view: navigationRightButtonView, frame: navigationRightButtonFrame)
+                alphaTransition.setAlpha(view: navigationRightButtonView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
             }
             
             if isTwoColumnLayout {
@@ -1300,10 +1376,11 @@ final class VideoChatScreenComponent: Component {
                 maxTitleWidth -= 110.0
             }
             
+            //TODO:localize
             let titleSize = self.title.update(
                 transition: transition,
                 component: AnyComponent(VideoChatTitleComponent(
-                    title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? " ",
+                    title: self.callState?.title ?? self.peer?.debugDisplayTitle ?? "Group Call",
                     status: idleTitleStatusText,
                     isRecording: self.callState?.recordingStartTimestamp != nil,
                     strings: environment.strings,
@@ -1350,6 +1427,7 @@ final class VideoChatScreenComponent: Component {
                     self.containerView.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
+                alphaTransition.setAlpha(view: titleView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
             }
             
             let areButtonsCollapsed: Bool
@@ -1411,6 +1489,10 @@ final class VideoChatScreenComponent: Component {
             let actionMicrophoneButtonSpacing = min(effectiveMaxActionMicrophoneButtonSpacing, floor(remainingButtonsSpace * 0.5))
             
             var collapsedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - collapsedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - 48.0 - environment.safeInsets.bottom - collapsedMicrophoneButtonDiameter), size: CGSize(width: collapsedMicrophoneButtonDiameter, height: collapsedMicrophoneButtonDiameter))
+            if self.isAnimatedOutFromPrivateCall {
+                collapsedMicrophoneButtonFrame.origin.y = availableSize.height + 48.0
+            }
+            
             var expandedMicrophoneButtonFrame: CGRect = CGRect(origin: CGPoint(x: floor((availableSize.width - expandedMicrophoneButtonDiameter) * 0.5), y: availableSize.height - environment.safeInsets.bottom - expandedMicrophoneButtonDiameter - 12.0), size: CGSize(width: expandedMicrophoneButtonDiameter, height: expandedMicrophoneButtonDiameter))
             
             var isMainColumnHidden = false
@@ -1615,6 +1697,9 @@ final class VideoChatScreenComponent: Component {
                 transition.setFrame(view: participantsView, frame: participantsFrame)
                 var participantsAlpha: CGFloat = 1.0
                 if let callState = self.callState, callState.scheduleTimestamp != nil {
+                    participantsAlpha = 0.0
+                }
+                if self.isAnimatedOutFromPrivateCall {
                     participantsAlpha = 0.0
                 }
                 alphaTransition.setAlpha(view: participantsView, alpha: participantsAlpha)
@@ -1919,12 +2004,16 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
     private var isAnimatingDismiss: Bool = false
     
     private var idleTimerExtensionDisposable: Disposable?
+    
+    private var sourceCallController: CallController?
 
     public init(
         initialData: InitialData,
-        call: PresentationGroupCall
+        call: PresentationGroupCall,
+        sourceCallController: CallController?
     ) {
         self.call = call
+        self.sourceCallController = sourceCallController
 
         let theme = customizeDefaultDarkPresentationTheme(
             theme: defaultDarkPresentationTheme,
@@ -1964,7 +2053,12 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
             self.isDismissed = false
             
             if let componentView = self.node.hostView.componentView as? VideoChatScreenComponent.View {
-                componentView.animateIn()
+                if let sourceCallController = self.sourceCallController {
+                    self.sourceCallController = nil
+                    componentView.animateIn(sourceCallController: sourceCallController)
+                } else {
+                    componentView.animateIn()
+                }
             }
         }
         

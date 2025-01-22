@@ -1887,6 +1887,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 genericCallContext.setRequestedVideoChannels(self.suspendVideoChannelRequests ? [] : self.requestedVideoChannels)
                 self.connectPendingVideoSubscribers()
                 
+                if let videoCapturer = self.videoCapturer {
+                    genericCallContext.requestVideo(videoCapturer)
+                }
+                
                 if case let .call(callContext) = genericCallContext {
                     var lastTimestamp: Double?
                     self.hasActiveIncomingDataDisposable?.dispose()
@@ -2335,6 +2339,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 } else {
                     peerView = .single(nil)
                 }
+                
+                self.updateLocalVideoState()
                 
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,

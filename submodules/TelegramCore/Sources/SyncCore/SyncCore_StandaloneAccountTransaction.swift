@@ -113,10 +113,10 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                     break
                 }
             }
-            var derivedData: DerivedDataMessageAttribute?
+            var previousDerivedData: DerivedDataMessageAttribute?
             for attribute in previous {
                 if let attribute = attribute as? DerivedDataMessageAttribute {
-                    derivedData = attribute
+                    previousDerivedData = attribute
                     break
                 }
             }
@@ -134,17 +134,16 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                     updated.append(audioTranscription)
                 }
             }
-            if let derivedData = derivedData {
+            if let previousDerivedData {
                 var found = false
                 for i in 0 ..< updated.count {
-                    if let attribute = updated[i] as? DerivedDataMessageAttribute {
-                        updated[i] = derivedData
+                    if let _ = updated[i] as? DerivedDataMessageAttribute {
                         found = true
                         break
                     }
                 }
                 if !found {
-                    updated.append(derivedData)
+                    updated.append(previousDerivedData)
                 }
             }
         },

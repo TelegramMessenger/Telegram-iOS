@@ -11,6 +11,7 @@ import MultilineTextComponent
 import TelegramPresentationData
 import PeerListItemComponent
 import ContextUI
+import CallScreen
 
 final class VideoChatParticipantsComponent: Component {
     struct Layout: Equatable {
@@ -1616,6 +1617,27 @@ final class VideoChatParticipantsComponent: Component {
             }
         }
         
+        func itemFrame(peerId: EnginePeer.Id, isPresentation: Bool) -> CGRect? {
+            for (key, itemView) in self.gridItemViews {
+                if key.id == peerId && key.isPresentation == isPresentation {
+                    if let itemComponentView = itemView.view.view {
+                        return itemComponentView.convert(itemComponentView.bounds, to: self)
+                    }
+                }
+            }
+            return nil
+        }
+        
+        func updateItemPlaceholder(peerId: EnginePeer.Id, isPresentation: Bool, placeholder: VideoSource.Output) {
+            for (key, itemView) in self.gridItemViews {
+                if key.id == peerId && key.isPresentation == isPresentation {
+                    if let itemComponentView = itemView.view.view as? VideoChatParticipantVideoComponent.View {
+                        itemComponentView.updatePlaceholder(placeholder: placeholder)
+                    }
+                }
+            }
+        }
+        
         func update(component: VideoChatParticipantsComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -1854,7 +1876,7 @@ final class VideoChatParticipantsComponent: Component {
                         return UIColor(white: 1.0, alpha: 1.0)
                     } else {
                         let step: CGFloat = CGFloat(i - firstStep) / CGFloat(numSteps - firstStep - 1)
-                        let value: CGFloat = 1.0 - bezierPoint(0.42, 0.0, 0.58, 1.0, step)
+                        let value: CGFloat = 1.0 - Display.bezierPoint(0.42, 0.0, 0.58, 1.0, step)
                         return UIColor(white: 0.0, alpha: baseGradientAlpha * value)
                     }
                 }

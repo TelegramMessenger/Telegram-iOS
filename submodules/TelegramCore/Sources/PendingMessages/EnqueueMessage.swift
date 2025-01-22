@@ -252,6 +252,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             return true
         case _ as EffectMessageAttribute:
             return true
+        case _ as ForwardVideoTimestampAttribute:
+            return true
         default:
             return false
         }
@@ -948,6 +950,12 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                     }
                                 } else {
                                     forwardInfo = nil
+                                }
+                            }
+                            
+                            for attribute in requestedAttributes {
+                                if attribute is ForwardVideoTimestampAttribute {
+                                    attributes.append(attribute)
                                 }
                             }
                         } else {

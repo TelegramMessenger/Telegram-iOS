@@ -1404,6 +1404,18 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         self.clipsToBounds = true
         
+        //TODO:wip-release
+        /*self.footerContentNode.shareMediaParameters = { [weak self] in
+            guard let self, let playerStatusValue = self.playerStatusValue else {
+                return nil
+            }
+            if playerStatusValue.duration >= 60.0 * 10.0 {
+                return ShareControllerSubject.MediaParameters(startAtTimestamp: Int32(playerStatusValue.timestamp))
+            } else {
+                return nil
+            }
+        }*/
+        
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         self.settingsBarButton.addTarget(self, action: #selector(self.settingsButtonPressed), forControlEvents: .touchUpInside)
         
@@ -1842,7 +1854,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     disablePictureInPicture = true
                 } else if Namespaces.Message.allNonRegular.contains(message.id.namespace) || message.id.namespace == Namespaces.Message.Local {
                     disablePictureInPicture = true
-                } else {
+                }
+                
+                if message.paidContent == nil {
                     let throttledSignal = videoNode.status
                     |> mapToThrottled { next -> Signal<MediaPlayerStatus?, NoError> in
                         return .single(next) |> then(.complete() |> delay(0.5, queue: Queue.concurrentDefaultQueue()))
@@ -2388,6 +2402,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 } else if let _ = item.content as? WebEmbedVideoContent {
                     if let time = item.timecode {
                         seek = .timecode(time)
+                    }
+                }
+                
+                if let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo {
+                    for attribute in message.attributes {
+                        if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                            seek = .timecode(Double(attribute.timestamp))
+                        }
                     }
                 }
             }

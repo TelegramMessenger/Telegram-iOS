@@ -1,0 +1,11 @@
+include "MediaId.fbs";
+include "VideoThumbnail.fbs";
+
+namespace TelegramCore;
+
+table TelegramMediaFile {
+    id: MediaId;
+    videoThumbnails: [VideoThumbnail];
+}
+
+root_type TelegramMediaFile;

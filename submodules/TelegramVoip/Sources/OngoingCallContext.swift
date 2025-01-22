@@ -7,6 +7,12 @@ import TelegramUIPreferences
 import TgVoip
 import TgVoipWebrtc
 
+#if os(iOS)
+import UIKit
+import AppBundle
+import Accelerate
+#endif
+
 private func debugUseLegacyVersionForReflectors() -> Bool {
     #if DEBUG && false
     return true
@@ -407,8 +413,179 @@ extension OngoingCallThreadLocalContext: OngoingCallThreadLocalContextProtocol {
     }
 }
 
+#if targetEnvironment(simulator)
+private extension UIImage {
+    @available(iOS 13.0, *)
+    func toBiplanarYUVPixelBuffer() -> CVPixelBuffer? {
+        guard let cgImage = self.cgImage else {
+            return nil
+        }
+        
+        // Dimensions
+        let width  = Int(self.size.width  * self.scale)
+        let height = Int(self.size.height * self.scale)
+        
+        // 1) Create an ARGB8888 vImage buffer from the UIImage (CGImage).
+        //    We will first allocate a buffer for ARGB pixels, then use
+        //    vImage to copy cgImage → argbBuffer.
+        
+        // Each ARGB pixel is 4 bytes
+        let argbBytesPerPixel = 4
+        let argbRowBytes      = width * argbBytesPerPixel
+        
+        // Allocate contiguous memory for ARGB data
+        let argbData = malloc(argbRowBytes * height)
+        defer {
+            free(argbData)
+        }
+        
+        // Create a vImage buffer for ARGB
+        var argbBuffer = vImage_Buffer(
+            data: argbData,
+            height: vImagePixelCount(height),
+            width:  vImagePixelCount(width),
+            rowBytes: argbRowBytes
+        )
+        
+        // Initialize the ARGB buffer from our CGImage
+        // This helper function can fail, so check the result:
+        var format = vImage_CGImageFormat(
+            bitsPerComponent: 8,
+            bitsPerPixel: 32,
+            colorSpace: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue),
+            renderingIntent: CGColorRenderingIntent.defaultIntent
+        )!
+        
+        if vImageBuffer_InitWithCGImage(
+            &argbBuffer,
+            &format,
+            nil,
+            cgImage,
+            vImage_Flags(kvImageNoFlags)
+        ) != kvImageNoError {
+            return nil
+        }
+        
+        // 2) Create a CVPixelBuffer in YUV 420 (bi-planar) format.
+        //    Typically, you’d choose either kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+        //    or kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange.
+        
+        let pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+        let attrs: [CFString: Any] = [
+            kCVPixelBufferIOSurfacePropertiesKey: [:],
+            // Optionally, specify other attributes if needed.
+        ]
+        
+        var cvPixelBufferOut: CVPixelBuffer?
+        guard CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            width,
+            height,
+            pixelFormat,
+            attrs as CFDictionary,
+            &cvPixelBufferOut
+        ) == kCVReturnSuccess,
+              let pixelBuffer = cvPixelBufferOut
+        else {
+            return nil
+        }
+        
+        // 3) Lock the CVPixelBuffer to get direct access to its planes.
+        CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly)
+        defer {
+            CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly)
+        }
+        
+        // Plane 0: Y-plane
+        guard let yBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0) else {
+            return nil
+        }
+        let yPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
+        
+        // Plane 1: CbCr-plane
+        guard let cbcrBaseAddress = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1) else {
+            return nil
+        }
+        let cbcrPitch = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
+        
+        // 4) Create vImage buffers for each plane.
+        
+        // Y plane is full size (width x height)
+        var yBuffer = vImage_Buffer(
+            data: yBaseAddress,
+            height: vImagePixelCount(height),
+            width:  vImagePixelCount(width),
+            rowBytes: yPitch
+        )
+        
+        // CbCr plane is half height, but each row has interleaved Cb/Cr
+        // so the plane is (width/2) * 2 bytes = width bytes wide, and height/2.
+        var cbcrBuffer = vImage_Buffer(
+            data: cbcrBaseAddress,
+            height: vImagePixelCount(height / 2),
+            width:  vImagePixelCount(width),
+            rowBytes: cbcrPitch
+        )
+        
+        var info = vImage_ARGBToYpCbCr()
+        var pixelRange = vImage_YpCbCrPixelRange(Yp_bias: 0, CbCr_bias: 128, YpRangeMax: 255, CbCrRangeMax: 255, YpMax: 255, YpMin: 1, CbCrMax: 255, CbCrMin: 0)
+        vImageConvert_ARGBToYpCbCr_GenerateConversion(kvImage_ARGBToYpCbCrMatrix_ITU_R_709_2, &pixelRange, &info, kvImageARGB8888, kvImage420Yp8_Cb8_Cr8, 0)
+        
+        let error = vImageConvert_ARGB8888To420Yp8_CbCr8(
+            &argbBuffer,
+            &yBuffer,
+            &cbcrBuffer,
+            &info,
+            nil,
+            UInt32(kvImageDoNotTile)
+        )
+        
+        if error != kvImageNoError {
+            return nil
+        }
+        
+        return pixelBuffer
+    }
+
+    @available(iOS 13.0, *)
+    var cmSampleBuffer: CMSampleBuffer? {
+        guard let pixelBuffer = self.toBiplanarYUVPixelBuffer() else {
+            return nil
+        }
+        var newSampleBuffer: CMSampleBuffer? = nil
+
+        var timingInfo = CMSampleTimingInfo(
+            duration: CMTimeMake(value: 1, timescale: 30),
+            presentationTimeStamp: CMTimeMake(value: 0, timescale: 30),
+            decodeTimeStamp: CMTimeMake(value: 0, timescale: 30)
+        )
+
+        var videoInfo: CMVideoFormatDescription? = nil
+        CMVideoFormatDescriptionCreateForImageBuffer(allocator: nil, imageBuffer: pixelBuffer, formatDescriptionOut: &videoInfo)
+        guard let videoInfo = videoInfo else {
+            return nil
+        }
+        CMSampleBufferCreateForImageBuffer(allocator: kCFAllocatorDefault, imageBuffer: pixelBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: videoInfo, sampleTiming: &timingInfo, sampleBufferOut: &newSampleBuffer)
+
+        if let newSampleBuffer = newSampleBuffer {
+            let attachments = CMSampleBufferGetSampleAttachmentsArray(newSampleBuffer, createIfNecessary: true)! as NSArray
+            let dict = attachments[0] as! NSMutableDictionary
+
+            dict.setValue(kCFBooleanTrue as AnyObject, forKey: kCMSampleAttachmentKey_DisplayImmediately as NSString as String)
+        }
+
+        return newSampleBuffer
+    }
+}
+#endif
+
 public final class OngoingCallVideoCapturer {
     internal let impl: OngoingCallThreadLocalContextVideoCapturer
+    
+    #if targetEnvironment(simulator)
+    private var simulatedVideoTimer: Foundation.Timer?
+    #endif
 
     private let isActivePromise = ValuePromise<Bool>(true, ignoreRepeated: true)
     public var isActive: Signal<Bool, NoError> {
@@ -419,12 +596,46 @@ public final class OngoingCallVideoCapturer {
         if isCustom {
             self.impl = OngoingCallThreadLocalContextVideoCapturer.withExternalSampleBufferProvider()
         } else {
+            #if targetEnvironment(simulator) && false
+            self.impl = OngoingCallThreadLocalContextVideoCapturer.withExternalSampleBufferProvider()
+            let imageSize = CGSize(width: 600.0, height: 800.0)
+            UIGraphicsBeginImageContextWithOptions(imageSize, true, 1.0)
+            let sourceImage: UIImage?
+            let imagePath = NSTemporaryDirectory() + "frontCameraImage.jpg"
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: imagePath)), let image = UIImage(data: data) {
+                sourceImage = image
+            } else {
+                sourceImage = UIImage(bundleImageName: "Camera/SelfiePlaceholder")!
+            }
+            if let sourceImage {
+                sourceImage.draw(in: CGRect(origin: CGPoint(), size: imageSize))
+            }
+            let image = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            self.simulatedVideoTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true, block: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if #available(iOS 13.0, *) {
+                    if let image, let sampleBuffer = image.cmSampleBuffer {
+                        self.injectSampleBuffer(sampleBuffer, rotation: .up, completion: {})
+                    }
+                }
+            })
+            #else
             self.impl = OngoingCallThreadLocalContextVideoCapturer(deviceId: "", keepLandscape: keepLandscape)
+            #endif
         }
         let isActivePromise = self.isActivePromise
         self.impl.setOnIsActiveUpdated({ value in
             isActivePromise.set(value)
         })
+    }
+
+    deinit {
+        #if targetEnvironment(simulator)
+        self.simulatedVideoTimer?.invalidate()
+        #endif
     }
     
     public func switchVideoInput(isFront: Bool) {

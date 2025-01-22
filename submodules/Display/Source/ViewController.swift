@@ -163,6 +163,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
     open var _presentedInModal: Bool = false
+    open var flatReceivesModalTransition: Bool = false
     
     public var presentedOverCoveringView: Bool = false
     

@@ -521,7 +521,7 @@ public final class ThemePreviewController: ViewController {
                 subject = .url("https://t.me/addtheme/\(slug)")
                 preferredAction = .default
             case let .media(media):
-                subject = .media(media)
+                subject = .media(media, nil)
                 preferredAction = .default
         }
         let controller = ShareController(context: self.context, subject: subject, preferredAction: preferredAction)

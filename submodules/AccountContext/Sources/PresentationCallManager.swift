@@ -143,6 +143,9 @@ public protocol PresentationCall: AnyObject {
     
     var state: Signal<PresentationCallState, NoError> { get }
     var audioLevel: Signal<Float, NoError> { get }
+    
+    var hasConference: Signal<Bool, NoError> { get }
+    var conferenceCall: PresentationGroupCall? { get }
 
     var isMuted: Signal<Bool, NoError> { get }
     
@@ -164,7 +167,7 @@ public protocol PresentationCall: AnyObject {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func createConferenceIfPossible()
+    func upgradeToConference(completion: @escaping (PresentationGroupCall) -> Void) -> Disposable
     
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }

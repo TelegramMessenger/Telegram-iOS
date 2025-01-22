@@ -32,7 +32,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     private let account: Account
     private let presentationData: PresentationData
     private let statusBar: StatusBar
-    private let call: CallController.Call
+    private let call: PresentationCall
     
     private let containerView: UIView
     private let callScreen: PrivateCallScreen
@@ -57,6 +57,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var presentCallRating: ((CallId, Bool) -> Void)?
     var present: ((ViewController) -> Void)?
     var callEnded: ((Bool) -> Void)?
+    var willBeDismissedInteractively: (() -> Void)?
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
     var restoreUIForPictureInPicture: ((@escaping (Bool) -> Void) -> Void)?
@@ -91,7 +92,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         statusBar: StatusBar,
         debugInfo: Signal<(String, String), NoError>,
         easyDebugAccess: Bool,
-        call: CallController.Call
+        call: PresentationCall
     ) {
         self.sharedContext = sharedContext
         self.account = account
@@ -130,13 +131,6 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             guard let self else {
                 return
             }
-            
-            #if DEBUG
-            if self.sharedContext.immediateExperimentalUISettings.conferenceCalls {
-                self.conferenceAddParticipant?()
-                return
-            }
-            #endif
             
             self.call.toggleIsMuted()
         }
@@ -185,7 +179,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             localVideo: nil,
             remoteVideo: nil,
             isRemoteBatteryLow: false,
-            isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency
+            isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
+            isConferencePossible: self.sharedContext.immediateExperimentalUISettings.conferenceCalls
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted
@@ -321,11 +316,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         case .active:
             switch callState.videoState {
             case .active(let isScreencast, _), .paused(let isScreencast, _):
-                if isScreencast {
-                    self.call.disableScreencast()
-                } else {
-                    self.call.disableVideo()
-                }
+                let _ = isScreencast
+                self.call.disableVideo()
             default:
                 DeviceAccess.authorizeAccess(to: .camera(.videoCall), onlyCheck: true, presentationData: self.presentationData, present: { [weak self] c, a in
                     if let strongSelf = self {
@@ -501,22 +493,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.remoteVideo = nil
         default:
             switch callState.videoState {
-            case .active(let isScreencast, let endpointId), .paused(let isScreencast, let endpointId):
+            case .active(let isScreencast, _), .paused(let isScreencast, _):
                 if isScreencast {
                     self.localVideo = nil
                 } else {
                     if self.localVideo == nil {
-                        switch self.call {
-                        case let .call(call):
-                            if let call = call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
-                                self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-                            }
-                        case let .groupCall(groupCall):
-                            if let groupCall = groupCall as? PresentationGroupCallImpl {
-                                if let videoStreamSignal = groupCall.video(endpointId: endpointId) {
-                                    self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-                                }
-                            }
+                        if let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: false) {
+                            self.localVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
                         }
                     }
                 }
@@ -525,19 +508,10 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             }
             
             switch callState.remoteVideoState {
-            case .active(let endpointId), .paused(let endpointId):
+            case .active, .paused:
                 if self.remoteVideo == nil {
-                    switch self.call {
-                    case let .call(call):
-                        if let call = call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
-                            self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-                        }
-                    case let .groupCall(groupCall):
-                        if let groupCall = groupCall as? PresentationGroupCallImpl {
-                            if let videoStreamSignal = groupCall.video(endpointId: endpointId) {
-                                self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
-                            }
-                        }
+                    if let call = self.call as? PresentationCallImpl, let videoStreamSignal = call.video(isIncoming: true) {
+                        self.remoteVideo = AdaptedCallVideoSource(videoStreamSignal: videoStreamSignal)
                     }
                 }
             case .inactive:
@@ -710,6 +684,17 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
     }
     
+    func animateOutToGroupChat(completion: @escaping () -> Void) -> CallController.AnimateOutToGroupChat {
+        self.callScreen.animateOutToGroupChat(completion: completion)
+        
+        let takenIncomingVideoLayer = self.callScreen.takeIncomingVideoLayer()
+        return CallController.AnimateOutToGroupChat(
+            incomingPeerId: self.call.peerId,
+            incomingVideoLayer: takenIncomingVideoLayer?.0,
+            incomingVideoPlaceholder: takenIncomingVideoLayer?.1
+        )
+    }
+    
     func expandFromPipIfPossible() {
     }
     
@@ -732,6 +717,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                 if abs(panGestureState.offsetFraction) > 0.6 || abs(velocity.y) >= 100.0 {
                     self.panGestureState = PanGestureState(offsetFraction: panGestureState.offsetFraction < 0.0 ? -1.0 : 1.0)
                     self.notifyDismissedInteractivelyOnPanGestureApply = true
+                    self.willBeDismissedInteractively?()
                     self.callScreen.beginPictureInPictureIfPossible()
                 }
                 

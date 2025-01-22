@@ -14,6 +14,7 @@ import MultilineTextComponent
 import TelegramStringFormatting
 import BundleIconComponent
 import LottieComponent
+import CheckNode
 
 enum ShareState {
     case preparing(Bool)
@@ -296,6 +297,22 @@ private final class ShareContentInfoView: UIView {
     }
 }
 
+private func textForTimeout(value: Int32) -> String {
+    if value < 3600 {
+        let minutes = value / 60
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(minutes):\(secondsPadding)\(seconds)"
+    } else {
+        let hours = value / 3600
+        let minutes = (value % 3600) / 60
+        let minutesPadding = minutes < 10 ? "0" : ""
+        let seconds = value % 60
+        let secondsPadding = seconds < 10 ? "0" : ""
+        return "\(hours):\(minutesPadding)\(minutes):\(secondsPadding)\(seconds)"
+    }
+}
+
 final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate {
     private weak var controller: ShareController?
     private let environment: ShareControllerEnvironment
@@ -332,6 +349,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     private let actionsBackgroundNode: ASImageNode
     private let actionButtonNode: ShareActionButtonNode
+    let startAtTimestampNode: ShareStartAtTimestampNode?
     private let inputFieldNode: ShareInputFieldNode
     private let actionSeparatorNode: ASDisplayNode
     
@@ -366,7 +384,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     private let showNames = ValuePromise<Bool>(true)
     
-    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?, collectibleItemInfo: TelegramCollectibleItemInfo?) {
+    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, mediaParameters: ShareControllerSubject.MediaParameters?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?, collectibleItemInfo: TelegramCollectibleItemInfo?) {
         self.controller = controller
         self.environment = environment
         self.presentationData = presentationData
@@ -445,6 +463,13 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.actionButtonNode.displaysAsynchronously = false
         self.actionButtonNode.titleNode.displaysAsynchronously = false
         self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
+        
+        if let startAtTimestamp = mediaParameters?.startAtTimestamp {
+            //TODO:localize
+            self.startAtTimestampNode = ShareStartAtTimestampNode(titleText: "Start at \(textForTimeout(value: startAtTimestamp))", titleTextColor: self.presentationData.theme.actionSheet.secondaryTextColor, checkNodeTheme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        } else {
+            self.startAtTimestampNode = nil
+        }
         
         self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: self.presentationData.theme), placeholder: self.presentationData.strings.ShareMenu_Comment)
         self.inputFieldNode.text = presetText ?? ""
@@ -650,6 +675,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
         self.contentContainerNode.addSubnode(self.inputFieldNode)
         self.contentContainerNode.addSubnode(self.actionButtonNode)
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            self.contentContainerNode.addSubnode(startAtTimestampNode)
+        }
         
         self.inputFieldNode.updateHeight = { [weak self] in
             if let strongSelf = self {
@@ -844,6 +872,11 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.actionButtonNode.badgeBackgroundColor = presentationData.theme.actionSheet.controlAccentColor
         self.actionButtonNode.badgeTextColor = presentationData.theme.actionSheet.opaqueItemBackgroundColor
         
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            startAtTimestampNode.titleTextColor = presentationData.theme.actionSheet.secondaryTextColor
+            startAtTimestampNode.checkNodeTheme = CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false)
+        }
+        
         self.contentNode?.updateTheme(presentationData.theme)
     }
     
@@ -992,6 +1025,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             actionButtonHeight = buttonHeight
             bottomGridInset += actionButtonHeight
         }
+        if self.startAtTimestampNode != nil {
+            bottomGridInset += buttonHeight
+        }
  
         let inputHeight = self.inputFieldNode.updateLayout(width: contentContainerFrame.size.width, transition: transition)
         if !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil {
@@ -1012,6 +1048,10 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)), beginWithCurrentState: true)
         
         transition.updateFrame(node: self.actionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - actionButtonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            transition.updateFrame(node: startAtTimestampNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - actionButtonHeight - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
+        }
         
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: inputHeight)), beginWithCurrentState: true)
         
@@ -1562,6 +1602,11 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.actionButtonNode.hitTest(self.actionButtonNode.convert(point, from: self), with: event) {
             return result
+        }
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            if let result = startAtTimestampNode.hitTest(startAtTimestampNode.convert(point, from: self), with: event) {
+                return result
+            }
         }
         if self.bounds.contains(point) {
             if let contentInfoView = self.contentInfoView, contentInfoView.alpha != 0.0 {

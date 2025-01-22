@@ -970,6 +970,12 @@ private final class ProfileGiftsContextImpl {
         self.actionDisposable.dispose()
     }
     
+    func reload() {
+        gifts = []
+        dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.loadMore()
+    }
+    
     func loadMore() {
         let peerId = self.peerId
         let accountPeerId = self.account.peerId
@@ -1426,6 +1432,12 @@ public final class ProfileGiftsContext {
     public func loadMore() {
         self.impl.with { impl in
             impl.loadMore()
+        }
+    }
+    
+    public func reload() {
+        self.impl.with { impl in
+            impl.reload()
         }
     }
     
