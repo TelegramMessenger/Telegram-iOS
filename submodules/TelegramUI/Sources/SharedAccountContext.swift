@@ -2302,8 +2302,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false)
         }
         
+        var allowChannelsInSearch = false
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
         if case let .starGiftTransfer(_, _, _, _, canExportDate) = source {
+            allowChannelsInSearch = true
             var subtitle: String?
             if let canExportDate {
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -2369,6 +2371,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             autoDismiss: false,
             title: { _ in return title },
             options: contactOptions,
+            allowChannelsInSearch: allowChannelsInSearch,
             openProfile: { peer in
                 openProfileImpl?(peer)
             },
@@ -2454,7 +2457,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            if currentTime > canExportDate || "".isEmpty {                
+            if currentTime > canExportDate {
                 let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: {
                     let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
                     |> deliverOnMainQueue).start(error: { [weak controller] error in

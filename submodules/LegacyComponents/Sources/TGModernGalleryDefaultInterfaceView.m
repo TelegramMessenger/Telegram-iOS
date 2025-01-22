@@ -355,6 +355,9 @@
 {
 }
 
+- (void)setGesturesEnabled:(void (^)(bool))setGesturesEnabled {
+}
+
 @end
 
 

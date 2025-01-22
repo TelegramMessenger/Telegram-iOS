@@ -42,6 +42,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     private let displayCallIcons: Bool
     private let multipleSelection: Bool
     private let requirePhoneNumbers: Bool
+    private let allowChannelsInSearch: Bool
     
     private let openProfile: ((EnginePeer) -> Void)?
     private let sendMessage: ((EnginePeer) -> Void)?
@@ -108,6 +109,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmation = params.confirmation
         self.multipleSelection = params.multipleSelection
         self.requirePhoneNumbers = params.requirePhoneNumbers
+        self.allowChannelsInSearch = params.allowChannelsInSearch
         
         self.openProfile = params.openProfile
         self.sendMessage = params.sendMessage
@@ -216,7 +218,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, mode: self.mode, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers, allowChannelsInSearch: self.allowChannelsInSearch)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar

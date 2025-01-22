@@ -9,6 +9,7 @@
 - (void)setController:(UIViewController *(^)(void))closePressed;
 - (void)setClosePressed:(void (^)())closePressed;
 - (void)setScrollViewOffsetRequested:(void (^)(CGFloat offset))scrollViewOffsetRequested;
+- (void)setGesturesEnabled:(void (^)(bool enabled))setGesturesEnabled;
 
 - (void)itemFocused:(id<TGModernGalleryItem>)item itemView:(TGModernGalleryItemView *)itemView;
 

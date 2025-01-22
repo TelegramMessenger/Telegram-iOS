@@ -646,7 +646,7 @@ private final class SheetContent: CombinedComponent {
                         case .noAds:
                             textString = strings.ChannelBoost_EnableNoAdsLevelText("\(requiredLevel)").string
                         case .wearGift:
-                            textString = strings.ChannelBoost_EnableNoAdsLevelText("\(requiredLevel)").string
+                            textString = strings.ChannelBoost_WearGiftLevelText("\(requiredLevel)").string
                         }
                     } else {
                         let boostsString = strings.ChannelBoost_MoreBoostsNeeded_Boosts(Int32(remaining))

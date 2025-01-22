@@ -120,6 +120,8 @@
     
     CMTime _chaseTime;
     bool _chasingTime;
+    
+    bool _isCoverEditing;
 }
 
 @property (nonatomic, strong) TGMediaPickerGalleryVideoItem *item;
@@ -763,12 +765,14 @@
 
 - (void)prepareForCoverEditing
 {
+    _isCoverEditing = true;
     [self setPlayButtonHidden:true animated:true];
     [self stop];
 }
 
 - (void)returnFromCoverEditing
 {
+    _isCoverEditing = false;
     if (![self usePhotoBehavior])
         [self setPlayButtonHidden:false animated:true];
 }
@@ -1272,6 +1276,9 @@
 
 - (void)playPressed
 {
+    if (!self.gesturesEnabled)
+        return;
+    
     if (_downloadRequired)
         [self _download];
     else
@@ -1437,7 +1444,12 @@
     if (_wasPlayingBeforeScrubbing) {
         [self play];
     } else {
-        [self setPlayButtonHidden:false animated:true];
+        if (!_isCoverEditing)
+            [self setPlayButtonHidden:false animated:true];
+    }
+    
+    if (videoScrubber == _coverScrubberView) {
+        [_coverScrubberView setValue:_scrubberView.value resetPosition:true];
     }
 }
 

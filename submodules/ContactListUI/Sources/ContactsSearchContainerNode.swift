@@ -207,6 +207,7 @@ public struct ContactsSearchCategories: OptionSet {
     public static let cloudContacts = ContactsSearchCategories(rawValue: 1 << 0)
     public static let global = ContactsSearchCategories(rawValue: 1 << 1)
     public static let deviceContacts = ContactsSearchCategories(rawValue: 1 << 2)
+    public static let channels = ContactsSearchCategories(rawValue: 1 << 3)
 }
 
 public final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
@@ -449,7 +450,10 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     if let remotePeers = remotePeers {
                         for peer in remotePeers.0 {
                             if !(peer.peer is TelegramUser) {
-                                continue
+                                if let channel = peer.peer as? TelegramChannel, case .broadcast = channel.info, categories.contains(.channels) {
+                                } else {
+                                    continue
+                                }
                             }
 
                             if let user = peer.peer as? TelegramUser {
@@ -488,7 +492,10 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         }
                         for peer in remotePeers.1 {
                             if !(peer.peer is TelegramUser) {
-                                continue
+                                if let channel = peer.peer as? TelegramChannel, case .broadcast = channel.info, categories.contains(.channels) {
+                                } else {
+                                    continue
+                                }
                             }
                             
                             if let user = peer.peer as? TelegramUser, requirePhoneNumbers {

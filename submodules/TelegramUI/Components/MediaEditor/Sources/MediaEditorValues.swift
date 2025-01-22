@@ -1751,7 +1751,7 @@ func targetSize(cropSize: CGSize, rotateSideward: Bool = false) -> CGSize {
     return CGSize(width: renderWidth, height: renderHeight)
 }
 
-public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false) -> MediaEditorVideoExport.Configuration {
+public func recommendedVideoExportConfiguration(values: MediaEditorValues, duration: Double, image: Bool = false, forceFullHd: Bool = false, frameRate: Float, isSticker: Bool = false, isAvatar: Bool = false) -> MediaEditorVideoExport.Configuration {
     let compressionProperties: [String: Any]
     let codecType: Any
     
@@ -1763,7 +1763,17 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     if image {
         videoBitrate = 5000
     } else {
-        if duration < 10 {
+        if isAvatar {
+            if duration <= 2.0 {
+                videoBitrate = 2400
+            } else if duration <= 5.0 {
+                videoBitrate = 2000
+            } else if duration <= 8.0 {
+                videoBitrate = 1500
+            } else {
+                videoBitrate = 1100
+            }
+        } else if duration < 10 {
             videoBitrate = 5800
         } else if duration < 20 {
             videoBitrate = 5500
@@ -1797,7 +1807,12 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         
         useHEVC = false
     } else {
-        if isSticker {
+        if isAvatar {
+            width = 640
+            height = 640
+            frameRate = 30
+            useHEVC = false
+        } else if isSticker {
             width = 512
             height = 512
             useVP9 = true

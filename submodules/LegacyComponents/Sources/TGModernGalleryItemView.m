@@ -12,6 +12,7 @@
     self = [super init];
     if (self != nil)
     {
+        _gesturesEnabled = true;
     }
     return self;
 }
@@ -95,7 +96,7 @@
 
 - (bool)allowsScrollingAtPoint:(CGPoint)__unused point
 {
-    return true;
+    return _gesturesEnabled;
 }
 
 - (SSignal *)contentAvailabilityStateSignal

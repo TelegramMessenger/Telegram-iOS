@@ -147,7 +147,7 @@ extension PeerInfoScreenImpl {
                     }
                     controller.videoCompletion = { [weak self] image, url, values, markup, commit in
                         resultImage = image
-                        self?.updateProfileVideo(image, asset: url, values: values, markup: markup, mode: mode, uploadStatus: uploadStatusPromise)
+                        self?.updateProfileVideo(image, video: nil, values: nil, markup: markup, mode: mode, uploadStatus: uploadStatusPromise)
                         commit()
                     }
                     parentController?.push(controller)
@@ -207,7 +207,7 @@ extension PeerInfoScreenImpl {
                         case let .video(video, coverImage, values, _, _):
                             if let coverImage {
                                 resultImage = coverImage
-                                self?.updateProfileVideo(coverImage, asset: video, values: values, markup: nil, mode: mode, uploadStatus: uploadStatusPromise)
+                                self?.updateProfileVideo(coverImage, video: video, values: values, markup: nil, mode: mode, uploadStatus: uploadStatusPromise)
                             }
                             commit({})
                         default:
@@ -459,7 +459,7 @@ extension PeerInfoScreenImpl {
         }))
     }
         
-    public func updateProfileVideo(_ image: UIImage, asset: Any?, values: MediaEditorValues?, markup: UploadPeerPhotoMarkup?, mode: PeerInfoAvatarEditingMode, uploadStatus: Promise<PeerInfoAvatarUploadStatus>?) {
+    public func updateProfileVideo(_ image: UIImage, video: MediaEditorScreenImpl.MediaResult.VideoResult?, values: MediaEditorValues?, markup: UploadPeerPhotoMarkup?, mode: PeerInfoAvatarEditingMode, uploadStatus: Promise<PeerInfoAvatarUploadStatus>?) {
         var uploadVideo = true
         if let _ = markup {
             if let data = self.context.currentAppConfiguration.with({ $0 }).data, let uploadVideoValue = data["upload_markup_video"] as? Bool, uploadVideoValue {
@@ -482,9 +482,82 @@ extension PeerInfoScreenImpl {
         let context = self.context
         
         let videoResource: Signal<TelegramMediaResource?, UploadPeerPhotoError>
-        if uploadVideo {
-            videoResource = Signal { subscriber in
-                return EmptyDisposable
+        if uploadVideo, let video, let values {
+            var exportSubject: Signal<(MediaEditorVideoExport.Subject, Double), NoError>?
+            switch video {
+            case let .imageFile(path):
+                if let image = UIImage(contentsOfFile: path) {
+                    exportSubject = .single((.image(image: image), 3.0))
+                }
+            case let .videoFile(path):
+                let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
+                exportSubject = .single((.video(asset: asset, isStory: false), asset.duration.seconds))
+            case let .asset(localIdentifier):
+                exportSubject = Signal { subscriber in
+                    let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [localIdentifier], options: nil)
+                    if fetchResult.count != 0 {
+                        let asset = fetchResult.object(at: 0)
+                        if asset.mediaType == .video {
+                            PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
+                                if let avAsset {
+                                    subscriber.putNext((.video(asset: avAsset, isStory: true), avAsset.duration.seconds))
+                                    subscriber.putCompletion()
+                                }
+                            }
+                        } else {
+                            let options = PHImageRequestOptions()
+                            options.deliveryMode = .highQualityFormat
+                            PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
+                                if let image {
+                                    subscriber.putNext((.image(image: image), 3.0))
+                                    subscriber.putCompletion()
+                                }
+                            }
+                        }
+                    }
+                    return EmptyDisposable
+                }
+            }
+            
+            if let exportSubject {
+                videoResource = exportSubject
+                |> castError(UploadPeerPhotoError.self)
+                |> mapToSignal { exportSubject, duration in
+                    return Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
+                        let configuration = recommendedVideoExportConfiguration(values: values, duration: duration, forceFullHd: true, frameRate: 60.0, isAvatar: true)
+                        //let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
+                        let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
+                        let videoExport = MediaEditorVideoExport(postbox: context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: tempFile.path, textScale: 2.0)
+                        
+                        let _ = (videoExport.status
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] status in
+                            guard let self else {
+                                return
+                            }
+                            switch status {
+                            case .completed:
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path), options: .mappedIfSafe) {
+                                    let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
+                                    account.postbox.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
+                                    subscriber.putNext(resource)
+                                    subscriber.putCompletion()
+                                }
+                                EngineTempBox.shared.dispose(tempFile)
+                            case let .progress(progress):
+                                Queue.mainQueue().async {
+                                    self.controllerNode.state = self.controllerNode.state.withAvatarUploadProgress(.value(CGFloat(progress * 0.45)))
+                                    self.requestLayout(transition: .immediate)
+                                }
+                            default:
+                                break
+                            }
+                        })
+                        
+                        return EmptyDisposable
+                    }
+                }
+            } else {
+                videoResource = .single(nil)
             }
         } else {
             videoResource = .single(nil)
