@@ -2396,8 +2396,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var mode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
-        if case let .starGiftTransfer(birthdays, _, _, _, _) = source {
-            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false)
+        if case let .starGiftTransfer(birthdays, _, _, _, _, showSelf) = source {
+            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: showSelf)
             currentBirthdays = birthdays
         } else if case let .chatList(birthdays) = source {
             mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
@@ -2411,7 +2411,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         
         var allowChannelsInSearch = false
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
-        if case let .starGiftTransfer(_, _, _, _, canExportDate) = source {
+        if case let .starGiftTransfer(_, _, _, _, canExportDate, _) = source {
             allowChannelsInSearch = true
             var subtitle: String?
             if let canExportDate {
@@ -2560,7 +2560,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentExportAlertImpl = { [weak controller] in
-            guard let controller, case let .starGiftTransfer(_, reference, gift, _, canExportDate) = source, let canExportDate else {
+            guard let controller, case let .starGiftTransfer(_, reference, gift, _, canExportDate, _) = source, let canExportDate else {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -2604,7 +2604,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentTransferAlertImpl = { [weak controller] peer in
-            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _) = source else {
+            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _, _) = source else {
                 return
             }
             let alertController = giftTransferAlertController(context: context, gift: gift, peer: peer, transferStars: transferStars, commit: { [weak controller] in

@@ -3271,6 +3271,9 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
                         
             let mediaEditor = MediaEditor(context: self.context, mode: mediaEditorMode, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
+            if case .avatarEditor = controller.mode {
+                mediaEditor.setVideoIsMuted(true)
+            }
             if let initialVideoPosition = controller.initialVideoPosition {
                 if controller.isEditingStoryCover {
                     mediaEditor.setCoverImageTimestamp(initialVideoPosition)

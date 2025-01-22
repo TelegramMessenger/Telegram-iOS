@@ -126,6 +126,8 @@ final class MediaEditorComposer {
         
         if values.isSticker {
             self.maskImage = roundedCornersMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
+        } else if values.isAvatar {
+            self.maskImage = rectangleMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
         }
         
         if let drawing = values.drawing, let drawingImage = CIImage(image: drawing, options: [.colorSpace: self.colorSpace]) {
@@ -224,6 +226,8 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
     var maskImage: CIImage?
     if values.isSticker {
         maskImage = roundedCornersMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
+    } else if values.isAvatar {
+        maskImage = rectangleMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
     } else if let _ = outputDimensions {
         maskImage = rectangleMaskImage(size: CGSize(width: 1080.0, height: 1080.0))
     }
@@ -264,7 +268,7 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
     
     var mediaImage = inputImage.samplingLinear().transformed(by: CGAffineTransform(translationX: -inputImage.extent.midX, y: -inputImage.extent.midY))
     
-    if values.isStory || values.isSticker {
+    if values.isStory || values.isSticker || values.isAvatar {
         resultImage = mediaImage.samplingLinear().composited(over: resultImage)
     } else {
         let initialScale = dimensions.width / mediaImage.extent.width

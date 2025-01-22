@@ -626,7 +626,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 1
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
                 let wearDescription = wearDescription.update(
@@ -1284,7 +1284,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 id: "address_owner",
                                 title: strings.Gift_Unique_Owner,
                                 component: AnyComponent(
-                                    MultilineTextComponent(text: .plain(NSAttributedString(string: address, font: tableMonospaceFont, textColor: tableTextColor)))
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: address, font: tableMonospaceFont, textColor: tableLinkColor)))
                                 )
                             ))
                         }
@@ -1379,36 +1379,47 @@ private final class GiftViewSheetContent: CombinedComponent {
                 
                 if let uniqueGift {
                     if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId || isChannelGift {
+                        var canTransfer = true
+                        if let peer = state.peerMap[peerId], case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                            canTransfer = false
+                        }
+                        
+                        let buttonsCount = canTransfer ? 3 : 2
+                        
                         let buttonSpacing: CGFloat = 10.0
-                        let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * 2.0) / 3.0
+                        let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * CGFloat(buttonsCount - 1)) / CGFloat(buttonsCount)
                         let buttonHeight: CGFloat = 58.0
                         
-                        let transferButton = transferButton.update(
-                            component: PlainButtonComponent(
-                                content: AnyComponent(
-                                    HeaderButtonComponent(
-                                        title: strings.Gift_View_Header_Transfer,
-                                        iconName: "Premium/Collectible/Transfer"
-                                    )
+                        var buttonOriginX = sideInset
+                        if canTransfer {
+                            let transferButton = transferButton.update(
+                                component: PlainButtonComponent(
+                                    content: AnyComponent(
+                                        HeaderButtonComponent(
+                                            title: strings.Gift_View_Header_Transfer,
+                                            iconName: "Premium/Collectible/Transfer"
+                                        )
+                                    ),
+                                    effectAlignment: .center,
+                                    action: {
+                                        component.transferGift()
+                                        Queue.mainQueue().after(0.6, {
+                                            component.cancel(false)
+                                        })
+                                    }
                                 ),
-                                effectAlignment: .center,
-                                action: {
-                                    component.transferGift()
-                                    Queue.mainQueue().after(0.6, {
-                                        component.cancel(false)
-                                    })
-                                }
-                            ),
-                            environment: {},
-                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
-                            transition: context.transition
-                        )
-                        context.add(transferButton
-                            .position(CGPoint(x: sideInset + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
-                            .appear(.default(scale: true, alpha: true))
-                            .disappear(.default(scale: true, alpha: true))
-                        )
-                    
+                                environment: {},
+                                availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                                transition: context.transition
+                            )
+                            context.add(transferButton
+                                .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                                .appear(.default(scale: true, alpha: true))
+                                .disappear(.default(scale: true, alpha: true))
+                            )
+                            buttonOriginX += buttonWidth + buttonSpacing
+                        }
+                        
                         let wearButton = wearButton.update(
                             component: PlainButtonComponent(
                                 content: AnyComponent(
@@ -1462,10 +1473,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                             transition: context.transition
                         )
                         context.add(wearButton
-                            .position(CGPoint(x: context.availableSize.width / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
                             .appear(.default(scale: true, alpha: true))
                             .disappear(.default(scale: true, alpha: true))
                         )
+                        buttonOriginX += buttonWidth + buttonSpacing
                         
                         let shareButton = shareButton.update(
                             component: PlainButtonComponent(
@@ -1485,7 +1497,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             transition: context.transition
                         )
                         context.add(shareButton
-                            .position(CGPoint(x: context.availableSize.width - sideInset - buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
                             .appear(.default(scale: true, alpha: true))
                             .disappear(.default(scale: true, alpha: true))
                         )
@@ -2676,7 +2688,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let _ = (context.account.stateManager.contactBirthdays
             |> take(1)
             |> deliverOnMainQueue).start(next: { birthdays in
-                let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, gift, transferStars, arguments.canExportDate), completion: { peerIds in
+                var showSelf = false
+                if arguments.peerId?.namespace == Namespaces.Peer.CloudChannel {
+                    showSelf = true
+                }
+                let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, gift, transferStars, arguments.canExportDate, showSelf), completion: { peerIds in
                     guard let peerId = peerIds.first else {
                         return
                     }
@@ -2820,41 +2836,53 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let link = "https://t.me/nft/\(gift.slug)"
             
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
-                c?.dismiss(completion: nil)
-                
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: arguments.peerId ?? context.account.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
                 guard let self else {
                     return
                 }
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    UIPasteboard.general.string = link
+                    
+                    self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                })))
                 
-                UIPasteboard.general.string = link
-                
-                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Share, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-            }, action: { c, _ in
-                c?.dismiss(completion: nil)
-                
-                shareGiftImpl?()
-            })))
-            
-            if let _ = arguments.transferStars {
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Transfer, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Share, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
                 }, action: { c, _ in
                     c?.dismiss(completion: nil)
                     
-                    transferGiftImpl?()
+                    shareGiftImpl?()
                 })))
-            }
-            
-            let contextController = ContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            self.presentInGlobalOverlay(contextController)
+                
+                if let _ = arguments.transferStars {
+                    if case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                        
+                    } else {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Transfer, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            transferGiftImpl?()
+                        })))
+                    }
+                }
+                
+                let contextController = ContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                self.presentInGlobalOverlay(contextController)
+            })
         }
     }
     

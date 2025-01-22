@@ -1808,10 +1808,11 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
         useHEVC = false
     } else {
         if isAvatar {
-            width = 640
-            height = 640
+            width = 800
+            height = 800
             frameRate = 30
             useHEVC = false
+            values = values.withUpdatedQualityPreset(.profile)
         } else if isSticker {
             width = 512
             height = 512
@@ -1853,7 +1854,7 @@ public func recommendedVideoExportConfiguration(values: MediaEditorValues, durat
     ]
     
     let audioSettings: [String: Any]
-    if isSticker {
+    if isSticker || isAvatar {
         audioSettings = [:]
     } else {
         audioSettings = [

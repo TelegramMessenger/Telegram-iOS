@@ -525,10 +525,8 @@ extension PeerInfoScreenImpl {
                 |> mapToSignal { exportSubject, duration in
                     return Signal<TelegramMediaResource?, UploadPeerPhotoError> { subscriber in
                         let configuration = recommendedVideoExportConfiguration(values: values, duration: duration, forceFullHd: true, frameRate: 60.0, isAvatar: true)
-                        //let outputPath = NSTemporaryDirectory() + "\(Int64.random(in: 0 ..< .max)).mp4"
                         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
                         let videoExport = MediaEditorVideoExport(postbox: context.account.postbox, subject: exportSubject, configuration: configuration, outputPath: tempFile.path, textScale: 2.0)
-                        
                         let _ = (videoExport.status
                         |> deliverOnMainQueue).startStandalone(next: { [weak self] status in
                             guard let self else {
