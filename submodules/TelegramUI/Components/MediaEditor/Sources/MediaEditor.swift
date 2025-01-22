@@ -575,6 +575,7 @@ public final class MediaEditor {
                 audioTrackSamples: nil,
                 collageTrackSamples: nil,
                 coverImageTimestamp: nil,
+                coverDimensions: nil,
                 qualityPreset: nil
             )
         }
@@ -2202,6 +2203,12 @@ public final class MediaEditor {
     public func setCoverImageTimestamp(_ coverImageTimestamp: Double?) {
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedCoverImageTimestamp(coverImageTimestamp)
+        }
+    }
+    
+    public func setCoverDimensions(_ coverDimensions: CGSize?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedCoverDimensions(coverDimensions)
         }
     }
     

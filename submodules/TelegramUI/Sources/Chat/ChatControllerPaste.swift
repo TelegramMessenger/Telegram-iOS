@@ -196,6 +196,7 @@ extension ChatControllerImpl {
             audioTrackSamples: nil,
             collageTrackSamples: nil,
             coverImageTimestamp: nil,
+            coverDimensions: nil,
             qualityPreset: nil
         )
         

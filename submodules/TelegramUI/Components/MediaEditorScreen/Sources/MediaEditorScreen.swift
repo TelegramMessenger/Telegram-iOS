@@ -2965,7 +2965,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 stickerBackgroundView.layer.rasterizationScale = UIScreenScale
                 self.stickerBackgroundView = stickerBackgroundView
                 self.previewContainerView.addSubview(stickerBackgroundView)
-            case .avatarEditor:
+            case .avatarEditor, .coverEditor:
                 let stickerBackgroundView = UIImageView()
                 self.stickerBackgroundView = stickerBackgroundView
                 self.previewContainerView.addSubview(stickerBackgroundView)
@@ -2980,10 +2980,6 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                     mediaEntityView.update(animated: false)
                 }
                 self.cropScrollView = cropScrollView
-            case .coverEditor:
-                let stickerBackgroundView = UIImageView()
-                self.stickerBackgroundView = stickerBackgroundView
-                self.previewContainerView.addSubview(stickerBackgroundView)
             default:
                 self.previewContainerView.addSubview(self.gradientView)
             }
@@ -3201,12 +3197,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 } else {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 }
-            case .stickerEditor, .avatarEditor, .coverEditor:
+            case .stickerEditor, .avatarEditor:
                 if fittedSize.height > fittedSize.width {
                     mediaEntity.scale = storyDimensions.width / fittedSize.width
                 } else {
                     mediaEntity.scale = storyDimensions.width / fittedSize.height
                 }
+            case let .coverEditor(dimensions):
+                let fittedStoryDimensions = dimensions.aspectFitted(storyDimensions)
+                mediaEntity.scale = max(fittedStoryDimensions.width / fittedSize.width, fittedStoryDimensions.height / fittedSize.height)
             }
 
             let initialPosition = mediaEntity.position
@@ -3273,6 +3272,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let mediaEditor = MediaEditor(context: self.context, mode: mediaEditorMode, subject: effectiveSubject.editorSubject, values: initialValues, hasHistogram: true)
             if case .avatarEditor = controller.mode {
                 mediaEditor.setVideoIsMuted(true)
+            } else if case let .coverEditor(dimensions) = controller.mode {
+                mediaEditor.setCoverDimensions(dimensions)
             }
             if let initialVideoPosition = controller.initialVideoPosition {
                 if controller.isEditingStoryCover {
@@ -3976,9 +3977,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
-                if case .avatarEditor = self.controller?.mode {
+                switch self.controller?.mode {
+                case .avatarEditor, .coverEditor:
                     return
+                default:
+                    break
                 }
+                
                 switch subject {
                 case .message, .gift:
                     return
@@ -3999,9 +4004,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
-                if case .avatarEditor = self.controller?.mode {
+                switch self.controller?.mode {
+                case .avatarEditor, .coverEditor:
                     return
+                default:
+                    break
                 }
+                
                 switch subject {
                 case .message, .gift:
                     return
@@ -4022,9 +4031,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 return
             }
             if gestureRecognizer.numberOfTouches == 2, let subject = self.subject, !self.entitiesView.hasSelection {
-                if case .avatarEditor = self.controller?.mode {
+                switch self.controller?.mode {
+                case .avatarEditor, .coverEditor:
                     return
+                default:
+                    break
                 }
+                
                 switch subject {
                 case .message, .gift:
                     return
@@ -5181,9 +5194,11 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 }
             case .stickerEditor:
                 controller.requestStickerCompletion(animated: true)
+            case .coverEditor:
+                controller.requestCoverCompletion(animated: true)
             case .botPreview:
                 controller.requestStoryCompletion(animated: true)
-            case .avatarEditor, .coverEditor:
+            case .avatarEditor:
                 controller.requestStoryCompletion(animated: true)
             }
         }
@@ -5952,14 +5967,23 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let overlayOuterRect = UIBezierPath(rect: CGRect(origin: .zero, size: previewSize))
                 let overlayInnerRect: UIBezierPath
                 
+                var cropScrollRect = CGSize(width: previewSize.width, height: previewSize.width).centered(around: stickerFrameRect.center)
+                
                 switch controller.mode {
                 case .avatarEditor:
                     overlayInnerRect = UIBezierPath(cgPath: CGPath(ellipseIn: stickerFrameRect, transform: nil))
                     stickerFrameLayer.isHidden = true
                 case let .coverEditor(dimensions):
-                    let fittedSize = dimensions.aspectFilled(stickerFrameRect.size)
+                    let fittedSize: CGSize
+                    if dimensions.width > dimensions.height {
+                        fittedSize = dimensions.aspectFitted(stickerFrameRect.size)
+                    } else {
+                        fittedSize = dimensions.aspectFilled(stickerFrameRect.size)
+                    }
                     overlayInnerRect = UIBezierPath(rect: fittedSize.centered(around: stickerFrameRect.center))
                     stickerFrameLayer.isHidden = true
+                    
+                    cropScrollRect = fittedSize.centered(around: stickerFrameRect.center)
                 default:
                     overlayInnerRect = UIBezierPath(cgPath: CGPath(roundedRect: stickerFrameRect, cornerWidth: stickerFrameWidth / 8.0, cornerHeight: stickerFrameWidth / 8.0, transform: nil))
                 }
@@ -5976,14 +6000,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 transition.setFrame(view: stickerBackgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth)))
                 stickerBackgroundView.layer.cornerRadius = stickerFrameWidth / 8.0
                 
-                let cropScrollRect = CGSize(width: previewSize.width, height: previewSize.width).centered(around: stickerFrameRect.center)
                 if let cropScrollView = self.cropScrollView {
                     cropScrollView.frame = cropScrollRect
                     if cropScrollView.superview == nil {
                         self.previewContainerView.addSubview(cropScrollView)
                         
                         if let dimensions = self.subject?.dimensions {
-                            let filledCropSize = dimensions.cgSize.aspectFilled(CGSize(width: previewSize.width, height: previewSize.width))
+                            let filledCropSize = dimensions.cgSize.aspectFilled(cropScrollRect.size)
                             cropScrollView.setContentSize(filledCropSize)
                         }
                     }
@@ -7542,6 +7565,38 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: CGSize(width: 512, height: 512), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                 if let self, let resultImage {
                     self.presentStickerPreview(image: resultImage)
+                }
+            })
+        }
+    }
+    
+    func requestCoverCompletion(animated: Bool) {
+        guard let mediaEditor = self.node.mediaEditor, case let .coverEditor(dimensions) = self.mode else {
+            return
+        }
+                
+        self.dismissAllTooltips()
+        
+        if let navigationController = self.navigationController as? NavigationController {
+            navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
+        }
+            
+        let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
+        let codableEntities = DrawingEntitiesView.encodeEntities(entities, entitiesView: self.node.entitiesView)
+        mediaEditor.setDrawingAndEntities(data: nil, image: mediaEditor.values.drawing, entities: codableEntities)
+                
+        if let image = mediaEditor.resultImage {
+            let values = mediaEditor.values.withUpdatedCoverDimensions(dimensions)
+            makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: dimensions.aspectFitted(CGSize(width: 1080, height: 1080)), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
+                if let self, let resultImage {
+                    self.completion(MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size))), { [weak self] finished in
+                        self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
+                            self?.dismiss()
+                            Queue.mainQueue().justDispatch {
+                                finished()
+                            }
+                        })
+                    })
                 }
             })
         }

@@ -1416,6 +1416,7 @@ final class AvatarEditorScreenComponent: Component {
                         audioTrackSamples: nil,
                         collageTrackSamples: nil,
                         coverImageTimestamp: nil,
+                        coverDimensions: nil,
                         qualityPreset: .profileHigh
                     )
                     
