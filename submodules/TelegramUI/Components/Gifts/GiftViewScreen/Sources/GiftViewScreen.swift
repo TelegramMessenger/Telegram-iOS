@@ -32,6 +32,7 @@ import GiftAnimationComponent
 import LottieComponent
 import ContextUI
 import TelegramNotices
+import PremiumLockButtonSubtitleComponent
 
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
@@ -128,6 +129,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         var upgradeForm: BotPaymentForm?
         var upgradeFormDisposable: Disposable?
         var upgradeDisposable: Disposable?
+        let levelsDisposable = MetaDisposable()
         
         var inWearPreview = false
         var pendingWear = false
@@ -170,6 +172,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 if let fromPeerId = arguments.fromPeerId, !peerIds.contains(fromPeerId) {
                     peerIds.append(fromPeerId)
+                }
+                if case let .message(message) = subject {
+                    for media in message.media {
+                        peerIds.append(contentsOf: media.peerIds)
+                    }
                 }
                 if case let .unique(gift) = arguments.gift {
                     if case let .peerId(peerId) = gift.owner {
@@ -219,6 +226,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         }
                     }
                 }
+                
                 self.disposable = combineLatest(queue: Queue.mainQueue(),
                     context.engine.data.get(EngineDataMap(
                         peerIds.map { peerId -> TelegramEngine.EngineData.Item.Peer.Peer in
@@ -270,6 +278,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.sampleDisposable.dispose()
             self.upgradeFormDisposable?.dispose()
             self.upgradeDisposable?.dispose()
+            self.levelsDisposable.dispose()
         }
         
         func requestUpgradePreview() {
@@ -293,7 +302,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.inWearPreview = false
             self.updated(transition: .spring(duration: 0.4))
             
-            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+            if let arguments = self.subject.arguments, let peerId = arguments.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
+                let _ = self.context.engine.peers.updatePeerStarGiftStatus(peerId: peerId, starGift: uniqueGift, expirationDate: nil).startStandalone()
+            } else {
+                let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+            }
             
             let _ = ApplicationSpecificNotice.incrementStarGiftWearTips(accountManager: self.context.sharedContext.accountManager).startStandalone()
         }
@@ -303,7 +316,11 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.pendingWear = false
             self.updated(transition: .spring(duration: 0.4))
             
-            let _ = self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil).startStandalone()
+            if let arguments = self.subject.arguments, let peerId = arguments.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
+                let _ = self.context.engine.peers.updatePeerEmojiStatus(peerId: peerId, fileId: nil, expirationDate: nil)
+            } else {
+                let _ = self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil).startStandalone()
+            }
         }
         
         func commitUpgrade() {
@@ -543,7 +560,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             if let uniqueGift {
                 if showWearPreview {
                     headerHeight = 200.0
-                } else if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
+                } else if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId || isChannelGift {
                     headerHeight = 314.0
                 } else {
                     headerHeight = 240.0
@@ -563,11 +580,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                 headerSubject = nil
             }
             
+            var ownerPeerId: EnginePeer.Id
+            if let uniqueGift, case let .peerId(peerId) = uniqueGift.owner {
+                ownerPeerId = peerId
+            } else {
+                ownerPeerId = component.context.account.peerId
+            }
+            
             var wearPeerNameChild: _UpdatedChildComponent?
             if showWearPreview, let uniqueGift {
                 var peerName = ""
-                if let accountPeer = state.peerMap[component.context.account.peerId] {
-                    peerName = accountPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+                if let ownerPeer = state.peerMap[ownerPeerId] {
+                    peerName = ownerPeer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
                 wearPeerNameChild = wearPeerName.update(
                     component: MultilineTextComponent(
@@ -602,7 +626,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 1
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
                 let wearDescription = wearDescription.update(
@@ -675,12 +699,12 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             if let wearPeerNameChild {
-                if let accountPeer = state.peerMap[component.context.account.peerId] {
+                if let ownerPeer = state.peerMap[ownerPeerId] {
                     let wearAvatar = wearAvatar.update(
                         component: AvatarComponent(
                             context: component.context,
                             theme: theme,
-                            peer: accountPeer
+                            peer: ownerPeer
                         ),
                         environment: {},
                         availableSize: CGSize(width: 100.0, height: 100.0),
@@ -696,7 +720,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let wearPeerStatus = wearPeerStatus.update(
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(
-                            string: strings.Presence_online,
+                            string: isChannelGift ? strings.Channel_Status : strings.Presence_online,
                             font: Font.regular(17.0),
                             textColor: vibrantColor,
                             paragraphAlignment: .center
@@ -736,7 +760,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Wear_Badge_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Wear_Badge_Text,
+                            text: isChannelGift ? strings.Gift_Wear_Badge_ChannelText : strings.Gift_Wear_Badge_Text,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Badge",
@@ -750,7 +774,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Wear_Design_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Wear_Design_Text,
+                            text: isChannelGift ? strings.Gift_Wear_Design_ChannelText : strings.Gift_Wear_Design_Text,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/BoostPerk/CoverColor",
@@ -764,7 +788,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                         component: AnyComponent(ParagraphComponent(
                             title: strings.Gift_Wear_Proof_Title,
                             titleColor: textColor,
-                            text: strings.Gift_Wear_Proof_Text,
+                            text: isChannelGift ? strings.Gift_Wear_Proof_ChannelText : strings.Gift_Wear_Proof_Text,
                             textColor: secondaryTextColor,
                             accentColor: linkColor,
                             iconName: "Premium/Collectible/Proof",
@@ -1249,10 +1273,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                             }
                         case let .name(name):
                             tableItems.append(.init(
-                                id: "anon_owner",
+                                id: "name_owner",
                                 title: strings.Gift_Unique_Owner,
                                 component: AnyComponent(
                                     MultilineTextComponent(text: .plain(NSAttributedString(string: name, font: tableFont, textColor: tableTextColor)))
+                                )
+                            ))
+                        case let .address(address):
+                            tableItems.append(.init(
+                                id: "address_owner",
+                                title: strings.Gift_Unique_Owner,
+                                component: AnyComponent(
+                                    MultilineTextComponent(text: .plain(NSAttributedString(string: address, font: tableMonospaceFont, textColor: tableLinkColor)))
                                 )
                             ))
                         }
@@ -1346,37 +1378,48 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 
                 if let uniqueGift {
-                    if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId {
+                    if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId || isChannelGift {
+                        var canTransfer = true
+                        if let peer = state.peerMap[peerId], case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                            canTransfer = false
+                        }
+                        
+                        let buttonsCount = canTransfer ? 3 : 2
+                        
                         let buttonSpacing: CGFloat = 10.0
-                        let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * 2.0) / 3.0
+                        let buttonWidth = floor(context.availableSize.width - sideInset * 2.0 - buttonSpacing * CGFloat(buttonsCount - 1)) / CGFloat(buttonsCount)
                         let buttonHeight: CGFloat = 58.0
                         
-                        let transferButton = transferButton.update(
-                            component: PlainButtonComponent(
-                                content: AnyComponent(
-                                    HeaderButtonComponent(
-                                        title: strings.Gift_View_Header_Transfer,
-                                        iconName: "Premium/Collectible/Transfer"
-                                    )
+                        var buttonOriginX = sideInset
+                        if canTransfer {
+                            let transferButton = transferButton.update(
+                                component: PlainButtonComponent(
+                                    content: AnyComponent(
+                                        HeaderButtonComponent(
+                                            title: strings.Gift_View_Header_Transfer,
+                                            iconName: "Premium/Collectible/Transfer"
+                                        )
+                                    ),
+                                    effectAlignment: .center,
+                                    action: {
+                                        component.transferGift()
+                                        Queue.mainQueue().after(0.6, {
+                                            component.cancel(false)
+                                        })
+                                    }
                                 ),
-                                effectAlignment: .center,
-                                action: {
-                                    component.transferGift()
-                                    Queue.mainQueue().after(0.6, {
-                                        component.cancel(false)
-                                    })
-                                }
-                            ),
-                            environment: {},
-                            availableSize: CGSize(width: buttonWidth, height: buttonHeight),
-                            transition: context.transition
-                        )
-                        context.add(transferButton
-                            .position(CGPoint(x: sideInset + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
-                            .appear(.default(scale: true, alpha: true))
-                            .disappear(.default(scale: true, alpha: true))
-                        )
-                    
+                                environment: {},
+                                availableSize: CGSize(width: buttonWidth, height: buttonHeight),
+                                transition: context.transition
+                            )
+                            context.add(transferButton
+                                .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                                .appear(.default(scale: true, alpha: true))
+                                .disappear(.default(scale: true, alpha: true))
+                            )
+                            buttonOriginX += buttonWidth + buttonSpacing
+                        }
+                        
                         let wearButton = wearButton.update(
                             component: PlainButtonComponent(
                                 content: AnyComponent(
@@ -1397,12 +1440,24 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                 controller.dismissAllTooltips()
                                             }
                                             
+                                            let canWear: Bool
+                                            if isChannelGift, case let .channel(channel) = state.peerMap[ownerPeerId] {
+                                                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                                                let requiredLevel = Int(BoostSubject.wearGift.requiredLevel(group: false, context: component.context, configuration: premiumConfiguration))
+                                                if let boostLevel = channel.approximateBoostLevel {
+                                                    canWear = boostLevel >= requiredLevel
+                                                } else {
+                                                    canWear = false
+                                                }
+                                            } else {
+                                                canWear = component.context.isPremium
+                                            }
                                             let _ = (ApplicationSpecificNotice.getStarGiftWearTips(accountManager: component.context.sharedContext.accountManager)
                                             |> deliverOnMainQueue).start(next: { [weak state] count in
                                                 guard let state else {
                                                     return
                                                 }
-                                                if !component.context.isPremium || count < 3 {
+                                                if !canWear || count < 3 {
                                                     state.requestWearPreview()
                                                 } else {
                                                     state.commitWear(uniqueGift)
@@ -1418,10 +1473,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                             transition: context.transition
                         )
                         context.add(wearButton
-                            .position(CGPoint(x: context.availableSize.width / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
                             .appear(.default(scale: true, alpha: true))
                             .disappear(.default(scale: true, alpha: true))
                         )
+                        buttonOriginX += buttonWidth + buttonSpacing
                         
                         let shareButton = shareButton.update(
                             component: PlainButtonComponent(
@@ -1441,7 +1497,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             transition: context.transition
                         )
                         context.add(shareButton
-                            .position(CGPoint(x: context.availableSize.width - sideInset - buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
+                            .position(CGPoint(x: buttonOriginX + buttonWidth / 2.0, y: headerHeight - buttonHeight / 2.0 - 16.0))
                             .appear(.default(scale: true, alpha: true))
                             .disappear(.default(scale: true, alpha: true))
                         )
@@ -1799,7 +1855,11 @@ private final class GiftViewSheetContent: CombinedComponent {
                 } else if let upgradeStars, upgradeStars > 0 && !upgraded {
                     descriptionText = isChannelGift ? strings.Gift_View_HiddenInfoShow_Channel : strings.Gift_View_HiddenInfoShow
                 } else {
-                    descriptionText = isChannelGift ? strings.Gift_View_HiddenInfo_Channel : strings.Gift_View_HiddenInfo
+                    if let _ = uniqueGift {
+                        descriptionText = isChannelGift ? strings.Gift_View_UniqueHiddenInfo_Channel : strings.Gift_View_UniqueHiddenInfo
+                    } else {
+                        descriptionText = isChannelGift ? strings.Gift_View_HiddenInfo_Channel : strings.Gift_View_HiddenInfo
+                    }
                 }
                 
                 let textFont = Font.regular(13.0)
@@ -1856,9 +1916,36 @@ private final class GiftViewSheetContent: CombinedComponent {
             let buttonChild: _UpdatedChildComponent
             if showWearPreview, let uniqueGift {
                 let buttonContent: AnyComponentWithIdentity<Empty>
-                if !component.context.isPremium {
+                
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                let requiredLevel = Int(BoostSubject.wearGift.requiredLevel(group: false, context: component.context, configuration: premiumConfiguration))
+                
+                var canWear = true
+                if isChannelGift, case let .channel(channel) = state.peerMap[ownerPeerId], (channel.approximateBoostLevel ?? 0) < requiredLevel {
+                    canWear = false
                     buttonContent = AnyComponentWithIdentity(
-                        id: AnyHashable("wear_locked"),
+                        id: AnyHashable("wear_channel"),
+                        component: AnyComponent(
+                            VStack([
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable("label"),
+                                    component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Wear_Start, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                                ),
+                                AnyComponentWithIdentity(
+                                    id: AnyHashable("level"),
+                                    component: AnyComponent(PremiumLockButtonSubtitleComponent(
+                                        count: requiredLevel,
+                                        theme: theme,
+                                        strings: strings
+                                    ))
+                                )
+                            ], spacing: 3.0)
+                        )
+                    )
+                } else if !isChannelGift && !component.context.isPremium {
+                    canWear = false
+                    buttonContent = AnyComponentWithIdentity(
+                        id: AnyHashable("wear_premium"),
                         component: AnyComponent(
                             HStack([
                                 AnyComponentWithIdentity(
@@ -1888,30 +1975,48 @@ private final class GiftViewSheetContent: CombinedComponent {
                         action: { [weak state] in
                             if let state {
                                 let context = component.context
-                                if !context.isPremium, let controller = controller() as? GiftViewScreen {
+                                if !canWear, let controller = controller() as? GiftViewScreen {
                                     controller.dismissAllTooltips()
                                     
-                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                    let text = strings.Gift_View_TooltipPremiumWearing
-                                    let tooltipController = UndoOverlayController(
-                                        presentationData: presentationData,
-                                        content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
-                                        position: .bottom,
-                                        animateInAsReplacement: false,
-                                        appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
-                                        action: { [weak controller] action in
-                                            if case .info = action {
-                                                controller?.dismissAllTooltips()
-                                                let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .messageEffects, forceDark: false, dismissed: nil)
-                                                controller?.push(premiumController)
-                                                Queue.mainQueue().after(0.6, {
-                                                    component.cancel(false)
-                                                })
+                                    if isChannelGift {
+                                        state.levelsDisposable.set(combineLatest(
+                                            queue: Queue.mainQueue(),
+                                            context.engine.peers.getChannelBoostStatus(peerId: ownerPeerId),
+                                            context.engine.peers.getMyBoostStatus()
+                                        ).startStandalone(next: { [weak controller] boostStatus, myBoostStatus in
+                                            guard let controller, let boostStatus, let myBoostStatus else {
+                                                return
                                             }
-                                            return false
-                                        }
-                                    )
-                                    controller.present(tooltipController, in: .window(.root))
+                                            component.cancel(true)
+                                            
+                                            let levelsController = context.sharedContext.makePremiumBoostLevelsController(context: context, peerId: ownerPeerId, subject: .wearGift, boostStatus: boostStatus, myBoostStatus: myBoostStatus, forceDark: false, openStats: nil)
+                                            controller.push(levelsController)
+                                            
+                                            HapticFeedback().impact(.light)
+                                        }))
+                                    } else {
+                                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                        let text = strings.Gift_View_TooltipPremiumWearing
+                                        let tooltipController = UndoOverlayController(
+                                            presentationData: presentationData,
+                                            content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
+                                            position: .bottom,
+                                            animateInAsReplacement: false,
+                                            appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                            action: { [weak controller] action in
+                                                if case .info = action {
+                                                    controller?.dismissAllTooltips()
+                                                    let premiumController = context.sharedContext.makePremiumIntroController(context: context, source: .messageEffects, forceDark: false, dismissed: nil)
+                                                    controller?.push(premiumController)
+                                                    Queue.mainQueue().after(0.6, {
+                                                        component.cancel(false)
+                                                    })
+                                                }
+                                                return false
+                                            }
+                                        )
+                                        controller.present(tooltipController, in: .window(.root))
+                                    }
                                 } else {
                                     state.commitWear(uniqueGift)
                                     if case .wearPreview = component.subject {
@@ -2583,7 +2688,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let _ = (context.account.stateManager.contactBirthdays
             |> take(1)
             |> deliverOnMainQueue).start(next: { birthdays in
-                let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, gift, transferStars, arguments.canExportDate), completion: { peerIds in
+                var showSelf = false
+                if arguments.peerId?.namespace == Namespaces.Peer.CloudChannel {
+                    showSelf = true
+                }
+                let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, gift, transferStars, arguments.canExportDate, showSelf), completion: { peerIds in
                     guard let peerId = peerIds.first else {
                         return
                     }
@@ -2727,41 +2836,53 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let link = "https://t.me/nft/\(gift.slug)"
             
-            var items: [ContextMenuItem] = []
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] c, _ in
-                c?.dismiss(completion: nil)
-                
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: arguments.peerId ?? context.account.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
                 guard let self else {
                     return
                 }
+                var items: [ContextMenuItem] = []
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    c?.dismiss(completion: nil)
+                    
+                    guard let self else {
+                        return
+                    }
+                    
+                    UIPasteboard.general.string = link
+                    
+                    self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                })))
                 
-                UIPasteboard.general.string = link
-                
-                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Share, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
-            }, action: { c, _ in
-                c?.dismiss(completion: nil)
-                
-                shareGiftImpl?()
-            })))
-            
-            if let _ = arguments.transferStars {
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Transfer, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Share, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
                 }, action: { c, _ in
                     c?.dismiss(completion: nil)
                     
-                    transferGiftImpl?()
+                    shareGiftImpl?()
                 })))
-            }
-            
-            let contextController = ContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-            self.presentInGlobalOverlay(contextController)
+                
+                if let _ = arguments.transferStars {
+                    if case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                        
+                    } else {
+                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_Transfer, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            c?.dismiss(completion: nil)
+                            
+                            transferGiftImpl?()
+                        })))
+                    }
+                }
+                
+                let contextController = ContextController(presentationData: presentationData, source: .reference(GiftViewContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                self.presentInGlobalOverlay(contextController)
+            })
         }
     }
     
@@ -3655,7 +3776,7 @@ private final class AvatarComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 42.0))
             
             super.init(frame: frame)
             

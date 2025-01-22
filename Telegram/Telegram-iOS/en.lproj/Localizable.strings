@@ -13659,10 +13659,13 @@ Sorry for the inconvenience.";
 "Gift.Wear.GetBenefits" = "and get these benefits:";
 "Gift.Wear.Badge.Title" = "Radiant Badge";
 "Gift.Wear.Badge.Text" = "The glittering icon of this item will be displayed next to your name.";
+"Gift.Wear.Badge.ChannelText" = "The glittering icon of this item will be displayed next to your channel's name.";
 "Gift.Wear.Design.Title" = "Unqiue Profile Design";
 "Gift.Wear.Design.Text" = "Your profile page will get the color and the symbol of this item.";
+"Gift.Wear.Design.ChannelText" = "Your channel's page will get the color and the symbol of this item.";
 "Gift.Wear.Proof.Title" = "Proof of Ownership";
 "Gift.Wear.Proof.Text" = "Tapping the icon of this item next to your name will show its info and owner.";
+"Gift.Wear.Proof.ChannelText" = "Tapping the icon of this item next to your channel's name will show its info and owner.";
 "Gift.Wear.Start" = "Start Wearing";
 
 "Gift.View.Header.Transfer" = "transfer";
@@ -13724,6 +13727,9 @@ Sorry for the inconvenience.";
 "Gift.View.HiddenInfo.Channel" = "This item is hidden from visitors of your channel.";
 "Gift.View.HiddenInfoShow.Channel" = "This item is hidden from visitors of your channel. [Show >]()";
 
+"Gift.View.UniqueHiddenInfo" = "This gift is not displayed on your page.";
+"Gift.View.UniqueHiddenInfo.Channel" = "This item is not displayed in your channel's Gifts.";
+
 "Gift.View.KeepOrConvertDescription.Channel" = "Your channel can keep this gift in your Profile or convert it to %@. [More About Stars >]()";
 "Gift.View.KeepUpgradeOrConvertDescription.Channel" = "Your channel can keep this gift, upgrade it, or sell it for %@. [More About Stars >]()";
 
@@ -13766,8 +13772,8 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.NoResults.ViewAll" = "View All Gifts";
 
 
-"Gift.Displayed.ChannelText" = "The gift is now shown on channel's Page.";
-"Gift.Hidden.ChannelText" = "The gift is removed from channel's Page.";
+"Gift.Displayed.ChannelText" = "The gift is now shown on the channel's Page.";
+"Gift.Hidden.ChannelText" = "The gift is removed from the channel's Page.";
 
 "Gift.Upgrade.AddChannelName" = "Add channel name to the gift";
 

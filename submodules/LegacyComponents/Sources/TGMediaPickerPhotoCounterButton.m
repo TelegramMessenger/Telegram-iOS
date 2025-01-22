@@ -790,6 +790,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
     UIImageView *_thumbnailView;
     UILabel *_label;
     
+    CGFloat _labelWidth;
     bool _gallery;
 }
 
@@ -805,9 +806,15 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         self.exclusiveTouch = true;
         _gallery = gallery;
         
-        CGFloat width = _gallery ? 168.0 : 98.0;
+        UIFont *font = [TGFont boldSystemFontOfSize:14];
+        NSString *title = _gallery ? TGLocalized(@"Media.ChooseFromGallery") : TGLocalized(@"Media.EditCover");
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        CGFloat width = floor([title sizeWithFont:font].width) + 28.0f;
+#pragma clang diagnostic pop
+        _labelWidth = width;
         
-        _wrapperView = [[UIView alloc] initWithFrame:CGRectMake((120 - width) / 2.0, 0, width, 26)];
+        _wrapperView = [[UIView alloc] initWithFrame:CGRectMake(TGScreenPixelFloor((180 - width) / 2.0), 0, width, 26)];
         _wrapperView.userInteractionEnabled = false;
         [self addSubview:_wrapperView];
         
@@ -825,9 +832,9 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
 
         _label = [[UILabel alloc] initWithFrame:CGRectZero];
         _label.backgroundColor = [UIColor clearColor];
-        _label.font = [TGFont boldSystemFontOfSize:14];
+        _label.font = font;
         _label.textColor = [UIColor whiteColor];
-        _label.text = _gallery ? TGLocalized(@"Media.ChooseFromGallery") : TGLocalized(@"Media.EditCover");
+        _label.text = title;
         [_label sizeToFit];
         _label.frame = CGRectMake(10.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
         [_wrapperView addSubview:_label];
@@ -846,15 +853,15 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         _thumbnailView.hidden = false;
         _thumbnailView.image = image;
                 
-        _wrapperView.frame = CGRectMake(0, 0, 120, 26);
-        _backgroundView.frame = CGRectMake(0.0f, 0, 120, 26);
+        CGFloat width = _labelWidth + 22.0;
+        _wrapperView.frame = CGRectMake(TGScreenPixelFloor((180 - width) / 2.0), 0, width, 26);
+        _backgroundView.frame = CGRectMake(0.0f, 0, width, 26);
         _label.frame = CGRectMake(10.0 + 22.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
     } else {
         _thumbnailView.hidden = true;
         
-        CGFloat width = _gallery ? 168.0 : 98.0;
-        
-        _wrapperView.frame =  CGRectMake(11, 0, width, 26);
+        CGFloat width = _labelWidth;
+        _wrapperView.frame =  CGRectMake(TGScreenPixelFloor((180 - width) / 2.0), 0, width, 26);
         _backgroundView.frame = CGRectMake(0.0f, 0, width, 26);
         _label.frame = CGRectMake(10.0, (26.0 - _label.frame.size.height) / 2.0, _label.frame.size.width, _label.frame.size.height);
     }

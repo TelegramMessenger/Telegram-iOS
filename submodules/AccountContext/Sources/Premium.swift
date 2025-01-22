@@ -50,7 +50,7 @@ public enum PremiumGiftSource: Equatable {
     case settings([EnginePeer.Id: TelegramBirthday]?)
     case chatList([EnginePeer.Id: TelegramBirthday]?)
     case stars([EnginePeer.Id: TelegramBirthday]?)
-    case starGiftTransfer([EnginePeer.Id: TelegramBirthday]?, StarGiftReference, StarGift.UniqueGift, Int64, Int32?)
+    case starGiftTransfer([EnginePeer.Id: TelegramBirthday]?, StarGiftReference, StarGift.UniqueGift, Int64, Int32?, Bool)
     case channelBoost
     case deeplink(String?)
 }
@@ -277,7 +277,7 @@ public struct PremiumConfiguration {
                 minChannelWallpaperLevel: get(data["channel_wallpaper_level_min"]) ?? defaultValue.minChannelWallpaperLevel,
                 minChannelCustomWallpaperLevel: get(data["channel_custom_wallpaper_level_min"]) ?? defaultValue.minChannelCustomWallpaperLevel,
                 minChannelRestrictAdsLevel: get(data["channel_restrict_sponsored_level_min"]) ?? defaultValue.minChannelRestrictAdsLevel,
-                minChannelWearGiftLevel: get(data["channel_wear_collectible_level_min"]) ?? defaultValue.minChannelWearGiftLevel,
+                minChannelWearGiftLevel: get(data["channel_emoji_status_level_min"]) ?? defaultValue.minChannelWearGiftLevel,
                 minGroupProfileIconLevel: get(data["group_profile_bg_icon_level_min"]) ?? defaultValue.minGroupProfileIconLevel,
                 minGroupEmojiStatusLevel: get(data["group_emoji_status_level_min"]) ?? defaultValue.minGroupEmojiStatusLevel,
                 minGroupWallpaperLevel: get(data["group_wallpaper_level_min"]) ?? defaultValue.minGroupWallpaperLevel,

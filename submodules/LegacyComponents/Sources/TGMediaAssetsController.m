@@ -260,6 +260,7 @@
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
         pickerController.hasSchedule = strongController.hasSchedule;
         pickerController.reminder = strongController.reminder;
+        pickerController.hasCoverButton = strongController.hasCoverButton;
         pickerController.forum = strongController.forum;
         pickerController.isSuggesting = strongController.isSuggesting;
         pickerController.presentScheduleController = strongController.presentScheduleController;
@@ -363,6 +364,12 @@
 {
     _reminder = reminder;
     self.pickerController.reminder = reminder;
+}
+
+- (void)setHasCoverButton:(bool)hasCoverButton
+{
+    _hasCoverButton = hasCoverButton;
+    self.pickerController.hasCoverButton = hasCoverButton;
 }
 
 - (void)setForum:(bool)forum {

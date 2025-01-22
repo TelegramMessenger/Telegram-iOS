@@ -867,27 +867,57 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         switch result {
             case let .media(media, key):
                 if !forceReupload, let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource, let fileReference = resource.fileReference {
-                    var flags: Int32 = 0
-                    var ttlSeconds: Int32?
-                    var videoTimestamp: Int32?
-                    if let autoclearMessageAttribute = autoclearMessageAttribute {
-                        flags |= 1 << 0
-                        ttlSeconds = autoclearMessageAttribute.timeout
-                    }
-                    
-                    for attribute in attributes {
-                        if let _ = attribute as? MediaSpoilerMessageAttribute {
-                            flags |= 1 << 2
-                        } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
-                            flags |= (1 << 4)
-                            videoTimestamp = attribute.timestamp
+                    var videoCoverSignal: Signal<UploadedMediaThumbnailResult, PendingMessageUploadError> = .single(.none)
+                    if let cover = file.videoCover, let resource = cover.representations.first?.resource {
+                        let fileReference: AnyMediaReference
+                        if let partialReference = file.partialReference {
+                            fileReference = partialReference.mediaReference(media)
+                        } else {
+                            fileReference = .standalone(media: media)
+                        }
+                        videoCoverSignal = uploadedVideoCover(network: network, postbox: postbox, resourceReference: fileReference.resourceReference(resource), peerId: peerId)
+                        |> mapError { _ -> PendingMessageUploadError in return .generic }
+                        |> map { result in
+                            if let result = result {
+                                return .photo(result)
+                            } else {
+                                return .none
+                            }
                         }
                     }
                     
-                    return .single(.progress(PendingMessageUploadedContentProgress(progress: 1.0)))
-                    |> then(
-                        .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: flags, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), videoCover: nil, videoTimestamp: videoTimestamp, ttlSeconds: ttlSeconds, query: nil), text), reuploadInfo: nil, cacheReferenceKey: nil)))
-                    )
+                    return videoCoverSignal
+                    |> mapToSignal { videoCover -> Signal<PendingMessageUploadedContentResult, PendingMessageUploadError> in
+                        var flags: Int32 = 0
+                        var ttlSeconds: Int32?
+                        var videoTimestamp: Int32?
+                        if let autoclearMessageAttribute = autoclearMessageAttribute {
+                            flags |= 1 << 0
+                            ttlSeconds = autoclearMessageAttribute.timeout
+                        }
+                        
+                        for attribute in attributes {
+                            if let _ = attribute as? MediaSpoilerMessageAttribute {
+                                flags |= 1 << 2
+                            } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                                flags |= (1 << 4)
+                                videoTimestamp = attribute.timestamp
+                            }
+                        }
+                        
+                        var videoCoverPhoto: Api.InputPhoto?
+                        if case let .photo(photo) = videoCover {
+                            videoCoverPhoto = photo
+                        }
+                        if let _ = videoCoverPhoto {
+                            flags |= 1 << 3
+                        }
+                        
+                        return .single(.progress(PendingMessageUploadedContentProgress(progress: 1.0)))
+                        |> then(
+                            .single(.content(PendingMessageUploadedContentAndReuploadInfo(content: .media(Api.InputMedia.inputMediaDocument(flags: flags, id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: fileReference)), videoCover: videoCoverPhoto, videoTimestamp: videoTimestamp, ttlSeconds: ttlSeconds, query: nil), text), reuploadInfo: nil, cacheReferenceKey: nil)))
+                        )
+                    }
                 }
                 referenceKey = key
             case let .localReference(key):

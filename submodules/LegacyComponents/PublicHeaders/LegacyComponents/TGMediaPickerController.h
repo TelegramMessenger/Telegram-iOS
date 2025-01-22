@@ -30,6 +30,7 @@
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
+@property (nonatomic, assign) bool hasCoverButton;
 
 @property (nonatomic, assign) bool forum;
 @property (nonatomic, assign) bool isSuggesting;

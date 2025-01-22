@@ -138,8 +138,8 @@ typedef enum
         static UIImage *leftCurtain;
         static UIImage *rightCurtain;
         dispatch_once(&onceToken, ^
-                      {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(24.0f, 40.0f), false, 0.0f);
+        {
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(11.0f, 40.0f), false, 0.0f);
             CGContextRef context = UIGraphicsGetCurrentContext();
             
             CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.8).CGColor);
@@ -150,11 +150,11 @@ typedef enum
             leftCurtain = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
             
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(24.0f, 40.0f), false, 0.0f);
+            UIGraphicsBeginImageContextWithOptions(CGSizeMake(11.0f, 40.0f), false, 0.0f);
             context = UIGraphicsGetCurrentContext();
             
             CGContextSetFillColorWithColor(context, UIColorRGBA(0x000000, 0.8).CGColor);
-            path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(-16.0, 0, 40, 40) cornerRadius:9.0];
+            path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(-29.0, 0, 40, 40) cornerRadius:9.0];
             CGContextAddPath(context, path.CGPath);
             CGContextFillPath(context);
             
@@ -163,12 +163,12 @@ typedef enum
         });
         
         _leftCurtainView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
-        _leftCurtainView.image = [leftCurtain stretchableImageWithLeftCapWidth:11 topCapHeight:20];
+        _leftCurtainView.image = [leftCurtain resizableImageWithCapInsets:UIEdgeInsetsMake(0, 11, 0, 0)];
         _leftCurtainView.clipsToBounds = true;
         [_wrapperView addSubview:_leftCurtainView];
         
         _rightCurtainView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
-        _rightCurtainView.image = [rightCurtain stretchableImageWithLeftCapWidth:11 topCapHeight:20];
+        _rightCurtainView.image = [rightCurtain resizableImageWithCapInsets:UIEdgeInsetsMake(0, 0, 0, 11)];
         _rightCurtainView.clipsToBounds = true;
         [_wrapperView addSubview:_rightCurtainView];
         
@@ -409,7 +409,7 @@ typedef enum
         [_dotHandle addGestureRecognizer:_dotPanGestureRecognizer];
         
         _tapGestureRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
-        _tapGestureRecognizer.enabled = false;
+        _tapGestureRecognizer.enabled = cover;
         [_trimView addGestureRecognizer:_tapGestureRecognizer];
     }
     return self;

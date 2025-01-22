@@ -2396,8 +2396,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var mode: ContactSelectionControllerMode = .generic
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
-        if case let .starGiftTransfer(birthdays, _, _, _, _) = source {
-            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false)
+        if case let .starGiftTransfer(birthdays, _, _, _, _, showSelf) = source {
+            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: showSelf)
             currentBirthdays = birthdays
         } else if case let .chatList(birthdays) = source {
             mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
@@ -2409,8 +2409,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false)
         }
         
+        var allowChannelsInSearch = false
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
-        if case let .starGiftTransfer(_, _, _, _, canExportDate) = source {
+        if case let .starGiftTransfer(_, _, _, _, canExportDate, _) = source {
+            allowChannelsInSearch = true
             var subtitle: String?
             if let canExportDate {
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -2476,6 +2478,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             autoDismiss: false,
             title: { _ in return title },
             options: contactOptions,
+            allowChannelsInSearch: allowChannelsInSearch,
             openProfile: { peer in
                 openProfileImpl?(peer)
             },
@@ -2557,11 +2560,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentExportAlertImpl = { [weak controller] in
-            guard let controller, case let .starGiftTransfer(_, reference, gift, _, canExportDate) = source, let canExportDate else {
+            guard let controller, case let .starGiftTransfer(_, reference, gift, _, canExportDate, _) = source, let canExportDate else {
                 return
             }
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-            if currentTime > canExportDate || "".isEmpty {                
+            if currentTime > canExportDate {
                 let alertController = giftWithdrawAlertController(context: context, gift: gift, commit: {
                     let _ = (context.engine.payments.checkStarGiftWithdrawalAvailability(reference: reference)
                     |> deliverOnMainQueue).start(error: { [weak controller] error in
@@ -2601,7 +2604,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         
         presentTransferAlertImpl = { [weak controller] peer in
-            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _) = source else {
+            guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _, _) = source else {
                 return
             }
             let alertController = giftTransferAlertController(context: context, gift: gift, peer: peer, transferStars: transferStars, commit: { [weak controller] in

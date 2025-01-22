@@ -1236,7 +1236,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         controller.videoCompletion = { [weak self] image, url, values, markup, commit in
                                             if let strongSelf = self {
                                                 if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                    settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), values: values, markup: markup, mode: .accept, uploadStatus: nil)
+                                                    settingsController.updateProfileVideo(image, video: nil, values: nil, markup: markup, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }

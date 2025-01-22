@@ -131,7 +131,7 @@ public final class MediaEditorVideoExport {
         }
         
         var composerDimensions: CGSize {
-            if self.values.isStory || self.values.isSticker {
+            if self.values.isStory || self.values.isSticker || self.values.isAvatar {
                 return CGSize(width: 1080.0, height: 1920.0)
             } else {
                 let maxSize = CGSize(width: 1920.0, height: 1920.0)
