@@ -2783,6 +2783,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         private let gradientView: UIImageView
         private var gradientColorsDisposable: Disposable?
         
+        fileprivate var cropScrollView: CropScrollView?
         fileprivate var stickerBackgroundView: UIImageView?
         private var stickerOverlayLayer: SimpleShapeLayer?
         private var stickerFrameLayer: SimpleShapeLayer?
@@ -2799,6 +2800,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
         
         var mediaEditor: MediaEditor?
         fileprivate var mediaEditorPromise = Promise<MediaEditor?>()
+        private var mediaEntityInitialValues: (position: CGPoint, scale: CGFloat, rotation: CGFloat)?
         
         let ciContext = CIContext(options: [.workingColorSpace : NSNull()])
         
@@ -2967,6 +2969,17 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 let stickerBackgroundView = UIImageView()
                 self.stickerBackgroundView = stickerBackgroundView
                 self.previewContainerView.addSubview(stickerBackgroundView)
+                
+                let cropScrollView = CropScrollView(frame: .zero)
+                cropScrollView.updated = { [weak self] position, scale in
+                    guard let self, let mediaEntityView = self.entitiesView.getView(where: { $0 is DrawingMediaEntityView }) as? DrawingMediaEntityView, let mediaEntity = mediaEntityView.entity as? DrawingMediaEntity, let (initialPosition, initialScale, _) = self.mediaEntityInitialValues else {
+                        return
+                    }
+                    mediaEntity.position = initialPosition.offsetBy(dx: position.x * initialScale, dy: position.y * initialScale)
+                    mediaEntity.scale = initialScale * scale
+                    mediaEntityView.update(animated: false)
+                }
+                self.cropScrollView = cropScrollView
             case .coverEditor:
                 let stickerBackgroundView = UIImageView()
                 self.stickerBackgroundView = stickerBackgroundView
@@ -3199,6 +3212,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let initialPosition = mediaEntity.position
             let initialScale = mediaEntity.scale
             let initialRotation = mediaEntity.rotation
+            self.mediaEntityInitialValues = (initialPosition, initialScale, initialRotation)
             
             if isFromCamera && mediaDimensions.width > mediaDimensions.height {
                 mediaEntity.scale = storyDimensions.height / fittedSize.height
@@ -5916,14 +5930,21 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             transition.setFrame(view: self.selectionContainerView, frame: CGRect(origin: .zero, size: previewFrame.size))
             
             if let stickerBackgroundView = self.stickerBackgroundView, let stickerOverlayLayer = self.stickerOverlayLayer, let stickerFrameLayer = self.stickerFrameLayer {
-                var stickerFrameFraction: CGFloat = 1.0
-                if case .avatarEditor = controller.mode {
+                let stickerFrameFraction: CGFloat
+                switch controller.mode {
+                case .avatarEditor, .stickerEditor:
                     stickerFrameFraction = 0.97
+                default:
+                    stickerFrameFraction = 1.0
                 }
+
                 let stickerFrameWidth = floorToScreenPixels(previewSize.width * stickerFrameFraction)
                 stickerOverlayLayer.frame = CGRect(origin: .zero, size: previewSize)
                 
-                let stickerFrameRect = CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth))
+                let stickerFrameRect = CGRect(
+                    origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)),
+                    size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth)
+                )
                  
                 let overlayOuterRect = UIBezierPath(rect: CGRect(origin: .zero, size: previewSize))
                 let overlayInnerRect: UIBezierPath
@@ -5951,6 +5972,19 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                 
                 transition.setFrame(view: stickerBackgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((previewSize.width - stickerFrameWidth) / 2.0), y: floorToScreenPixels((previewSize.height - stickerFrameWidth) / 2.0)), size: CGSize(width: stickerFrameWidth, height: stickerFrameWidth)))
                 stickerBackgroundView.layer.cornerRadius = stickerFrameWidth / 8.0
+                
+                let cropScrollRect = CGSize(width: previewSize.width, height: previewSize.width).centered(around: stickerFrameRect.center)
+                if let cropScrollView = self.cropScrollView {
+                    cropScrollView.frame = cropScrollRect
+                    if cropScrollView.superview == nil {
+                        self.previewContainerView.addSubview(cropScrollView)
+                        
+                        if let dimensions = self.subject?.dimensions {
+                            let filledCropSize = dimensions.cgSize.aspectFilled(CGSize(width: previewSize.width, height: previewSize.width))
+                            cropScrollView.setContentSize(filledCropSize)
+                        }
+                    }
+                }
             }
             
             self.interaction?.containerLayoutUpdated(layout: layout, transition: transition)
