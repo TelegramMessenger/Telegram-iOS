@@ -13642,6 +13642,7 @@ Sorry for the inconvenience.";
 
 "Premium.Gift.ContactSelection.ThisIsYou" = "THIS IS YOU";
 "Premium.Gift.ContactSelection.BuySelf" = "buy yourself a gift";
+"Premium.Gift.ContactSelection.TransferSelf" = "send yourself a gift";
 
 "Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
 "Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";

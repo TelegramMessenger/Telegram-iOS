@@ -24,6 +24,9 @@ extension MediaEditorScreenImpl {
         if case .avatarEditor = self.mode {
             return false
         }
+        if case .coverEditor = self.mode {
+            return false
+        }
         
         let filteredEntities = self.node.entitiesView.entities.filter { entity in
             if entity is DrawingMediaEntity {
