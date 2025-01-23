@@ -1198,8 +1198,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.push(controller)
                             return true
                         case .starGift, .starGiftUnique:
-                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message), shareStory: { [weak self] in
-                                if let self, case let .starGiftUnique(gift, _, _, _, _, _, _, _, _, _) = action.action, case let .unique(uniqueGift) = gift {
+                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message), shareStory: { [weak self] uniqueGift in
+                                if let self {
                                     Queue.mainQueue().after(0.15) {
                                         let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: self)
                                         self.push(controller)
@@ -4577,7 +4577,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false)
+                let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false, completion: nil)
                 self.push(controller)
             })
         }, requestMessageUpdate: { [weak self] id, scroll in

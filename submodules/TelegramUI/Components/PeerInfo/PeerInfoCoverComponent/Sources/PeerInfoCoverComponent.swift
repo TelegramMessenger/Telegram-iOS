@@ -114,6 +114,7 @@ public final class PeerInfoCoverComponent: Component {
     public let avatarScale: CGFloat
     public let defaultHeight: CGFloat
     public let gradientOnTop: Bool
+    public let gradientCenter: CGPoint
     public let avatarTransitionFraction: CGFloat
     public let patternTransitionFraction: CGFloat
     
@@ -126,6 +127,7 @@ public final class PeerInfoCoverComponent: Component {
         avatarScale: CGFloat,
         defaultHeight: CGFloat,
         gradientOnTop: Bool = false,
+        gradientCenter: CGPoint = CGPoint(x: 0.5, y: 0.5),
         avatarTransitionFraction: CGFloat,
         patternTransitionFraction: CGFloat
     ) {
@@ -137,6 +139,7 @@ public final class PeerInfoCoverComponent: Component {
         self.avatarScale = avatarScale
         self.defaultHeight = defaultHeight
         self.gradientOnTop = gradientOnTop
+        self.gradientCenter = gradientCenter
         self.avatarTransitionFraction = avatarTransitionFraction
         self.patternTransitionFraction = patternTransitionFraction
     }
@@ -164,6 +167,9 @@ public final class PeerInfoCoverComponent: Component {
             return false
         }
         if lhs.gradientOnTop != rhs.gradientOnTop {
+            return false
+        }
+        if lhs.gradientCenter != rhs.gradientCenter {
             return false
         }
         if lhs.avatarTransitionFraction != rhs.avatarTransitionFraction {
@@ -412,7 +418,7 @@ public final class PeerInfoCoverComponent: Component {
             } else if case .status = component.subject {
                 gradientWidth = availableSize.width
                 self.backgroundView.backgroundColor = secondaryBackgroundColor
-                self.backgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: component.avatarCenter.y / gradientHeight)
+                self.backgroundGradientLayer.startPoint = component.gradientCenter
                 self.backgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
                 self.backgroundGradientLayer.type = .radial
                 self.backgroundGradientLayer.colors = [backgroundColor.cgColor, secondaryBackgroundColor.cgColor]

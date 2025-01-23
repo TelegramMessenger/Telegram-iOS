@@ -13474,6 +13474,7 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuSendGiftTo" = "Send Gift to %@";
 "Conversation.ContextMenuSendAnotherGift" = "Send Another Gift";
+"Conversation.ContextMenuBuyGift" = "Buy Yourself a Gift";
 
 "Gift.View.Status" = "Status";
 "Gift.View.Status.NonUnique" = "Non-Unique";

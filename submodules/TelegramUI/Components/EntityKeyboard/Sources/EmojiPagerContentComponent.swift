@@ -2789,7 +2789,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 self.longPressItem = item.1
                 
-                if #available(iOS 13.0, *) {
+                if #available(iOS 13.0, *), item.0.itemFile != nil {
                     self.continuousHaptic = try? ContinuousHaptic(duration: longPressDuration)
                 }
                 

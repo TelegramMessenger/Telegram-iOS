@@ -4339,7 +4339,7 @@ extension ChatControllerImpl {
                     let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
                 }
             } else {
-                let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: [], hasBirthday: false)
+                let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: [], hasBirthday: false, completion: nil)
                 self.push(controller)
             }
         }, openPremiumRequiredForMessaging: { [weak self] in
