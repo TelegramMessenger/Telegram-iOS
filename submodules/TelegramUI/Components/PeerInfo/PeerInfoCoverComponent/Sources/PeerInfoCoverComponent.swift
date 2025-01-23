@@ -457,7 +457,7 @@ public final class PeerInfoCoverComponent: Component {
                 ]
             } else if case let .status(status) = component.subject, case let .starGift(_, _, _, _, _, _, _, patternColorValue, _) = status.content {
                 let patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
-                self.avatarBackgroundPatternContentsLayer.compositingFilter = "overlayBlendMode"
+                self.avatarBackgroundPatternContentsLayer.compositingFilter = nil
                 self.avatarBackgroundPatternContentsLayer.colors = [
                     patternColor.withAlphaComponent(0.6).cgColor,
                     patternColor.withAlphaComponent(0.0).cgColor
