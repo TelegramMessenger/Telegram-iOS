@@ -244,19 +244,7 @@
             //if (_selectionContext != nil)
             //    [_cameraButton setHidden:true animated:false];
         }
-        
-        if (hasCoverButton) {
-            _coverButton = [[TGMediaPickerCoverButton alloc] initWithFrame:CGRectMake(0, 0, 180, 26) gallery:false];
-            _coverButton.hidden = true;
-            [_coverButton addTarget:self action:@selector(coverButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_wrapperView addSubview:_coverButton];
-            
-            _coverGalleryButton = [[TGMediaPickerCoverButton alloc] initWithFrame:CGRectMake(0, 0, 180, 26) gallery:true];
-            _coverGalleryButton.hidden = true;
-            [_coverGalleryButton addTarget:self action:@selector(coverGalleryButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_wrapperView addSubview:_coverGalleryButton];
-        }
-            
+                    
         if (_selectionContext != nil)
         {
             _checkButton = [[TGCheckButtonView alloc] initWithStyle:TGCheckButtonStyleGallery];
@@ -428,6 +416,18 @@
         [_photoCounterButton addTarget:self action:@selector(photoCounterButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         _photoCounterButton.userInteractionEnabled = false;
         [_wrapperView addSubview:_photoCounterButton];
+        
+        if (hasCoverButton) {
+            _coverButton = [[TGMediaPickerCoverButton alloc] initWithFrame:CGRectMake(0, 0, 180, 26) gallery:false];
+            _coverButton.hidden = true;
+            [_coverButton addTarget:self action:@selector(coverButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [_wrapperView addSubview:_coverButton];
+            
+            _coverGalleryButton = [[TGMediaPickerCoverButton alloc] initWithFrame:CGRectMake(0, 0, 180, 26) gallery:true];
+            _coverGalleryButton.hidden = true;
+            [_coverGalleryButton addTarget:self action:@selector(coverGalleryButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [_wrapperView addSubview:_coverGalleryButton];
+        }
         
         TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : TGPhotoEditorDoneButtonSend;
         
@@ -1642,9 +1642,6 @@
             || view == _groupButton
             || view == _cameraButton
             || view == _coverButton
-            || view == _cancelCoverButton
-            || view == _saveCoverButton
-            || view == _coverGalleryButton
             || [view isDescendantOfView:_headerWrapperView]
             || [view isDescendantOfView:_portraitToolbarView]
             || [view isDescendantOfView:_landscapeToolbarView]

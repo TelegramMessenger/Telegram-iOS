@@ -971,12 +971,12 @@ private final class ProfileGiftsContextImpl {
     }
     
     func reload() {
-        gifts = []
-        dataState = .ready(canLoadMore: true, nextOffset: nil)
-        self.loadMore()
+        self.gifts = []
+        self.dataState = .ready(canLoadMore: true, nextOffset: nil)
+        self.loadMore(reload: true)
     }
     
-    func loadMore() {
+    func loadMore(reload: Bool = false) {
         let peerId = self.peerId
         let accountPeerId = self.account.peerId
         let network = self.account.network
@@ -1012,8 +1012,10 @@ private final class ProfileGiftsContextImpl {
             } else {
                 self.dataState = .loading
             }
-            self.pushState()
-        
+            if !reload {
+                self.pushState()
+            }
+            
             let signal: Signal<([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?), NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
                 return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
@@ -1077,7 +1079,7 @@ private final class ProfileGiftsContextImpl {
                     return
                 }
                 if isFiltered {
-                    if initialNextOffset == nil {
+                    if initialNextOffset == nil || reload {
                         self.filteredGifts = gifts
                     } else {
                         for gift in gifts {
@@ -1089,7 +1091,7 @@ private final class ProfileGiftsContextImpl {
                     self.filteredCount = updatedCount
                     self.filteredDataState = .ready(canLoadMore: count != 0 && updatedCount > self.filteredGifts.count && nextOffset != nil, nextOffset: nextOffset)
                 } else {
-                    if initialNextOffset == nil {
+                    if initialNextOffset == nil || reload {
                         self.gifts = gifts
                         self.cacheDisposable.set(self.account.postbox.transaction { transaction in
                             if let entry = CodableEntry(CachedProfileGifts(gifts: gifts, count: count, notificationsEnabled: notificationsEnabled)) {

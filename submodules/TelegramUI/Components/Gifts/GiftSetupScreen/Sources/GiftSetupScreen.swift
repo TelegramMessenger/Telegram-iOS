@@ -358,6 +358,27 @@ final class GiftSetupScreenComponent: Component {
                     }
                     let _ = (component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
                     |> deliverOnMainQueue).start(next: { [weak self] result in
+                        if let self, peerId.namespace == Namespaces.Peer.CloudChannel, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                            navigationController.setViewControllers(controllers, animated: true)
+                            
+                            let tooltipController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .sticker(
+                                    context: context,
+                                    file: starGift.file,
+                                    loop: true,
+                                    title: nil,
+                                    text: presentationData.strings.Gift_Send_Success(self.peerMap[peerId]?.compactDisplayTitle ?? "", presentationData.strings.Gift_Send_Success_Stars(Int32(starGift.price))).string,
+                                    undoText: nil,
+                                    customAction: nil
+                                ),
+                                action: { _ in return true }
+                            )
+                            (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
+                        }
+                        
                         if let completion {
                             completion()
                             
@@ -369,26 +390,7 @@ final class GiftSetupScreenComponent: Component {
                                 return
                             }
                             
-                            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                var controllers = navigationController.viewControllers
-                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
-                                navigationController.setViewControllers(controllers, animated: true)
-                                
-                                let tooltipController = UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .sticker(
-                                        context: context,
-                                        file: starGift.file,
-                                        loop: true,
-                                        title: nil,
-                                        text: presentationData.strings.Gift_Send_Success(self.peerMap[peerId]?.compactDisplayTitle ?? "", presentationData.strings.Gift_Send_Success_Stars(Int32(starGift.price))).string,
-                                        undoText: nil,
-                                        customAction: nil
-                                    ),
-                                    action: { _ in return true }
-                                )
-                                (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
-                            } else {
+                            if peerId.namespace != Namespaces.Peer.CloudChannel {
                                 var controllers = navigationController.viewControllers
                                 controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
                                 var foundController = false

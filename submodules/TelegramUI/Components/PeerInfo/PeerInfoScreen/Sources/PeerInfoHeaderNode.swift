@@ -620,6 +620,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
         let expandedAvatarContentButtonForegroundColor: UIColor = .white
         
+        var hasCoverColor = false
         let regularNavigationContentsSecondaryColor: UIColor
         if let emojiStatus = peer?.emojiStatus, case let .starGift(_, _, _, _, _, innerColor, outerColor, _, _) = emojiStatus.content {
             let mainColor = UIColor(rgb: UInt32(bitPattern: innerColor))
@@ -632,8 +633,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else {
                 baseButtonBackgroundColor = UIColor(white: 1.0, alpha: 0.25)
             }
-            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: mainColor)
+            regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: secondaryColor.mixedWith(mainColor, alpha: 0.1))
+            
+            hasCoverColor = true
         } else if let profileColor = peer?.profileColor {
             let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance)
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
@@ -646,12 +649,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColors.main)
             regularHeaderButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: (backgroundColors.secondary ?? backgroundColors.main).mixedWith(backgroundColors.main, alpha: 0.1))
+            
+            hasCoverColor = true
         } else {
             regularNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
             regularContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
             regularHeaderButtonBackgroundColor = .clear
         }
-        self.contentButtonBackgroundColor = regularContentButtonBackgroundColor
+        self.contentButtonBackgroundColor = regularNavigationContentsSecondaryColor.mixedWith(regularContentButtonBackgroundColor, alpha: 0.5)
         
         let collapsedHeaderNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
         let expandedAvatarNavigationContentsSecondaryColor: UIColor = .white
@@ -793,7 +798,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor.mixedWith(collapsedHeaderNavigationContentsPrimaryColor, alpha: effectiveTransitionFraction)
             navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor.mixedWith(collapsedHeaderNavigationContentsSecondaryColor, alpha: effectiveTransitionFraction)
             
-            if peer?.profileColor != nil {
+            if hasCoverColor {
                 navigationContentsCanBeExpanded = effectiveTransitionFraction == 1.0
             } else {
                 navigationContentsCanBeExpanded = true
@@ -2263,6 +2268,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let backgroundCoverSubject: PeerInfoCoverComponent.Subject?
         var backgroundCoverAnimateIn = false
+        var backgroundDefaultHeight: CGFloat = 254.0
         if let status = peer?.emojiStatus, case .starGift = status.content {
             backgroundCoverSubject = .status(status)
             if !self.didSetupBackgroundCover {
@@ -2270,6 +2276,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     backgroundCoverAnimateIn = true
                 }
                 self.didSetupBackgroundCover = true
+            }
+            if !buttonKeys.isEmpty {
+                backgroundDefaultHeight = 327.0
             }
         } else if let peer {
             backgroundCoverSubject = .peer(EnginePeer(peer))
@@ -2286,7 +2295,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center,
                 avatarScale: avatarScale,
-                defaultHeight: 254.0,
+                defaultHeight: backgroundDefaultHeight,
+                gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),
                 avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
                 patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
             )),

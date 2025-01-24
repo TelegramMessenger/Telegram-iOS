@@ -1131,7 +1131,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
             }
-            if isIncoming {
+            if message.id.peerId == context.account.peerId {
+                sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuBuyGift
+            } else if isIncoming {
                 let peerName = message.peers[message.id.peerId].flatMap(EnginePeer.init)?.compactDisplayTitle ?? ""
                 sendGiftTitle = chatPresentationInterfaceState.strings.Conversation_ContextMenuSendGiftTo(peerName).string
             } else {

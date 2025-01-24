@@ -13474,6 +13474,7 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuSendGiftTo" = "Send Gift to %@";
 "Conversation.ContextMenuSendAnotherGift" = "Send Another Gift";
+"Conversation.ContextMenuBuyGift" = "Buy Yourself a Gift";
 
 "Gift.View.Status" = "Status";
 "Gift.View.Status.NonUnique" = "Non-Unique";
@@ -13642,6 +13643,7 @@ Sorry for the inconvenience.";
 
 "Premium.Gift.ContactSelection.ThisIsYou" = "THIS IS YOU";
 "Premium.Gift.ContactSelection.BuySelf" = "buy yourself a gift";
+"Premium.Gift.ContactSelection.TransferSelf" = "send yourself a gift";
 
 "Gift.View.Outgoing.NameHidden" = "Only %@ can see your name.";
 "Gift.View.Outgoing.NameAndMessageHidden" = "Only %@ can see your name and message.";
@@ -13771,7 +13773,6 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.NoResults" = "No Matching Gifts";
 "PeerInfo.Gifts.NoResults.ViewAll" = "View All Gifts";
 
-
 "Gift.Displayed.ChannelText" = "The gift is now shown on the channel's Page.";
 "Gift.Hidden.ChannelText" = "The gift is removed from the channel's Page.";
 
@@ -13782,3 +13783,9 @@ Sorry for the inconvenience.";
 "AvatarUpload.StatusUploading" = "Your photo is uploading.";
 "AvatarUpload.StatusDone" = "Your photo is now set.";
 "AvatarUpload.ViewAction" = "View";
+
+"Notification.StarGift.TitleShort" = "Gift";
+"Notification.StarsGift.SentSomeone" = "Someone sent you a gift";
+"Notification.StarsGift.UpgradeChannel" = "A gift was turned into a unique collectible";
+
+"Gift.View.ViewTonAddressUrl" = "https://tonviewer.com/%@";

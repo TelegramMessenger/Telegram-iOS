@@ -88,7 +88,20 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         var colors = AvatarNode.Colors(theme: theme)
         
         let regularNavigationContentsSecondaryColor: UIColor
-        if let profileColor = peer?.profileColor {
+        if case let .starGift(_, _, _, _, _, innerColorValue, outerColorValue, _, _) = peer?.emojiStatus?.content {
+            let innerColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
+            let outerColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
+            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(innerColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+                    
+            let baseBackgroundColor = UIColor(white: 1.0, alpha: 0.75)
+    
+            let topColor = baseBackgroundColor.blendOver(background: innerColor.mixedWith(outerColor, alpha: 0.1)).withMultiplied(hue: 1.0, saturation: 1.2, brightness: 1.5)
+            let bottomColor = baseBackgroundColor.blendOver(background: outerColor).withMultiplied(hue: 1.0, saturation: 1.2, brightness: 1.5)
+        
+            colors.unseenColors = [topColor, bottomColor]
+            colors.unseenCloseFriendsColors = colors.unseenColors
+            colors.seenColors = colors.unseenColors
+        } else if let profileColor = peer?.profileColor {
             let backgroundColors = self.context.peerNameColors.getProfile(profileColor, dark: theme.overallDarkAppearance)
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColors.main.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             

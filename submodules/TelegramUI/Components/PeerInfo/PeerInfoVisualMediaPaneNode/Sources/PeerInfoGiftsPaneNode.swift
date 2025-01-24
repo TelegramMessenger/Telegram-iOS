@@ -265,8 +265,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             }
                                             return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
                                         },
-                                        shareStory: { [weak self] in
-                                            guard let self, case let .unique(uniqueGift) = product.gift, let parentController = self.parentController else {
+                                        shareStory: { [weak self] uniqueGift in
+                                            guard let self, let parentController = self.parentController else {
                                                 return
                                             }
                                             Queue.mainQueue().after(0.15) {
@@ -650,7 +650,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.chatControllerInteraction.navigationController()?.pushViewController(controller)
             })
         } else {
-            let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: self.peerId, premiumOptions: [], hasBirthday: false)
+            let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: self.peerId, premiumOptions: [], hasBirthday: false, completion: nil)
             self.chatControllerInteraction.navigationController()?.pushViewController(controller)
         }
     }

@@ -359,6 +359,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     private func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, force: Bool) -> CGFloat {
+        let isFirstTime = self.layoutData == nil
         self.layoutData = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, isSecondary, metrics)
         
         if self.presentationInterfaceState != interfaceState || force {
@@ -416,6 +417,11 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 
                 if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
                     if case .broadcast = peer.info, interfaceState.starGiftsAvailable {
+                        if self.giftButton.isHidden && !isFirstTime {
+                            self.giftButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            self.giftButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        }
+                        
                         self.giftButton.isHidden = false
                         self.helpButton.isHidden = true
                         

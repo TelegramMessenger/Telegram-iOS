@@ -9821,7 +9821,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             context: self.context,
             peerId: self.peerId,
             premiumOptions: premiumOptions,
-            hasBirthday: false
+            hasBirthday: false,
+            completion: { [weak self] in
+                guard let self, let profileGiftsContext = self.data?.profileGiftsContext else {
+                    return
+                }
+                profileGiftsContext.reload()
+            }
         )
         self.controller?.push(controller)
     }
