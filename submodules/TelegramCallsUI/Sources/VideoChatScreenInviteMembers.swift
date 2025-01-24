@@ -9,7 +9,7 @@ import PresentationDataUtils
 
 extension VideoChatScreenComponent.View {
     func openInviteMembers() {
-        guard let component = self.component else {
+        guard case let .group(groupCall) = self.currentCall else {
             return
         }
         
@@ -38,16 +38,16 @@ extension VideoChatScreenComponent.View {
         guard let inviteType else {
             return
         }
-        guard let peerId = component.call.peerId else {
+        guard let peerId = groupCall.peerId else {
             return
         }
         
         switch inviteType {
         case .invite:
-            let groupPeer = component.call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            let groupPeer = groupCall.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             let _ = (groupPeer
             |> deliverOnMainQueue).start(next: { [weak self] groupPeer in
-                guard let self, let component = self.component, let environment = self.environment, let groupPeer else {
+                guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall, let groupPeer else {
                     return
                 }
                 let inviteLinks = self.inviteLinks
@@ -81,8 +81,8 @@ extension VideoChatScreenComponent.View {
                 filters.append(.excludeBots)
                 
                 var dismissController: (() -> Void)?
-                let controller = ChannelMembersSearchController(context: component.call.accountContext, peerId: groupPeer.id, forceTheme: environment.theme, mode: .inviteToCall, filters: filters, openPeer: { [weak self] peer, participant in
-                    guard let self, let component = self.component, let environment = self.environment else {
+                let controller = ChannelMembersSearchController(context: groupCall.accountContext, peerId: groupPeer.id, forceTheme: environment.theme, mode: .inviteToCall, filters: filters, openPeer: { [weak self] peer, participant in
+                    guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                         dismissController?()
                         return
                     }
@@ -90,51 +90,51 @@ extension VideoChatScreenComponent.View {
                         return
                     }
                     
-                    let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+                    let presentationData = groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
                     if peer.id == callState.myPeerId {
                         return
                     }
                     if let participant {
                         dismissController?()
                         
-                        if component.call.invitePeer(participant.peer.id) {
+                        if groupCall.invitePeer(participant.peer.id) {
                             let text: String
                             if case let .channel(channel) = self.peer, case .broadcast = channel.info {
-                                text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                                text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
                             } else {
-                                text = environment.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                                text = environment.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
                             }
-                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: EnginePeer(participant.peer), title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
+                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: groupCall.accountContext, peer: EnginePeer(participant.peer), title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                         }
                     } else {
                         if case let .channel(groupPeer) = groupPeer, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
-                            let text = environment.strings.VoiceChat_SendPublicLinkText(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                            let text = environment.strings.VoiceChat_SendPublicLinkText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
                             
-                            environment.controller()?.present(textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_SendPublicLinkSend, action: { [weak self] in
+                            environment.controller()?.present(textAlertController(context: groupCall.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_SendPublicLinkSend, action: { [weak self] in
                                 dismissController?()
                                 
-                                guard let self, let component = self.component else {
+                                guard let self, case let .group(groupCall) = self.currentCall else {
                                     return
                                 }
                                 
-                                let _ = (enqueueMessages(account: component.call.accountContext.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
-                                         |> deliverOnMainQueue).start(next: { [weak self] _ in
-                                    guard let self, let environment = self.environment else {
+                                let _ = (enqueueMessages(account: groupCall.accountContext.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                                    guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                         return
                                     }
-                                    self.presentUndoOverlay(content: .forward(savedMessages: false, text: environment.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string), action: { _ in return true })
+                                    self.presentUndoOverlay(content: .forward(savedMessages: false, text: environment.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string), action: { _ in return true })
                                 })
                             })]), in: .window(.root))
                         } else {
                             let text: String
                             if case let .channel(groupPeer) = groupPeer, case .broadcast = groupPeer.info {
-                                text = environment.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                                text = environment.strings.VoiceChat_InviteMemberToChannelFirstText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), EnginePeer(groupPeer).displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
                             } else {
-                                text = environment.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), groupPeer.displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
+                                text = environment.strings.VoiceChat_InviteMemberToGroupFirstText(peer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), groupPeer.displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)).string
                             }
                             
-                            environment.controller()?.present(textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: { [weak self] in
-                                guard let self, let component = self.component, let environment = self.environment else {
+                            environment.controller()?.present(textAlertController(context: groupCall.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_InviteMemberToGroupFirstAdd, action: { [weak self] in
+                                guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                     return
                                 }
                                 
@@ -143,7 +143,7 @@ extension VideoChatScreenComponent.View {
                                         return
                                     }
                                     let inviteDisposable = self.inviteDisposable
-                                    var inviteSignal = component.call.accountContext.peerChannelMemberCategoriesContextsManager.addMembers(engine: component.call.accountContext.engine, peerId: groupPeer.id, memberIds: [peer.id])
+                                    var inviteSignal = groupCall.accountContext.peerChannelMemberCategoriesContextsManager.addMembers(engine: groupCall.accountContext.engine, peerId: groupPeer.id, memberIds: [peer.id])
                                     var cancelImpl: (() -> Void)?
                                     let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
                                         let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
@@ -172,7 +172,7 @@ extension VideoChatScreenComponent.View {
                                     
                                     inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { [weak self] error in
                                         dismissController?()
-                                        guard let self, let component = self.component, let environment = self.environment else {
+                                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                             return
                                         }
                                         
@@ -201,22 +201,22 @@ extension VideoChatScreenComponent.View {
                                         case .kicked:
                                             text = environment.strings.Channel_AddUserKickedError
                                         }
-                                        environment.controller()?.present(textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
+                                        environment.controller()?.present(textAlertController(context: groupCall.accountContext, forceTheme: environment.theme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
                                     }, completed: { [weak self] in
-                                        guard let self, let component = self.component, let environment = self.environment else {
+                                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                             dismissController?()
                                             return
                                         }
                                         dismissController?()
                                         
-                                        if component.call.invitePeer(peer.id) {
+                                        if groupCall.invitePeer(peer.id) {
                                             let text: String
                                             if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                 text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             } else {
                                                 text = environment.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             }
-                                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
+                                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: groupCall.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                                         }
                                     }))
                                 } else if case let .legacyGroup(groupPeer) = groupPeer {
@@ -224,7 +224,7 @@ extension VideoChatScreenComponent.View {
                                         return
                                     }
                                     let inviteDisposable = self.inviteDisposable
-                                    var inviteSignal = component.call.accountContext.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: peer.id)
+                                    var inviteSignal = groupCall.accountContext.engine.peers.addGroupMember(peerId: groupPeer.id, memberId: peer.id)
                                     var cancelImpl: (() -> Void)?
                                     let progressSignal = Signal<Never, NoError> { [weak selfController] subscriber in
                                         let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
@@ -253,19 +253,19 @@ extension VideoChatScreenComponent.View {
                                     
                                     inviteDisposable.set((inviteSignal |> deliverOnMainQueue).start(error: { [weak self] error in
                                         dismissController?()
-                                        guard let self, let component = self.component, let environment = self.environment else {
+                                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                             return
                                         }
-                                        let context = component.call.accountContext
+                                        let context = groupCall.accountContext
                                         
                                         switch error {
                                         case .privacy:
-                                            let _ = (component.call.accountContext.account.postbox.loadedPeerWithId(peer.id)
-                                                     |> deliverOnMainQueue).start(next: { [weak self] peer in
-                                                guard let self, let component = self.component, let environment = self.environment else {
+                                            let _ = (groupCall.accountContext.account.postbox.loadedPeerWithId(peer.id)
+                                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                                guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                                     return
                                                 }
-                                                environment.controller()?.present(textAlertController(context: component.call.accountContext, title: nil, text: environment.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
+                                                environment.controller()?.present(textAlertController(context: groupCall.accountContext, title: nil, text: environment.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(peer).compactDisplayTitle, EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
                                             })
                                         case .notMutualContact:
                                             environment.controller()?.present(textAlertController(context: context, title: nil, text: environment.strings.GroupInfo_AddUserLeftError, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
@@ -275,20 +275,20 @@ extension VideoChatScreenComponent.View {
                                             environment.controller()?.present(textAlertController(context: context, forceTheme: environment.theme, title: nil, text: environment.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})]), in: .window(.root))
                                         }
                                     }, completed: { [weak self] in
-                                        guard let self, let component = self.component, let environment = self.environment else {
+                                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                                             dismissController?()
                                             return
                                         }
                                         dismissController?()
                                         
-                                        if component.call.invitePeer(peer.id) {
+                                        if groupCall.invitePeer(peer.id) {
                                             let text: String
                                             if case let .channel(channel) = self.peer, case .broadcast = channel.info {
                                                 text = environment.strings.LiveStream_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             } else {
                                                 text = environment.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: environment.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             }
-                                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: component.call.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
+                                            self.presentUndoOverlay(content: .invitedToVoiceChat(context: groupCall.accountContext, peer: peer, title: nil, text: text, action: nil, duration: 3), action: { _ in return false })
                                         }
                                     }))
                                 }
@@ -299,14 +299,14 @@ extension VideoChatScreenComponent.View {
                 controller.copyInviteLink = { [weak self] in
                     dismissController?()
                     
-                    guard let self, let component = self.component else {
+                    guard let self, case let .group(groupCall) = self.currentCall else {
                         return
                     }
-                    guard let callPeerId = component.call.peerId else {
+                    guard let callPeerId = groupCall.peerId else {
                         return
                     }
                     
-                    let _ = (component.call.accountContext.engine.data.get(
+                    let _ = (groupCall.accountContext.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: callPeerId),
                         TelegramEngine.EngineData.Item.Peer.ExportedInvitation(id: callPeerId)
                     )
@@ -321,7 +321,7 @@ extension VideoChatScreenComponent.View {
                             return nil
                         }
                     }
-                             |> deliverOnMainQueue).start(next: { [weak self] link in
+                    |> deliverOnMainQueue).start(next: { [weak self] link in
                         guard let self, let environment = self.environment else {
                             return
                         }

@@ -517,18 +517,20 @@ public final class CallController: ViewController {
             }
             
             controller?.displayProgress = true
-            let _ = self.call.upgradeToConference(completion: { [weak self] _ in
-                guard let self else {
+            let call = self.call
+            
+            controller?.dismiss()
+            
+            let _ = self.call.upgradeToConference(completion: { [weak call] _ in
+                guard let call else {
                     return
                 }
                 
                 for peerId in peerIds {
                     if case let .peer(peerId) = peerId {
-                        let _ = (self.call as? PresentationCallImpl)?.requestAddToConference(peerId: peerId)
+                        let _ = (call as? PresentationCallImpl)?.requestAddToConference(peerId: peerId)
                     }
                 }
-                
-                controller?.dismiss()
             })
         })
         

@@ -26,17 +26,20 @@ public final class AnimatedTextComponent: Component {
     public let color: UIColor
     public let items: [Item]
     public let noDelay: Bool
+    public let animateScale: Bool
     
     public init(
         font: UIFont,
         color: UIColor,
         items: [Item],
-        noDelay: Bool = false
+        noDelay: Bool = false,
+        animateScale: Bool = true
     ) {
         self.font = font
         self.color = color
         self.items = items
         self.noDelay = noDelay
+        self.animateScale = animateScale
     }
 
     public static func ==(lhs: AnimatedTextComponent, rhs: AnimatedTextComponent) -> Bool {
@@ -50,6 +53,9 @@ public final class AnimatedTextComponent: Component {
             return false
         }
         if lhs.noDelay != rhs.noDelay {
+            return false
+        }
+        if lhs.animateScale != rhs.animateScale {
             return false
         }
         return true
@@ -172,7 +178,9 @@ public final class AnimatedTextComponent: Component {
                                 }
                             }
                             
-                            characterComponentView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring)
+                            if component.animateScale {
+                                characterComponentView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
                             characterComponentView.layer.animatePosition(from: CGPoint(x: 0.0, y: characterSize.height * 0.5), to: CGPoint(), duration: 0.4, delay: delayNorm * delayWidth, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             characterComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18, delay: delayNorm * delayWidth)
                         }
@@ -202,7 +210,9 @@ public final class AnimatedTextComponent: Component {
                                 outFirstDelayWidth = characterComponentView.frame.minX
                             }
                             
-                            outScaleTransition.setScale(view: characterComponentView, scale: 0.01, delay: delayNorm * delayWidth)
+                            if component.animateScale {
+                                outScaleTransition.setScale(view: characterComponentView, scale: 0.01, delay: delayNorm * delayWidth)
+                            }
                             outScaleTransition.setPosition(view: characterComponentView, position: CGPoint(x: characterComponentView.center.x, y: characterComponentView.center.y - characterComponentView.bounds.height * 0.4), delay: delayNorm * delayWidth)
                             outAlphaTransition.setAlpha(view: characterComponentView, alpha: 0.0, delay: delayNorm * delayWidth, completion: { [weak characterComponentView] _ in
                                 characterComponentView?.removeFromSuperview()

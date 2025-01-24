@@ -126,7 +126,7 @@ final class VideoChatParticipantsComponent: Component {
         }
     }
     
-    let call: PresentationGroupCall
+    let call: VideoChatCall
     let participants: Participants?
     let speakingParticipants: Set<EnginePeer.Id>
     let expandedVideoState: ExpandedVideoState?
@@ -145,7 +145,7 @@ final class VideoChatParticipantsComponent: Component {
     let visibleParticipantsUpdated: (Set<EnginePeer.Id>) -> Void
 
     init(
-        call: PresentationGroupCall,
+        call: VideoChatCall,
         participants: Participants?,
         speakingParticipants: Set<EnginePeer.Id>,
         expandedVideoState: ExpandedVideoState?,
@@ -183,6 +183,9 @@ final class VideoChatParticipantsComponent: Component {
     }
 
     static func ==(lhs: VideoChatParticipantsComponent, rhs: VideoChatParticipantsComponent) -> Bool {
+        if lhs.call != rhs.call {
+            return false
+        }
         if lhs.participants != rhs.participants {
             return false
         }
@@ -1853,7 +1856,7 @@ final class VideoChatParticipantsComponent: Component {
                     }
                 }
             }
-            (component.call as! PresentationGroupCallImpl).setRequestedVideoList(items: requestedVideo)
+            component.call.setRequestedVideoList(items: requestedVideo)
             
             transition.setPosition(view: self.scrollViewClippingContainer, position: itemLayout.scrollClippingFrame.center)
             transition.setBounds(view: self.scrollViewClippingContainer, bounds: CGRect(origin: CGPoint(x: itemLayout.scrollClippingFrame.minX - itemLayout.listFrame.minX, y: itemLayout.scrollClippingFrame.minY - itemLayout.listFrame.minY), size: itemLayout.scrollClippingFrame.size))

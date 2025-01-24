@@ -37,7 +37,16 @@ open class GalleryFooterContentNode: ASDisplayNode {
         return 0.0
     }
     
+    open func animateIn(transition: ContainedViewLayoutTransition) {
+        self.alpha = 0.0
+        transition.updateAlpha(node: self, alpha: 1.0)
+    }
+    
     open func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
+    }
+    
+    open func animateOut(transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self, alpha: 0.0)
     }
     
     open func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {

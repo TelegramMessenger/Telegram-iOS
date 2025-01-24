@@ -41,6 +41,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/UndoUI",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/TelegramUI/Components/AnimatedTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",

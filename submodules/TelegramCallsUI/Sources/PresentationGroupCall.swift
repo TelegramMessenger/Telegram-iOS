@@ -538,6 +538,7 @@ private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
                     onMutedSpeechActivityDetected: { _ in },
                     encryptionKey: nil,
                     isConference: self.isConference,
+                    isStream: false,
                     sharedAudioDevice: nil
                 )
             )
@@ -1005,6 +1006,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
     
     let debugLog = Promise<String?>()
+    
+    weak var upgradedConferenceCall: PresentationCallImpl?
     
     init(
         accountContext: AccountContext,
@@ -1869,7 +1872,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                             strongSelf.onMutedSpeechActivityDetected?(value)
                         }
-                    }, encryptionKey: encryptionKey, isConference: self.isConference, sharedAudioDevice: self.sharedAudioDevice))
+                    }, encryptionKey: encryptionKey, isConference: self.isConference, isStream: self.isStream, sharedAudioDevice: self.sharedAudioDevice))
                 }
 
                 self.genericCallContext = genericCallContext
@@ -2794,6 +2797,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.screencastIPCContext?.disableScreencast(account: self.account)
 
         self._canBeRemoved.set(.single(true))
+        
+        if let upgradedConferenceCall = self.upgradedConferenceCall {
+            upgradedConferenceCall.internal_markAsCanBeRemoved()
+        }
         
         if self.didConnectOnce {
             if let callManager = self.accountContext.sharedContext.callManager {

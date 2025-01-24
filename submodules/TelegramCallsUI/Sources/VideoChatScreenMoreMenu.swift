@@ -20,7 +20,10 @@ extension VideoChatScreenComponent.View {
         guard let sourceView = self.navigationLeftButton.view else {
             return
         }
-        guard let component = self.component, let environment = self.environment, let controller = environment.controller() else {
+        guard let environment = self.environment, let controller = environment.controller() else {
+            return
+        }
+        guard let currentCall = self.currentCall else {
             return
         }
         guard let callState = self.callState else {
@@ -35,7 +38,7 @@ extension VideoChatScreenComponent.View {
             for peer in displayAsPeers {
                 if peer.peer.id == callState.myPeerId {
                     let avatarSize = CGSize(width: 28.0, height: 28.0)
-                    items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: component.call.accountContext.account, peer: EnginePeer(peer.peer), size: avatarSize)), action: { [weak self] c, _ in
+                    items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_DisplayAs, textLayout: .secondLineWithValue(EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder)), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: currentCall.accountContext.account, peer: EnginePeer(peer.peer), size: avatarSize)), action: { [weak self] c, _ in
                         guard let self else {
                             return
                         }
@@ -201,19 +204,19 @@ extension VideoChatScreenComponent.View {
         }
         
         if callState.isVideoEnabled && (callState.muteState?.canUnmute ?? true) {
-            if component.call.hasScreencast {
+            if currentCall.hasScreencast {
                 items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_StopScreenSharing, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] _, f in
                     f(.default)
 
-                    guard let self, let component = self.component else {
+                    guard let self, let currentCall = self.currentCall else {
                         return
                     }
-                    component.call.disableScreencast()
+                    currentCall.disableScreencast()
                 })))
             } else {
-                items.append(.custom(VoiceChatShareScreenContextItem(context: component.call.accountContext, text: environment.strings.VoiceChat_ShareScreen, icon: { theme in
+                items.append(.custom(VoiceChatShareScreenContextItem(context: currentCall.accountContext, text: environment.strings.VoiceChat_ShareScreen, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Call/Context Menu/ShareScreen"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, _ in }), false))
             }
@@ -224,15 +227,15 @@ extension VideoChatScreenComponent.View {
                 items.append(.custom(VoiceChatRecordingContextItem(timestamp: recordingStartTimestamp, action: { [weak self] _, f in
                     f(.dismissWithoutContent)
 
-                    guard let self, let component = self.component, let environment = self.environment else {
+                    guard let self, let environment = self.environment, let currentCall = self.currentCall else {
                         return
                     }
                     
-                    let alertController = textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: nil, text: environment.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_StopRecordingStop, action: { [weak self] in
-                        guard let self, let component = self.component, let environment = self.environment else {
+                    let alertController = textAlertController(context: currentCall.accountContext, forceTheme: environment.theme, title: nil, text: environment.strings.VoiceChat_StopRecordingTitle, actions: [TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: environment.strings.VoiceChat_StopRecordingStop, action: { [weak self] in
+                        guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall else {
                             return
                         }
-                        component.call.setShouldBeRecording(false, title: nil, videoOrientation: nil)
+                        groupCall.setShouldBeRecording(false, title: nil, videoOrientation: nil)
 
                         Queue.mainQueue().after(0.88) {
                             HapticFeedback().success()
@@ -245,8 +248,8 @@ extension VideoChatScreenComponent.View {
                             text = environment.strings.VideoChat_RecordingSaved
                         }
                         self.presentUndoOverlay(content: .forward(savedMessages: true, text: text), action: { [weak self] value in
-                            if case .info = value, let self, let component = self.component, let environment = self.environment, let navigationController = environment.controller()?.navigationController as? NavigationController {
-                                let context = component.call.accountContext
+                            if case .info = value, let self, let environment = self.environment, let currentCall = self.currentCall, let navigationController = environment.controller()?.navigationController as? NavigationController {
+                                let context = currentCall.accountContext
                                 environment.controller()?.dismiss(completion: { [weak navigationController] in
                                     Queue.mainQueue().justDispatch {
                                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
@@ -279,12 +282,12 @@ extension VideoChatScreenComponent.View {
                     }, action: { [weak self] _, f in
                         f(.dismissWithoutContent)
 
-                        guard let self, let component = self.component, let environment = self.environment, let peer = self.peer else {
+                        guard let self, let environment = self.environment, let currentCall = self.currentCall, let peer = self.peer else {
                             return
                         }
 
-                        let controller = VoiceChatRecordingSetupController(context: component.call.accountContext, peer: peer, completion: { [weak self] videoOrientation in
-                            guard let self, let component = self.component, let environment = self.environment, let peer = self.peer else {
+                        let controller = VoiceChatRecordingSetupController(context: currentCall.accountContext, peer: peer, completion: { [weak self] videoOrientation in
+                            guard let self, let environment = self.environment, let currentCall = self.currentCall, let peer = self.peer else {
                                 return
                             }
                             let title: String
@@ -311,12 +314,12 @@ extension VideoChatScreenComponent.View {
                                 }
                             }
 
-                            let controller = voiceChatTitleEditController(sharedContext: component.call.accountContext.sharedContext, account: component.call.account, forceTheme: environment.theme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak self] title in
-                                guard let self, let component = self.component, let environment = self.environment, let peer = self.peer, let title else {
+                            let controller = voiceChatTitleEditController(sharedContext: currentCall.accountContext.sharedContext, account: currentCall.accountContext.account, forceTheme: environment.theme, title: title, text: text, placeholder: placeholder, value: nil, maxLength: 40, apply: { [weak self] title in
+                                guard let self, let environment = self.environment, case let .group(groupCall) = self.currentCall, let peer = self.peer, let title else {
                                     return
                                 }
                                 
-                                component.call.setShouldBeRecording(true, title: title, videoOrientation: videoOrientation)
+                                groupCall.setShouldBeRecording(true, title: title, videoOrientation: videoOrientation)
 
                                 let text: String
                                 if case let .channel(channel) = peer, case .broadcast = channel.info {
@@ -326,7 +329,7 @@ extension VideoChatScreenComponent.View {
                                 }
 
                                 self.presentUndoOverlay(content: .voiceChatRecording(text: text), action: { _ in return false })
-                                component.call.playTone(.recordingStarted)
+                                groupCall.playTone(.recordingStarted)
                             })
                             environment.controller()?.present(controller, in: .window(.root))
                         })
@@ -348,24 +351,37 @@ extension VideoChatScreenComponent.View {
             }, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
 
-                guard let self, let component = self.component, let environment = self.environment else {
+                guard let self, let environment = self.environment, let currentCall = self.currentCall else {
                     return
                 }
 
                 let action: () -> Void = { [weak self] in
-                    guard let self, let component = self.component else {
+                    guard let self, let currentCall = self.currentCall else {
                         return
                     }
 
-                    let _ = (component.call.leave(terminateIfPossible: true)
-                    |> filter { $0 }
-                    |> take(1)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let self, let environment = self.environment else {
-                            return
-                        }
-                        environment.controller()?.dismiss()
-                    })
+                    switch currentCall {
+                    case let .group(groupCall):
+                        let _ = (groupCall.leave(terminateIfPossible: true)
+                        |> filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let self, let environment = self.environment else {
+                                return
+                            }
+                            environment.controller()?.dismiss()
+                        })
+                    case let .conferenceSource(conferenceSource):
+                        let _ = (conferenceSource.hangUp()
+                        |> filter { $0 }
+                        |> take(1)
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
+                            guard let self, let environment = self.environment else {
+                                return
+                            }
+                            environment.controller()?.dismiss()
+                        })
+                    }
                 }
 
                 let title: String
@@ -378,7 +394,7 @@ extension VideoChatScreenComponent.View {
                     text = isScheduled ? environment.strings.VoiceChat_CancelConfirmationText : environment.strings.VoiceChat_EndConfirmationText
                 }
 
-                let alertController = textAlertController(context: component.call.accountContext, forceTheme: environment.theme, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: isScheduled ? environment.strings.VoiceChat_CancelConfirmationEnd : environment.strings.VoiceChat_EndConfirmationEnd, action: {
+                let alertController = textAlertController(context: currentCall.accountContext, forceTheme: environment.theme, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: environment.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: isScheduled ? environment.strings.VoiceChat_CancelConfirmationEnd : environment.strings.VoiceChat_EndConfirmationEnd, action: {
                     action()
                 })])
                 environment.controller()?.present(alertController, in: .window(.root))
@@ -395,29 +411,45 @@ extension VideoChatScreenComponent.View {
             }, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
 
-                guard let self, let component = self.component else {
+                guard let self, let currentCall = self.currentCall else {
                     return
                 }
 
-                let _ = (component.call.leave(terminateIfPossible: false)
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    guard let self, let environment = self.environment else {
-                        return
-                    }
-                    environment.controller()?.dismiss()
-                })
+                switch currentCall {
+                case let .group(groupCall):
+                    let _ = (groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self, let environment = self.environment else {
+                            return
+                        }
+                        environment.controller()?.dismiss()
+                    })
+                case let .conferenceSource(conferenceSource):
+                    let _ = (conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self, let environment = self.environment else {
+                            return
+                        }
+                        environment.controller()?.dismiss()
+                    })
+                }
             })))
         }
 
-        let presentationData = component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
+        let presentationData = currentCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
         let contextController = ContextController(presentationData: presentationData, source: .reference(VoiceChatContextReferenceContentSource(controller: controller, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
         controller.presentInGlobalOverlay(contextController)
     }
     
     private func contextMenuDisplayAsItems() -> [ContextMenuItem] {
-        guard let component = self.component, let environment = self.environment else {
+        guard let environment = self.environment else {
+            return []
+        }
+        guard case let .group(groupCall) = self.currentCall else {
             return []
         }
         guard let callState = self.callState else {
@@ -469,7 +501,7 @@ extension VideoChatScreenComponent.View {
                 let isSelected = peer.peer.id == myPeerId
                 let extendedAvatarSize = CGSize(width: 35.0, height: 35.0)
                 let theme = environment.theme
-                let avatarSignal = peerAvatarCompleteImage(account: component.call.accountContext.account, peer: EnginePeer(peer.peer), size: avatarSize)
+                let avatarSignal = peerAvatarCompleteImage(account: groupCall.accountContext.account, peer: EnginePeer(peer.peer), size: avatarSize)
                 |> map { image -> UIImage? in
                     if isSelected, let image = image {
                         return generateImage(extendedAvatarSize, rotatedContext: { size, context in
@@ -490,15 +522,15 @@ extension VideoChatScreenComponent.View {
                     }
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: component.call.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { [weak self] _, f in
+                items.append(.action(ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: environment.strings, displayOrder: groupCall.accountContext.sharedContext.currentPresentationData.with({ $0 }).nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), action: { [weak self] _, f in
                     f(.default)
                     
-                    guard let self, let component = self.component else {
+                    guard let self, case let .group(groupCall) = self.currentCall else {
                         return
                     }
                     
                     if peer.peer.id != myPeerId {
-                        component.call.reconnect(as: peer.peer.id)
+                        groupCall.reconnect(as: peer.peer.id)
                     }
                 })))
                 
@@ -548,11 +580,11 @@ extension VideoChatScreenComponent.View {
             }, action: { [weak self] _, f in
                 f(.default)
                 
-                guard let self, let component = self.component else {
+                guard let self, let currentCall = self.currentCall else {
                     return
                 }
                 
-                component.call.setCurrentAudioOutput(output)
+                currentCall.setCurrentAudioOutput(output)
             })))
         }
         
@@ -583,10 +615,10 @@ extension VideoChatScreenComponent.View {
             }, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
 
-                guard let self, let component = self.component else {
+                guard let self, case let .group(groupCall) = self.currentCall else {
                     return
                 }
-                component.call.updateDefaultParticipantsAreMuted(isMuted: false)
+                groupCall.updateDefaultParticipantsAreMuted(isMuted: false)
             })))
             items.append(.action(ContextMenuActionItem(text: environment.strings.VoiceChat_SpeakPermissionAdmin, icon: { theme in
                 if !isMuted {
@@ -597,10 +629,10 @@ extension VideoChatScreenComponent.View {
             }, action: { [weak self] _, f in
                 f(.dismissWithoutContent)
 
-                guard let self, let component = self.component else {
+                guard let self, case let .group(groupCall) = self.currentCall else {
                     return
                 }
-                component.call.updateDefaultParticipantsAreMuted(isMuted: true)
+                groupCall.updateDefaultParticipantsAreMuted(isMuted: true)
             })))
         }
         return items

@@ -40,7 +40,7 @@ private let activityBorderImage: UIImage = {
 final class VideoChatParticipantVideoComponent: Component {
     let theme: PresentationTheme
     let strings: PresentationStrings
-    let call: PresentationGroupCall
+    let call: VideoChatCall
     let participant: GroupCallParticipantsContext.Participant
     let isMyPeer: Bool
     let isPresentation: Bool
@@ -59,7 +59,7 @@ final class VideoChatParticipantVideoComponent: Component {
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
-        call: PresentationGroupCall,
+        call: VideoChatCall,
         participant: GroupCallParticipantsContext.Participant,
         isMyPeer: Bool,
         isPresentation: Bool,
@@ -95,6 +95,9 @@ final class VideoChatParticipantVideoComponent: Component {
     }
     
     static func ==(lhs: VideoChatParticipantVideoComponent, rhs: VideoChatParticipantVideoComponent) -> Bool {
+        if lhs.call != rhs.call {
+            return false
+        }
         if lhs.participant != rhs.participant {
             return false
         }
@@ -514,7 +517,7 @@ final class VideoChatParticipantVideoComponent: Component {
                     
                     videoLayer.blurredLayer.opacity = 0.0
                     
-                    if let input = (component.call as! PresentationGroupCallImpl).video(endpointId: videoDescription.endpointId) {
+                    if let input = component.call.video(endpointId: videoDescription.endpointId) {
                         let videoSource = AdaptedCallVideoSource(videoStreamSignal: input)
                         self.videoSource = videoSource
                         

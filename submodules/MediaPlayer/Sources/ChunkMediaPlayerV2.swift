@@ -168,10 +168,13 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private let mediaDataReaderParams: MediaDataReaderParams
     private let audioSessionManager: ManagedAudioSession
     private let onSeeked: (() -> Void)?
+    private weak var playerNode: MediaPlayerNode?
     
     private let renderSynchronizer: AVSampleBufferRenderSynchronizer
     private var videoRenderer: AVSampleBufferDisplayLayer
     private var audioRenderer: AVSampleBufferAudioRenderer?
+    
+    private var didNotifySentVideoFrames: Bool = false
     
     private var partsState = ChunkMediaPlayerPartsState(duration: nil, content: .parts([]))
     private var loadedParts: [LoadedPart] = []
@@ -245,6 +248,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         self.mediaDataReaderParams = params
         self.audioSessionManager = audioSessionManager
         self.onSeeked = onSeeked
+        self.playerNode = playerNode
         
         self.loadedPartsMediaData = QueueLocalObject(queue: self.dataQueue, generate: {
             return LoadedPartsMediaData()
@@ -938,10 +942,11 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                 videoTarget = self.videoRenderer
             }
         
+            let didNotifySentVideoFrames = self.didNotifySentVideoFrames
             videoTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
-                    let bufferIsReadyForMoreData = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
-                    if bufferIsReadyForMoreData {
+                    let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: videoTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: true)
+                    if bufferFillResult.bufferIsReadyForMoreData {
                         videoTarget.stopRequestingMediaData()
                         Queue.mainQueue().async {
                             guard let self else {
@@ -949,6 +954,21 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                             }
                             self.videoIsRequestingMediaData = false
                             self.updateInternalState()
+                        }
+                    }
+                    if !didNotifySentVideoFrames {
+                        Queue.mainQueue().async {
+                            guard let self else {
+                                return
+                            }
+                            if self.didNotifySentVideoFrames {
+                                return
+                            }
+                            self.didNotifySentVideoFrames = true
+                            if #available(iOS 17.4, *) {
+                            } else {
+                                self.playerNode?.hasSentFramesToDisplay?()
+                            }
                         }
                     }
                 }
@@ -961,8 +981,8 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             let audioTarget = audioRenderer
             audioTarget.requestMediaDataWhenReady(on: self.dataQueue.queue, using: { [weak self] in
                 if let loadedPartsMediaData = loadedPartsMediaData.unsafeGet() {
-                    let bufferIsReadyForMoreData = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: audioTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: false)
-                    if bufferIsReadyForMoreData {
+                    let bufferFillResult = ChunkMediaPlayerV2.fillRendererBuffer(bufferTarget: audioTarget, loadedPartsMediaData: loadedPartsMediaData, isVideo: false)
+                    if bufferFillResult.bufferIsReadyForMoreData {
                         audioTarget.stopRequestingMediaData()
                         Queue.mainQueue().async {
                             guard let self else {
@@ -977,8 +997,9 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
         }
     }
     
-    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> Bool {
+    private static func fillRendererBuffer(bufferTarget: AVQueuedSampleBufferRendering, loadedPartsMediaData: LoadedPartsMediaData, isVideo: Bool) -> (bufferIsReadyForMoreData: Bool, didEnqueue: Bool) {
         var bufferIsReadyForMoreData = true
+        var didEnqueue = false
         outer: while true {
             if !bufferTarget.isReadyForMoreMediaData {
                 bufferIsReadyForMoreData = false
@@ -1077,6 +1098,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                         print("Enqueue audio \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value) next: \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer).value + 1024)")
                     }*/
                     bufferTarget.enqueue(sampleBuffer)
+                    didEnqueue = true
                     hasData = true
                     continue outer
                 case .waitingForMoreData:
@@ -1090,7 +1112,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             }
         }
         
-        return bufferIsReadyForMoreData
+        return (bufferIsReadyForMoreData: bufferIsReadyForMoreData, didEnqueue: didEnqueue)
     }
 }
 
