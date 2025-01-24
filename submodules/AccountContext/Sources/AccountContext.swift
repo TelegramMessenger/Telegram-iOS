@@ -590,6 +590,7 @@ public enum PeerInfoControllerMode {
     case forumTopic(thread: ChatReplyThreadMessage)
     case recommendedChannels
     case myProfile
+    case gifts
     case myProfileGifts
 }
 

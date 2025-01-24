@@ -1728,8 +1728,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                         valueAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
                     }
                     
+                    var canConvert = true
+                    if let reference = subject.arguments?.reference, case let .peer(peerId, _) = reference {
+                        if let peer = state.peerMap[peerId], case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                            canConvert = false
+                        }
+                    }
                     let valueComponent: AnyComponent<Empty>
-                    if let convertStars, incoming && !converted {
+                    if let convertStars, incoming && !converted && canConvert {
                         valueComponent = AnyComponent(
                             HStack([
                                 AnyComponentWithIdentity(
@@ -2558,10 +2564,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             self.dismissAnimated()
             
+            let giftsPeerId: EnginePeer.Id?
             let text: String
-            if arguments.peerId?.namespace == Namespaces.Peer.CloudChannel {
+            if case let .peer(peerId, _) = arguments.reference, peerId == Namespaces.Peer.CloudChannel {
+                giftsPeerId = peerId
                 text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
             } else {
+                giftsPeerId = arguments.peerId
                 text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
             }
             
@@ -2573,8 +2582,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             content: .sticker(context: context, file: animationFile, loop: false, title: nil, text: text, undoText: updateSavedToProfile == nil ? presentationData.strings.Gift_Displayed_View : nil, customAction: nil),
                             elevatedLayout: lastController is ChatController,
                             action: { [weak navigationController] action in
-                                if case .undo = action, let navigationController {
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                if case .undo = action, let navigationController, let giftsPeerId {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: giftsPeerId))
                                     |> deliverOnMainQueue).start(next: { [weak navigationController] peer in
                                         guard let peer, let navigationController else {
                                             return
@@ -2583,7 +2592,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                             context: context,
                                             updatedPresentationData: nil,
                                             peer: peer._asPeer(),
-                                            mode: .myProfileGifts,
+                                            mode: giftsPeerId == context.account.peerId ? .myProfileGifts : .gifts,
                                             avatarInitiallyExpanded: false,
                                             fromChat: false,
                                             requestsContext: nil

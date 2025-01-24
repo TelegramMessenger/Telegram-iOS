@@ -439,7 +439,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                 self.giftButton.isHidden = true
                 self.helpButton.isHidden = true
             }
-            self.giftButton.frame = CGRect(x: width - rightInset - panelHeight - 5.0, y: -3.0, width: panelHeight, height: panelHeight)
+            self.giftButton.frame = CGRect(x: width - rightInset - panelHeight - 5.0, y: 0.0, width: panelHeight, height: panelHeight)
             self.helpButton.frame = CGRect(x: width - rightInset - panelHeight, y: 0.0, width: panelHeight, height: panelHeight)
         } else {
             self.giftButton.isHidden = true

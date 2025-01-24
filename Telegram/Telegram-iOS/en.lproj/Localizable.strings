@@ -13747,6 +13747,7 @@ Sorry for the inconvenience.";
 
 "Gift.SendChannel.Title" = "Gift Preview";
 "Gift.SendChannel.HideMyName.Info" = "Hide my name and message from visitors of this channel. The channel admins will still see them.";
+"Gift.SendChannel.Upgrade.Info" = "Enable this to let the admins of %@ turn your gift into a unique collectible. [Learn More >]()";
 
 "Media.EditCover" = "Edit Cover";
 "Media.ChooseFromGallery" = "Choose From Gallery";

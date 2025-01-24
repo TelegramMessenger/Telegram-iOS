@@ -3230,6 +3230,8 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             forumTopicThread = thread
         case .myProfile:
             isMyProfile = true
+        case .gifts:
+            switchToGifts = true
         case .myProfileGifts:
             isMyProfile = true
             switchToGifts = true

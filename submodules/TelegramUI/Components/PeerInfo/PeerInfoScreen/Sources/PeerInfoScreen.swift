@@ -4440,10 +4440,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             PeerInfoScreenImpl.openSavedMessagesMoreMenu(context: strongSelf.context, sourceController: controller, isViewingAsTopics: true, sourceView: source.view, gesture: gesture)
                         }
                     default:
-                        break
+                        strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
                     }
-                } else {
-                    strongSelf.displayMediaGalleryContextMenu(source: source, gesture: gesture)
                 }
             case .sort:
                 guard let source else {

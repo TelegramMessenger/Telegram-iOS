@@ -218,24 +218,26 @@ final class MutableItemCollectionsView {
             }
         }
         
-        let (entries, lower, higher) = aroundEntries(namespaces: namespaces,
-                                                     aroundIndex: aroundIndex,
-                                                     count: count, collectionIndexById: { id in
-                                                        return postbox.itemCollectionInfoTable.getIndex(id: id)
-        },
-                                                     lowerCollectionId: { namespaceList, collectionId, collectionIndex in
-                                                        return self.lowerCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
-        },
-                                                     fetchLowerItems: { collectionId, itemIndex, count in
-                                                        return self.lowerItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
-        },
-                                                     higherCollectionId: { namespaceList, collectionId, collectionIndex in
-                                                        return self.higherCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
-        },
-                                                     fetchHigherItems: {
-                                                        collectionId, itemIndex, count in
-                                                        return self.higherItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
-        })
+        let (entries, lower, higher) = aroundEntries(
+            namespaces: namespaces,
+            aroundIndex: aroundIndex,
+            count: count, collectionIndexById: { id in
+                return postbox.itemCollectionInfoTable.getIndex(id: id)
+            },
+            lowerCollectionId: { namespaceList, collectionId, collectionIndex in
+                return self.lowerCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
+            },
+            fetchLowerItems: { collectionId, itemIndex, count in
+                return self.lowerItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
+            },
+            higherCollectionId: { namespaceList, collectionId, collectionIndex in
+                return self.higherCollectionId(postbox: postbox, namespaceList: namespaceList, collectionId: collectionId, collectionIndex: collectionIndex)
+            },
+            fetchHigherItems: {
+                collectionId, itemIndex, count in
+                return self.higherItems(postbox: postbox, collectionId: collectionId, itemIndex: itemIndex, count: count)
+            }
+        )
         
         self.entries = entries
         self.lower = lower

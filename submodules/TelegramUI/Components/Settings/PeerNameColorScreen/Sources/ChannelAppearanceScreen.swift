@@ -187,9 +187,7 @@ final class ChannelAppearanceScreenComponent: Component {
         private let emojiStatusSection = ComponentView<Empty>()
         private let emojiPackSection = ComponentView<Empty>()
         private let stickerPackSection = ComponentView<Empty>()
-        
-        private var chatPreviewItemNode: PeerNameColorChatPreviewItemNode?
-        
+                
         private var isUpdating: Bool = false
         
         private var component: ChannelAppearanceScreenComponent?
@@ -227,7 +225,6 @@ final class ChannelAppearanceScreenComponent: Component {
         private var applyDisposable: Disposable?
         
         private weak var emojiStatusSelectionController: ViewController?
-        private weak var currentUndoController: UndoOverlayController?
         
         override init(frame: CGRect) {
             self.scrollView = ScrollView()
@@ -468,12 +465,7 @@ final class ChannelAppearanceScreenComponent: Component {
                 self.displayBoostLevels(subject: requiredBoostSubject)
                 return
             }
-            
-            if resolvedState.changes.isEmpty {
-                self.environment?.controller()?.dismiss()
-                return
-            }
-            
+                        
             self.isApplyingSettings = true
             self.state?.updated(transition: .immediate)
             

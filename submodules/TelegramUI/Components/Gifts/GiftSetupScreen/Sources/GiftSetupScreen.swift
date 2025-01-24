@@ -914,7 +914,7 @@ final class GiftSetupScreenComponent: Component {
                 if let upgradeStars = gift.upgradeStars, component.peerId != component.context.account.peerId {
                     let upgradeFooterRawString: String
                     if isChannelGift {
-                        upgradeFooterRawString = "Enable this to let the admins of \(peerName) turn your gift into a unique collectible. [Learn More >]()"
+                        upgradeFooterRawString = environment.strings.Gift_SendChannel_Upgrade_Info(peerName).string
                     } else {
                         upgradeFooterRawString = environment.strings.Gift_Send_Upgrade_Info(peerName).string
                     }
