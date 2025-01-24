@@ -538,6 +538,7 @@ private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
                     onMutedSpeechActivityDetected: { _ in },
                     encryptionKey: nil,
                     isConference: self.isConference,
+                    isStream: false,
                     sharedAudioDevice: nil
                 )
             )
