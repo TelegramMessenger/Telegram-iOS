@@ -168,6 +168,7 @@ private final class EmbeddedBroadcastUploadImpl: BroadcastUploadImpl {
                             onMutedSpeechActivityDetected: { _ in },
                             encryptionKey: nil,
                             isConference: false,
+                            isStream: false,
                             sharedAudioDevice: nil
                         )
                         self.callContext = callContext
