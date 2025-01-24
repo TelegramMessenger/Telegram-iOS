@@ -2566,7 +2566,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             
             let giftsPeerId: EnginePeer.Id?
             let text: String
-            if case let .peer(peerId, _) = arguments.reference, peerId == Namespaces.Peer.CloudChannel {
+            if case let .peer(peerId, _) = arguments.reference, peerId.namespace == Namespaces.Peer.CloudChannel {
                 giftsPeerId = peerId
                 text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
             } else {
