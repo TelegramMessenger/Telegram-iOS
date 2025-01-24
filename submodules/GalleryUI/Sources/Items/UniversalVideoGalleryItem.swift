@@ -1404,17 +1404,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
 
         self.clipsToBounds = true
         
-        //TODO:wip-release
-        /*self.footerContentNode.shareMediaParameters = { [weak self] in
+        self.footerContentNode.shareMediaParameters = { [weak self] in
             guard let self, let playerStatusValue = self.playerStatusValue else {
                 return nil
             }
+            
             if playerStatusValue.duration >= 60.0 * 10.0 {
-                return ShareControllerSubject.MediaParameters(startAtTimestamp: Int32(playerStatusValue.timestamp))
+                var publicLinkPrefix: ShareControllerSubject.PublicLinkPrefix?
+                if case let .message(message, _) = self.item?.contentInfo, message.id.namespace == Namespaces.Message.Cloud, let peer = message.peers[message.id.peerId] as? TelegramChannel, let username = peer.username {
+                    let visibleString = "t.me/\(username)/\(message.id.id)"
+                    publicLinkPrefix = ShareControllerSubject.PublicLinkPrefix(
+                        visibleString: visibleString,
+                        actualString: "https://\(visibleString)"
+                    )
+                }
+                
+                return ShareControllerSubject.MediaParameters(
+                    startAtTimestamp: Int32(playerStatusValue.timestamp),
+                    publicLinkPrefix: publicLinkPrefix
+                )
             } else {
                 return nil
             }
-        }*/
+        }
         
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         self.settingsBarButton.addTarget(self, action: #selector(self.settingsButtonPressed), forControlEvents: .touchUpInside)
@@ -2456,6 +2468,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         }
         
         if let node = node.0 as? OverlayMediaItemNode, self.context.sharedContext.mediaManager.hasOverlayVideoNode(node) {
+            if let scrubberView = self.scrubberView {
+                scrubberView.animateIn(from: nil, transition: .animated(duration: 0.25, curve: .spring))
+            }
+            
             var transformedFrame = node.view.convert(node.view.bounds, to: videoNode.view)
             let transformedSuperFrame = node.view.convert(node.view.bounds, to: videoNode.view.superview)
             
@@ -2471,6 +2487,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
+            if let scrubberView = self.scrubberView {
+                let scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+                scrubberView.animateIn(from: scrubberTransition, transition: .animated(duration: 0.25, curve: .spring))
+            }
+            
             var transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)
             var transformedSuperFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view.superview)
             var transformedSelfFrame = node.0.view.convert(node.0.view.bounds, to: self.view)
@@ -2568,6 +2589,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode else {
             completion()
             return
+        }
+        
+        if let scrubberView = self.scrubberView {
+            var scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+            if !self.controlsVisibility() {
+                scrubberTransition = nil
+            }
+            scrubberView.animateOut(to: scrubberTransition, transition: .animated(duration: 0.25, curve: .spring))
         }
         
         let transformedFrame = node.0.view.convert(node.0.view.bounds, to: videoNode.view)

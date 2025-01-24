@@ -1367,6 +1367,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         return panelHeight
     }
     
+    override func animateIn(transition: ContainedViewLayoutTransition) {
+        self.contentNode.alpha = 0.0
+        transition.updateAlpha(node: self.contentNode, alpha: self.visibilityAlpha)
+    }
+    
     override func animateIn(fromHeight: CGFloat, previousContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition) {
         if let scrubberView = self.scrubberView, scrubberView.superview == self.view {
             if let previousContentNode = previousContentNode as? ChatItemGalleryFooterContentNode, previousContentNode.scrubberView != nil {
@@ -1390,6 +1395,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         self.playbackControlButton.alpha = 1.0
         self.buttonNode?.alpha = 1.0
         self.scrollWrapperNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+    }
+    
+    override func animateOut(transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.contentNode, alpha: 0.0)
     }
     
     override func animateOut(toHeight: CGFloat, nextContentNode: GalleryFooterContentNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
@@ -1717,6 +1726,30 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                         let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, externalShare: hasExternalShare, forceTheme: forceTheme)
                         shareController.dismissed = { [weak self] _ in
                             self?.interacting?(false)
+                        }
+                        shareController.onMediaTimestampLinkCopied = { [weak self] timestamp in
+                            guard let self else {
+                                return
+                            }
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                            let text: String
+                            if let timestamp {
+                                //TODO:localize
+                                let startTimeString: String
+                                let hours = timestamp / (60 * 60)
+                                let minutes = timestamp % (60 * 60) / 60
+                                let seconds = timestamp % 60
+                                if hours != 0 {
+                                    startTimeString = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+                                } else {
+                                    startTimeString = String(format: "%d:%02d", minutes, seconds)
+                                }
+                                text = "Link with start time at \(startTimeString) copied to clipboard."
+                            } else {
+                                text = presentationData.strings.Conversation_LinkCopied
+                            }
+                            
+                            self.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .linkCopied(title: nil, text: text), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
                         }
                         
                         shareController.actionCompleted = { [weak self] in

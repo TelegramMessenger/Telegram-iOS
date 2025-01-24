@@ -32,6 +32,32 @@ public final class GalleryFooterNode: ASDisplayNode {
         self.currentOverlayContentNode?.setVisibilityAlpha(alpha)
     }
     
+    func animateIn(transition: ContainedViewLayoutTransition) {
+        self.backgroundNode.alpha = 0.0
+        transition.updateAlpha(node: self.backgroundNode, alpha: 1.0)
+        
+        if let currentFooterContentNode = self.currentFooterContentNode {
+            currentFooterContentNode.animateIn(transition: transition)
+        }
+        
+        if let currentOverlayContentNode = self.currentOverlayContentNode {
+            currentOverlayContentNode.alpha = 0.0
+            transition.updateAlpha(node: currentOverlayContentNode, alpha: 1.0)
+        }
+    }
+    
+    func animateOut(transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.backgroundNode, alpha: 0.0)
+        
+        if let currentFooterContentNode = self.currentFooterContentNode {
+            currentFooterContentNode.animateOut(transition: transition)
+        }
+        
+        if let currentOverlayContentNode = self.currentOverlayContentNode {
+            transition.updateAlpha(node: currentOverlayContentNode, alpha: 0.0)
+        }
+    }
+    
     public func updateLayout(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, footerContentNode: GalleryFooterContentNode?, overlayContentNode: GalleryOverlayContentNode?, thumbnailPanelHeight: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.currentLayout = (layout, navigationBarHeight, thumbnailPanelHeight, isHidden)
         let cleanInsets = layout.insets(options: [])

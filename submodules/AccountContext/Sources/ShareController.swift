@@ -49,11 +49,23 @@ public enum ShareControllerError {
 }
 
 public enum ShareControllerSubject {
+    public final class PublicLinkPrefix {
+        public let visibleString: String
+        public let actualString: String
+        
+        public init(visibleString: String, actualString: String) {
+            self.visibleString = visibleString
+            self.actualString = actualString
+        }
+    }
+    
     public final class MediaParameters {
         public let startAtTimestamp: Int32?
+        public let publicLinkPrefix: PublicLinkPrefix?
         
-        public init(startAtTimestamp: Int32?) {
+        public init(startAtTimestamp: Int32?, publicLinkPrefix: PublicLinkPrefix?) {
             self.startAtTimestamp = startAtTimestamp
+            self.publicLinkPrefix = publicLinkPrefix
         }
     }
     

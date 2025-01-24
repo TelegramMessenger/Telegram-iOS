@@ -326,6 +326,8 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     private let fromPublicChannel: Bool
     private let segmentedValues: [ShareControllerSegmentedValue]?
     private let collectibleItemInfo: TelegramCollectibleItemInfo?
+    private let mediaParameters: ShareControllerSubject.MediaParameters?
+    
     var selectedSegmentedIndex: Int = 0
     
     private let defaultAction: ShareControllerAction?
@@ -365,6 +367,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     var enqueued: (([PeerId], [Int64]) -> Void)?
     var present: ((ViewController) -> Void)?
     var disabledPeerSelected: ((EnginePeer) -> Void)?
+    var onMediaTimestampLinkCopied: ((Int32?) -> Void)?
     
     let ready = Promise<Bool>()
     
@@ -397,6 +400,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.fromPublicChannel = fromPublicChannel
         self.segmentedValues = segmentedValues
         self.collectibleItemInfo = collectibleItemInfo
+        self.mediaParameters = mediaParameters
         
         self.presetText = presetText
         
@@ -471,7 +475,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             self.startAtTimestampNode = nil
         }
         
-        self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: self.presentationData.theme), placeholder: self.presentationData.strings.ShareMenu_Comment)
+        self.inputFieldNode = ShareInputFieldNode(theme: ShareInputFieldNodeTheme(presentationTheme: self.presentationData.theme), strings: self.presentationData.strings, placeholder: self.presentationData.strings.ShareMenu_Comment)
         self.inputFieldNode.text = presetText ?? ""
         self.inputFieldNode.preselectText()
         self.inputFieldNode.alpha = 0.0
@@ -490,6 +494,15 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         super.init()
         
         self.isHidden = true
+        
+        self.startAtTimestampNode?.updated = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let (layout, navigationBarHeight, _) = self.containerLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
+        }
                 
         self.actionButtonNode.shouldBegin = { [weak self] in
             if let strongSelf = self {
@@ -593,7 +606,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 }
                 
                 if !openedTopicList {
-                    strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
+                    strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil && strongSelf.mediaParameters?.publicLinkPrefix == nil, inputField: true, actions: strongSelf.defaultAction == nil)
                     
                     strongSelf.updateButton()
                     
@@ -686,10 +699,44 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 }
             }
         }
+        self.inputFieldNode.onInputCopyText = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let publicLinkPrefix = self.mediaParameters?.publicLinkPrefix {
+                var timestampSuffix = ""
+                var effectiveStartTimestamp: Int32?
+                if let startAtTimestamp = self.mediaParameters?.startAtTimestamp, let startAtTimestampNode = self.startAtTimestampNode, startAtTimestampNode.value {
+                    var startAtTimestampString = ""
+                    let hours = startAtTimestamp / 3600
+                    let minutes = startAtTimestamp / 60 % 60
+                    let seconds = startAtTimestamp % 60
+                    if hours == 0 && minutes == 0 {
+                        startAtTimestampString = "\(startAtTimestamp)"
+                    } else {
+                        if hours != 0 {
+                            startAtTimestampString += "\(hours)h"
+                        }
+                        if minutes != 0 {
+                            startAtTimestampString += "\(minutes)m"
+                        }
+                        if seconds != 0 {
+                            startAtTimestampString += "\(seconds)s"
+                        }
+                    }
+                    timestampSuffix = "?t=\(startAtTimestampString)"
+                    effectiveStartTimestamp = startAtTimestamp
+                }
+                let inputCopyText = "\(publicLinkPrefix.actualString)\(timestampSuffix)"
+                UIPasteboard.general.string = inputCopyText
+                self.onMediaTimestampLinkCopied?(effectiveStartTimestamp)
+            }
+            self.cancel?()
+        }
         
         self.updateButton()
         
-        if self.presetText != nil {
+        if self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil {
             self.setActionNodesHidden(false, inputField: true, actions: true, animated: false)
         }
     }
@@ -971,7 +1018,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                     if contentNode is ShareSearchContainerNode {
                         self.setActionNodesHidden(true, inputField: true, actions: true)
                     } else if !(contentNode is ShareLoadingContainer) {
-                        self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil, actions: true)
+                        self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil, actions: true)
                     }
                 } else {
                     if let contentNode = self.contentNode {
@@ -1021,16 +1068,45 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         var bottomGridInset: CGFloat = 0
  
         var actionButtonHeight: CGFloat = 0
-        if self.defaultAction != nil || !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil {
+        if self.defaultAction != nil || !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil {
             actionButtonHeight = buttonHeight
             bottomGridInset += actionButtonHeight
         }
         if self.startAtTimestampNode != nil {
             bottomGridInset += buttonHeight
         }
- 
-        let inputHeight = self.inputFieldNode.updateLayout(width: contentContainerFrame.size.width, transition: transition)
+        
+        var inputCopyText: String?
         if !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil {
+        } else {
+            if let publicLinkPrefix = self.mediaParameters?.publicLinkPrefix {
+                var timestampSuffix = ""
+                if let startAtTimestamp = self.mediaParameters?.startAtTimestamp, let startAtTimestampNode = self.startAtTimestampNode, startAtTimestampNode.value {
+                    var startAtTimestampString = ""
+                    let hours = startAtTimestamp / 3600
+                    let minutes = startAtTimestamp / 60 % 60
+                    let seconds = startAtTimestamp % 60
+                    if hours == 0 && minutes == 0 {
+                        startAtTimestampString = "\(startAtTimestamp)"
+                    } else {
+                        if hours != 0 {
+                            startAtTimestampString += "\(hours)h"
+                        }
+                        if minutes != 0 {
+                            startAtTimestampString += "\(minutes)m"
+                        }
+                        if seconds != 0 {
+                            startAtTimestampString += "\(seconds)s"
+                        }
+                    }
+                    timestampSuffix = "?t=\(startAtTimestampString)"
+                }
+                inputCopyText = "\(publicLinkPrefix.visibleString)\(timestampSuffix)"
+            }
+        }
+ 
+        let inputHeight = self.inputFieldNode.updateLayout(width: contentContainerFrame.size.width, inputCopyText: inputCopyText, transition: transition)
+        if !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil || self.mediaParameters?.publicLinkPrefix != nil {
             bottomGridInset += inputHeight
         }
         

@@ -132,6 +132,8 @@ public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
         return self.checkNode.selected
     }
     
+    public var updated: (() -> Void)?
+    
     public init(titleText: String, titleTextColor: UIColor, checkNodeTheme: CheckNodeTheme) {
         self.titleText = titleText
         self.titleTextColor = titleTextColor
@@ -154,6 +156,7 @@ public final class ShareStartAtTimestampNode: HighlightTrackingButtonNode {
     
     @objc private func pressed() {
         self.checkNode.setSelected(!self.checkNode.selected, animated: true)
+        self.updated?()
     }
     
     override public func layout() {

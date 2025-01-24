@@ -42,6 +42,8 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     
     private var currentChapter: MediaPlayerScrubbingChapter?
     
+    private var isAnimatedOut: Bool = false
+    
     var hideWhenDurationIsUnknown = false {
         didSet {
             if self.hideWhenDurationIsUnknown {
@@ -150,6 +152,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     func updateTimestampsVisibility(animated: Bool) {
+        if self.isAnimatedOut {
+            return
+        }
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.2, curve: .easeInOut) : .immediate
         let alpha: CGFloat = self.isCollapsed == true || self.isLoading ? 0.0 : 1.0
         transition.updateAlpha(node: self.leftTimestampNode, alpha: alpha)
@@ -374,5 +379,81 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             hitTestRect = bounds.insetBy(dx: 0, dy: -minHeightDiff / 2.0)
         }
         return hitTestRect.contains(point)
+    }
+    
+    func animateIn(from scrubberTransition: GalleryItemScrubberTransition?, transition: ContainedViewLayoutTransition) {
+        if let scrubberTransition {
+            let fromRect = scrubberTransition.view.convert(scrubberTransition.view.bounds, to: self)
+            
+            let targetCloneView = scrubberTransition.makeView()
+            self.addSubview(targetCloneView)
+            targetCloneView.frame = fromRect
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 0.0), .immediate)
+            targetCloneView.alpha = 1.0
+            
+            transition.updateFrame(view: targetCloneView, frame: CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - fromRect.height - 3.0), size: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height)))
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 1.0), transition)
+            let scrubberTransitionView = scrubberTransition.view
+            scrubberTransitionView.isHidden = true
+            ContainedViewLayoutTransition.animated(duration: 0.08, curve: .easeInOut).updateAlpha(layer: targetCloneView.layer, alpha: 0.0, completion: { [weak scrubberTransitionView, weak targetCloneView] _ in
+                scrubberTransitionView?.isHidden = false
+                targetCloneView?.removeFromSuperview()
+            })
+            
+            let scrubberSourceRect = CGRect(origin: CGPoint(x: fromRect.minX, y: fromRect.maxY - 3.0), size: CGSize(width: fromRect.width, height: 3.0))
+            
+            let leftTimestampOffset = CGPoint(x: self.leftTimestampNode.position.x - self.scrubberNode.frame.minX, y: self.leftTimestampNode.position.y - self.scrubberNode.frame.maxY)
+            let rightTimestampOffset = CGPoint(x: self.rightTimestampNode.position.x - self.scrubberNode.frame.maxX, y: self.rightTimestampNode.position.y - self.scrubberNode.frame.maxY)
+            
+            transition.animatePosition(node: self.scrubberNode, from: scrubberSourceRect.center)
+            self.scrubberNode.animateWidth(from: scrubberSourceRect.width, transition: transition)
+            
+            transition.animatePosition(node: self.leftTimestampNode, from: CGPoint(x: leftTimestampOffset.x + scrubberSourceRect.minX, y: leftTimestampOffset.y + scrubberSourceRect.maxY))
+            transition.animatePosition(node: self.rightTimestampNode, from: CGPoint(x: rightTimestampOffset.x + scrubberSourceRect.maxX, y: rightTimestampOffset.y + scrubberSourceRect.maxY))
+        }
+        
+        self.scrubberNode.layer.animateAlpha(from: 0.0, to: self.leftTimestampNode.alpha, duration: 0.25)
+        self.leftTimestampNode.layer.animateAlpha(from: 0.0, to: self.leftTimestampNode.alpha, duration: 0.25)
+        self.rightTimestampNode.layer.animateAlpha(from: 0.0, to: self.leftTimestampNode.alpha, duration: 0.25)
+        self.infoNode.layer.animateAlpha(from: 0.0, to: self.leftTimestampNode.alpha, duration: 0.25)
+    }
+    
+    func animateOut(to scrubberTransition: GalleryItemScrubberTransition?, transition: ContainedViewLayoutTransition) {
+        self.isAnimatedOut = true
+        
+        if let scrubberTransition {
+            let toRect = scrubberTransition.view.convert(scrubberTransition.view.bounds, to: self)
+            let scrubberDestinationRect = CGRect(origin: CGPoint(x: toRect.minX, y: toRect.maxY - 3.0), size: CGSize(width: toRect.width, height: 3.0))
+
+            let targetCloneView = scrubberTransition.makeView()
+            self.addSubview(targetCloneView)
+            targetCloneView.frame = CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - toRect.height), size: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height))
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 0.0), .immediate)
+            targetCloneView.alpha = 0.0
+            
+            transition.updateFrame(view: targetCloneView, frame: toRect)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 1.0), transition)
+            let scrubberTransitionView = scrubberTransition.view
+            scrubberTransitionView.isHidden = true
+            transition.updateAlpha(layer: targetCloneView.layer, alpha: 1.0, completion: { [weak scrubberTransitionView] _ in
+                scrubberTransitionView?.isHidden = false
+            })
+            
+            let leftTimestampOffset = CGPoint(x: self.leftTimestampNode.position.x - self.scrubberNode.frame.minX, y: self.leftTimestampNode.position.y - self.scrubberNode.frame.maxY)
+            let rightTimestampOffset = CGPoint(x: self.rightTimestampNode.position.x - self.scrubberNode.frame.maxX, y: self.rightTimestampNode.position.y - self.scrubberNode.frame.maxY)
+            
+            transition.animatePositionAdditive(layer: self.scrubberNode.layer, offset: CGPoint(), to: CGPoint(x: scrubberDestinationRect.midX - self.scrubberNode.position.x, y: scrubberDestinationRect.midY - self.scrubberNode.position.y), removeOnCompletion: false)
+            
+            self.scrubberNode.animateWidth(to: scrubberDestinationRect.width, transition: transition)
+            
+            transition.animatePositionAdditive(layer: self.leftTimestampNode.layer, offset: CGPoint(), to: CGPoint(x: -self.leftTimestampNode.position.x + (leftTimestampOffset.x + scrubberDestinationRect.minX), y: -self.leftTimestampNode.position.y + (leftTimestampOffset.y + scrubberDestinationRect.maxY)), removeOnCompletion: false)
+            
+            transition.animatePositionAdditive(layer: self.rightTimestampNode.layer, offset: CGPoint(), to: CGPoint(x: -self.rightTimestampNode.position.x + (rightTimestampOffset.x + scrubberDestinationRect.maxX), y: -self.rightTimestampNode.position.y + (rightTimestampOffset.y + scrubberDestinationRect.maxY)), removeOnCompletion: false)
+        }
+        
+        transition.updateAlpha(layer: self.scrubberNode.layer, alpha: 0.0)
+        transition.updateAlpha(layer: self.leftTimestampNode.layer, alpha: 0.0)
+        transition.updateAlpha(layer: self.rightTimestampNode.layer, alpha: 0.0)
+        transition.updateAlpha(layer: self.infoNode.layer, alpha: 0.0)
     }
 }

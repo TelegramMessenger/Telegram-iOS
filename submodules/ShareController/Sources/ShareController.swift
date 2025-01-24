@@ -436,6 +436,8 @@ public final class ShareController: ViewController {
 
     public var debugAction: (() -> Void)?
     
+    public var onMediaTimestampLinkCopied: ((Int32?) -> Void)?
+    
     public var parentNavigationController: NavigationController?
     
     public convenience init(context: AccountContext, subject: ShareControllerSubject, presetText: String? = nil, preferredAction: ShareControllerPreferredAction = .default, showInChat: ((Message) -> Void)? = nil, fromForeignApp: Bool = false, segmentedValues: [ShareControllerSegmentedValue]? = nil, externalShare: Bool = true, immediateExternalShare: Bool = false, switchableAccounts: [AccountWithInfo] = [], immediatePeerId: PeerId? = nil, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, forceTheme: PresentationTheme? = nil, forcedActionTitle: String? = nil, shareAsLink: Bool = false, collectibleItemInfo: TelegramCollectibleItemInfo? = nil) {
@@ -1209,6 +1211,12 @@ public final class ShareController: ViewController {
                 }
                 return false
             }), in: .current)
+        }
+        self.controllerNode.onMediaTimestampLinkCopied = { [weak self] timestamp in
+            guard let self else {
+                return
+            }
+            self.onMediaTimestampLinkCopied?(timestamp)
         }
         self.controllerNode.debugAction = { [weak self] in
             self?.debugAction?()

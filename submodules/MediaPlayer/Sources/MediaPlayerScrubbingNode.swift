@@ -1091,4 +1091,12 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
             }
         }
     }
+    
+    public func animateWidth(from: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.animateTransformScale(layer: self.layer, from: CGPoint(x: from / self.bounds.width, y: 1.0))
+    }
+    
+    public func animateWidth(to: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateTransformScale(node: self, scale: CGPoint(x: to / self.bounds.width, y: 1.0))
+    }
 }
