@@ -14,7 +14,7 @@ import AvatarNode
 import ContextUI
 
 final class VideoChatParticipantThumbnailComponent: Component {
-    let call: PresentationGroupCall
+    let call: VideoChatCall
     let theme: PresentationTheme
     let participant: GroupCallParticipantsContext.Participant
     let isPresentation: Bool
@@ -26,7 +26,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     
     init(
-        call: PresentationGroupCall,
+        call: VideoChatCall,
         theme: PresentationTheme,
         participant: GroupCallParticipantsContext.Participant,
         isPresentation: Bool,
@@ -50,7 +50,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
     }
     
     static func ==(lhs: VideoChatParticipantThumbnailComponent, rhs: VideoChatParticipantThumbnailComponent) -> Bool {
-        if lhs.call !== rhs.call {
+        if lhs.call != rhs.call {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -280,7 +280,7 @@ final class VideoChatParticipantThumbnailComponent: Component {
                     
                     videoLayer.blurredLayer.opacity = 0.25
                     
-                    if let input = (component.call as! PresentationGroupCallImpl).video(endpointId: videoDescription.endpointId) {
+                    if let input = component.call.video(endpointId: videoDescription.endpointId) {
                         let videoSource = AdaptedCallVideoSource(videoStreamSignal: input)
                         self.videoSource = videoSource
                         
@@ -474,7 +474,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
         }
     }
 
-    let call: PresentationGroupCall
+    let call: VideoChatCall
     let theme: PresentationTheme
     let displayVideo: Bool
     let participants: [Participant]
@@ -485,7 +485,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
 
     init(
-        call: PresentationGroupCall,
+        call: VideoChatCall,
         theme: PresentationTheme,
         displayVideo: Bool,
         participants: [Participant],
@@ -507,7 +507,7 @@ final class VideoChatExpandedParticipantThumbnailsComponent: Component {
     }
 
     static func ==(lhs: VideoChatExpandedParticipantThumbnailsComponent, rhs: VideoChatExpandedParticipantThumbnailsComponent) -> Bool {
-        if lhs.call !== rhs.call {
+        if lhs.call != rhs.call {
             return false
         }
         if lhs.theme !== rhs.theme {

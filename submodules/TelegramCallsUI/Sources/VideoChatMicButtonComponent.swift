@@ -188,7 +188,7 @@ final class VideoChatMicButtonComponent: Component {
         case scheduled(state: ScheduledState)
     }
     
-    let call: PresentationGroupCall
+    let call: VideoChatCall
     let strings: PresentationStrings
     let content: Content
     let isCollapsed: Bool
@@ -197,7 +197,7 @@ final class VideoChatMicButtonComponent: Component {
     let scheduleAction: () -> Void
 
     init(
-        call: PresentationGroupCall,
+        call: VideoChatCall,
         strings: PresentationStrings,
         content: Content,
         isCollapsed: Bool,
@@ -215,6 +215,9 @@ final class VideoChatMicButtonComponent: Component {
     }
 
     static func ==(lhs: VideoChatMicButtonComponent, rhs: VideoChatMicButtonComponent) -> Bool {
+        if lhs.call != rhs.call {
+            return false
+        }
         if lhs.content != rhs.content {
             return false
         }
@@ -612,8 +615,8 @@ final class VideoChatMicButtonComponent: Component {
                 switch component.content {
                 case .unmuted:
                     if self.audioLevelDisposable == nil {
-                        self.audioLevelDisposable = (component.call.myAudioLevel
-                        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                        self.audioLevelDisposable = (component.call.myAudioLevelAndSpeaking
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] value, _ in
                             guard let self, let blobView = self.blobView else {
                                 return
                             }

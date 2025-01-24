@@ -1006,6 +1006,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     let debugLog = Promise<String?>()
     
+    weak var upgradedConferenceCall: PresentationCallImpl?
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -2794,6 +2796,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.screencastIPCContext?.disableScreencast(account: self.account)
 
         self._canBeRemoved.set(.single(true))
+        
+        if let upgradedConferenceCall = self.upgradedConferenceCall {
+            upgradedConferenceCall.internal_markAsCanBeRemoved()
+        }
         
         if self.didConnectOnce {
             if let callManager = self.accountContext.sharedContext.callManager {

@@ -856,6 +856,10 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return .joined
     }
     
+    public func switchToConference(call: PresentationCall) {
+        
+    }
+    
     private func startGroupCall(
         accountContext: AccountContext,
         peerId: PeerId,

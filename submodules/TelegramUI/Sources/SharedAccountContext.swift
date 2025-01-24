@@ -830,7 +830,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         self.hasOngoingCall.set(true)
                         setNotificationCall(call)
                         
-                        self.callIsConferenceDisposable = (call.hasConference
+                        self.callIsConferenceDisposable = (call.conferenceState
+                        |> filter { $0 != nil }
+                        |> take(1)
                         |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                             guard let self else {
                                 return
@@ -911,7 +913,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.groupCallDisposable = (callManager.currentGroupCallSignal
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
-                    if call !== strongSelf.groupCallController?.call {
+                    if call.flatMap(VideoChatCall.group) != strongSelf.groupCallController?.call {
                         strongSelf.groupCallController?.dismiss(closing: true, manual: false)
                         strongSelf.groupCallController = nil
                         strongSelf.hasOngoingCall.set(false)
@@ -939,13 +941,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             } else {
                                 strongSelf.hasGroupCallOnScreenPromise.set(true)
                                 
-                                let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                                let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: .group(call))
                                 |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
                                     guard let strongSelf, let navigationController else {
                                         return
                                     }
                                     
-                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call, initialData: initialData, sourceCallController: nil)
+                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: .group(call), initialData: initialData, sourceCallController: nil)
                                     groupCallController.onViewDidAppear = { [weak strongSelf] in
                                         if let strongSelf {
                                             strongSelf.hasGroupCallOnScreenPromise.set(true)
@@ -979,13 +981,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     guard let call else {
                         return .single((nil, nil))
                     }
-                    return combineLatest(call.state, call.hasConference)
-                    |> map { [weak call] state, _ -> (PresentationCall?, PresentationGroupCall?) in
+                    return call.state
+                    |> map { [weak call] state -> (PresentationCall?, PresentationGroupCall?) in
                         guard let call else {
                             return (nil, nil)
-                        }
-                        if let conferenceCall = call.conferenceCall {
-                            return (nil, conferenceCall)
                         }
                         switch state.state {
                         case .ringing:
@@ -1217,9 +1216,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return
         }
         
-        if let conferenceCall = call.conferenceCall {
+        if call.conferenceStateValue != nil {
             if let groupCallController = self.groupCallController {
-                if groupCallController.call === conferenceCall {
+                if groupCallController.call == call.conferenceCall.flatMap(VideoChatCall.group) || groupCallController.call == .conferenceSource(call) {
                     return
                 }
                 groupCallController.dismiss(closing: true, manual: false)
@@ -1228,11 +1227,19 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             var transitioniongCallController: CallController?
             if let callController = self.callController {
                 transitioniongCallController = callController
-                callController.dismissWithoutAnimation()
+                if callController.navigationPresentation != .flatModal {
+                    callController.dismissWithoutAnimation()
+                }
                 self.callController = nil
             }
             
-            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: conferenceCall.accountContext, call: conferenceCall)
+            let groupCall: VideoChatCall
+            if let conferenceCall = call.conferenceCall, case .ready = call.conferenceStateValue {
+                groupCall = .group(conferenceCall)
+            } else {
+                groupCall = .conferenceSource(call)
+            }
+            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: call.context, call: groupCall)
             |> deliverOnMainQueue).start(next: { [weak self, weak transitioniongCallController] initialData in
                 guard let self else {
                     return
@@ -1240,11 +1247,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
                     return
                 }
-                guard let call = self.call, let conferenceCall = call.conferenceCall else {
+                guard let call = self.call else {
                     return
                 }
                 
-                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: conferenceCall.accountContext, call: conferenceCall, initialData: initialData, sourceCallController: transitioniongCallController)
+                let groupCall: VideoChatCall
+                if let conferenceCall = call.conferenceCall, case .ready = call.conferenceStateValue {
+                    groupCall = .group(conferenceCall)
+                } else {
+                    groupCall = .conferenceSource(call)
+                }
+                
+                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: call.context, call: groupCall, initialData: initialData, sourceCallController: transitioniongCallController)
                 groupCallController.onViewDidAppear = { [weak self] in
                     if let self {
                         self.hasGroupCallOnScreenPromise.set(true)
@@ -1258,7 +1272,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 groupCallController.navigationPresentation = .flatModal
                 groupCallController.parentNavigationController = navigationController
                 self.groupCallController = groupCallController
-                navigationController.pushViewController(groupCallController)
+                
+                transitioniongCallController?.onViewDidAppear = nil
+                transitioniongCallController?.onViewDidDisappear = nil
+                
+                self.hasGroupCallOnScreenPromise.set(true)
+                if let transitioniongCallController, let navigationController = transitioniongCallController.navigationController as? NavigationController {
+                    var viewControllers = navigationController.viewControllers
+                    if let index = viewControllers.firstIndex(where: { $0 === transitioniongCallController }) {
+                        viewControllers.insert(groupCallController, at: index)
+                        navigationController.setViewControllers(viewControllers, animated: false)
+                        viewControllers.remove(at: index + 1)
+                        navigationController.setViewControllers(viewControllers, animated: false)
+                    } else {
+                        navigationController.pushViewController(groupCallController)
+                    }
+                } else {
+                    navigationController.pushViewController(groupCallController)
+                }
             })
         } else {
             if let currentCallController = self.callController {
