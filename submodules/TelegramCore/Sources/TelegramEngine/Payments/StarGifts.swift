@@ -1122,6 +1122,9 @@ private final class ProfileGiftsContextImpl {
         if let index = self.gifts.firstIndex(where: { $0.reference == reference }) {
             self.gifts[index] = self.gifts[index].withSavedToProfile(added)
         }
+        if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
+            self.filteredGifts[index] = self.filteredGifts[index].withSavedToProfile(added)
+        }
         self.pushState()
     }
     
@@ -1133,6 +1136,7 @@ private final class ProfileGiftsContextImpl {
             self.count = max(0, count - 1)
         }
         self.gifts.removeAll(where: { $0.reference == reference })
+        self.filteredGifts.removeAll(where: { $0.reference == reference })
         self.pushState()
     }
     
@@ -1144,6 +1148,7 @@ private final class ProfileGiftsContextImpl {
             self.count = max(0, count - 1)
         }
         self.gifts.removeAll(where: { $0.reference == reference })
+        self.filteredGifts.removeAll(where: { $0.reference == reference })
         self.pushState()
     }
     
@@ -1160,8 +1165,11 @@ private final class ProfileGiftsContextImpl {
                     }
                     if let index = self.gifts.firstIndex(where: { $0.reference == reference }) {
                         self.gifts[index] = result
-                        self.pushState()
                     }
+                    if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
+                        self.filteredGifts[index] = result
+                    }
+                    self.pushState()
                     subscriber.putNext(result)
                 }, error: { error in
                     subscriber.putError(error)
