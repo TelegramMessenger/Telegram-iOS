@@ -2659,21 +2659,35 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 controllers = controllers.filter { !($0 is ContactSelectionController) }
                 
                 if !isChannelGift {
-                    var foundController = false
-                    for controller in controllers.reversed() {
-                        if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                    if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                        if let controller = context.sharedContext.makePeerInfoController(
+                            context: context,
+                            updatedPresentationData: nil,
+                            peer: peer._asPeer(),
+                            mode: .gifts,
+                            avatarInitiallyExpanded: false,
+                            fromChat: false,
+                            requestsContext: nil
+                        ) {
+                            controllers.append(controller)
+                        }
+                    } else {
+                        var foundController = false
+                        for controller in controllers.reversed() {
+                            if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                                chatController.hintPlayNextOutgoingGift()
+                                foundController = true
+                                break
+                            }
+                        }
+                        if !foundController {
+                            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                             chatController.hintPlayNextOutgoingGift()
-                            foundController = true
-                            break
+                            controllers.append(chatController)
                         }
                     }
-                    if !foundController {
-                        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                        chatController.hintPlayNextOutgoingGift()
-                        controllers.append(chatController)
-                    }
-                    navigationController.setViewControllers(controllers, animated: true)
                 }
+                navigationController.setViewControllers(controllers, animated: true)
                 
                 Queue.mainQueue().after(0.3) {
                     let tooltipController = UndoOverlayController(

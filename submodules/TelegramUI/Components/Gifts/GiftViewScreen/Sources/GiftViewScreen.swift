@@ -1743,54 +1743,56 @@ private final class GiftViewSheetContent: CombinedComponent {
                             canConvert = false
                         }
                     }
-                    let valueComponent: AnyComponent<Empty>
                     if let convertStars, incoming && !converted && canConvert {
-                        valueComponent = AnyComponent(
-                            HStack([
-                                AnyComponentWithIdentity(
-                                    id: AnyHashable(0),
-                                    component: AnyComponent(MultilineTextWithEntitiesComponent(
-                                        context: component.context,
-                                        animationCache: component.context.animationCache,
-                                        animationRenderer: component.context.animationRenderer,
-                                        placeholderColor: theme.list.mediaPlaceholderColor,
-                                        text: .plain(valueAttributedString),
-                                        maximumNumberOfLines: 0
-                                    ))
-                                ),
-                                AnyComponentWithIdentity(
-                                    id: AnyHashable(1),
-                                    component: AnyComponent(Button(
-                                        content: AnyComponent(ButtonContentComponent(
+                        tableItems.append(.init(
+                            id: "value_convert",
+                            title: strings.Gift_View_Value,
+                            component: AnyComponent(
+                                HStack([
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(0),
+                                        component: AnyComponent(MultilineTextWithEntitiesComponent(
                                             context: component.context,
-                                            text: strings.Gift_View_Sale(strings.Gift_View_Sale_Stars(Int32(convertStars))).string,
-                                            color: theme.list.itemAccentColor
-                                        )),
-                                        action: {
-                                            component.convertToStars()
-                                        }
-                                    ))
-                                )
-                            ], spacing: 4.0)
-                        )
+                                            animationCache: component.context.animationCache,
+                                            animationRenderer: component.context.animationRenderer,
+                                            placeholderColor: theme.list.mediaPlaceholderColor,
+                                            text: .plain(valueAttributedString),
+                                            maximumNumberOfLines: 0
+                                        ))
+                                    ),
+                                    AnyComponentWithIdentity(
+                                        id: AnyHashable(1),
+                                        component: AnyComponent(Button(
+                                            content: AnyComponent(ButtonContentComponent(
+                                                context: component.context,
+                                                text: strings.Gift_View_Sale(strings.Gift_View_Sale_Stars(Int32(convertStars))).string,
+                                                color: theme.list.itemAccentColor
+                                            )),
+                                            action: {
+                                                component.convertToStars()
+                                            }
+                                        ))
+                                    )
+                                ], spacing: 4.0)
+                            ),
+                            insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
+                        ))
                     } else {
-                        valueComponent = AnyComponent(MultilineTextWithEntitiesComponent(
-                            context: component.context,
-                            animationCache: component.context.animationCache,
-                            animationRenderer: component.context.animationRenderer,
-                            placeholderColor: theme.list.mediaPlaceholderColor,
-                            text: .plain(valueAttributedString),
-                            maximumNumberOfLines: 0
+                        tableItems.append(.init(
+                            id: "value",
+                            title: strings.Gift_View_Value,
+                            component: AnyComponent(MultilineTextWithEntitiesComponent(
+                                context: component.context,
+                                animationCache: component.context.animationCache,
+                                animationRenderer: component.context.animationRenderer,
+                                placeholderColor: theme.list.mediaPlaceholderColor,
+                                text: .plain(valueAttributedString),
+                                maximumNumberOfLines: 0
+                            )),
+                            insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
                         ))
                     }
-                    
-                    tableItems.append(.init(
-                        id: "value",
-                        title: strings.Gift_View_Value,
-                        component: valueComponent,
-                        insets: UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 12.0)
-                    ))
-                    
+                                        
                     if let limitTotal {
                         var remains: Int32 = 0
                         if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
