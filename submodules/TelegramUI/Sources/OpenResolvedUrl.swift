@@ -1220,7 +1220,14 @@ func openResolvedUrlImpl(
                         updateExternalController(nil)
                     }
                 }
-                let controller = context.sharedContext.makeGiftViewScreen(context: context, gift: gift, shareStory: nil, dismissed: {
+                let controller = context.sharedContext.makeGiftViewScreen(context: context, gift: gift, shareStory: { [weak navigationController] uniqueGift in
+                    Queue.mainQueue().after(0.15) {
+                        if let lastController = navigationController?.viewControllers.last as? ViewController {
+                            let controller = context.sharedContext.makeStorySharingScreen(context: context, subject: .gift(gift), parentController: lastController)
+                            navigationController?.pushViewController(controller)
+                        }
+                    }
+                }, dismissed: {
                     dismissedImpl?()
                 })
                 navigationController?.pushViewController(controller)

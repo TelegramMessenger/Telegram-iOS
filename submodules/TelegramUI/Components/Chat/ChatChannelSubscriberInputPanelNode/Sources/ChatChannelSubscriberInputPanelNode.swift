@@ -315,7 +315,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     private var displayedGiftTooltip = false
     private func presentGiftTooltip() {
-        guard let context = self.context, !self.displayedGiftTooltip else {
+        guard let context = self.context, !self.displayedGiftTooltip, let parentController = self.interfaceInteraction?.chatController() else {
             return
         }
         self.displayedGiftTooltip = true
@@ -332,7 +332,7 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             let _ = ApplicationSpecificNotice.incrementChannelSendGiftTooltip(accountManager: context.sharedContext.accountManager).start()
             
             Queue.mainQueue().after(0.4, {
-                let absoluteFrame = self.giftButton.view.convert(self.giftButton.bounds, to: nil)
+                let absoluteFrame = self.giftButton.view.convert(self.giftButton.bounds, to: parentController.view)
                 let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY + 11.0), size: CGSize())
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }

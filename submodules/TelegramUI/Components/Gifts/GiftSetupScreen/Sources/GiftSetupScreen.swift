@@ -35,6 +35,7 @@ import ProgressNavigationButtonNode
 import Markdown
 import GiftViewScreen
 import UndoUI
+import ConfettiEffect
 
 final class GiftSetupScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -377,6 +378,8 @@ final class GiftSetupScreenComponent: Component {
                                 action: { _ in return true }
                             )
                             (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
+                            
+                            navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
                         }
                         
                         if let completion {

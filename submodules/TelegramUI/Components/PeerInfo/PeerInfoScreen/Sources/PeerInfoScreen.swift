@@ -8906,7 +8906,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private func editingOpenNameColorSetup() {
         if self.peerId == self.context.account.peerId {
-            let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .account)
+            let controller = UserAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData)
             self.controller?.push(controller)
         } else if let peer = self.data?.peer, peer is TelegramChannel {
             self.controller?.push(ChannelAppearanceScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, boostStatus: self.boostStatus))
@@ -9815,16 +9815,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let premiumGiftOptions = self.data?.premiumGiftOptions ?? []
         let premiumOptions = premiumGiftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
         
+        var hasBirthday = false
+        if let cachedUserData = self.data?.cachedData as? CachedUserData {
+            hasBirthday = hasBirthdayToday(cachedData: cachedUserData)
+        }
+        
         let controller = self.context.sharedContext.makeGiftOptionsController(
             context: self.context,
             peerId: self.peerId,
             premiumOptions: premiumOptions,
-            hasBirthday: false,
+            hasBirthday: hasBirthday,
             completion: { [weak self] in
                 guard let self, let profileGiftsContext = self.data?.profileGiftsContext else {
                     return
                 }
-                profileGiftsContext.reload()
+                Queue.mainQueue().after(0.5) {
+                    profileGiftsContext.reload()
+                }
             }
         )
         self.controller?.push(controller)
@@ -10916,7 +10923,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        guard let data = self.data, let channel = data.peer as? TelegramChannel, channel.hasPermission(.sendSomething), let giftsContext = data.profileGiftsContext else {
+        guard let data = self.data, let channel = data.peer as? TelegramChannel, let giftsContext = data.profileGiftsContext else {
             return
         }
                 
@@ -10979,18 +10986,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 toggleFilter(.unique)
             })))
             
-            items.append(.separator)
-            
-            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Displayed, icon: { theme in
-                return filter.contains(.displayed) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, f in
-                toggleFilter(.displayed)
-            })))
-            items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Hidden, icon: { theme in
-                return filter.contains(.hidden) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-            }, action: { _, f in
-                toggleFilter(.hidden)
-            })))
+            if channel.hasPermission(.sendSomething) {
+                items.append(.separator)
+                
+                items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Displayed, icon: { theme in
+                    return filter.contains(.displayed) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                }, action: { _, f in
+                    toggleFilter(.displayed)
+                })))
+                items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Hidden, icon: { theme in
+                    return filter.contains(.hidden) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+                }, action: { _, f in
+                    toggleFilter(.hidden)
+                })))
+            }
             
             return ContextController.Items(content: .list(items))
         }
@@ -12019,7 +12028,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                             }
                         case .gifts:
-                            if let data = self.data, let channel = data.peer as? TelegramChannel, channel.hasPermission(.sendSomething) {
+                            if let data = self.data, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info {
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .sort, isForExpandedView: true))
                             }
                         default:
@@ -12294,14 +12303,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         self.didPlayBirthdayAnimation = true
-
-        var hasBirthdayToday = false
-        let today = Calendar.current.dateComponents(Set([.day, .month]), from: Date())
-        if today.day == Int(birthday.day) && today.month == Int(birthday.month) {
-            hasBirthdayToday = true
-        }
         
-        if hasBirthdayToday {
+        if hasBirthdayToday(cachedData: cachedData) {
             Queue.mainQueue().after(0.3) {
                 var birthdayItemFrame: CGRect?
                 if let section = self.regularSections[InfoSection.peerInfo] {

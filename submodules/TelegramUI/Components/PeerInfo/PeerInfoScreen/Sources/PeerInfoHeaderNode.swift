@@ -813,6 +813,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         do {
             self.currentCredibilityIcon = credibilityIcon
             
+            var emojiStatusSize: CGSize?
             var currentEmojiStatus: PeerEmojiStatus?
             let emojiRegularStatusContent: EmojiStatusComponent.Content
             let emojiExpandedStatusContent: EmojiStatusComponent.Content
@@ -823,6 +824,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .premium:
                 emojiRegularStatusContent = .premium(color: navigationContentsAccentColor)
                 emojiExpandedStatusContent = .premium(color: navigationContentsAccentColor)
+                emojiStatusSize = CGSize(width: 30.0, height: 30.0)
             case .verified:
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
                 emojiExpandedStatusContent = .verified(fillColor: navigationContentsAccentColor, foregroundColor: .clear, sizeType: .large)
@@ -845,6 +847,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationCache: self.animationCache,
                     animationRenderer: self.animationRenderer,
                     content: emojiRegularStatusContent,
+                    size: emojiStatusSize,
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in
@@ -866,6 +869,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationCache: self.animationCache,
                     animationRenderer: self.animationRenderer,
                     content: emojiExpandedStatusContent,
+                    size: emojiStatusSize,
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in

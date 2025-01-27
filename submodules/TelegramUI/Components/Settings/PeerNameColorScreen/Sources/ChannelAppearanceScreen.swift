@@ -1071,7 +1071,8 @@ final class ChannelAppearanceScreenComponent: Component {
                                     isGroup ? environment.strings.Conversation_StatusMembers(Int32($0)) : environment.strings.Conversation_StatusSubscribers(Int32($0))
                                 },
                                 files: self.cachedIconFiles,
-                                nameDisplayOrder: presentationData.nameDisplayOrder
+                                nameDisplayOrder: presentationData.nameDisplayOrder,
+                                showBackground: false
                             ),
                             params: ListViewItemLayoutParams(width: availableSize.width, leftInset: 0.0, rightInset: 0.0, availableHeight: 10000.0, isStandalone: true)
                         ))),

@@ -4577,7 +4577,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 let premiumOptions = giftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-                let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: false, completion: nil)
+                
+                var hasBirthday = false
+                if let cachedUserData = self.peerView?.cachedData as? CachedUserData {
+                    hasBirthday = hasBirthdayToday(cachedData: cachedUserData)
+                }
+                let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: hasBirthday, completion: nil)
                 self.push(controller)
             })
         }, requestMessageUpdate: { [weak self] id, scroll in

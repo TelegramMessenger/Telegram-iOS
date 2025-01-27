@@ -87,6 +87,7 @@ public final class GiftItemComponent: Component {
         case profile
         case thumbnail
         case preview
+        case grid
     }
     
     let context: AccountContext
@@ -99,6 +100,7 @@ public final class GiftItemComponent: Component {
     let isLoading: Bool
     let isHidden: Bool
     let isSoldOut: Bool
+    let isSelected: Bool
     let mode: Mode
     
     public init(
@@ -112,6 +114,7 @@ public final class GiftItemComponent: Component {
         isLoading: Bool = false,
         isHidden: Bool = false,
         isSoldOut: Bool = false,
+        isSelected: Bool = false,
         mode: Mode = .generic
     ) {
         self.context = context
@@ -124,6 +127,7 @@ public final class GiftItemComponent: Component {
         self.isLoading = isLoading
         self.isHidden = isHidden
         self.isSoldOut = isSoldOut
+        self.isSelected = isSelected
         self.mode = mode
     }
 
@@ -158,6 +162,9 @@ public final class GiftItemComponent: Component {
         if lhs.isSoldOut != rhs.isSoldOut {
             return false
         }
+        if lhs.isSelected != rhs.isSelected {
+            return false
+        }
         if lhs.mode != rhs.mode {
             return false
         }
@@ -181,6 +188,7 @@ public final class GiftItemComponent: Component {
         private let ribbonText = ComponentView<Empty>()
         
         private var animationLayer: InlineStickerItemLayer?
+        private var selectionLayer: SimpleShapeLayer?
         
         private var disposables = DisposableSet()
         private var fetchedFiles = Set<Int64>()
@@ -234,6 +242,10 @@ public final class GiftItemComponent: Component {
                 size = CGSize(width: availableSize.width, height: availableSize.width)
                 iconSize = CGSize(width: floor(size.width * 0.7), height: floor(size.width * 0.7))
                 cornerRadius = floor(availableSize.width * 0.2)
+            case .grid:
+                size = CGSize(width: availableSize.width, height: availableSize.width)
+                iconSize = CGSize(width: floor(size.width * 0.7), height: floor(size.width * 0.7))
+                cornerRadius = 10.0
             case .preview:
                 size = availableSize
                 iconSize = CGSize(width: floor(size.width * 0.6), height: floor(size.width * 0.6))
@@ -584,6 +596,43 @@ public final class GiftItemComponent: Component {
                         hiddenIconBackground.removeFromSuperview()
                     })
                     hiddenIconBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            }
+            
+            if case .grid = component.mode {
+                let lineWidth: CGFloat = 2.0
+                let selectionFrame = CGRect(origin: .zero, size: size).insetBy(dx: 3.0, dy: 3.0)
+                
+                if component.isSelected {
+                    let selectionLayer: SimpleShapeLayer
+                    if let current = self.selectionLayer {
+                        selectionLayer = current
+                    } else {
+                        selectionLayer = SimpleShapeLayer()
+                        self.selectionLayer = selectionLayer
+                        self.layer.addSublayer(selectionLayer)
+                        
+                        selectionLayer.fillColor = UIColor.clear.cgColor
+                        selectionLayer.strokeColor = UIColor.white.cgColor
+                        selectionLayer.lineWidth = lineWidth
+                        selectionLayer.frame = selectionFrame
+                        selectionLayer.path = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
+                        
+                        if !transition.animation.isImmediate {
+                            let initialPath = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: 0.0, dy: 0.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
+                            selectionLayer.animate(from: initialPath, to: selectionLayer.path as AnyObject, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                            selectionLayer.animateShapeLineWidth(from: 0.0, to: lineWidth, duration: 0.2)
+                        }
+                    }
+                    
+                } else if let selectionLayer = self.selectionLayer {
+                    self.selectionLayer = nil
+                    
+                    let targetPath = CGPath(roundedRect: CGRect(origin: .zero, size: selectionFrame.size).insetBy(dx: 0.0, dy: 0.0), cornerWidth: 6.0, cornerHeight: 6.0, transform: nil)
+                    selectionLayer.animate(from: selectionLayer.path, to: targetPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2, removeOnCompletion: false)
+                    selectionLayer.animateShapeLineWidth(from: selectionLayer.lineWidth, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        selectionLayer.removeFromSuperlayer()
+                    })
                 }
             }
             

@@ -47,6 +47,7 @@ private final class GiftViewSheetContent: CombinedComponent {
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
     let openAddress: (String) -> Void
+    let copyAddress: (String) -> Void
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
@@ -66,6 +67,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         cancel: @escaping (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openAddress: @escaping (String) -> Void,
+        copyAddress: @escaping (String) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
@@ -84,6 +86,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         self.cancel = cancel
         self.openPeer = openPeer
         self.openAddress = openAddress
+        self.copyAddress = copyAddress
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
@@ -447,6 +450,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             var soldOut = false
             var nameHidden = false
             var upgraded = false
+            var exported = false
             var canUpgrade = false
             var upgradeStars: Int64?
             var uniqueGift: StarGift.UniqueGift?
@@ -1082,6 +1086,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                         return (TelegramTextAttributes.URL, contents)
                     })
+                    
+                    descriptionText = descriptionText.replacingOccurrences(of: " >]", with: "\u{00A0}>]")
                     let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                     if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                         attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
@@ -1286,6 +1292,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                                 )
                             ))
                         case let .address(address):
+                            exported = true
+                            
                             func formatAddress(_ str: String) -> String {
                                var result = str
                                let middleIndex = result.index(result.startIndex, offsetBy: str.count / 2)
@@ -1302,8 +1310,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                             MultilineTextComponent(text: .plain(NSAttributedString(string: formatAddress(address), font: tableLargeMonospaceFont, textColor: tableLinkColor)), maximumNumberOfLines: 2, lineSpacing: 0.2)
                                         ),
                                         action: {
-                                            component.openAddress(address)
-                                            component.cancel(true)
+                                            component.copyAddress(address)
                                         }
                                     )
                                 )
@@ -1402,6 +1409,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                     if case let .peerId(peerId) = uniqueGift.owner, peerId == component.context.account.peerId || isChannelGift {
                         var canTransfer = true
                         if let peer = state.peerMap[peerId], case let .channel(channel) = peer, !channel.flags.contains(.isCreator) {
+                            canTransfer = false
+                        } else if subject.arguments?.transferStars == nil {
                             canTransfer = false
                         }
                         
@@ -1871,13 +1880,17 @@ private final class GiftViewSheetContent: CombinedComponent {
                 originY += table.size.height + 23.0
             }
             
-            if incoming && !converted && !upgraded && !showUpgradePreview && !showWearPreview {
+            if ((incoming && !converted && !upgraded) || exported) && (!showUpgradePreview && !showWearPreview) {
                 let linkColor = theme.actionSheet.controlAccentColor
                 if state.cachedSmallChevronImage == nil || state.cachedSmallChevronImage?.1 !== environment.theme {
                     state.cachedSmallChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: linkColor)!, theme)
                 }
-                let descriptionText: String
-                if savedToProfile {
+                var addressToOpen: String?
+                var descriptionText: String
+                if let uniqueGift, case let .address(address) = uniqueGift.owner {
+                    addressToOpen = address
+                    descriptionText = strings.Gift_View_TonGiftInfo
+                } else if savedToProfile {
                     descriptionText = isChannelGift ? strings.Gift_View_DisplayedInfoHide_Channel : strings.Gift_View_DisplayedInfoHide
                 } else if let upgradeStars, upgradeStars > 0 && !upgraded {
                     descriptionText = isChannelGift ? strings.Gift_View_HiddenInfoShow_Channel : strings.Gift_View_HiddenInfoShow
@@ -1894,6 +1907,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 })
+                
+                descriptionText = descriptionText.replacingOccurrences(of: " >]", with: "\u{00A0}>]")
                 let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                 if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedSmallChevronImage?.0 {
                     attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
@@ -1917,10 +1932,15 @@ private final class GiftViewSheetContent: CombinedComponent {
                         },
                         tapAction: { attributes, _ in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                                component.updateSavedToProfile(!savedToProfile)
-                                Queue.mainQueue().after(0.6, {
-                                    component.cancel(false)
-                                })
+                                if let addressToOpen {
+                                    component.openAddress(addressToOpen)
+                                    component.cancel(true)
+                                } else {
+                                    component.updateSavedToProfile(!savedToProfile)
+                                    Queue.mainQueue().after(0.6, {
+                                        component.cancel(false)
+                                    })
+                                }
                             }
                         }
                     ),
@@ -2201,6 +2221,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
     let subject: GiftViewScreen.Subject
     let openPeer: (EnginePeer) -> Void
     let openAddress: (String) -> Void
+    let copyAddress: (String) -> Void
     let updateSavedToProfile: (Bool) -> Void
     let convertToStars: () -> Void
     let openStarsIntro: () -> Void
@@ -2218,6 +2239,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         subject: GiftViewScreen.Subject,
         openPeer: @escaping (EnginePeer) -> Void,
         openAddress: @escaping (String) -> Void,
+        copyAddress: @escaping (String) -> Void,
         updateSavedToProfile: @escaping (Bool) -> Void,
         convertToStars: @escaping () -> Void,
         openStarsIntro: @escaping () -> Void,
@@ -2234,6 +2256,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
         self.subject = subject
         self.openPeer = openPeer
         self.openAddress = openAddress
+        self.copyAddress = copyAddress
         self.updateSavedToProfile = updateSavedToProfile
         self.convertToStars = convertToStars
         self.openStarsIntro = openStarsIntro
@@ -2286,6 +2309,7 @@ private final class GiftViewSheetComponent: CombinedComponent {
                         },
                         openPeer: context.component.openPeer,
                         openAddress: context.component.openAddress,
+                        copyAddress: context.component.copyAddress,
                         updateSavedToProfile: context.component.updateSavedToProfile,
                         convertToStars: context.component.convertToStars,
                         openStarsIntro: context.component.openStarsIntro,
@@ -2447,6 +2471,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         
         var openPeerImpl: ((EnginePeer) -> Void)?
         var openAddressImpl: ((String) -> Void)?
+        var copyAddressImpl: ((String) -> Void)?
         var updateSavedToProfileImpl: ((Bool) -> Void)?
         var convertToStarsImpl: (() -> Void)?
         var openStarsIntroImpl: (() -> Void)?
@@ -2469,6 +2494,9 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 },
                 openAddress: { address in
                     openAddressImpl?(address)
+                },
+                copyAddress: { address in
+                    copyAddressImpl?(address)
                 },
                 updateSavedToProfile: { added in
                     updateSavedToProfileImpl?(added)
@@ -2536,6 +2564,18 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Gift_View_ViewTonAddressUrl(address).string, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                 }
             }
+        }
+        copyAddressImpl = { [weak self] address in
+            guard let self else {
+                return
+            }
+            UIPasteboard.general.string = address
+            
+            self.dismissAllTooltips()
+            
+            self.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Gift_View_CopiedAddress), elevatedLayout: false, position: .bottom, action: { _ in return true }), in: .current)
+            
+            HapticFeedback().tap()
         }
         updateSavedToProfileImpl = { [weak self] added in
             guard let self, let arguments = self.subject.arguments, let reference = arguments.reference else {
@@ -2618,6 +2658,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             let configuration = GiftConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
             let starsConvertMaxDate = arguments.date + configuration.convertToStarsPeriod
             
+            var isChannelGift = false
+            if case let .peer(peerId, _) = reference, peerId.namespace == Namespaces.Peer.CloudChannel {
+                isChannelGift = true
+            }
+            
             let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             if currentTime > starsConvertMaxDate {
                 let days: Int32 = Int32(ceil(Float(configuration.convertToStarsPeriod) / 86400.0))
@@ -2653,8 +2698,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             
                             if let navigationController {
                                 Queue.mainQueue().after(0.5) {
-                                    if let starsContext = context.starsContext {
-                                        navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
+                                    if !isChannelGift {
+                                        if let starsContext = context.starsContext {
+                                            navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
+                                        }
                                     }
                                     
                                     if let lastController = navigationController.viewControllers.last as? ViewController {

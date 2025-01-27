@@ -16,7 +16,7 @@ public protocol ContactSelectionController: ViewController {
 
 public enum ContactSelectionControllerMode {
     case generic
-    case starsGifting(birthdays: [EnginePeer.Id: TelegramBirthday]?, hasActions: Bool, showSelf: Bool)
+    case starsGifting(birthdays: [EnginePeer.Id: TelegramBirthday]?, hasActions: Bool, showSelf: Bool, selfSubtitle: String?)
 }
 
 public struct ContactListAdditionalOption: Equatable {

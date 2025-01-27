@@ -514,7 +514,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }, openWallpaperSettings: {
         pushControllerImpl?(ThemeGridController(context: context))
     }, openNameColorSettings: {
-        pushControllerImpl?(PeerNameColorScreen(context: context, subject: .account))
+        pushControllerImpl?(UserAppearanceScreen(context: context))
     }, selectAccentColor: { accentColor in
         selectAccentColorImpl?(accentColor)
     }, openAccentColorPicker: { themeReference, create in

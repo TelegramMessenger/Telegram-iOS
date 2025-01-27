@@ -2352,7 +2352,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
         var presentBirthdayPickerImpl: (() -> Void)?
-        let starsMode: ContactSelectionControllerMode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false)
+        let starsMode: ContactSelectionControllerMode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: false, selfSubtitle: nil)
     
         let contactOptions: Signal<[ContactListAdditionalOption], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Birthday(id: context.account.peerId))
         |> map { birthday in
@@ -2428,22 +2428,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         var currentBirthdays: [EnginePeer.Id: TelegramBirthday]?
         
         if case let .starGiftTransfer(birthdays, _, _, _, _, showSelf) = source {
-            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: showSelf)
+            mode = .starsGifting(birthdays: birthdays, hasActions: false, showSelf: showSelf, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_TransferSelf)
             currentBirthdays = birthdays
         } else if case let .chatList(birthdays) = source {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_BuySelf)
             currentBirthdays = birthdays
         } else if case let .settings(birthdays) = source {
-            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true)
+            mode = .starsGifting(birthdays: birthdays, hasActions: true, showSelf: true, selfSubtitle: presentationData.strings.Premium_Gift_ContactSelection_BuySelf)
             currentBirthdays = birthdays
         } else {
-            mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false)
+            mode = .starsGifting(birthdays: nil, hasActions: true, showSelf: false, selfSubtitle: nil)
         }
         
         var allowChannelsInSearch = false
+        var isChannelGift = false
         let contactOptions: Signal<[ContactListAdditionalOption], NoError>
-        if case let .starGiftTransfer(_, _, _, _, canExportDate, _) = source {
+        if case let .starGiftTransfer(_, reference, _, _, canExportDate, _) = source {
             allowChannelsInSearch = true
+            if case let .peer(peerId, _) = reference, peerId.namespace == Namespaces.Peer.CloudChannel {
+                isChannelGift = true
+            }
             var subtitle: String?
             if let canExportDate {
                 let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -2605,9 +2609,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         case .requestPassword:
                             let alertController = confirmGiftWithdrawalController(context: context, reference: reference, present: { [weak controller] c, a in
                                 controller?.present(c, in: .window(.root))
-                            }, completion: { url in
+                            }, completion: { [weak controller] url in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                                
+                                guard let controller, let navigationController = controller.navigationController as? NavigationController else {
+                                    return
+                                }
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is ContactSelectionController) }
+                                navigationController.setViewControllers(controllers, animated: true)
                             })
                             controller?.present(alertController, in: .window(.root))
                         default:
@@ -2646,20 +2657,23 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                 var controllers = navigationController.viewControllers
                 controllers = controllers.filter { !($0 is ContactSelectionController) }
-                var foundController = false
-                for controller in controllers.reversed() {
-                    if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
-                        chatController.hintPlayNextOutgoingGift()
-                        foundController = true
-                        break
+                
+                if !isChannelGift {
+                    var foundController = false
+                    for controller in controllers.reversed() {
+                        if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                            chatController.hintPlayNextOutgoingGift()
+                            foundController = true
+                            break
+                        }
                     }
+                    if !foundController {
+                        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                        chatController.hintPlayNextOutgoingGift()
+                        controllers.append(chatController)
+                    }
+                    navigationController.setViewControllers(controllers, animated: true)
                 }
-                if !foundController {
-                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                    chatController.hintPlayNextOutgoingGift()
-                    controllers.append(chatController)
-                }
-                navigationController.setViewControllers(controllers, animated: true)
                 
                 Queue.mainQueue().after(0.3) {
                     let tooltipController = UndoOverlayController(
