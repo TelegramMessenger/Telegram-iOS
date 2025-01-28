@@ -241,7 +241,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 return .natural(options: options, includeChatList: includeChatList, topPeers: displayTopPeers)
             }
             
-            let contactListNode = ContactListNode(context: context, updatedPresentationData: updatedPresentationData, presentation: presentation, filters: filters, onlyWriteable: onlyWriteable, isGroupInvitation: isGroupInvitation, selectionState: ContactListNodeGroupSelectionState())
+            let contactListNode = ContactListNode(context: context, updatedPresentationData: updatedPresentationData, presentation: presentation, filters: filters, onlyWriteable: onlyWriteable, isGroupInvitation: isGroupInvitation, isPeerEnabled: isPeerEnabled, selectionState: ContactListNodeGroupSelectionState())
             self.contentNode = .contacts(contactListNode)
             
             if !selectedPeers.isEmpty {

@@ -93,6 +93,7 @@ public enum ContactListFilter {
 public final class ContactMultiselectionControllerParams {
     public let context: AccountContext
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
+    public let title: String?
     public let mode: ContactMultiselectionControllerMode
     public let options: Signal<[ContactListAdditionalOption], NoError>
     public let filters: [ContactListFilter]
@@ -106,9 +107,10 @@ public final class ContactMultiselectionControllerParams {
     public let openProfile: ((EnginePeer) -> Void)?
     public let sendMessage: ((EnginePeer) -> Void)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: Signal<[ContactListAdditionalOption], NoError> = .single([]), filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool = false, isGroupInvitation: Bool = false, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)? = nil, alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil, openProfile: ((EnginePeer) -> Void)? = nil, sendMessage: ((EnginePeer) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, title: String? = nil, mode: ContactMultiselectionControllerMode, options: Signal<[ContactListAdditionalOption], NoError> = .single([]), filters: [ContactListFilter] = [.excludeSelf], onlyWriteable: Bool = false, isGroupInvitation: Bool = false, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, attemptDisabledItemSelection: ((EnginePeer, ChatListDisabledPeerReason) -> Void)? = nil, alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil, openProfile: ((EnginePeer) -> Void)? = nil, sendMessage: ((EnginePeer) -> Void)? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
+        self.title = title
         self.mode = mode
         self.options = options
         self.filters = filters

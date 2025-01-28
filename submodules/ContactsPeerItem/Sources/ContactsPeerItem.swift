@@ -1444,7 +1444,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
-                            strongSelf.statusNode.textNode.alpha = item.enabled ? 1.0 : 1.0
+                            strongSelf.statusNode.textNode.alpha = item.enabled ? 1.0 : 0.4
                             
                             strongSelf.statusNode.visibilityRect = strongSelf.visibilityStatus == false ? CGRect.zero : CGRect.infinite
                             let _ = statusApply(TextNodeWithEntities.Arguments(

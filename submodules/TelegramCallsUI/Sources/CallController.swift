@@ -425,15 +425,18 @@ public final class CallController: ViewController {
     }
     
     final class AnimateOutToGroupChat {
+        let containerView: UIView
         let incomingPeerId: EnginePeer.Id
         let incomingVideoLayer: CALayer?
         let incomingVideoPlaceholder: VideoSource.Output?
         
         init(
+            containerView: UIView,
             incomingPeerId: EnginePeer.Id,
             incomingVideoLayer: CALayer?,
             incomingVideoPlaceholder: VideoSource.Output?
         ) {
+            self.containerView = containerView
             self.incomingPeerId = incomingPeerId
             self.incomingVideoLayer = incomingVideoLayer
             self.incomingVideoPlaceholder = incomingVideoPlaceholder
@@ -487,6 +490,7 @@ public final class CallController: ViewController {
         let controller = self.call.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
             context: self.call.context,
             updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
+            title: "Invite Members",
             mode: .peerSelection(searchChatList: true, searchGroups: false, searchChannels: false),
             isPeerEnabled: { peer in
                 guard case let .user(user) = peer else {
@@ -516,21 +520,19 @@ public final class CallController: ViewController {
                 return
             }
             
-            controller?.displayProgress = true
-            let call = self.call
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                controller?.dismiss()
+            }
             
-            controller?.dismiss()
+            let invitePeerIds = peerIds.compactMap { item -> EnginePeer.Id? in
+                if case let .peer(peerId) = item {
+                    return peerId
+                } else {
+                    return nil
+                }
+            }
             
-            let _ = self.call.upgradeToConference(completion: { [weak call] _ in
-                guard let call else {
-                    return
-                }
-                
-                for peerId in peerIds {
-                    if case let .peer(peerId) = peerId {
-                        let _ = (call as? PresentationCallImpl)?.requestAddToConference(peerId: peerId)
-                    }
-                }
+            let _ = self.call.upgradeToConference(invitePeerIds: invitePeerIds, completion: { _ in
             })
         })
         

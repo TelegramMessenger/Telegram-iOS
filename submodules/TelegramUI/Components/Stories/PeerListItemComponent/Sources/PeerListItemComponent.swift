@@ -245,7 +245,7 @@ public final class PeerListItemComponent: Component {
     let hasNext: Bool
     let extractedTheme: ExtractedTheme?
     let insets: UIEdgeInsets?
-    let action: (EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void
+    let action: ((EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void)?
     let inlineActions: InlineActionsState?
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
     let openStories: ((EnginePeer, AvatarNode) -> Void)?
@@ -276,7 +276,7 @@ public final class PeerListItemComponent: Component {
         hasNext: Bool,
         extractedTheme: ExtractedTheme? = nil,
         insets: UIEdgeInsets? = nil,
-        action: @escaping (EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void,
+        action: ((EnginePeer, EngineMessage.Id?, PeerListItemComponent.View) -> Void)?,
         inlineActions: InlineActionsState? = nil,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
         openStories: ((EnginePeer, AvatarNode) -> Void)? = nil
@@ -389,6 +389,12 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.inlineActions != rhs.inlineActions {
+            return false
+        }
+        if (lhs.action == nil) != (rhs.action == nil) {
+            return false
+        }
+        if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
             return false
         }
         return true
@@ -568,7 +574,7 @@ public final class PeerListItemComponent: Component {
             guard let component = self.component, let peer = component.peer else {
                 return
             }
-            component.action(peer, component.message?.id, self)
+            component.action?(peer, component.message?.id, self)
         }
         
         @objc private func avatarButtonPressed() {
@@ -631,7 +637,7 @@ public final class PeerListItemComponent: Component {
             if let hint = transition.userData(TransitionHint.self) {
                 synchronousLoad = hint.synchronousLoad
             }
-                
+            
             self.isGestureEnabled = component.contextAction != nil
             
             let themeUpdated = self.component?.theme !== component.theme
@@ -673,6 +679,7 @@ public final class PeerListItemComponent: Component {
             self.state = state
             
             self.containerButton.alpha = component.isEnabled ? 1.0 : 0.3
+            self.containerButton.isEnabled = component.action != nil
             
             self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil && component.openStories != nil
             
