@@ -487,7 +487,6 @@ final class UserAppearanceScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                
                 let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                 let navigationController: NavigationController? = self.environment?.controller()?.navigationController as? NavigationController
                 

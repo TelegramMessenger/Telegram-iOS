@@ -172,8 +172,10 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
             }
             if highlighted {
                 strongSelf.highlightBackgroundNode.alpha = 1.0
+                strongSelf.startTimer()
             } else {
                 strongSelf.highlightBackgroundNode.alpha = 0.0
+                strongSelf.invalidateTimer()
             }
         }
         
@@ -183,6 +185,25 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     deinit {
         self.iconDisposable?.dispose()
     }
+        
+    private var timer: SwiftSignalKit.Timer?
+    private func startTimer() {
+        self.invalidateTimer()
+        
+        self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            guard let self else {
+                return
+            }
+            self.invalidateTimer()
+            self.longPressed()
+        }, queue: Queue.mainQueue())
+        self.timer?.start()
+    }
+    
+    private func invalidateTimer() {
+        self.timer?.invalidate()
+        self.timer = nil
+    }
     
     public override func didLoad() {
         super.didLoad()
@@ -191,7 +212,29 @@ public final class ContextControllerActionsListActionItemNode: HighlightTracking
     }
     
     @objc private func pressed() {
+        self.invalidateTimer()
+        
         self.item.action?(ContextMenuActionItem.Action(
+            controller: self.getController(),
+            dismissWithResult: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestDismiss(result)
+            },
+            updateAction: { [weak self] id, updatedAction in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestUpdateAction(id, updatedAction)
+            }
+        ))
+    }
+    
+    private func longPressed() {
+        self.touchesCancelled(nil, with: nil)
+        
+        self.item.longPressAction?(ContextMenuActionItem.Action(
             controller: self.getController(),
             dismissWithResult: { [weak self] result in
                 guard let strongSelf = self else {

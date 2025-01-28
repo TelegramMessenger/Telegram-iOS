@@ -931,7 +931,7 @@
     TGModernGalleryItemView *currentItemView = _currentItemView;
     if ([currentItemView isKindOfClass:[TGMediaPickerGalleryVideoItemView class]]) {
         id<TGMediaEditableItem> editableMediaItem = [galleryEditableItem editableMediaItem];
-        [_editingContext setCoverImage:[(TGMediaPickerGalleryVideoItemView *)currentItemView screenImage] forItem:editableMediaItem];
+        [_editingContext setCoverImage:[(TGMediaPickerGalleryVideoItemView *)currentItemView screenImage] position:@([(TGMediaPickerGalleryVideoItemView *)currentItemView currentPosition]) forItem:editableMediaItem];
     }
     
     TGDispatchAfter(0.01, dispatch_get_main_queue(), ^{
@@ -956,7 +956,7 @@
             __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
-            [strongSelf->_editingContext setCoverImage:cover forItem:editableMediaItem];
+            [strongSelf->_editingContext setCoverImage:cover position:nil forItem:editableMediaItem];
             [strongSelf coverEditorTransitionOut];
         });
     }

@@ -1023,7 +1023,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                                 }
                                 self.instantPage = webPage
                                 self.instantPageResources = resources
-                                let _ = (updatedRemoteWebpage(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, webPage: WebpageReference(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: self._state.url, displayUrl: "", hash: 0, type: nil, websiteName: nil, title: nil, text: nil, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
+                                let _ = (updatedRemoteWebpage(postbox: self.context.account.postbox, network: self.context.account.network, accountPeerId: self.context.account.peerId, webPage: WebpageReference(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: self._state.url, displayUrl: "", hash: 0, type: nil, websiteName: nil, title: nil, text: nil, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, imageIsVideoCover: false, image: nil, file: nil, story: nil, attributes: [], instantPage: nil)))))
                                 |> deliverOnMainQueue).start(next: { [weak self] webPage in
                                     guard let self, let webPage, case let .Loaded(result) = webPage.content, let _ = result.instantPage else {
                                         return
@@ -1518,6 +1518,7 @@ final class BrowserWebContent: UIView, BrowserContent, WKNavigationDelegate, WKU
                             duration: nil,
                             author: nil,
                             isMediaLargeByDefault: nil,
+                            imageIsVideoCover: false,
                             image: image,
                             file: nil,
                             story: nil,

@@ -107,6 +107,7 @@
     TGMemoryImageCache *_originalThumbnailImageCache;
     
     TGMemoryImageCache *_coverImageCache;
+    NSMutableDictionary *_coverPositions;
     
     TGModernCache *_diskCache;
     NSURL *_fullSizeResultsUrl;
@@ -171,6 +172,7 @@
         
         _coverImageCache = [[TGMemoryImageCache alloc] initWithSoftMemoryLimit:[[self class] thumbnailImageSoftMemoryLimit] * 10
                                                               hardMemoryLimit:[[self class] thumbnailImageHardMemoryLimit] * 10];
+        _coverPositions = [[NSMutableDictionary alloc] init];
         
         NSString *diskCachePath = [[[LegacyComponentsGlobals provider] dataStoragePath] stringByAppendingPathComponent:[[self class] diskCachePath]];
         _diskCache = [[TGModernCache alloc] initWithPath:diskCachePath size:[[self class] diskMemoryLimit]];
@@ -945,7 +947,14 @@
     return [_coverImageCache imageForKey:itemId attributes:NULL];
 }
 
-- (void)setCoverImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item
+- (NSNumber *)coverPositionForItem:(NSObject<TGMediaEditableItem> *)item {
+    NSString *itemId = [TGMediaEditingContext _coverImageUriForItemId:item.uniqueIdentifier];
+    if (itemId == nil)
+        return nil;
+    return _coverPositions[itemId];
+}
+
+- (void)setCoverImage:(UIImage *)image position:(NSNumber *)position forItem:(id<TGMediaEditableItem>)item
 {
     NSString *itemId = [TGMediaEditingContext _coverImageUriForItemId:item.uniqueIdentifier];
     if (itemId == nil)
@@ -953,6 +962,7 @@
     
     [_coverImageCache setImage:image forKey:itemId attributes:NULL];
     _coverImagePipe.sink([TGMediaImageUpdate imageUpdateWithItem:item representation:image]);
+    [_coverPositions setObject:position forKey:itemId];
 }
 
 - (void)setFullSizeImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item
