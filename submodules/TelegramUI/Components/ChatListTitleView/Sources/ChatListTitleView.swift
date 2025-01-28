@@ -134,11 +134,15 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
             
             if let peerStatus = title.peerStatus {
                 let statusContent: EmojiStatusComponent.Content
+                var statusParticleColor: UIColor?
                 switch peerStatus {
                 case .premium:
                     statusContent = .premium(color: self.theme.list.itemAccentColor)
-                case let .emoji(emoji):
-                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
+                case let .emoji(emojiStatus):
+                    statusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
+                    if let color = emojiStatus.color {
+                        statusParticleColor = UIColor(rgb: UInt32(bitPattern: color))
+                    }
                 }
                 
                 var titleCredibilityIconTransition: ComponentTransition
@@ -164,6 +168,7 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
                         animationCache: self.animationCache,
                         animationRenderer: self.animationRenderer,
                         content: statusContent,
+                        particleColor: statusParticleColor,
                         isVisibleForAnimations: true,
                         action: { [weak self] in
                             guard let strongSelf = self, let titleCredibilityIconView = strongSelf.titleCredibilityIconView else {

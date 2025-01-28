@@ -9,6 +9,7 @@ import AccountContext
 import ContextUI
 import PhotoResources
 import TelegramUIPreferences
+import TelegramStringFormatting
 import ItemListPeerItem
 import ItemListPeerActionItem
 import MergeLists
@@ -48,6 +49,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private var panelButton: SolidRoundedButtonNode?
     private var panelCheck: ComponentView<Empty>?
     
+    private let emptyResultsClippingView = UIView()
     private let emptyResultsAnimation = ComponentView<Empty>()
     private let emptyResultsTitle = ComponentView<Empty>()
     private let emptyResultsAction = ComponentView<Empty>()
@@ -93,7 +95,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.scrollNode)
-                        
+                                
         self.dataDisposable = (profileGifts.state
         |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             guard let self else {
@@ -125,6 +127,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         
         self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         self.scrollNode.view.delegate = self
+        
+        self.emptyResultsClippingView.clipsToBounds = true
+        self.scrollNode.view.addSubview(self.emptyResultsClippingView)
     }
     
     public func ensureMessageIsVisible(id: MessageId) {
@@ -145,7 +150,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = 3
+            let defaultItemsInRow = params.size.width > params.size.height ? 5 : 3
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
@@ -489,6 +494,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 let emptyAnimationSpacing: CGFloat = 20.0
                 let emptyTextSpacing: CGFloat = 18.0
                 
+                self.emptyResultsClippingView.isHidden = false
+                                
+                transition.setFrame(view: self.emptyResultsClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                transition.setBounds(view: self.emptyResultsClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                
                 let emptyResultsTitleSize = self.emptyResultsTitle.update(
                     transition: .immediate,
                     component: AnyComponent(
@@ -517,7 +527,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     return
                                 }
                                 self.profileGifts.updateFilter(.All)
-                            }
+                            },
+                            animateScale: false
                         )
                     ),
                     environment: {},
@@ -545,7 +556,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if view.superview == nil {
                         view.alpha = 0.0
                         fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.scrollNode.view.addSubview(view)
+                        self.emptyResultsClippingView.addSubview(view)
                         view.playOnce()
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
@@ -555,7 +566,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if view.superview == nil {
                         view.alpha = 0.0
                         fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.scrollNode.view.addSubview(view)
+                        self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
                     transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
@@ -564,7 +575,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if view.superview == nil {
                         view.alpha = 0.0
                         fadeTransition.setAlpha(view: view, alpha: 1.0)
-                        self.scrollNode.view.addSubview(view)
+                        self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
                     transition.setPosition(view: view, position: emptyResultsActionFrame.center)
@@ -572,6 +583,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             } else {
                 if let view = self.emptyResultsAnimation.view {
                     fadeTransition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        self.emptyResultsClippingView.isHidden = true
                         view.removeFromSuperview()
                     })
                 }
@@ -650,8 +662,21 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.chatControllerInteraction.navigationController()?.pushViewController(controller)
             })
         } else {
-            let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: self.peerId, premiumOptions: [], hasBirthday: false, completion: nil)
-            self.chatControllerInteraction.navigationController()?.pushViewController(controller)
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Birthday(id: self.peerId))
+            |> deliverOnMainQueue).start(next: { birthday in
+                var hasBirthday = false
+                if let birthday {
+                    hasBirthday = hasBirthdayToday(birthday: birthday)
+                }
+                let controller = self.context.sharedContext.makeGiftOptionsController(
+                    context: self.context,
+                    peerId: self.peerId,
+                    premiumOptions: [],
+                    hasBirthday: hasBirthday,
+                    completion: nil
+                )
+                self.chatControllerInteraction.navigationController()?.pushViewController(controller)
+            })
         }
     }
     

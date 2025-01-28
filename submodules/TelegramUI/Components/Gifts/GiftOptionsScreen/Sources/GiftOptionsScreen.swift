@@ -19,7 +19,6 @@ import TelegramStringFormatting
 import PlainButtonComponent
 import BlurredBackgroundComponent
 import PremiumStarComponent
-import ConfettiEffect
 import TextFormat
 import GiftItemComponent
 import InAppPurchaseManager

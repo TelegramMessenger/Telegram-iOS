@@ -67,7 +67,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         var excludeSelf = true
         
         let displayTopPeers: ContactListPresentation.TopPeers
-        if case let .starsGifting(birthdays, hasActions, showSelf) = mode {
+        if case let .starsGifting(birthdays, hasActions, showSelf, selfSubtitle) = mode {
             if showSelf {
                 excludeSelf = false
             }
@@ -98,7 +98,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                     sections.append((presentationData.strings.Premium_Gift_ContactSelection_BirthdayTomorrow, tomorrowPeers, hasActions))
                 }
                 
-                displayTopPeers = .custom(showSelf: showSelf, sections: sections)
+                displayTopPeers = .custom(showSelf: showSelf, selfSubtitle: selfSubtitle, sections: sections)
             } else {
                 displayTopPeers = .recent
             }

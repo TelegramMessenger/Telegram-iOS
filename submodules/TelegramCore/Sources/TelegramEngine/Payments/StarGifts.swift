@@ -1124,6 +1124,9 @@ private final class ProfileGiftsContextImpl {
         }
         if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
             self.filteredGifts[index] = self.filteredGifts[index].withSavedToProfile(added)
+            if !self.filter.contains(.hidden) && !added {
+                self.filteredGifts.remove(at: index)
+            }
         }
         self.pushState()
     }
@@ -1801,5 +1804,16 @@ func _internal_toggleStarGiftsNotifications(account: Account, peerId: EnginePeer
             return .single(nil)
         }
         |> ignoreValues
+    }
+}
+
+public extension StarGift.UniqueGift {
+    var itemFile: TelegramMediaFile? {
+        for attribute in self.attributes {
+            if case let .model(_, file, _) = attribute {
+                return file
+            }
+        }
+        return nil
     }
 }

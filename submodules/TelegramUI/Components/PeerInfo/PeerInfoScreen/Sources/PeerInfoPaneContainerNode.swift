@@ -1173,7 +1173,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
             tabsAlpha = 1.0 - tabsOffset / tabsHeight
         }
         tabsAlpha *= tabsAlpha
-        transition.updateFrame(node: self.tabsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -tabsOffset), size: CGSize(width: size.width, height: tabsHeight)))
+        transition.updateFrame(node: self.tabsContainerNode, frame: CGRect(origin: CGPoint(x: sideInset, y: -tabsOffset), size: CGSize(width: size.width - sideInset * 2.0, height: tabsHeight)))
         transition.updateAlpha(node: self.tabsContainerNode, alpha: tabsAlpha)
 
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
@@ -1183,7 +1183,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
 
         transition.updateFrame(node: self.tabsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: tabsHeight - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
 
-        self.tabsContainerNode.update(size: CGSize(width: size.width, height: tabsHeight), presentationData: presentationData, paneList: availablePanes.map { key in
+        self.tabsContainerNode.update(size: CGSize(width: size.width - sideInset * 2.0, height: tabsHeight), presentationData: presentationData, paneList: availablePanes.map { key in
             let title: String
             var icons: [TelegramMediaFile] = []
             switch key {

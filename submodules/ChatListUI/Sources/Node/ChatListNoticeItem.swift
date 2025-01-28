@@ -137,10 +137,6 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
         self.zPosition = 1.0
     }
     
-    override func didLoad() {
-        super.didLoad()
-    }
-    
     @objc private func closePressed() {
         guard let item = self.item else {
             return
@@ -497,6 +493,14 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                     }
                 }
             })
+        }
+    }
+    
+    override public func selected() {
+        super.selected()
+        
+        if case .setupPhoto = self.item?.notice {
+            self.avatarNode?.playCameraAnimation()
         }
     }
     

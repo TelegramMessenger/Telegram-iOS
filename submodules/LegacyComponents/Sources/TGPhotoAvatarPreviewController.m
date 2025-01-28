@@ -569,6 +569,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             break;
     }
     
+    _cancelButton.modernHighlight = false;
     [UIView animateWithDuration:0.2f animations:^
     {
         _portraitToolsWrapperView.alpha = 0.0f;
@@ -687,6 +688,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 {
     [_cropView hideImageForCustomTransition];
     [_cropView animateTransitionOutSwitching:false];
+    
+    _cancelButton.modernHighlight = false;
+    [_cancelButton.layer removeAllAnimations];
     
     _previewView.hidden = true;
     [UIView animateWithDuration:0.3f animations:^

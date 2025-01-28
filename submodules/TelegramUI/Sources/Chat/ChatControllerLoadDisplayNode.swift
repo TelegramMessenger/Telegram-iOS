@@ -4333,13 +4333,29 @@ extension ChatControllerImpl {
             guard let self, let peerId = self.chatLocation.peerId else {
                 return
             }
+            
             if peerId.namespace == Namespaces.Peer.CloudUser {
                 self.presentAttachmentMenu(subject: .gift)
                 Queue.mainQueue().after(0.5) {
                     let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: self.context.sharedContext.accountManager, peerId: peerId, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
                 }
             } else {
-                let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: [], hasBirthday: false, completion: nil)
+                let controller = self.context.sharedContext.makeGiftOptionsController(context: self.context, peerId: peerId, premiumOptions: [], hasBirthday: false, completion: { [weak self] in
+                    guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+                        return
+                    }
+                    if let controller = self.context.sharedContext.makePeerInfoController(
+                        context: self.context,
+                        updatedPresentationData: nil,
+                        peer: peer,
+                        mode: .gifts,
+                        avatarInitiallyExpanded: false,
+                        fromChat: false,
+                        requestsContext: nil
+                    ) {
+                        self.push(controller)
+                    }
+                })
                 self.push(controller)
             }
         }, openPremiumRequiredForMessaging: { [weak self] in

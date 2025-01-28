@@ -5950,7 +5950,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let stickerBackgroundView = self.stickerBackgroundView, let stickerOverlayLayer = self.stickerOverlayLayer, let stickerFrameLayer = self.stickerFrameLayer {
                 let stickerFrameFraction: CGFloat
                 switch controller.mode {
-                case .avatarEditor, .stickerEditor:
+                case .stickerEditor:
                     stickerFrameFraction = 0.97
                 default:
                     stickerFrameFraction = 1.0

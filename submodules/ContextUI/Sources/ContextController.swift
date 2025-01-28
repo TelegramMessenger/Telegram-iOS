@@ -141,6 +141,7 @@ public final class ContextMenuActionItem {
     public let textIcon: (PresentationTheme) -> UIImage?
     public let textLinkAction: () -> Void
     public let action: ((Action) -> Void)?
+    public let longPressAction: ((Action) -> Void)?
     
     convenience public init(
         id: AnyHashable? = nil,
@@ -160,7 +161,8 @@ public final class ContextMenuActionItem {
         iconAnimation: IconAnimation? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
-        action: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)?
+        action: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)?,
+        longPressAction: ((ContextControllerProtocol?, @escaping (ContextMenuActionResult) -> Void) -> Void)? = nil
     ) {
         self.init(
             id: id,
@@ -184,6 +186,11 @@ public final class ContextMenuActionItem {
                 return { impl in
                     action(impl.controller, impl.dismissWithResult)
                 }
+            },
+            longPressAction: longPressAction.flatMap { longPressAction in
+                return { impl in
+                    longPressAction(impl.controller, impl.dismissWithResult)
+                }
             }
         )
     }
@@ -206,7 +213,8 @@ public final class ContextMenuActionItem {
         iconAnimation: IconAnimation? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
-        action: ((Action) -> Void)?
+        action: ((Action) -> Void)?,
+        longPressAction: ((Action) -> Void)? = nil
     ) {
         self.id = id
         self.text = text
@@ -226,6 +234,7 @@ public final class ContextMenuActionItem {
         self.textIcon = textIcon
         self.textLinkAction = textLinkAction
         self.action = action
+        self.longPressAction = longPressAction
     }
 }
 

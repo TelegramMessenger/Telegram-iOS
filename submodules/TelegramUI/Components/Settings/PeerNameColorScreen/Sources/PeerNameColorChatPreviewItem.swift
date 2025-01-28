@@ -308,7 +308,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
                             snapshot.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: snapshot.frame.size)
                             strongSelf.view.addSubview(snapshot)
-                            snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.25, removeOnCompletion: false, completion: { _ in
+                            snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.0, removeOnCompletion: false, completion: { _ in
                                 snapshot.removeFromSuperview()
                             })
                         }

@@ -277,6 +277,7 @@ final class EntityKeyboardIconTopPanelComponent: Component {
         case saved
         case premium
         case liked
+        case collectible
     }
     
     let icon: Icon
@@ -363,6 +364,8 @@ final class EntityKeyboardIconTopPanelComponent: Component {
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelSavedIcon")
                 case .liked:
                     image = UIImage(bundleImageName: "Chat/Input/Media/PanelHeartIcon")?.withRenderingMode(.alwaysTemplate)
+                case .collectible:
+                    image = UIImage(bundleImageName: "Chat/Input/Media/PanelCollectibleIcon")?.withRenderingMode(.alwaysTemplate)
                 case .premium:
                     image = generateImage(CGSize(width: 44.0, height: 44.0), contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))

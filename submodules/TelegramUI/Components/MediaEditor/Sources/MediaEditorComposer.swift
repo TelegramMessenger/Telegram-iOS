@@ -127,7 +127,7 @@ final class MediaEditorComposer {
         if values.isSticker {
             self.maskImage = roundedCornersMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
         } else if values.isAvatar {
-            self.maskImage = rectangleMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
+            self.maskImage = rectangleMaskImage(size: CGSize(width: 1080.0, height: 1080.0))
         }
         
         if let drawing = values.drawing, let drawingImage = CIImage(image: drawing, options: [.colorSpace: self.colorSpace]) {
@@ -227,9 +227,9 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
     if values.isSticker {
         maskImage = roundedCornersMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
     } else if values.isAvatar {
-        maskImage = rectangleMaskImage(size: CGSize(width: floor(1080.0 * 0.97), height: floor(1080.0 * 0.97)))
+        maskImage = rectangleMaskImage(size: CGSize(width: 1080.0, height: 1080.0))
     } else if let outputDimensions {
-        maskImage = rectangleMaskImage(size: outputDimensions.aspectFitted(CGSize(width: 1080.0, height: 1080.0)))
+        maskImage = rectangleMaskImage(size: outputDimensions.aspectFitted(CGSize(width: 1080.0, height: 1920.0)))
     }
     
     if let drawing = values.drawing, let image = CIImage(image: drawing, options: [.colorSpace: colorSpace]) {
@@ -299,13 +299,16 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
             }
             
             resultImage = resultImage.transformed(by: CGAffineTransform(translationX: dimensions.width / 2.0, y: dimensions.height / 2.0))
-            if values.isSticker || values.isAvatar {
+            if values.isSticker {
                 let minSize = min(dimensions.width, dimensions.height)
                 let scaledSize = CGSize(width: floor(minSize * 0.97), height: floor(minSize * 0.97))
                 resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))
-            } else if values.isCover, let outputDimensions {
+            } else if values.isAvatar {
                 let minSize = min(dimensions.width, dimensions.height)
-                let scaledSize = outputDimensions.aspectFitted(CGSize(width: minSize, height: minSize))
+                let scaledSize = CGSize(width: minSize, height: minSize)
+                resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))
+            } else if values.isCover, let outputDimensions {
+                let scaledSize = outputDimensions.aspectFitted(dimensions)
                 resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))
             } else if values.isStory {
                 resultImage = resultImage.cropped(to: CGRect(origin: .zero, size: dimensions))

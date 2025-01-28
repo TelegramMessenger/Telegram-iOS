@@ -573,7 +573,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                 index += 1
             }
         }
-    case let .custom(showSelf, sections):
+    case let .custom(showSelf, selfSubtitle, sections):
         if !topPeers.isEmpty {
             var index: Int = 0
                         
@@ -637,7 +637,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             if showSelf, let accountPeer {
                 if let peer = topPeers.first(where: { $0.id == accountPeer.id }) {
                     let header = ChatListSearchItemHeader(type: .text(strings.Premium_Gift_ContactSelection_ThisIsYou.uppercased(), AnyHashable(10)), theme: theme, strings: strings)
-                    entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false, strings.Premium_Gift_ContactSelection_BuySelf))
+                    entries.append(.peer(index, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, false, true, nil, false, selfSubtitle))
                     existingPeerIds.insert(.peer(peer.id))
                 }
             }
@@ -886,7 +886,7 @@ public enum ContactListPresentation {
     public enum TopPeers {
         case none
         case recent
-        case custom(showSelf: Bool, sections: [(title: String, peerIds: [EnginePeer.Id], hasActions: Bool)])
+        case custom(showSelf: Bool, selfSubtitle: String?, sections: [(title: String, peerIds: [EnginePeer.Id], hasActions: Bool)])
     }
     
     case orderedByPresence(options: [ContactListAdditionalOption])
@@ -1732,7 +1732,7 @@ public final class ContactListNode: ASDisplayNode {
                             return .single([])                      
                         }
                     }
-                case let .custom(showSelf, sections):
+                case let .custom(showSelf, _, sections):
                     var peerIds: [EnginePeer.Id] = []
                     if showSelf {
                         peerIds.append(context.account.peerId)

@@ -1507,9 +1507,9 @@
                 doneButtonType = TGPhotoEditorDoneButtonDone;
                 
                 if (sideButtonsHiddenInCrop) {
-                    [_portraitToolbarView setCancelDoneButtonsHidden:true animated:true];
-                    [_portraitToolbarView setCenterButtonsHidden:false animated:true];
-                    [_landscapeToolbarView setAllButtonsHidden:false animated:true];
+                    [_portraitToolbarView setCancelDoneButtonsHidden:true animated:false];
+                    [_portraitToolbarView setCenterButtonsHidden:false animated:false];
+                    [_landscapeToolbarView setAllButtonsHidden:false animated:false];
                 } else {
                     [_portraitToolbarView setAllButtonsHidden:false animated:false];
                     [_landscapeToolbarView setAllButtonsHidden:false animated:false];
