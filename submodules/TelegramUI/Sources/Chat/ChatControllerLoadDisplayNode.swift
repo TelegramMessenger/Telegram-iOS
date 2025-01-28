@@ -4333,6 +4333,7 @@ extension ChatControllerImpl {
             guard let self, let peerId = self.chatLocation.peerId else {
                 return
             }
+            
             if peerId.namespace == Namespaces.Peer.CloudUser {
                 self.presentAttachmentMenu(subject: .gift)
                 Queue.mainQueue().after(0.5) {

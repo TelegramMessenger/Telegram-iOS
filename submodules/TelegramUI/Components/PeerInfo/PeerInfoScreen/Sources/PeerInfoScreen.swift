@@ -3680,6 +3680,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
         }, sendGift: { _ in
+        }, openUniqueGift: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -10970,20 +10971,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 giftsContext?.updateFilter(updatedFilter)
             }
             
+            let switchToFilter: (ProfileGiftsContext.Filters) -> Void = { [weak giftsContext] value in
+                giftsContext?.updateFilter(value)
+            }
+            
             items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Unlimited, icon: { theme in
                 return filter.contains(.unlimited) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
             }, action: { _, f in
                 toggleFilter(.unlimited)
+            }, longPressAction: { _, f in
+                switchToFilter(.unlimited)
             })))
             items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Limited, icon: { theme in
                 return filter.contains(.limited) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
             }, action: { _, f in
                 toggleFilter(.limited)
+            }, longPressAction: { _, f in
+                switchToFilter(.limited)
             })))
             items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Unique, icon: { theme in
                 return filter.contains(.unique) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
             }, action: { _, f in
                 toggleFilter(.unique)
+            }, longPressAction: { _, f in
+                switchToFilter(.unique)
             })))
             
             if channel.hasPermission(.sendSomething) {
@@ -10993,11 +11004,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return filter.contains(.displayed) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
                 }, action: { _, f in
                     toggleFilter(.displayed)
+                }, longPressAction: { _, f in
+                    switchToFilter(.displayed)
                 })))
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Hidden, icon: { theme in
                     return filter.contains(.hidden) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
                 }, action: { _, f in
                     toggleFilter(.hidden)
+                }, longPressAction: { _, f in
+                    switchToFilter(.hidden)
                 })))
             }
             

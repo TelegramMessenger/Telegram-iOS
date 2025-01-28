@@ -229,7 +229,7 @@ public func makeEditorImageComposition(context: CIContext, postbox: Postbox, inp
     } else if values.isAvatar {
         maskImage = rectangleMaskImage(size: CGSize(width: 1080.0, height: 1080.0))
     } else if let outputDimensions {
-        maskImage = rectangleMaskImage(size: outputDimensions.aspectFitted(CGSize(width: 1080.0, height: 1080.0)))
+        maskImage = rectangleMaskImage(size: outputDimensions.aspectFitted(CGSize(width: 1080.0, height: 1920.0)))
     }
     
     if let drawing = values.drawing, let image = CIImage(image: drawing, options: [.colorSpace: colorSpace]) {
@@ -308,8 +308,7 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
                 let scaledSize = CGSize(width: minSize, height: minSize)
                 resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))
             } else if values.isCover, let outputDimensions {
-                let minSize = min(dimensions.width, dimensions.height)
-                let scaledSize = outputDimensions.aspectFitted(CGSize(width: minSize, height: minSize))
+                let scaledSize = outputDimensions.aspectFitted(dimensions)
                 resultImage = resultImage.transformed(by: CGAffineTransform(translationX: -(dimensions.width - scaledSize.width) / 2.0, y: -(dimensions.height - scaledSize.height) / 2.0)).cropped(to: CGRect(origin: .zero, size: scaledSize))
             } else if values.isStory {
                 resultImage = resultImage.cropped(to: CGRect(origin: .zero, size: dimensions))

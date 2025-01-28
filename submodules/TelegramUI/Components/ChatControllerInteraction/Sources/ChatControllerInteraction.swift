@@ -268,6 +268,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let playMessageEffect: (Message) -> Void
     public let editMessageFactCheck: (MessageId) -> Void
     public let sendGift: (EnginePeer.Id) -> Void
+    public let openUniqueGift: (String) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -402,6 +403,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         playMessageEffect: @escaping (Message) -> Void,
         editMessageFactCheck: @escaping (MessageId) -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void,
+        openUniqueGift: @escaping (String) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -515,6 +517,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.playMessageEffect = playMessageEffect
         self.editMessageFactCheck = editMessageFactCheck
         self.sendGift = sendGift
+        self.openUniqueGift = openUniqueGift
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

@@ -791,6 +791,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             
             var credibilityIcon: EmojiStatusComponent.Content?
+            var credibilityParticleColor: UIColor?
             var verifiedIcon: EmojiStatusComponent.Content?
             switch item.peer {
             case let .peer(peer, _):
@@ -801,6 +802,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if let emojiStatus = peer.emojiStatus {
                         credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
+                        if let color = emojiStatus.color {
+                            credibilityParticleColor = UIColor(rgb: UInt32(bitPattern: color))
+                        }
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
@@ -1498,6 +1502,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     animationCache: animationCache,
                                     animationRenderer: animationRenderer,
                                     content: credibilityIcon,
+                                    particleColor: credibilityParticleColor,
                                     isVisibleForAnimations: strongSelf.visibilityStatus,
                                     action: nil,
                                     emojiFileUpdated: nil

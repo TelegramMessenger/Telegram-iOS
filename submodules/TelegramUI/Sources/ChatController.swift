@@ -4585,6 +4585,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let controller = self.context.sharedContext.makeGiftOptionsController(context: context, peerId: peerId, premiumOptions: premiumOptions, hasBirthday: hasBirthday, completion: nil)
                 self.push(controller)
             })
+        }, openUniqueGift: { [weak self] slug in
+            guard let self else {
+                return
+            }
+            self.openUrl("https://t.me/nft/\(slug)", concealed: false)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

@@ -1937,6 +1937,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
         }, sendGift: { _ in
+        }, openUniqueGift: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -3256,15 +3257,18 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
     } else if let _ = peer as? TelegramChannel {
         var forumTopicThread: ChatReplyThreadMessage?
         var switchToRecommendedChannels = false
+        var switchToGifts = false
         switch mode {
         case let .forumTopic(thread):
             forumTopicThread = thread
         case .recommendedChannels:
             switchToRecommendedChannels = true
+        case .gifts:
+            switchToGifts = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread, switchToRecommendedChannels: switchToRecommendedChannels)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread, switchToRecommendedChannels: switchToRecommendedChannels, switchToGifts: switchToGifts)
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var reactionSourceMessageId: MessageId?
