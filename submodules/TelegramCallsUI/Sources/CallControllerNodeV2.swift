@@ -689,6 +689,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         
         let takenIncomingVideoLayer = self.callScreen.takeIncomingVideoLayer()
         return CallController.AnimateOutToGroupChat(
+            containerView: self.containerView,
             incomingPeerId: self.call.peerId,
             incomingVideoLayer: takenIncomingVideoLayer?.0,
             incomingVideoPlaceholder: takenIncomingVideoLayer?.1

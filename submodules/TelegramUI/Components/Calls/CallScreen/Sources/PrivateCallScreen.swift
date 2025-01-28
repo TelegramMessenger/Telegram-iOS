@@ -751,15 +751,18 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         self.backgroundLayer.update(stateIndex: backgroundStateIndex, isEnergySavingEnabled: params.state.isEnergySavingEnabled, transition: transition)
         
-        genericAlphaTransition.setAlpha(layer: self.backgroundLayer, alpha: self.isAnimatedOutToGroupCall ? 0.0 : 1.0, completion: { [weak self] _ in
-            guard let self else {
-                return
-            }
-            if let animateOutToGroupCallCompletion = self.animateOutToGroupCallCompletion {
-                self.animateOutToGroupCallCompletion = nil
-                animateOutToGroupCallCompletion()
-            }
-        })
+        let backgroundAlpha = self.isAnimatedOutToGroupCall ? 0.0 : 1.0
+        if CGFloat(self.backgroundLayer.opacity) != backgroundAlpha {
+            genericAlphaTransition.setAlpha(layer: self.backgroundLayer, alpha: backgroundAlpha, completion: { [weak self] _ in
+                guard let self else {
+                    return
+                }
+                if let animateOutToGroupCallCompletion = self.animateOutToGroupCallCompletion {
+                    self.animateOutToGroupCallCompletion = nil
+                    animateOutToGroupCallCompletion()
+                }
+            })
+        }
         
         transition.setFrame(view: self.buttonGroupView, frame: CGRect(origin: CGPoint(), size: params.size))
         
@@ -914,7 +917,6 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         transition.setFrame(view: self.backButtonView, frame: backButtonFrame)
         genericAlphaTransition.setAlpha(view: self.backButtonView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
         
-        
         var isConferencePossible = false
         if case .active = params.state.lifecycleState, params.state.isConferencePossible {
             isConferencePossible = true
@@ -952,7 +954,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             let conferenceButtonFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 10.0 - conferenceButtonSize.width, y: conferenceButtonY), size: conferenceButtonSize)
             
             conferenceButtonTransition.setFrame(view: conferenceButtonView, frame: conferenceButtonFrame)
-            genericAlphaTransition.setAlpha(view: conferenceButtonView, alpha: 1.0)
+            genericAlphaTransition.setAlpha(view: conferenceButtonView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
         } else {
             if let conferenceButtonView = self.conferenceButtonView {
                 self.conferenceButtonView = nil
@@ -1291,8 +1293,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         }
         
         self.avatarLayer.update(size: collapsedAvatarFrame.size, isExpanded: havePrimaryVideo, cornerRadius: avatarCornerRadius, transition: transition)
-        transition.setAlpha(layer: self.avatarLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
-        transition.setScale(layer: self.avatarLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
+        transition.setAlpha(layer: self.avatarLayer, alpha: (self.isAnimatedOutToGroupCall || (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo)) ? 0.0 : 1.0)
+        transition.setScale(layer: self.avatarLayer, scale: (self.isAnimatedOutToGroupCall || expandedEmojiKeyOverlapsAvatar) ? 0.001 : 1.0)
         
         transition.setPosition(view: self.videoContainerBackgroundView, position: avatarFrame.center)
         transition.setBounds(view: self.videoContainerBackgroundView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
@@ -1347,8 +1349,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             transition.setScale(layer: self.avatarTransformLayer, scale: 1.0)
             transition.setScale(layer: self.blobTransformLayer, scale: 1.0)
         } else {
-            genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo) ? 0.0 : 1.0)
-            transition.setScale(layer: self.blobLayer, scale: expandedEmojiKeyOverlapsAvatar ? 0.001 : 1.0)
+            genericAlphaTransition.setAlpha(layer: self.blobLayer, alpha: (self.isAnimatedOutToGroupCall || (expandedEmojiKeyOverlapsAvatar && !havePrimaryVideo)) ? 0.0 : 1.0)
+            transition.setScale(layer: self.blobLayer, scale: (self.isAnimatedOutToGroupCall || expandedEmojiKeyOverlapsAvatar) ? 0.001 : 1.0)
             if !havePrimaryVideo {
                 self.canAnimateAudioLevel = true
             }

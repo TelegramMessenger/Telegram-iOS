@@ -950,6 +950,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
         if actions {
             actionNodes.append(contentsOf: [self.actionsBackgroundNode, self.actionButtonNode, self.actionSeparatorNode])
+            if let startAtTimestampNode = self.startAtTimestampNode {
+                actionNodes.append(startAtTimestampNode)
+            }
         }
         updateActionNodesAlpha(actionNodes, alpha: hidden ? 0.0 : 1.0)
     }
@@ -1326,6 +1329,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
+        }
         
         let peerIds: [PeerId]
         var topicIds: [PeerId: Int64] = [:]
@@ -1623,6 +1629,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                                 transition.updateAlpha(node: strongSelf.inputFieldNode, alpha: 0.0)
                                 transition.updateAlpha(node: strongSelf.actionSeparatorNode, alpha: 0.0)
                                 transition.updateAlpha(node: strongSelf.actionsBackgroundNode, alpha: 0.0)
+                                if let startAtTimestampNode = strongSelf.startAtTimestampNode {
+                                    transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
+                                }
                                 strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                                 loadingTimestamp = CACurrentMediaTime()
                                 if reportReady {
@@ -1777,6 +1786,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+        if let startAtTimestampNode = self.startAtTimestampNode {
+            transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
+        }
         
         self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true, postbox: self.context?.stateManager.postbox, environment: self.environment), fastOut: true)
         let timestamp = CACurrentMediaTime()
@@ -1815,6 +1827,9 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
             transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
             transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
+            if let startAtTimestampNode = self.startAtTimestampNode {
+                transition.updateAlpha(node: startAtTimestampNode, alpha: 0.0)
+            }
             
             self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
             

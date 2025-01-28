@@ -706,7 +706,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                                 encryptionKey: nil,
                                 conferenceFromCallId: nil,
                                 isConference: false,
-                                sharedAudioDevice: nil
+                                sharedAudioContext: nil
                             )
                             call.schedule(timestamp: timestamp)
                             
@@ -749,7 +749,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     encryptionKey: nil,
                     conferenceFromCallId: nil,
                     isConference: false,
-                    sharedAudioDevice: nil
+                    sharedAudioContext: nil
                 )
                 strongSelf.updateCurrentGroupCall(call)
                 strongSelf.currentGroupCallPromise.set(.single(call))
@@ -937,7 +937,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 encryptionKey: nil,
                 conferenceFromCallId: nil,
                 isConference: false,
-                sharedAudioDevice: nil
+                sharedAudioContext: nil
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

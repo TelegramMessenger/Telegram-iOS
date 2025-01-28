@@ -173,7 +173,7 @@ public protocol PresentationCall: AnyObject {
     func setCurrentAudioOutput(_ output: AudioSessionOutput)
     func debugInfo() -> Signal<(String, String), NoError>
     
-    func upgradeToConference(completion: @escaping (PresentationGroupCall) -> Void) -> Disposable
+    func upgradeToConference(invitePeerIds: [EnginePeer.Id], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable
     
     func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void)
 }
@@ -413,6 +413,8 @@ public protocol PresentationGroupCall: AnyObject {
     var schedulePending: Bool { get }
     
     var isStream: Bool { get }
+    var isConference: Bool { get }
+    var encryptionKeyValue: Data? { get }
     
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     

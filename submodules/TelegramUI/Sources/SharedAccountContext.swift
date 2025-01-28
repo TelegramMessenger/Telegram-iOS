@@ -843,7 +843,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             guard let callController = self.callController, callController.call === call else {
                                 return
                             }
-                            if call.conferenceCall != nil {
+                            if call.conferenceStateValue != nil {
                                 self.callState.set(.single(nil))
                                 self.presentControllerWithCurrentCall()
                             }

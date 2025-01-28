@@ -14,6 +14,131 @@ import LegacyMediaPickerUI
 import AvatarNode
 import PresentationDataUtils
 import AccountContext
+import CallsEmoji
+import AlertComponent
+import TelegramPresentationData
+import ComponentFlow
+import MultilineTextComponent
+
+private func resolvedEmojiKey(data: Data) -> [String] {
+    let resolvedKey = stringForEmojiHashOfData(data, 4) ?? []
+    return resolvedKey
+}
+
+private final class EmojiKeyAlertComponet: CombinedComponent {
+    let theme: PresentationTheme
+    let emojiKey: [String]
+    let title: String
+    let text: String
+    
+    init(theme: PresentationTheme, emojiKey: [String], title: String, text: String) {
+        self.theme = theme
+        self.emojiKey = emojiKey
+        self.title = title
+        self.text = text
+    }
+    
+    static func ==(lhs: EmojiKeyAlertComponet, rhs: EmojiKeyAlertComponet) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.emojiKey != rhs.emojiKey {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+    
+    public static var body: Body {
+        //let emojiKeyItems = ChildMap(environment: MultilineTextComponent.self, keyedBy: Int.self)
+        let emojiKey = Child(MultilineTextComponent.self)
+        let title = Child(MultilineTextComponent.self)
+        let text = Child(MultilineTextComponent.self)
+        
+        return { context in
+            /*let emojiKeyItems = context.component.emojiKey.map { item in
+                return emojiKeyItems[item].update(
+                    component: AnyComponent(MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: context.component.emojiKey.joined(separator: ""), font: Font.semibold(40.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                        horizontalAlignment: .center
+                    )),
+                    environment: {},
+                    availableSize: CGSize(width: 100.0, height: 100.0),
+                    transition: .immediate
+                )
+            }*/
+            
+            let emojiKey = emojiKey.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.emojiKey.joined(separator: ""), font: Font.semibold(40.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                    horizontalAlignment: .center
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            let title = title.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.title, font: Font.semibold(16.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: context.component.text, font: Font.regular(13.0), textColor: context.component.theme.actionSheet.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: 10000.0),
+                transition: .immediate
+            )
+            
+            var size = CGSize(width: 0.0, height: 0.0)
+            
+            size.width = max(size.width, emojiKey.size.width)
+            size.width = max(size.width, title.size.width)
+            size.width = max(size.width, text.size.width)
+            
+            let titleSpacing: CGFloat = 10.0
+            let textSpacing: CGFloat = 10.0
+            
+            size.height += emojiKey.size.height
+            size.height += titleSpacing
+            size.height += title.size.height
+            size.height += textSpacing
+            size.height += text.size.height
+            
+            var contentHeight: CGFloat = 0.0
+            let emojiKeyFrame = CGRect(origin: CGPoint(x: floor((size.width - emojiKey.size.width) * 0.5), y: contentHeight), size: emojiKey.size)
+            contentHeight += emojiKey.size.height + titleSpacing
+            let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - title.size.width) * 0.5), y: contentHeight), size: title.size)
+            contentHeight += title.size.height + textSpacing
+            let textFrame = CGRect(origin: CGPoint(x: floor((size.width - text.size.width) * 0.5), y: contentHeight), size: text.size)
+            contentHeight += text.size.height + 5.0
+            
+            context.add(emojiKey
+                .position(emojiKeyFrame.center)
+            )
+            context.add(title
+                .position(titleFrame.center)
+            )
+            context.add(text
+                .position(textFrame.center)
+            )
+            
+            return size
+        }
+    }
+}
 
 extension VideoChatScreenComponent.View {
     func openMoreMenu() {
@@ -48,6 +173,35 @@ extension VideoChatScreenComponent.View {
                     break
                 }
             }
+        }
+        
+        if case let .group(groupCall) = currentCall, let encryptionKey = groupCall.encryptionKeyValue {
+            //TODO:localize
+            let emojiKey = resolvedEmojiKey(data: encryptionKey)
+            items.append(.action(ContextMenuActionItem(text: "Encryption Key", textLayout: .secondLineWithValue(emojiKey.joined(separator: "")), icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Lock"), color: theme.actionSheet.primaryTextColor)
+            }, action: { [weak self] c, _ in
+                c?.dismiss(completion: nil)
+                
+                guard let self, let environment = self.environment else {
+                    return
+                }
+                
+                let alertController = componentAlertController(
+                    theme: AlertControllerTheme(presentationTheme: defaultDarkPresentationTheme, fontSize: .regular),
+                    content: AnyComponent(EmojiKeyAlertComponet(
+                        theme: defaultDarkPresentationTheme,
+                        emojiKey: emojiKey,
+                        title: "This call is end-to-end encrypted",
+                        text: "If the emojis on everyone's screens are the same, this call is 100% secure."
+                    )),
+                    actions: [ComponentAlertAction(type: .defaultAction, title: environment.strings.Common_OK, action: {})],
+                    actionLayout: .horizontal
+                )
+                
+                environment.controller()?.present(alertController, in: .window(.root))
+            })))
+            items.append(.separator)
         }
         
         if let (availableOutputs, currentOutput) = self.audioOutputState, availableOutputs.count > 1 {

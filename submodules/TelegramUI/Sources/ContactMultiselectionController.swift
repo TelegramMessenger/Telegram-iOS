@@ -250,7 +250,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             case let .chats(chatsNode):
                 count = chatsNode.currentState.selectedPeerIds.count
             }
-            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.Compose_NewGroupTitle, counter: "\(count)/\(maxCount)")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
@@ -262,23 +262,23 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterControllerTitle(title: hasActions ? self.presentationData.strings.Premium_Gift_ContactSelection_Title : self.presentationData.strings.Stars_Purchase_GiftStars, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? (hasActions ? self.presentationData.strings.Premium_Gift_ContactSelection_Title : self.presentationData.strings.Stars_Purchase_GiftStars), counter: "\(count)/\(maxCount)")
         case .requestedUsersSelection:
             let maxCount: Int32 = self.limit ?? 10
             var count = 0
             if case let .contacts(contactsNode) = self.contactsNode.contentNode {
                 count = contactsNode.selectionState?.selectedPeerIndices.count ?? 0
             }
-            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.RequestPeer_SelectUsers, counter: "\(count)/\(maxCount)")
         case .channelCreation:
-            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.GroupInfo_AddParticipantTitle, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case .peerSelection:
-            self.titleView.title = CounterControllerTitle(title: self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? self.presentationData.strings.PrivacyLastSeenSettings_EmpryUsersPlaceholder, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton
@@ -286,7 +286,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             }
         case let .chatSelection(chatSelection):
-            self.titleView.title = CounterControllerTitle(title: chatSelection.title, counter: "")
+            self.titleView.title = CounterControllerTitle(title: self.params.title ?? chatSelection.title, counter: "")
             if self.rightNavigationButton == nil {
                 let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
                 self.rightNavigationButton = rightNavigationButton

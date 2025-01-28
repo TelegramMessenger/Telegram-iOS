@@ -15,6 +15,154 @@ import AccountContext
 import DeviceProximity
 import PhoneNumberFormat
 
+final class SharedCallAudioContext {
+    let audioDevice: OngoingCallContext.AudioDevice?
+    let callKitIntegration: CallKitIntegration?
+    
+    private var audioSessionDisposable: Disposable?
+    private var audioSessionShouldBeActiveDisposable: Disposable?
+    private var isAudioSessionActiveDisposable: Disposable?
+    
+    private(set) var audioSessionControl: ManagedAudioSessionControl?
+    
+    private let isAudioSessionActivePromise = Promise<Bool>(false)
+    private var isAudioSessionActive: Signal<Bool, NoError> {
+        return self.isAudioSessionActivePromise.get()
+    }
+    
+    private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
+    private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
+    private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    private var didSetCurrentAudioOutputValue: Bool = false
+    var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
+        return self.audioOutputStatePromise.get()
+    }
+    
+    private let audioSessionShouldBeActive = Promise<Bool>(true)
+    
+    init(audioSession: ManagedAudioSession, callKitIntegration: CallKitIntegration?) {
+        self.callKitIntegration = callKitIntegration
+        self.audioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
+        
+        var didReceiveAudioOutputs = false
+        self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                let previousControl = self.audioSessionControl
+                self.audioSessionControl = control
+                
+                if previousControl == nil, let audioSessionControl = self.audioSessionControl {
+                    if let callKitIntegration = self.callKitIntegration {
+                        if self.didSetCurrentAudioOutputValue {
+                            callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+                        }
+                    } else {
+                        audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                        audioSessionControl.setup(synchronous: true)
+                    }
+                }
+            }
+        }, deactivate: { [weak self] _ in
+            return Signal { subscriber in
+                Queue.mainQueue().async {
+                    if let self {
+                        self.isAudioSessionActivePromise.set(.single(false))
+                        self.audioSessionControl = nil
+                    }
+                    subscriber.putCompletion()
+                }
+                return EmptyDisposable
+            }
+        }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
+            Queue.mainQueue().async {
+                guard let self else {
+                    return
+                }
+                self.audioOutputStateValue = (availableOutputs, currentOutput)
+                if let currentOutput = currentOutput {
+                    self.currentAudioOutputValue = currentOutput
+                    self.didSetCurrentAudioOutputValue = true
+                }
+                
+                var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
+                if !didReceiveAudioOutputs {
+                    didReceiveAudioOutputs = true
+                    if currentOutput == .speaker {
+                        signal = .single((availableOutputs, .builtin))
+                        |> then(
+                            signal
+                            |> delay(1.0, queue: Queue.mainQueue())
+                        )
+                    }
+                }
+                self.audioOutputStatePromise.set(signal)
+            }
+        })
+        
+        self.audioSessionShouldBeActive.set(.single(true))
+        self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            if value {
+                if let audioSessionControl = self.audioSessionControl {
+                    let audioSessionActive: Signal<Bool, NoError>
+                    if let callKitIntegration = self.callKitIntegration {
+                        audioSessionActive = callKitIntegration.audioSessionActive
+                    } else {
+                        audioSessionControl.activate({ _ in })
+                        audioSessionActive = .single(true)
+                    }
+                    self.isAudioSessionActivePromise.set(audioSessionActive)
+                } else {
+                    self.isAudioSessionActivePromise.set(.single(false))
+                }
+            } else {
+                self.isAudioSessionActivePromise.set(.single(false))
+            }
+        })
+        
+        self.isAudioSessionActiveDisposable = (self.isAudioSessionActive
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            let _ = self
+        })
+    }
+    
+    deinit {
+        self.audioSessionDisposable?.dispose()
+        self.audioSessionShouldBeActiveDisposable?.dispose()
+        self.isAudioSessionActiveDisposable?.dispose()
+    }
+    
+    func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        guard self.currentAudioOutputValue != output else {
+            return
+        }
+        self.currentAudioOutputValue = output
+        self.didSetCurrentAudioOutputValue = true
+        
+        self.audioOutputStatePromise.set(.single((self.audioOutputStateValue.0, output))
+        |> then(
+            .single(self.audioOutputStateValue)
+            |> delay(1.0, queue: Queue.mainQueue())
+        ))
+        
+        if let audioSessionControl = self.audioSessionControl {
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(output))
+            }
+        }
+    }
+}
+
 public final class PresentationCallImpl: PresentationCall {
     public let context: AccountContext
     private let audioSession: ManagedAudioSession
@@ -43,6 +191,8 @@ public final class PresentationCallImpl: PresentationCall {
     private let currentNetworkType: NetworkType
     private let updatedNetworkType: Signal<NetworkType, NoError>
     
+    private var sharedAudioContext: SharedCallAudioContext?
+    
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
     private var ongoingContext: OngoingCallContext?
@@ -50,7 +200,6 @@ public final class PresentationCallImpl: PresentationCall {
     private var ongoingContextIsFailedDisposable: Disposable?
     private var ongoingContextIsDroppedDisposable: Disposable?
     private var didDropCall = false
-    private var sharedAudioDevice: OngoingCallContext.AudioDevice?
     private var requestedVideoAspect: Float?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
@@ -90,6 +239,10 @@ public final class PresentationCallImpl: PresentationCall {
     private var currentAudioOutputValue: AudioSessionOutput = .builtin
     private var didSetCurrentAudioOutputValue: Bool = false
     public var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
+        if let sharedAudioContext = self.sharedAudioContext {
+            return sharedAudioContext.audioOutputState
+        }
+        
         return self.audioOutputStatePromise.get()
     }
     
@@ -156,6 +309,8 @@ public final class PresentationCallImpl: PresentationCall {
     public var conferenceState: Signal<PresentationCallConferenceState?, NoError> {
         return self.conferenceStatePromise.get()
     }
+    
+    public private(set) var pendingInviteToConferencePeerIds: [EnginePeer.Id] = []
     
     private var localVideoEndpointId: String?
     private var remoteVideoEndpointId: String?
@@ -242,91 +397,94 @@ public final class PresentationCallImpl: PresentationCall {
             }
         })
         
-        self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
-            Queue.mainQueue().async {
-                if let strongSelf = self {
-                    if let sessionState = strongSelf.sessionState {
-                        strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: control)
-                    } else {
-                        strongSelf.audioSessionControl = control
-                    }
-                }
-            }
-        }, deactivate: { [weak self] _ in
-            return Signal { subscriber in
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
+            self.sharedAudioContext = nil
+        } else {
+            self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+        }
+        
+        if let _ = self.sharedAudioContext {
+        } else {
+            self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
                 Queue.mainQueue().async {
                     if let strongSelf = self {
-                        strongSelf.updateIsAudioSessionActive(false)
                         if let sessionState = strongSelf.sessionState {
-                            strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: nil)
+                            strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: control)
                         } else {
-                            strongSelf.audioSessionControl = nil
+                            strongSelf.audioSessionControl = control
                         }
                     }
-                    subscriber.putCompletion()
                 }
-                return EmptyDisposable
-            }
-        }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
-            Queue.mainQueue().async {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
-                if let currentOutput = currentOutput {
-                    strongSelf.currentAudioOutputValue = currentOutput
-                    strongSelf.didSetCurrentAudioOutputValue = true
-                }
-                
-                var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
-                if !didReceiveAudioOutputs {
-                    didReceiveAudioOutputs = true
-                    if currentOutput == .speaker {
-                        signal = .single((availableOutputs, .builtin))
-                        |> then(
-                            signal
-                            |> delay(1.0, queue: Queue.mainQueue())
-                        )
-                    }
-                }
-                strongSelf.audioOutputStatePromise.set(signal)
-            }
-        })
-        
-        self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if let audioSessionControl = strongSelf.audioSessionControl {
-                        let audioSessionActive: Signal<Bool, NoError>
-                        if let callKitIntegration = strongSelf.callKitIntegration {
-                            audioSessionActive = callKitIntegration.audioSessionActive
-                        } else {
-                            audioSessionControl.activate({ _ in })
-                            audioSessionActive = .single(true)
+            }, deactivate: { [weak self] _ in
+                return Signal { subscriber in
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.updateIsAudioSessionActive(false)
+                            if let sessionState = strongSelf.sessionState {
+                                strongSelf.updateSessionState(sessionState: sessionState, callContextState: strongSelf.callContextState, reception: strongSelf.reception, audioSessionControl: nil)
+                            } else {
+                                strongSelf.audioSessionControl = nil
+                            }
                         }
-                        strongSelf.audioSessionActive.set(audioSessionActive)
+                        subscriber.putCompletion()
+                    }
+                    return EmptyDisposable
+                }
+            }, availableOutputsChanged: { [weak self] availableOutputs, currentOutput in
+                Queue.mainQueue().async {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                    if let currentOutput = currentOutput {
+                        strongSelf.currentAudioOutputValue = currentOutput
+                        strongSelf.didSetCurrentAudioOutputValue = true
+                    }
+                    
+                    var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
+                    if !didReceiveAudioOutputs {
+                        didReceiveAudioOutputs = true
+                        if currentOutput == .speaker {
+                            signal = .single((availableOutputs, .builtin))
+                            |> then(
+                                signal
+                                |> delay(1.0, queue: Queue.mainQueue())
+                            )
+                        }
+                    }
+                    strongSelf.audioOutputStatePromise.set(signal)
+                }
+            })
+            
+            self.audioSessionShouldBeActiveDisposable = (self.audioSessionShouldBeActive.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                if let strongSelf = self {
+                    if value {
+                        if let audioSessionControl = strongSelf.audioSessionControl {
+                            let audioSessionActive: Signal<Bool, NoError>
+                            if let callKitIntegration = strongSelf.callKitIntegration {
+                                audioSessionActive = callKitIntegration.audioSessionActive
+                            } else {
+                                audioSessionControl.activate({ _ in })
+                                audioSessionActive = .single(true)
+                            }
+                            strongSelf.audioSessionActive.set(audioSessionActive)
+                        } else {
+                            strongSelf.audioSessionActive.set(.single(false))
+                        }
                     } else {
                         strongSelf.audioSessionActive.set(.single(false))
                     }
-                } else {
-                    strongSelf.audioSessionActive.set(.single(false))
                 }
-            }
-        })
-        
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
-            self.sharedAudioDevice = nil
-        } else {
-            self.sharedAudioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
+            })
+            
+            self.audioSessionActiveDisposable = (self.audioSessionActive.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                if let strongSelf = self {
+                    strongSelf.updateIsAudioSessionActive(value)
+                }
+            })
         }
-        
-        self.audioSessionActiveDisposable = (self.audioSessionActive.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                strongSelf.updateIsAudioSessionActive(value)
-            }
-        })
 
         let screencastCapturer = OngoingCallVideoCapturer(isCustom: true)
         self.screencastCapturer = screencastCapturer
@@ -414,9 +572,9 @@ public final class PresentationCallImpl: PresentationCall {
         
         let reception = self.reception
         
-        if previousControl != nil && audioSessionControl == nil {
+        /*if previousControl != nil && audioSessionControl == nil {
             print("updateSessionState \(sessionState.state) \(audioSessionControl != nil)")
-        }
+        }*/
         
         var presentationState: PresentationCallState?
         
@@ -433,14 +591,16 @@ public final class PresentationCallImpl: PresentationCall {
             }
         }
         
-        if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            if let callKitIntegration = self.callKitIntegration {
-                if self.didSetCurrentAudioOutputValue {
-                    callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+        if self.sharedAudioContext == nil {
+            if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
+                if let callKitIntegration = self.callKitIntegration {
+                    if self.didSetCurrentAudioOutputValue {
+                        callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+                    }
+                } else {
+                    audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                    audioSessionControl.setup(synchronous: true)
                 }
-            } else {
-                audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
-                audioSessionControl.setup(synchronous: true)
             }
         }
         
@@ -637,10 +797,12 @@ public final class PresentationCallImpl: PresentationCall {
                     encryptionKey: (key, 1),
                     conferenceFromCallId: conferenceFromCallId,
                     isConference: true,
-                    sharedAudioDevice: self.sharedAudioDevice
+                    sharedAudioContext: self.sharedAudioContext
                 )
                 self.conferenceCallImpl = conferenceCall
                 conferenceCall.upgradedConferenceCall = self
+                
+                conferenceCall.setInvitedPeers(self.pendingInviteToConferencePeerIds)
                 
                 conferenceCall.setIsMuted(action: self.isMutedValue ? .muted(isPushToTalkActive: false) : .unmuted)
                 if let videoCapturer = self.videoCapturer {
@@ -746,12 +908,19 @@ public final class PresentationCallImpl: PresentationCall {
                         self.callKitIntegration?.reportOutgoingCallConnected(uuid: sessionState.id, at: Date())
                     }
                 } else {
-                    if let _ = audioSessionControl, !wasActive || previousControl == nil {
+                    if (self.sharedAudioContext != nil || audioSessionControl != nil), !wasActive || (self.sharedAudioContext == nil && previousControl == nil) {
                         let logName = "\(id.id)_\(id.accessHash)"
                         
                         let updatedConnections = connections
                         
-                        let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, customParameters: customParameters, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec, audioDevice: self.sharedAudioDevice)
+                        let contextAudioSessionActive: Signal<Bool, NoError>
+                        if self.sharedAudioContext != nil {
+                            contextAudioSessionActive = .single(true)
+                        } else {
+                            contextAudioSessionActive = self.audioSessionActive.get()
+                        }
+                        
+                        let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, customParameters: customParameters, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: contextAudioSessionActive, logName: logName, preferredVideoCodec: self.preferredVideoCodec, audioDevice: self.sharedAudioContext?.audioDevice)
                         self.ongoingContext = ongoingContext
                         ongoingContext.setIsMuted(self.isMutedValue)
                         if let requestedVideoAspect = self.requestedVideoAspect {
@@ -957,7 +1126,7 @@ public final class PresentationCallImpl: PresentationCall {
         }
         if tone != self.currentTone {
             self.currentTone = tone
-            self.sharedAudioDevice?.setTone(tone: tone.flatMap(presentationCallToneData).flatMap { data in
+            self.sharedAudioContext?.audioDevice?.setTone(tone: tone.flatMap(presentationCallToneData).flatMap { data in
                 return OngoingCallContext.Tone(samples: data, sampleRate: 48000, loopCount: tone?.loopCount ?? 1000000)
             })
         }
@@ -967,7 +1136,6 @@ public final class PresentationCallImpl: PresentationCall {
         if self.isAudioSessionActive != value {
             self.isAudioSessionActive = value
         }
-        self.sharedAudioDevice?.setIsAudioSessionActive(value)
     }
     
     public func answer() {
@@ -1143,13 +1311,29 @@ public final class PresentationCallImpl: PresentationCall {
         self.videoCapturer?.setIsVideoEnabled(!isPaused)
     }
     
-    public func upgradeToConference(completion: @escaping (PresentationGroupCall) -> Void) -> Disposable {
+    public func upgradeToConference(invitePeerIds: [EnginePeer.Id], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable {
         if let conferenceCall = self.conferenceCall {
             completion(conferenceCall)
+            
+            for peerId in invitePeerIds {
+                let _ = self.requestAddToConference(peerId: peerId)
+            }
+            
             return EmptyDisposable
         }
         
-        let index = self.upgradedToConferenceCompletions.add(completion)
+        self.pendingInviteToConferencePeerIds = invitePeerIds
+        let index = self.upgradedToConferenceCompletions.add({ [weak self] call in
+            completion(call)
+            
+            if let self {
+                for peerId in invitePeerIds {
+                    let _ = self.requestAddToConference(peerId: peerId)
+                }
+            }
+        })
+        
+        self.conferenceStateValue = .preparing
         self.callSessionManager.createConferenceIfNecessary(internalId: self.internalId)
         
         return ActionDisposable { [weak self] in
@@ -1162,7 +1346,7 @@ public final class PresentationCallImpl: PresentationCall {
         }
     }
     
-    public func requestAddToConference(peerId: EnginePeer.Id) -> Disposable {
+    private func requestAddToConference(peerId: EnginePeer.Id) -> Disposable {
         var conferenceCall: (conference: GroupCallReference, encryptionKey: Data)?
         if let sessionState = self.sessionState {
             switch sessionState.state {
@@ -1189,6 +1373,11 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        if let sharedAudioContext = self.sharedAudioContext {
+            sharedAudioContext.setCurrentAudioOutput(output)
+            return
+        }
+        
         guard self.currentAudioOutputValue != output else {
             return
         }

@@ -115,6 +115,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/TelegramUI/Components/BackButtonComponent",
+        "//submodules/TelegramUI/Components/AlertComponent",
         "//submodules/DirectMediaImageCache",
         "//submodules/FastBlur",
     ],

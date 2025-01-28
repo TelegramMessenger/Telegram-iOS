@@ -382,17 +382,17 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     }
     
     func animateIn(from scrubberTransition: GalleryItemScrubberTransition?, transition: ContainedViewLayoutTransition) {
-        if let scrubberTransition {
+        if let scrubberTransition = scrubberTransition?.scrubber {
             let fromRect = scrubberTransition.view.convert(scrubberTransition.view.bounds, to: self)
             
             let targetCloneView = scrubberTransition.makeView()
             self.addSubview(targetCloneView)
             targetCloneView.frame = fromRect
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 0.0), .immediate)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 0.0), .immediate)
             targetCloneView.alpha = 1.0
             
             transition.updateFrame(view: targetCloneView, frame: CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - fromRect.height - 3.0), size: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height)))
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 1.0), transition)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 1.0), transition)
             let scrubberTransitionView = scrubberTransition.view
             scrubberTransitionView.isHidden = true
             ContainedViewLayoutTransition.animated(duration: 0.08, curve: .easeInOut).updateAlpha(layer: targetCloneView.layer, alpha: 0.0, completion: { [weak scrubberTransitionView, weak targetCloneView] _ in
@@ -421,18 +421,18 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     func animateOut(to scrubberTransition: GalleryItemScrubberTransition?, transition: ContainedViewLayoutTransition) {
         self.isAnimatedOut = true
         
-        if let scrubberTransition {
+        if let scrubberTransition = scrubberTransition?.scrubber {
             let toRect = scrubberTransition.view.convert(scrubberTransition.view.bounds, to: self)
             let scrubberDestinationRect = CGRect(origin: CGPoint(x: toRect.minX, y: toRect.maxY - 3.0), size: CGSize(width: toRect.width, height: 3.0))
 
             let targetCloneView = scrubberTransition.makeView()
             self.addSubview(targetCloneView)
             targetCloneView.frame = CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - toRect.height), size: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height))
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 0.0), .immediate)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 0.0), .immediate)
             targetCloneView.alpha = 0.0
             
             transition.updateFrame(view: targetCloneView, frame: toRect)
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 1.0), transition)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 1.0), transition)
             let scrubberTransitionView = scrubberTransition.view
             scrubberTransitionView.isHidden = true
             transition.updateAlpha(layer: targetCloneView.layer, alpha: 1.0, completion: { [weak scrubberTransitionView] _ in
