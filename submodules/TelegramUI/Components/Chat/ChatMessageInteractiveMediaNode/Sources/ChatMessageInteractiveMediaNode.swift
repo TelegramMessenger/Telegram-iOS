@@ -1863,6 +1863,21 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 statusFrame.origin.y = floor(imageFrame.height / 2.0 - statusFrame.height / 2.0)
                                 statusNode.frame = statusFrame
                             }
+                            
+                            var videoTimestamp: Int32?
+                            var storedVideoTimestamp: Int32?
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                                    videoTimestamp = attribute.timestamp
+                                } else if let attribute = attribute as? DerivedDataMessageAttribute {
+                                    if let value = attribute.data["mps"]?.get(MediaPlaybackStoredState.self) {
+                                        storedVideoTimestamp = Int32(value.timestamp)
+                                    }
+                                }
+                            }
+                            if let storedVideoTimestamp {
+                                videoTimestamp = storedVideoTimestamp
+                            }
                                                         
                             var updatedVideoNodeReadySignal: Signal<Void, NoError>?
                             var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
@@ -1920,8 +1935,15 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     }
                                     let videoNode = UniversalVideoNode(context: context, postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
+                                    var firstTime = true
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
                                         if let strongSelf = self {
+                                            if firstTime {
+                                                firstTime = false
+                                                if let videoTimestamp {
+                                                    videoNode.seek(Double(videoTimestamp))
+                                                }
+                                            }
                                             strongSelf.videoNode?.isHidden = !owns
                                             if owns {
                                                 strongSelf.videoNode?.setBaseRate(1.0)
@@ -2006,21 +2028,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            var videoTimestamp: Int32?
-                            var storedVideoTimestamp: Int32?
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ForwardVideoTimestampAttribute {
-                                    videoTimestamp = attribute.timestamp
-                                } else if let attribute = attribute as? DerivedDataMessageAttribute {
-                                    if let value = attribute.data["mps"]?.get(MediaPlaybackStoredState.self) {
-                                        storedVideoTimestamp = Int32(value.timestamp)
-                                    }
-                                }
-                            }
-                            if let storedVideoTimestamp {
-                                videoTimestamp = storedVideoTimestamp
-                            }
-                            
                             if let videoTimestamp, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
                                 let timestampContainerView: UIView
                                 if let current = strongSelf.timestampContainerView {
@@ -2064,7 +2071,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 videoTimestampBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.5).cgColor
                                 videoTimestampForegroundLayer.backgroundColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.accentControlColor.cgColor : presentationData.theme.theme.chat.message.outgoing.accentControlColor.cgColor
                                 
-                                timestampContainerView.frame = imageFrame
+                                timestampContainerView.frame = imageFrame.offsetBy(dx: arguments.corners.extendedEdges.left, dy: 0.0)
                                 timestampMaskView.frame = imageFrame
                                 
                                 let videoTimestampBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: imageFrame.height - 3.0), size: CGSize(width: imageFrame.width, height: 3.0))
@@ -3093,55 +3100,175 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     }
     
     public func scrubberTransition() -> GalleryItemScrubberTransition? {
-        if let timestampContainerView = self.timestampContainerView, let timestampMaskView = self.timestampMaskView, let videoTimestampBackgroundLayer = self.videoTimestampBackgroundLayer, let videoTimestampForegroundLayer = self.videoTimestampForegroundLayer {
-            final class TimestampContainerTransitionView: UIView {
-                let containerView: UIView
-                let containerMaskView: UIImageView
-                let backgroundLayer: SimpleLayer
-                let foregroundLayer: SimpleLayer
-                let fraction: CGFloat
+        final class TimestampContainerTransitionView: UIView {
+            let containerView: UIView
+            let containerMaskView: UIImageView
+            let backgroundLayer: SimpleLayer
+            let foregroundLayer: SimpleLayer
+            let fraction: CGFloat
+            
+            init(timestampContainerView: UIView?, timestampMaskView: UIImageView?, videoTimestampBackgroundLayer: SimpleLayer?, videoTimestampForegroundLayer: SimpleLayer?) {
+                self.containerView = UIView()
+                self.containerMaskView = UIImageView()
+                self.backgroundLayer = SimpleLayer()
+                self.foregroundLayer = SimpleLayer()
                 
-                init(timestampContainerView: UIView?, timestampMaskView: UIImageView?, videoTimestampBackgroundLayer: SimpleLayer?, videoTimestampForegroundLayer: SimpleLayer?) {
-                    self.containerView = UIView()
-                    self.containerMaskView = UIImageView()
-                    self.backgroundLayer = SimpleLayer()
-                    self.foregroundLayer = SimpleLayer()
-                    
-                    if let videoTimestampBackgroundLayer, let videoTimestampForegroundLayer {
-                        self.fraction = videoTimestampForegroundLayer.bounds.width / videoTimestampBackgroundLayer.bounds.width
-                    } else {
-                        self.fraction = 0.0
-                    }
-                    
-                    super.init(frame: CGRect())
-                    
-                    self.addSubview(self.containerView)
-                    
-                    self.containerView.mask = self.containerMaskView
-                    self.containerMaskView.image = timestampMaskView?.image
-                    
-                    self.containerView.layer.addSublayer(self.backgroundLayer)
-                    self.containerView.layer.addSublayer(self.foregroundLayer)
-                    
-                    self.backgroundLayer.backgroundColor = videoTimestampBackgroundLayer?.backgroundColor
-                    self.foregroundLayer.backgroundColor = videoTimestampForegroundLayer?.backgroundColor
+                if let videoTimestampBackgroundLayer, let videoTimestampForegroundLayer {
+                    self.fraction = videoTimestampForegroundLayer.bounds.width / videoTimestampBackgroundLayer.bounds.width
+                } else {
+                    self.fraction = 0.0
                 }
                 
-                required init?(coder: NSCoder) {
-                    fatalError("init(coder:) has not been implemented")
-                }
+                super.init(frame: CGRect())
                 
-                func update(state: GalleryItemScrubberTransition.TransitionState, transition: ContainedViewLayoutTransition) {
-                    let containerFrame = CGRect(origin: CGPoint(), size: state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress))
-                    transition.updateFrame(view: self.containerView, frame: containerFrame)
-                    transition.updateFrame(view: self.containerMaskView, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
-                    
-                    transition.updateFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.height - 3.0), size: CGSize(width: containerFrame.width, height: 3.0)))
-                    transition.updateFrame(layer: self.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.height - 3.0), size: CGSize(width: containerFrame.width * self.fraction, height: 3.0)))
-                }
+                self.addSubview(self.containerView)
+                
+                self.containerView.mask = self.containerMaskView
+                self.containerMaskView.image = timestampMaskView?.image
+                
+                self.containerView.layer.addSublayer(self.backgroundLayer)
+                self.containerView.layer.addSublayer(self.foregroundLayer)
+                
+                self.backgroundLayer.backgroundColor = videoTimestampBackgroundLayer?.backgroundColor
+                self.foregroundLayer.backgroundColor = videoTimestampForegroundLayer?.backgroundColor
             }
             
-            return GalleryItemScrubberTransition(
+            required init?(coder: NSCoder) {
+                fatalError("init(coder:) has not been implemented")
+            }
+            
+            func update(state: GalleryItemScrubberTransition.Scrubber.TransitionState, transition: ContainedViewLayoutTransition) {
+                let containerFrame = CGRect(origin: CGPoint(), size: state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress))
+                transition.updateFrame(view: self.containerView, frame: containerFrame)
+                transition.updateFrame(view: self.containerMaskView, frame: CGRect(origin: CGPoint(), size: containerFrame.size))
+                
+                transition.updateFrame(layer: self.backgroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.height - 3.0), size: CGSize(width: containerFrame.width, height: 3.0)))
+                transition.updateFrame(layer: self.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: containerFrame.height - 3.0), size: CGSize(width: containerFrame.width * self.fraction, height: 3.0)))
+            }
+        }
+        
+        final class MediaContentTransitionView: UIView {
+            let backgroundLayer: SimpleLayer
+            let backgroundMaskLayer: SimpleShapeLayer
+            let sourceCorners: ImageCorners
+            
+            init(imageNode: TransformImageNode) {
+                self.backgroundLayer = SimpleLayer()
+                self.backgroundLayer.backgroundColor = UIColor.black.cgColor
+                
+                self.backgroundMaskLayer = SimpleShapeLayer()
+                self.backgroundMaskLayer.fillColor = UIColor.white.cgColor
+                self.backgroundLayer.mask = self.backgroundMaskLayer
+                
+                self.sourceCorners = imageNode.currentArguments?.corners ?? ImageCorners()
+                
+                super.init(frame: CGRect())
+                
+                self.layer.addSublayer(self.backgroundLayer)
+            }
+            
+            required init?(coder: NSCoder) {
+                fatalError("init(coder:) has not been implemented")
+            }
+            
+            func update(state: GalleryItemScrubberTransition.Content.TransitionState, transition: ContainedViewLayoutTransition) {
+                let sourceCorners: (topLeft: CGFloat, topRight: CGFloat, bottomLeft: CGFloat, bottomRight: CGFloat) = (max(0.1, self.sourceCorners.topLeft.radius), max(0.1, self.sourceCorners.topRight.radius), max(0.1, self.sourceCorners.bottomLeft.radius), max(0.1, self.sourceCorners.bottomRight.radius))
+                let destinationCorners: (topLeft: CGFloat, topRight: CGFloat, bottomLeft: CGFloat, bottomRight: CGFloat) = (max(0.1, state.destinationCornerRadius), max(0.1, state.destinationCornerRadius), max(0.1, state.destinationCornerRadius), max(0.1, state.destinationCornerRadius))
+                
+                let currentCornersData = CGRect(x: sourceCorners.topLeft, y: sourceCorners.topRight, width: sourceCorners.bottomLeft, height: sourceCorners.bottomRight).interpolate(to: CGRect(x: destinationCorners.topLeft, y: destinationCorners.topRight, width: destinationCorners.bottomLeft, height: destinationCorners.bottomRight), amount: state.progress)
+                let currentCorners: (topLeft: CGFloat, topRight: CGFloat, bottomLeft: CGFloat, bottomRight: CGFloat) = (currentCornersData.minX, currentCornersData.minY, currentCornersData.width, currentCornersData.height)
+                
+                func makeRoundedRectPath(
+                    in rect: CGRect,
+                    topLeft: CGFloat,
+                    topRight: CGFloat,
+                    bottomRight: CGFloat,
+                    bottomLeft: CGFloat
+                ) -> CGPath {
+                    let path = CGMutablePath()
+
+                    // Move to top-left, offset by its corner radius
+                    path.move(to: CGPoint(x: rect.minX + topLeft, y: rect.minY))
+
+                    // Top edge (straight line)
+                    path.addLine(to: CGPoint(x: rect.maxX - topRight, y: rect.minY))
+                    // Top-right corner arc
+                    if topRight > 0 {
+                        path.addArc(
+                            center: CGPoint(x: rect.maxX - topRight, y: rect.minY + topRight),
+                            radius: topRight,
+                            startAngle: -CGFloat.pi / 2,
+                            endAngle: 0,
+                            clockwise: false
+                        )
+                    }
+
+                    // Right edge (straight line)
+                    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottomRight))
+                    // Bottom-right corner arc
+                    if bottomRight > 0 {
+                        path.addArc(
+                            center: CGPoint(x: rect.maxX - bottomRight, y: rect.maxY - bottomRight),
+                            radius: bottomRight,
+                            startAngle: 0,
+                            endAngle: CGFloat.pi / 2,
+                            clockwise: false
+                        )
+                    }
+
+                    // Bottom edge (straight line)
+                    path.addLine(to: CGPoint(x: rect.minX + bottomLeft, y: rect.maxY))
+                    // Bottom-left corner arc
+                    if bottomLeft > 0 {
+                        path.addArc(
+                            center: CGPoint(x: rect.minX + bottomLeft, y: rect.maxY - bottomLeft),
+                            radius: bottomLeft,
+                            startAngle: CGFloat.pi / 2,
+                            endAngle: CGFloat.pi,
+                            clockwise: false
+                        )
+                    }
+
+                    // Left edge (straight line)
+                    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + topLeft))
+                    // Top-left corner arc
+                    if topLeft > 0 {
+                        path.addArc(
+                            center: CGPoint(x: rect.minX + topLeft, y: rect.minY + topLeft),
+                            radius: topLeft,
+                            startAngle: CGFloat.pi,
+                            endAngle: 3 * CGFloat.pi / 2,
+                            clockwise: false
+                        )
+                    }
+
+                    path.closeSubpath()
+                    return path
+                }
+                
+                let backgroundFrame = CGRect(origin: CGPoint(), size: state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress))
+                
+                transition.updatePath(layer: self.backgroundMaskLayer, path: makeRoundedRectPath(in: CGRect(origin: CGPoint(), size: backgroundFrame.size), topLeft: currentCorners.topLeft, topRight: currentCorners.topRight, bottomRight: currentCorners.bottomLeft, bottomLeft: currentCorners.bottomRight))
+                
+                transition.updateFrame(layer: self.backgroundLayer, frame: backgroundFrame)
+                
+                transition.updateFrame(layer: self.backgroundMaskLayer, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            }
+        }
+        
+        guard let currentImageArguments = self.currentImageArguments else {
+            return nil
+        }
+        
+        var sourceContentRect = self.imageNode.bounds
+        sourceContentRect.origin.x += currentImageArguments.insets.left
+        sourceContentRect.origin.y += currentImageArguments.insets.top
+        sourceContentRect.size.width -= currentImageArguments.insets.left + currentImageArguments.insets.right
+        sourceContentRect.size.height -= currentImageArguments.insets.top + currentImageArguments.insets.bottom
+    
+        var scrubber: GalleryItemScrubberTransition.Scrubber?
+        if let timestampContainerView = self.timestampContainerView, let timestampMaskView = self.timestampMaskView, let videoTimestampBackgroundLayer = self.videoTimestampBackgroundLayer, let videoTimestampForegroundLayer = self.videoTimestampForegroundLayer {
+            scrubber = GalleryItemScrubberTransition.Scrubber(
                 view: timestampContainerView,
                 makeView: { [weak timestampContainerView, weak timestampMaskView, weak videoTimestampBackgroundLayer, weak videoTimestampForegroundLayer] in
                     return TimestampContainerTransitionView(timestampContainerView: timestampContainerView, timestampMaskView: timestampMaskView, videoTimestampBackgroundLayer: videoTimestampBackgroundLayer, videoTimestampForegroundLayer: videoTimestampForegroundLayer)
@@ -3150,12 +3277,33 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     if let view = view as? TimestampContainerTransitionView {
                         view.update(state: state, transition: transition)
                     }
-                },
-                insertCloneTransitionView: nil
+                }
             )
-        } else {
-            return nil
         }
+        
+        var content: GalleryItemScrubberTransition.Content?
+        content = GalleryItemScrubberTransition.Content(
+            sourceView: self.imageNode.view,
+            sourceRect: sourceContentRect,
+            makeView: { [weak self] in
+                guard let self else {
+                    return UIView()
+                }
+                
+                return MediaContentTransitionView(imageNode: self.imageNode)
+            },
+            updateView: { view, state, transition in
+                guard let view = view as? MediaContentTransitionView else {
+                    return
+                }
+                view.update(state: state, transition: transition)
+            }
+        )
+            
+        return GalleryItemScrubberTransition(
+            scrubber: scrubber,
+            content: content
+        )
     }
     
     public func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {

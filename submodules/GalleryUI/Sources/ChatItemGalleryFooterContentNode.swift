@@ -1615,7 +1615,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                                 preferredAction = .saveToCameraRoll
                                 actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
                             case .video:
-                                preferredAction = .saveToCameraRoll
+                                if let message = messages.first, let channel = message.peers[message.id.peerId] as? TelegramChannel, channel.addressName != nil {
+                                } else {
+                                    preferredAction = .saveToCameraRoll
+                                }
                                 actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                             case .file:
                                 preferredAction = .saveToCameraRoll

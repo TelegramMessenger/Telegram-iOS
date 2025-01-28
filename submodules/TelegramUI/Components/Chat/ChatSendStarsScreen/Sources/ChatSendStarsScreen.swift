@@ -1439,7 +1439,8 @@ private final class ChatSendStarsScreenComponent: Component {
                     })
                 }
                 
-                self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
+                //TODO:wip-release
+                /*self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
                     guard let self else {
                         return
@@ -1448,7 +1449,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.channelsForPublicReaction = peers
                         self.state?.updated(transition: .immediate)
                     }
-                })
+                })*/
             }
             
             self.component = component
