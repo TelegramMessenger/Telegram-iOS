@@ -2069,7 +2069,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                                 
                                 videoTimestampBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.5).cgColor
-                                videoTimestampForegroundLayer.backgroundColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.accentControlColor.cgColor : presentationData.theme.theme.chat.message.outgoing.accentControlColor.cgColor
+                                videoTimestampForegroundLayer.backgroundColor = UIColor(rgb: 0x0A84FF).cgColor
                                 
                                 timestampContainerView.frame = imageFrame.offsetBy(dx: arguments.corners.extendedEdges.left, dy: 0.0)
                                 timestampMaskView.frame = imageFrame
