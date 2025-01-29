@@ -2489,7 +2489,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.context.sharedContext.mediaManager.setOverlayVideoNode(nil)
         } else {
-            let scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+            var scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+            
+            if let data = self.context.currentAppConfiguration.with({ $0 }).data {
+                if let value = data["ios_gallery_scrubber_transition"] as? Double {
+                    if value == 0.0 {
+                        scrubberTransition = nil
+                    }
+                }
+            }
             
             if let scrubberView = self.scrubberView {
                 scrubberView.animateIn(from: scrubberTransition, transition: .animated(duration: 0.25, curve: .spring))
@@ -2633,7 +2641,14 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         
-        let scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+        var scrubberTransition = (node.0 as? GalleryItemTransitionNode)?.scrubberTransition()
+        if let data = self.context.currentAppConfiguration.with({ $0 }).data {
+            if let value = data["ios_gallery_scrubber_transition"] as? Double {
+                if value == 0.0 {
+                    scrubberTransition = nil
+                }
+            }
+        }
         
         if let scrubberView = self.scrubberView {
             var scrubberEffectiveTransition = scrubberTransition
