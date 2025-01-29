@@ -31,8 +31,13 @@ extension MediaEditorScreenImpl {
         let filteredEntities = self.node.entitiesView.entities.filter { entity in
             if entity is DrawingMediaEntity {
                 return false
-            } else if let entity = entity as? DrawingStickerEntity, case .message = entity.content {
-                return false
+            } else if let entity = entity as? DrawingStickerEntity {
+                switch entity.content {
+                case .message, .gift:
+                    return false
+                default:
+                    break
+                }
             }
             return true
         }
@@ -45,6 +50,8 @@ extension MediaEditorScreenImpl {
             if case .asset = subject, !values.hasChanges && caption.string.isEmpty {
                 return false
             } else if case .message = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
+                return false
+            } else if case .gift = subject, !filteredValues.hasChanges && filteredEntities.isEmpty && caption.string.isEmpty {
                 return false
             } else if case .empty = subject, !self.node.hasAnyChanges && !self.node.drawingView.internalState.canUndo {
                 return false

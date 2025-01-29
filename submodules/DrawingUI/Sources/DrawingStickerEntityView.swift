@@ -345,7 +345,11 @@ public class DrawingStickerEntityView: DrawingEntityView {
         } else {
             imageView = UIImageView()
             imageView.contentMode = .scaleAspectFit
-            self.addSubview(imageView)
+            if let _ = self.animationNode {
+                self.insertSubview(imageView, at: 0)
+            } else {
+                self.addSubview(imageView)
+            }
             self.animatedImageView = imageView
         }
         imageView.image = image
@@ -754,11 +758,16 @@ public class DrawingStickerEntityView: DrawingEntityView {
     
         self.updateAnimationColor()
 
-        if case .message = self.stickerEntity.content, self.animatedImageView == nil {
-            let image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
-            if let image {
-                self.setupWithImage(image)
+        switch self.stickerEntity.content {
+        case .message, .gift:
+            if self.animatedImageView == nil {
+                let image = self.isNightTheme ? self.stickerEntity.secondaryRenderImage : self.stickerEntity.renderImage
+                if let image {
+                    self.setupWithImage(image)
+                }
             }
+        default:
+            break
         }
         
         self.updateMirroring(animated: animated)

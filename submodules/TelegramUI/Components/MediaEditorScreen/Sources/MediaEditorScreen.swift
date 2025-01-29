@@ -3151,9 +3151,15 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             var effectiveSubject = subject
             if case let .draft(draft, _ ) = subject {
                 for entity in draft.values.entities {
-                    if case let .sticker(sticker) = entity, case let .message(ids, _, _, _, _) = sticker.content {
-                        effectiveSubject = .message(ids)
-                        break
+                    if case let .sticker(sticker) = entity {
+                        switch sticker.content {
+                        case let .message(ids, _, _, _, _):
+                            effectiveSubject = .message(ids)
+                        case let .gift(gift, _):
+                            effectiveSubject = .gift(gift)
+                        default:
+                            break
+                        }
                     }
                 }
             }
@@ -3173,11 +3179,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             case .image, .video:
                 isSavingAvailable = !controller.isEmbeddedEditor
                 isFromCamera = true
-            case .draft:
-                isSavingAvailable = true
-            case .message:
-                isSavingAvailable = true
-            case .gift:
+            case .draft, .message,. gift:
                 isSavingAvailable = true
             default:
                 isSavingAvailable = false
@@ -3454,11 +3456,14 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                         let renderer = DrawingMessageRenderer(context: self.context, messages: messages, parentView: self.view, isGift: isGift, wallpaperDayColor: wallpaperColors.0, wallpaperNightColor: wallpaperColors.1)
                         renderer.render(completion: { result in
                             if case .draft = subject, let existingEntityView = self.entitiesView.getView(where: { entityView in
-                                if let stickerEntityView = entityView as? DrawingStickerEntityView, case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
-                                    return true
-                                } else {
-                                    return false
+                                if let stickerEntityView = entityView as? DrawingStickerEntityView {
+                                    if case .message = (stickerEntityView.entity as! DrawingStickerEntity).content {
+                                        return true
+                                    } else if case .gift = (stickerEntityView.entity as! DrawingStickerEntity).content {
+                                        return true
+                                    }
                                 }
+                                return false
                             }) as? DrawingStickerEntityView {
                                 existingEntityView.isNightTheme = isNightTheme
                                 let messageEntity = existingEntityView.entity as! DrawingStickerEntity
@@ -6416,7 +6421,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
     }
     
     fileprivate func checkPostingAvailability() {
-        guard self.postingAvailabilityDisposable == nil else {
+        guard self.postingAvailabilityDisposable == nil && !self.isEditingStory else {
             return
         }
         self.postingAvailabilityDisposable = (self.postingAvailabilityPromise.get()
