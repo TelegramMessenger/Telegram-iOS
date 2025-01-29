@@ -7142,13 +7142,7 @@ public func shouldUseV2VideoChatImpl(context: AccountContext) -> Bool {
 }
 
 public func makeVoiceChatControllerInitialData(sharedContext: SharedAccountContext, accountContext: AccountContext, call: VideoChatCall) -> Signal<Any, NoError> {
-    let useV2 = shouldUseV2VideoChatImpl(context: accountContext)
-    
-    if useV2 {
-        return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
-    } else {
-        return .single(Void())
-    }
+    return VideoChatScreenV2Impl.initialData(call: call) |> map { $0 as Any }
 }
 
 public func makeVoiceChatController(sharedContext: SharedAccountContext, accountContext: AccountContext, call: VideoChatCall, initialData: Any, sourceCallController: CallController?) -> VoiceChatController {
