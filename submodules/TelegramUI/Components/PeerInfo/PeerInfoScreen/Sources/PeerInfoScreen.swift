@@ -10972,7 +10972,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             let switchToFilter: (ProfileGiftsContext.Filters) -> Void = { [weak giftsContext] value in
-                giftsContext?.updateFilter(value)
+                var updatedFilter = filter
+                updatedFilter.remove(.unlimited)
+                updatedFilter.remove(.limited)
+                updatedFilter.remove(.unique)
+                updatedFilter.insert(value)
+                giftsContext?.updateFilter(updatedFilter)
+            }
+            
+            let switchToVisiblityFilter: (ProfileGiftsContext.Filters) -> Void = { [weak giftsContext] value in
+                var updatedFilter = filter
+                updatedFilter.remove(.hidden)
+                updatedFilter.remove(.displayed)
+                updatedFilter.insert(value)
+                giftsContext?.updateFilter(updatedFilter)
             }
             
             items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Unlimited, icon: { theme in
@@ -11005,14 +11018,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }, action: { _, f in
                     toggleFilter(.displayed)
                 }, longPressAction: { _, f in
-                    switchToFilter(.displayed)
+                    switchToVisiblityFilter(.displayed)
                 })))
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Hidden, icon: { theme in
                     return filter.contains(.hidden) ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
                 }, action: { _, f in
                     toggleFilter(.hidden)
                 }, longPressAction: { _, f in
-                    switchToFilter(.hidden)
+                    switchToVisiblityFilter(.hidden)
                 })))
             }
             

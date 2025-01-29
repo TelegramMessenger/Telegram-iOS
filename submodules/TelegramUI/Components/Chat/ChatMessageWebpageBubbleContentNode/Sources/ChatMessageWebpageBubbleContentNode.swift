@@ -344,7 +344,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                     }
                 default:
-                    if let file = mainMedia as? TelegramMediaFile, webpage.type != "telegram_theme" {
+                    if var file = mainMedia as? TelegramMediaFile, webpage.type != "telegram_theme" {
+                        if webpage.imageIsVideoCover, let image = webpage.image {
+                            file = file.withUpdatedVideoCover(image)
+                        }
+                        
                         if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
                             if automaticPlayback {
                                 mediaAndFlags = ([file], [.preferMediaBeforeText])
@@ -689,7 +693,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         if let image = content.image {
                             mediaList.append(image)
                         }
-                        if let file = content.file {
+                        if var file = content.file {
+                            if content.imageIsVideoCover, let image = content.image {
+                                file = file.withUpdatedVideoCover(image)
+                            }
                             mediaList.append(file)
                         }
                         updatedMedia = mediaList
@@ -698,7 +705,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         if let image = content.image {
                             mediaList.append(image)
                         }
-                        if let file = content.file {
+                        if var file = content.file {
+                            if content.imageIsVideoCover, let image = content.image {
+                                file = file.withUpdatedVideoCover(image)
+                            }
                             mediaList.append(file)
                         }
                         updatedMedia = mediaList

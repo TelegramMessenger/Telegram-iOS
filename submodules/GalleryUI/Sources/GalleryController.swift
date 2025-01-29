@@ -77,7 +77,10 @@ private func mediaForMessage(message: Message) -> [(Media, TelegramMediaImage?)]
                 case let .Loaded(content):
                     if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
                         return [(webpage, nil)]
-                    } else if let file = content.file {
+                    } else if var file = content.file {
+                        if content.imageIsVideoCover, let image = content.image {
+                            file = file.withUpdatedVideoCover(image)
+                        }
                         if let result = galleryMediaForMedia(media: file) {
                             return [(result, content.image)]
                         }

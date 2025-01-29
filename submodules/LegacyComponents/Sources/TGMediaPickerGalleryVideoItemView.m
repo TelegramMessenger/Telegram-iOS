@@ -768,6 +768,13 @@
     _isCoverEditing = true;
     [self setPlayButtonHidden:true animated:true];
     [self stop];
+    
+    NSNumber *savedPosition = [self.item.editingContext coverPositionForItem:self.item.editableMediaItem];
+    if (savedPosition != nil) {
+        [self _seekToPosition:savedPosition.doubleValue manual:false];
+        [_scrubberView setValue:savedPosition.doubleValue resetPosition:true];
+        [_coverScrubberView setValue:savedPosition.doubleValue resetPosition:true];
+    }
 }
 
 - (void)returnFromCoverEditing
@@ -939,6 +946,10 @@
     } else {
         return _imageView;
     }
+}
+
+- (NSTimeInterval)currentPosition {
+    return _coverScrubberView.value;
 }
 
 - (UIImage *)screenImage

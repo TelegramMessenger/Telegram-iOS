@@ -360,7 +360,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             contentMediaAutomaticDownload = .prefetch
                         }
                         
-                        if file.isAnimated {
+                        if let _ = file.videoCover {
+                            contentMediaAutomaticPlayback = false
+                        } else if file.isAnimated {
                             contentMediaAutomaticPlayback = context.sharedContext.energyUsageSettings.autoplayGif
                         } else if file.isVideo && context.sharedContext.energyUsageSettings.autoplayVideo {
                             var willDownloadOrLocal = false

@@ -179,6 +179,11 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
         if areResourcesEqual(file.resource, resource) {
             return file.resource
         } else {
+            if let videoCover = file.videoCover {
+                if let resource = findMediaResource(media: videoCover, previousMedia: previousMedia, resource: resource) {
+                    return resource
+                }
+            }
             for representation in file.previewRepresentations {
                 if areResourcesEqual(representation.resource, resource) {
                     return representation.resource

@@ -171,6 +171,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let duration: Int?
     public let author: String?
     public let isMediaLargeByDefault: Bool?
+    public let imageIsVideoCover: Bool
     
     public let image: TelegramMediaImage?
     public let file: TelegramMediaFile?
@@ -192,6 +193,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         duration: Int?,
         author: String?,
         isMediaLargeByDefault: Bool?,
+        imageIsVideoCover: Bool,
         image: TelegramMediaImage?,
         file: TelegramMediaFile?,
         story: TelegramMediaStory?,
@@ -211,6 +213,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.duration = duration
         self.author = author
         self.isMediaLargeByDefault = isMediaLargeByDefault
+        self.imageIsVideoCover = imageIsVideoCover
         self.image = image
         self.file = file
         self.story = story
@@ -240,6 +243,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         }
         self.author = decoder.decodeOptionalStringForKey("au")
         self.isMediaLargeByDefault = decoder.decodeOptionalBoolForKey("lbd")
+        self.imageIsVideoCover = decoder.decodeBoolForKey("isvc", orElse: false)
         
         if let image = decoder.decodeObjectForKey("im") as? TelegramMediaImage {
             self.image = image
@@ -331,6 +335,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "lbd")
         }
+        encoder.encodeBool(self.imageIsVideoCover, forKey: "isvc")
         if let image = self.image {
             encoder.encodeObject(image, forKey: "im")
         } else {
@@ -374,6 +379,10 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
     }
     
     if lhs.isMediaLargeByDefault != rhs.isMediaLargeByDefault {
+        return false
+    }
+    
+    if lhs.imageIsVideoCover != rhs.imageIsVideoCover {
         return false
     }
     

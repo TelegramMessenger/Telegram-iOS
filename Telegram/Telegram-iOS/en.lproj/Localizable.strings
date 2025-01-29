@@ -13798,3 +13798,6 @@ Sorry for the inconvenience.";
 "NameColor.GiftTitle" = "USE A GIFT";
 "NameColor.GiftInfo" = "Apply your collectible's unique look to your profile.";
 "NameColor.WearCollectible" = "Wear Collectible";
+
+"Notification.StarsGift.TransferToChannel" = "%@ transferred a unique collectible to %@";
+"Notification.StarsGift.TransferToChannelYou" = "You transferred a unique collectible to %@";
