@@ -868,11 +868,26 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             let _ = peerType
             
             var useInlineHLS = true
+            var displayInlineScrubber = true
+            var startFromSavedPosition = true
             if let data = context.currentAppConfiguration.with({ $0 }).data {
                 if let value = data["ios_inline_hls_v2"] as? Double {
                     useInlineHLS = value != 0.0
                 }
+                if let value = data["ios_inline_scrubber"] as? Double {
+                    displayInlineScrubber = value != 0.0
+                }
+                if let value = data["ios_inline_continue"] as? Double {
+                    startFromSavedPosition = value != 0.0
+                }
             }
+            
+            /*#if DEBUG
+            if "".isEmpty {
+                displayInlineScrubber = false
+                startFromSavedPosition = false
+            }
+            #endif*/
             
             var nativeSize: CGSize
             
@@ -1940,7 +1955,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         if let strongSelf = self {
                                             if firstTime {
                                                 firstTime = false
-                                                if let videoTimestamp {
+                                                if startFromSavedPosition, let videoTimestamp {
                                                     videoNode.seek(Double(videoTimestamp))
                                                 }
                                             }
@@ -2028,7 +2043,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            if let videoTimestamp, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
+                            if displayInlineScrubber, let videoTimestamp, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
                                 let timestampContainerView: UIView
                                 if let current = strongSelf.timestampContainerView {
                                     timestampContainerView = current

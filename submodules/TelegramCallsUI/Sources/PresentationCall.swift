@@ -399,8 +399,10 @@ public final class PresentationCallImpl: PresentationCall {
         
         if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
             self.sharedAudioContext = nil
-        } else {
+        } else if context.sharedContext.immediateExperimentalUISettings.conferenceCalls {
             self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+        } else {
+            self.sharedAudioContext = nil
         }
         
         if let _ = self.sharedAudioContext {

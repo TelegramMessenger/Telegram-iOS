@@ -2752,7 +2752,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
         #else
-        guard let buildConfig = self.buildConfig, !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
+        guard let buildConfig = self.buildConfig, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty else {
             return
         }
         let timestamp = CFAbsoluteTimeGetCurrent()
