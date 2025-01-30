@@ -107,6 +107,8 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     var hasCoverButton = false
     if case let .channel(channel) = peer, case .broadcast = channel.info {
         hasCoverButton = true
+    } else if peer?.id == context.account.peerId {
+        hasCoverButton = true
     }
     
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
