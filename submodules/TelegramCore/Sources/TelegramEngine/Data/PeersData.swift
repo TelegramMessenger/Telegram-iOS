@@ -2279,8 +2279,8 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
-        public struct StarsReactionDefaultToPrivate: TelegramEngineDataItem, PostboxViewDataItem {
-            public typealias Result = Bool
+        public struct StarsReactionDefaultPrivacy: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = TelegramPaidReactionPrivacy
             
             public init() {
             }
@@ -2291,9 +2291,9 @@ public extension TelegramEngine.EngineData.Item {
             
             func extract(view: PostboxView) -> Result {
                 if let value = (view as? CachedItemView)?.value?.get(StarsReactionDefaultToPrivateData.self) {
-                    return value.isPrivate
+                    return value.privacy
                 } else {
-                    return false
+                    return .default
                 }
             }
         }

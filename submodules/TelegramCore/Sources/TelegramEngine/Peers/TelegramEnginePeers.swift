@@ -95,6 +95,42 @@ public final class TelegramResolvedMessageLink {
     }
 }
 
+public enum TelegramPaidReactionPrivacy: Equatable, Codable {
+    case `default`
+    case anonymous
+    case peer(PeerId)
+    
+    enum CodingKeys: String, CodingKey {
+        case `default` = "d"
+        case anonymous = "a"
+        case peer = "p"
+    }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if try container.decodeNil(forKey: .default) {
+            self = .default
+        } else if try container.decodeNil(forKey: .anonymous) {
+            self = .anonymous
+        } else {
+            let peerId = PeerId(try container.decode(Int64.self, forKey: .peer))
+            self = .peer(peerId)
+        }
+    }
+    
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .default:
+            try container.encodeNil(forKey: .default)
+        case .anonymous:
+            try container.encodeNil(forKey: .anonymous)
+        case let .peer(peerId):
+            try container.encode(peerId.toInt64(), forKey: .peer)
+        }
+    }
+}
+
 public extension TelegramEngine {
     enum NextUnreadChannelLocation: Equatable {
         case same
@@ -1650,9 +1686,9 @@ public extension TelegramEngine {
             }
         }
         
-        public func setStarsReactionDefaultToPrivate(isPrivate: Bool) {
+        public func setStarsReactionDefaultPrivacy(privacy: TelegramPaidReactionPrivacy) {
             let _ = self.account.postbox.transaction({ transaction in
-                _internal_setStarsReactionDefaultToPrivate(isPrivate: isPrivate, transaction: transaction)
+                _internal_setStarsReactionDefaultPrivacy(privacy: privacy, transaction: transaction)
             }).startStandalone()
         }
         

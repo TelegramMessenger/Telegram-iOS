@@ -12,6 +12,18 @@
 
 @end
 
+@implementation MTRequestPendingRecaptchaVerificationData
+
+- (instancetype)initWithSiteKey:(NSString *)siteKey {
+    self = [super init];
+    if (self != nil) {
+        _siteKey = siteKey;
+    }
+    return self;
+}
+
+@end
+
 @implementation MTRequestErrorContext
 
 @end

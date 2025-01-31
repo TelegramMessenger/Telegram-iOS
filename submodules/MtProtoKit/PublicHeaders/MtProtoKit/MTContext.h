@@ -100,7 +100,9 @@
 
 - (void)setDiscoverBackupAddressListSignal:(MTSignal * _Nonnull)signal;
 - (void)setExternalRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull))externalRequestVerification;
+- (void)setExternalRecaptchaRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull, NSString * _Nonnull))externalRecaptchaRequestVerification;
 - (MTSignal * _Nullable)performExternalRequestVerificationWithNonce:(NSString * _Nonnull)nonce;
+- (MTSignal * _Nullable)performExternalRecaptchaRequestVerificationWithMethod:(NSString * _Nonnull)method siteKey:(NSString * _Nonnull)siteKey;
 
 - (NSTimeInterval)globalTime;
 - (NSTimeInterval)globalTimeDifference;

@@ -822,7 +822,6 @@ private final class ChatSendStarsScreenComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let myPeer: EnginePeer
-    let sendAsPeer: EnginePeer
     let channelsForPublicReaction: [EnginePeer]
     let messageId: EngineMessage.Id
     let maxAmount: Int
@@ -830,13 +829,12 @@ private final class ChatSendStarsScreenComponent: Component {
     let currentSentAmount: Int?
     let topPeers: [ChatSendStarsScreen.TopPeer]
     let myTopPeer: ChatSendStarsScreen.TopPeer?
-    let completion: (Int64, Bool, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+    let completion: (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     
     init(
         context: AccountContext,
         peer: EnginePeer,
         myPeer: EnginePeer,
-        sendAsPeer: EnginePeer,
         channelsForPublicReaction: [EnginePeer],
         messageId: EngineMessage.Id,
         maxAmount: Int,
@@ -844,12 +842,11 @@ private final class ChatSendStarsScreenComponent: Component {
         currentSentAmount: Int?,
         topPeers: [ChatSendStarsScreen.TopPeer],
         myTopPeer: ChatSendStarsScreen.TopPeer?,
-        completion: @escaping (Int64, Bool, Bool, ChatSendStarsScreen.TransitionOut) -> Void
+        completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, ChatSendStarsScreen.TransitionOut) -> Void
     ) {
         self.context = context
         self.peer = peer
         self.myPeer = myPeer
-        self.sendAsPeer = sendAsPeer
         self.channelsForPublicReaction = channelsForPublicReaction
         self.messageId = messageId
         self.maxAmount = maxAmount
@@ -868,9 +865,6 @@ private final class ChatSendStarsScreenComponent: Component {
             return false
         }
         if lhs.myPeer != rhs.myPeer {
-            return false
-        }
-        if lhs.sendAsPeer != rhs.sendAsPeer {
             return false
         }
         if lhs.channelsForPublicReaction != rhs.channelsForPublicReaction {
@@ -991,6 +985,12 @@ private final class ChatSendStarsScreenComponent: Component {
         }
     }
     
+    private enum PrivacyPeer: Equatable {
+        case account
+        case anonymous
+        case peer(EnginePeer)
+    }
+    
     final class View: UIView, UIScrollViewDelegate {
         private let dimView: UIView
         private let backgroundLayer: SimpleLayer
@@ -1041,7 +1041,7 @@ private final class ChatSendStarsScreenComponent: Component {
         private var amount: Amount = Amount(realValue: 1, maxRealValue: 1000, maxSliderValue: 1000, isLogarithmic: true)
         private var didChangeAmount: Bool = false
         
-        private var isAnonymous: Bool = false
+        private var privacyPeer: PrivacyPeer = .account
         private var cachedStarImage: (UIImage, PresentationTheme)?
         private var cachedCloseImage: UIImage?
         
@@ -1386,7 +1386,25 @@ private final class ChatSendStarsScreenComponent: Component {
                     if self.currentMyPeer != peer {
                         self.currentMyPeer = peer
                         
-                        let _ = component.context.engine.peers.updatePeerSendAsPeer(peerId: component.peer.id, sendAs: peer.id).startStandalone()
+                        if peer.id == component.context.account.peerId {
+                            self.privacyPeer = .account
+                        } else {
+                            self.privacyPeer = .peer(peer)
+                        }
+                        
+                        if component.myTopPeer != nil {
+                            let mappedPrivacy: TelegramPaidReactionPrivacy
+                            switch self.privacyPeer {
+                            case .account:
+                                mappedPrivacy = .default
+                            case .anonymous:
+                                mappedPrivacy = .anonymous
+                            case let .peer(peer):
+                                mappedPrivacy = .peer(peer.id)
+                            }
+                            
+                            let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: component.messageId, privacy: mappedPrivacy).startStandalone()
+                        }
                     }
                     
                     self.state?.updated(transition: .immediate)
@@ -1421,7 +1439,16 @@ private final class ChatSendStarsScreenComponent: Component {
                 }
                 self.amount = Amount(realValue: 50, maxRealValue: component.maxAmount, maxSliderValue: 999, isLogarithmic: isLogarithmic)
                 if let myTopPeer = component.myTopPeer {
-                    self.isAnonymous = myTopPeer.isAnonymous
+                    if myTopPeer.isAnonymous {
+                        self.privacyPeer = .anonymous
+                    } else if myTopPeer.peer?.id == component.context.account.peerId {
+                        self.privacyPeer = .account
+                    } else if let peer = myTopPeer.peer {
+                        self.privacyPeer = .peer(peer)
+                        self.currentMyPeer = peer
+                    } else {
+                        self.privacyPeer = .account
+                    }
                 }
                 
                 if let starsContext = component.context.starsContext {
@@ -1439,8 +1466,7 @@ private final class ChatSendStarsScreenComponent: Component {
                     })
                 }
                 
-                //TODO:wip-release
-                /*self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
+                self.channelsForPublicReactionDisposable = (component.context.engine.peers.channelsForPublicReaction(useLocalCache: false)
                 |> deliverOnMainQueue).startStrict(next: { [weak self] peers in
                     guard let self else {
                         return
@@ -1449,7 +1475,7 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.channelsForPublicReaction = peers
                         self.state?.updated(transition: .immediate)
                     }
-                })*/
+                })
             }
             
             self.component = component
@@ -1861,9 +1887,19 @@ private final class ChatSendStarsScreenComponent: Component {
                 }
                 myCount += myCountAddition
                 if myCount != 0 {
+                    var topPeer: EnginePeer?
+                    switch self.privacyPeer {
+                    case .anonymous:
+                        topPeer = nil
+                    case .account:
+                        topPeer = component.myPeer
+                    case let .peer(peer):
+                        topPeer = peer
+                    }
+                    
                     mappedTopPeers.append(ChatSendStarsScreen.TopPeer(
                         randomIndex: -1,
-                        peer: self.isAnonymous ? nil : currentMyPeer,
+                        peer: topPeer,
                         isMy: true,
                         count: myCount
                     ))
@@ -2021,7 +2057,7 @@ private final class ChatSendStarsScreenComponent: Component {
                             content: AnyComponent(HStack([
                             AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(CheckComponent(
                                 theme: checkTheme,
-                                selected: !self.isAnonymous
+                                selected: self.privacyPeer != .anonymous
                             ))),
                             AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(
                                 text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_ShowMyselfInTop, font: Font.regular(16.0), textColor: environment.theme.list.itemPrimaryTextColor))
@@ -2034,11 +2070,33 @@ private final class ChatSendStarsScreenComponent: Component {
                             guard let self, let component = self.component else {
                                 return
                             }
-                            self.isAnonymous = !self.isAnonymous
+                            
+                            switch self.privacyPeer {
+                            case .anonymous:
+                                if let currentMyPeer = self.currentMyPeer {
+                                    if currentMyPeer.id == component.context.account.peerId {
+                                        self.privacyPeer = .account
+                                    } else {
+                                        self.privacyPeer = .peer(currentMyPeer)
+                                    }
+                                }
+                            default:
+                                self.privacyPeer = .anonymous
+                            }
                             self.state?.updated(transition: .easeInOut(duration: 0.2))
                             
                             if component.myTopPeer != nil {
-                                let _ = component.context.engine.messages.updateStarsReactionIsAnonymous(id: component.messageId, isAnonymous: self.isAnonymous).startStandalone()
+                                let mappedPrivacy: TelegramPaidReactionPrivacy
+                                switch self.privacyPeer {
+                                case .account:
+                                    mappedPrivacy = .default
+                                case .anonymous:
+                                    mappedPrivacy = .anonymous
+                                case let .peer(peer):
+                                    mappedPrivacy = .peer(peer.id)
+                                }
+                                
+                                let _ = component.context.engine.messages.updateStarsReactionPrivacy(id: component.messageId, privacy: mappedPrivacy).startStandalone()
                             }
                         },
                         animateAlpha: false,
@@ -2132,9 +2190,19 @@ private final class ChatSendStarsScreenComponent: Component {
                             isBecomingTop = true
                         }
                         
+                        let mappedPrivacy: TelegramPaidReactionPrivacy
+                        switch self.privacyPeer {
+                        case .account:
+                            mappedPrivacy = .default
+                        case .anonymous:
+                            mappedPrivacy = .anonymous
+                        case let .peer(peer):
+                            mappedPrivacy = .peer(peer.id)
+                        }
+                        
                         component.completion(
                             Int64(self.amount.realValue),
-                            self.isAnonymous,
+                            mappedPrivacy,
                             isBecomingTop,
                             ChatSendStarsScreen.TransitionOut(
                                 sourceView: badgeView.badgeIcon
@@ -2248,7 +2316,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
         fileprivate let peer: EnginePeer
         fileprivate let myPeer: EnginePeer
-        fileprivate let sendAsPeer: EnginePeer
         fileprivate let channelsForPublicReaction: [EnginePeer]
         fileprivate let messageId: EngineMessage.Id
         fileprivate let balance: StarsAmount?
@@ -2259,7 +2326,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         fileprivate init(
             peer: EnginePeer,
             myPeer: EnginePeer,
-            sendAsPeer: EnginePeer,
             channelsForPublicReaction: [EnginePeer],
             messageId: EngineMessage.Id,
             balance: StarsAmount?,
@@ -2269,7 +2335,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         ) {
             self.peer = peer
             self.myPeer = myPeer
-            self.sendAsPeer = sendAsPeer
             self.channelsForPublicReaction = channelsForPublicReaction
             self.messageId = messageId
             self.balance = balance
@@ -2344,7 +2409,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     
     private var presenceDisposable: Disposable?
     
-    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, Bool, Bool, TransitionOut) -> Void) {
+    public init(context: AccountContext, initialData: InitialData, completion: @escaping (Int64, TelegramPaidReactionPrivacy, Bool, TransitionOut) -> Void) {
         self.context = context
         
         var maxAmount = 2500
@@ -2356,7 +2421,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             context: context,
             peer: initialData.peer,
             myPeer: initialData.myPeer,
-            sendAsPeer: initialData.sendAsPeer,
             channelsForPublicReaction: initialData.channelsForPublicReaction,
             messageId: initialData.messageId,
             maxAmount: maxAmount,
@@ -2420,10 +2484,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             topPeers = Array(topPeers.prefix(3))
         }
         
-        //TODO:wip-release
-        //let channelsForPublicReaction = context.engine.peers.channelsForPublicReaction(useLocalCache: true)
-        let channelsForPublicReaction: Signal<[EnginePeer], NoError> = .single([])
-        let sendAsPeer: Signal<EnginePeer?, NoError> = .single(nil)
+        let channelsForPublicReaction = context.engine.peers.channelsForPublicReaction(useLocalCache: true)
         
         return combineLatest(
             context.engine.data.get(
@@ -2432,10 +2493,9 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 EngineDataMap(allPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
             ),
             balance,
-            sendAsPeer,
             channelsForPublicReaction
         )
-        |> map { peerAndTopPeerMap, balance, sendAsPeer, channelsForPublicReaction -> InitialData? in
+        |> map { peerAndTopPeerMap, balance, channelsForPublicReaction -> InitialData? in
             let (peer, myPeer, topPeerMap) = peerAndTopPeerMap
             guard let peer, let myPeer else {
                 return nil
@@ -2445,7 +2505,6 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             return InitialData(
                 peer: peer,
                 myPeer: myPeer,
-                sendAsPeer: sendAsPeer ?? myPeer,
                 channelsForPublicReaction: channelsForPublicReaction,
                 messageId: messageId,
                 balance: balance,

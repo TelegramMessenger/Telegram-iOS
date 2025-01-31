@@ -391,7 +391,7 @@ extension ChatControllerImpl {
                     return
                 }
                 HapticFeedback().tap()
-                self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, isAnonymous, isBecomingTop, transitionOut in
+                self.push(ChatSendStarsScreen(context: self.context, initialData: initialData, completion: { [weak self] amount, privacy, isBecomingTop, transitionOut in
                     guard let self, amount > 0 else {
                         return
                     }
@@ -485,14 +485,14 @@ extension ChatControllerImpl {
                         }
                     }
                     
-                    let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), isAnonymous: isAnonymous).startStandalone()
-                    self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount), isAnonymous: isAnonymous)
+                    let _ = self.context.engine.messages.sendStarsReaction(id: message.id, count: Int(amount), privacy: privacy).startStandalone()
+                    self.displayOrUpdateSendStarsUndo(messageId: message.id, count: Int(amount), privacy: privacy)
                 }))
             })
         })
     }
     
-    func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int, isAnonymous: Bool) {
+    func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int, privacy: TelegramPaidReactionPrivacy) {
         if self.currentSendStarsUndoMessageId != messageId {
             if let current = self.currentSendStarsUndoController {
                 self.currentSendStarsUndoController = nil
@@ -507,7 +507,7 @@ extension ChatControllerImpl {
         }
         
         let title: String
-        if isAnonymous {
+        if case .anonymous = privacy {
             title = self.presentationData.strings.Chat_ToastStarsSent_AnonymousTitle(Int32(self.currentSendStarsUndoCount))
         } else {
             title = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))

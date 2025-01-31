@@ -13,6 +13,17 @@
 
 @end
 
+@interface MTRequestPendingRecaptchaVerificationData : NSObject
+
+@property (nonatomic, strong, readonly) NSString *siteKey;
+@property (nonatomic, strong) NSString *token;
+@property (nonatomic) bool isResolved;
+@property (nonatomic, strong) id<MTDisposable> disposable;
+
+- (instancetype)initWithSiteKey:(NSString *)siteKey;
+
+@end
+
 @interface MTRequestErrorContext : NSObject
 
 @property (nonatomic) CFAbsoluteTime minimalExecuteTime;
@@ -25,5 +36,6 @@
 @property (nonatomic, strong) id waitingForRequestToComplete;
 
 @property (nonatomic, strong) MTRequestPendingVerificationData *pendingVerificationData;
+@property (nonatomic, strong) MTRequestPendingRecaptchaVerificationData *pendingRecaptchaVerificationData;
 
 @end

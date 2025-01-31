@@ -182,6 +182,7 @@ static MTDatacenterAuthInfoMapKeyStruct parseAuthInfoMapKeyInteger(NSNumber *key
     
     MTSignal *_discoverBackupAddressListSignal;
     MTSignal * _Nonnull (^ _Nullable _externalRequestVerification)(NSString * _Nonnull);
+    MTSignal * _Nonnull (^ _Nullable _externalRecaptchaRequestVerification)(NSString * _Nonnull, NSString * _Nonnull);
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
     NSMutableDictionary<NSNumber *, MTDatacenterAuthAction *> *_datacenterAuthActions;
@@ -533,6 +534,12 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     } synchronous:true];
 }
 
+- (void)setExternalRecaptchaRequestVerification:(MTSignal * _Nonnull (^ _Nonnull)(NSString * _Nonnull, NSString * _Nonnull))externalRecaptchaRequestVerification {
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        _externalRecaptchaRequestVerification = externalRecaptchaRequestVerification;
+    } synchronous:true];
+}
+
 - (MTSignal * _Nullable)performExternalRequestVerificationWithNonce:(NSString * _Nonnull)nonce {
     __block MTSignal * _Nonnull (^ _Nullable externalRequestVerification)(NSString * _Nonnull);
     [[MTContext contextQueue] dispatchOnQueue:^ {
@@ -541,6 +548,19 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
     
     if (externalRequestVerification != nil) {
         return externalRequestVerification(nonce);
+    } else {
+        return [MTSignal single:nil];
+    }
+}
+
+- (MTSignal * _Nullable)performExternalRecaptchaRequestVerificationWithMethod:(NSString * _Nonnull)method siteKey:(NSString * _Nonnull)siteKey {
+    __block MTSignal * _Nonnull (^ _Nullable externalRecaptchaRequestVerification)(NSString * _Nonnull, NSString * _Nonnull);
+    [[MTContext contextQueue] dispatchOnQueue:^ {
+        externalRecaptchaRequestVerification = _externalRecaptchaRequestVerification;
+    } synchronous:true];
+    
+    if (externalRecaptchaRequestVerification != nil) {
+        return externalRecaptchaRequestVerification(method, siteKey);
     } else {
         return [MTSignal single:nil];
     }

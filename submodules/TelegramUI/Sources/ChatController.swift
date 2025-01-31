@@ -1787,12 +1787,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return
                             }
                             
-                            let _ = (strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, isAnonymous: nil)
-                            |> deliverOnMainQueue).startStandalone(next: { isAnonymous in
+                            let _ = (strongSelf.context.engine.messages.sendStarsReaction(id: message.id, count: 1, privacy: nil)
+                            |> deliverOnMainQueue).startStandalone(next: { privacy in
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1, isAnonymous: isAnonymous)
+                                strongSelf.displayOrUpdateSendStarsUndo(messageId: message.id, count: 1, privacy: privacy)
                             })
                         })
                     } else {

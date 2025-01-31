@@ -1,4 +1,88 @@
 public extension Api {
+    enum PhoneCallDiscardReason: TypeConstructorDescription {
+        case phoneCallDiscardReasonAllowGroupCall(encryptedKey: Buffer)
+        case phoneCallDiscardReasonBusy
+        case phoneCallDiscardReasonDisconnect
+        case phoneCallDiscardReasonHangup
+        case phoneCallDiscardReasonMissed
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .phoneCallDiscardReasonAllowGroupCall(let encryptedKey):
+                    if boxed {
+                        buffer.appendInt32(-1344096199)
+                    }
+                    serializeBytes(encryptedKey, buffer: buffer, boxed: false)
+                    break
+                case .phoneCallDiscardReasonBusy:
+                    if boxed {
+                        buffer.appendInt32(-84416311)
+                    }
+                    
+                    break
+                case .phoneCallDiscardReasonDisconnect:
+                    if boxed {
+                        buffer.appendInt32(-527056480)
+                    }
+                    
+                    break
+                case .phoneCallDiscardReasonHangup:
+                    if boxed {
+                        buffer.appendInt32(1471006352)
+                    }
+                    
+                    break
+                case .phoneCallDiscardReasonMissed:
+                    if boxed {
+                        buffer.appendInt32(-2048646399)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .phoneCallDiscardReasonAllowGroupCall(let encryptedKey):
+                return ("phoneCallDiscardReasonAllowGroupCall", [("encryptedKey", encryptedKey as Any)])
+                case .phoneCallDiscardReasonBusy:
+                return ("phoneCallDiscardReasonBusy", [])
+                case .phoneCallDiscardReasonDisconnect:
+                return ("phoneCallDiscardReasonDisconnect", [])
+                case .phoneCallDiscardReasonHangup:
+                return ("phoneCallDiscardReasonHangup", [])
+                case .phoneCallDiscardReasonMissed:
+                return ("phoneCallDiscardReasonMissed", [])
+    }
+    }
+    
+        public static func parse_phoneCallDiscardReasonAllowGroupCall(_ reader: BufferReader) -> PhoneCallDiscardReason? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PhoneCallDiscardReason.phoneCallDiscardReasonAllowGroupCall(encryptedKey: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_phoneCallDiscardReasonBusy(_ reader: BufferReader) -> PhoneCallDiscardReason? {
+            return Api.PhoneCallDiscardReason.phoneCallDiscardReasonBusy
+        }
+        public static func parse_phoneCallDiscardReasonDisconnect(_ reader: BufferReader) -> PhoneCallDiscardReason? {
+            return Api.PhoneCallDiscardReason.phoneCallDiscardReasonDisconnect
+        }
+        public static func parse_phoneCallDiscardReasonHangup(_ reader: BufferReader) -> PhoneCallDiscardReason? {
+            return Api.PhoneCallDiscardReason.phoneCallDiscardReasonHangup
+        }
+        public static func parse_phoneCallDiscardReasonMissed(_ reader: BufferReader) -> PhoneCallDiscardReason? {
+            return Api.PhoneCallDiscardReason.phoneCallDiscardReasonMissed
+        }
+    
+    }
+}
+public extension Api {
     enum PhoneCallProtocol: TypeConstructorDescription {
         case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32, libraryVersions: [String])
     

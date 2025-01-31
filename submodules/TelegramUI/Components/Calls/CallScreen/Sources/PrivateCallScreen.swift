@@ -610,7 +610,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
                 if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden {
                     self.displayEmojiTooltip = true
                     
-                    self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false, block: { [weak self] _ in
+                    self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
                         guard let self else {
                             return
                         }
@@ -959,126 +959,6 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             if let conferenceButtonView = self.conferenceButtonView {
                 self.conferenceButtonView = nil
                 conferenceButtonView.removeFromSuperview()
-            }
-        }
-        
-        if !isConferencePossible, case let .active(activeState) = params.state.lifecycleState {
-            let emojiView: KeyEmojiView
-            var emojiTransition = transition
-            var emojiAlphaTransition = genericAlphaTransition
-            if let current = self.emojiView {
-                emojiView = current
-            } else {
-                emojiTransition = transition.withAnimation(.none)
-                emojiAlphaTransition = genericAlphaTransition.withAnimation(.none)
-                emojiView = KeyEmojiView(emoji: activeState.emojiKey)
-                self.emojiView = emojiView
-                emojiView.pressAction = { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    if !self.isEmojiKeyExpanded {
-                        self.isEmojiKeyExpanded = true
-                        self.displayEmojiTooltip = false
-                        self.update(transition: .spring(duration: 0.4))
-                    }
-                }
-            }
-            if emojiView.superview == nil {
-                self.addSubview(emojiView)
-                if !transition.animation.isImmediate {
-                    emojiView.animateIn()
-                }
-            }
-            emojiView.isUserInteractionEnabled = !self.isEmojiKeyExpanded
-            
-            let emojiViewWasExpanded = emojiView.isExpanded
-            let emojiViewSize = emojiView.update(isExpanded: self.isEmojiKeyExpanded, transition: emojiTransition)
-            
-            if self.isEmojiKeyExpanded {
-                let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: params.insets.top + 93.0), size: emojiViewSize)
-                
-                if case let .curve(duration, curve) = transition.animation, let emojiViewWasExpanded, !emojiViewWasExpanded {
-                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
-                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiView.center, to: emojiViewFrame.center, elevation: -distance.y * 0.8, duration: duration, curve: curve, reverse: false)
-                    emojiView.center = emojiViewFrame.center
-                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
-                } else {
-                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
-                }
-                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
-                if self.isAnimatedOutToGroupCall {
-                    emojiAlphaTransition.setAlpha(view: emojiView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
-                }
-                
-                if let emojiTooltipView = self.emojiTooltipView {
-                    self.emojiTooltipView = nil
-                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
-                        emojiTooltipView?.removeFromSuperview()
-                    })
-                }
-            } else {
-                let emojiY: CGFloat
-                if currentAreControlsHidden {
-                    emojiY = -8.0 - emojiViewSize.height
-                } else {
-                    emojiY = params.insets.top + 12.0
-                }
-                let emojiViewFrame = CGRect(origin: CGPoint(x: params.size.width - params.insets.right - 12.0 - emojiViewSize.width, y: emojiY), size: emojiViewSize)
-                
-                if case let .curve(duration, curve) = transition.animation, let emojiViewWasExpanded, emojiViewWasExpanded {
-                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
-                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiViewFrame.center, to: emojiView.center, elevation: distance.y * 0.8, duration: duration, curve: curve, reverse: true)
-                    emojiView.center = emojiViewFrame.center
-                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
-                } else {
-                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
-                }
-                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
-                emojiAlphaTransition.setAlpha(view: emojiView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
-                
-                if self.displayEmojiTooltip {
-                    let emojiTooltipView: EmojiTooltipView
-                    var emojiTooltipTransition = transition
-                    var animateIn = false
-                    if let current = self.emojiTooltipView {
-                        emojiTooltipView = current
-                    } else {
-                        emojiTooltipTransition = emojiTooltipTransition.withAnimation(.none)
-                        emojiTooltipView = EmojiTooltipView(text: params.state.strings.Call_EncryptionKeyTooltip)
-                        animateIn = true
-                        self.emojiTooltipView = emojiTooltipView
-                        self.addSubview(emojiTooltipView)
-                    }
-                    
-                    let emojiTooltipSize = emojiTooltipView.update(constrainedWidth: params.size.width - 32.0 * 2.0, subjectWidth: emojiViewSize.width - 20.0)
-                    let emojiTooltipFrame = CGRect(origin: CGPoint(x: emojiViewFrame.maxX - emojiTooltipSize.width, y: emojiViewFrame.maxY + 8.0), size: emojiTooltipSize)
-                    emojiTooltipTransition.setFrame(view: emojiTooltipView, frame: emojiTooltipFrame)
-                    
-                    if animateIn && !transition.animation.isImmediate {
-                        emojiTooltipView.animateIn()
-                    }
-                } else if let emojiTooltipView = self.emojiTooltipView {
-                    self.emojiTooltipView = nil
-                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
-                        emojiTooltipView?.removeFromSuperview()
-                    })
-                }
-            }
-            
-            emojiAlphaTransition.setAlpha(view: emojiView, alpha: 1.0)
-        } else {
-            if let emojiView = self.emojiView {
-                self.emojiView = nil
-                genericAlphaTransition.setAlpha(view: emojiView, alpha: 0.0, completion: { [weak emojiView] _ in
-                    emojiView?.removeFromSuperview()
-                })
-            }
-            if let emojiTooltipView = self.emojiTooltipView {
-                self.emojiTooltipView = nil
-                emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
-                    emojiTooltipView?.removeFromSuperview()
-                })
             }
         }
         
@@ -1435,9 +1315,91 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         transition.setFrame(view: self.titleView, frame: titleFrame)
         genericAlphaTransition.setAlpha(view: self.titleView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
         
+        var emojiViewSizeValue: CGSize?
+        var emojiTransition = transition
+        var emojiAlphaTransition = genericAlphaTransition
+        let emojiViewWasExpanded = self.emojiView?.isExpanded ?? false
+        if case let .active(activeState) = params.state.lifecycleState {
+            let emojiView: KeyEmojiView
+            if let current = self.emojiView {
+                emojiView = current
+            } else {
+                emojiTransition = transition.withAnimation(.none)
+                emojiAlphaTransition = genericAlphaTransition.withAnimation(.none)
+                emojiView = KeyEmojiView(emoji: activeState.emojiKey)
+                self.emojiView = emojiView
+                emojiView.pressAction = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    if !self.isEmojiKeyExpanded {
+                        self.isEmojiKeyExpanded = true
+                        self.displayEmojiTooltip = false
+                        self.update(transition: .spring(duration: 0.4))
+                    }
+                }
+            }
+            if emojiView.superview == nil {
+                self.addSubview(emojiView)
+                if !transition.animation.isImmediate {
+                    emojiView.animateIn()
+                }
+            }
+            emojiView.isUserInteractionEnabled = !self.isEmojiKeyExpanded
+            
+            let emojiViewSize = emojiView.update(isExpanded: self.isEmojiKeyExpanded, transition: emojiTransition)
+            emojiViewSizeValue = emojiViewSize
+            
+            if self.isEmojiKeyExpanded {
+                let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: params.insets.top + 93.0), size: emojiViewSize)
+                
+                if case let .curve(duration, curve) = transition.animation, !emojiViewWasExpanded {
+                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
+                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiView.center, to: emojiViewFrame.center, elevation: -distance.y * 0.8, duration: duration, curve: curve, reverse: false)
+                    emojiView.center = emojiViewFrame.center
+                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
+                } else {
+                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
+                }
+                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
+                if self.isAnimatedOutToGroupCall {
+                    emojiAlphaTransition.setAlpha(view: emojiView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+                }
+                
+                if let emojiTooltipView = self.emojiTooltipView {
+                    self.emojiTooltipView = nil
+                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                        emojiTooltipView?.removeFromSuperview()
+                    })
+                }
+            } else {
+                // Inline mode handled after calculating status frame
+            }
+            
+            emojiAlphaTransition.setAlpha(view: emojiView, alpha: 1.0)
+        } else {
+            if let emojiView = self.emojiView {
+                self.emojiView = nil
+                genericAlphaTransition.setAlpha(view: emojiView, alpha: 0.0, completion: { [weak emojiView] _ in
+                    emojiView?.removeFromSuperview()
+                })
+            }
+            if let emojiTooltipView = self.emojiTooltipView {
+                self.emojiTooltipView = nil
+                emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                    emojiTooltipView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        var statusEmojiWidth: CGFloat = 0.0
+        let statusEmojiSpacing: CGFloat = 8.0
+        if !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
+            statusEmojiWidth = statusEmojiSpacing + emojiViewSize.width
+        }
         let statusFrame = CGRect(
             origin: CGPoint(
-                x: (params.size.width - statusSize.width) * 0.5,
+                x: (params.size.width - statusSize.width - statusEmojiWidth) * 0.5,
                 y: titleFrame.maxY + (havePrimaryVideo ? 0.0 : 4.0)
             ),
             size: statusSize
@@ -1453,6 +1415,51 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         } else {
             transition.setFrame(view: self.statusView, frame: statusFrame)
             genericAlphaTransition.setAlpha(view: self.statusView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+        }
+        
+        if case .active = params.state.lifecycleState {
+            if let emojiView = self.emojiView, !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
+                let emojiViewFrame = CGRect(origin: CGPoint(x: statusFrame.maxX + statusEmojiSpacing, y: statusFrame.minY + floorToScreenPixels((statusFrame.height - emojiViewSize.height) * 0.5)), size: emojiViewSize)
+                
+                if case let .curve(duration, curve) = transition.animation, emojiViewWasExpanded {
+                    let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)
+                    let positionKeyframes = generateParabollicMotionKeyframes(from: emojiViewFrame.center, to: emojiView.center, elevation: distance.y * 0.8, duration: duration, curve: curve, reverse: true)
+                    emojiView.center = emojiViewFrame.center
+                    emojiView.layer.animateKeyframes(values: positionKeyframes.map { NSValue(cgPoint: $0) }, duration: duration, keyPath: "position", additive: false)
+                } else {
+                    emojiTransition.setPosition(view: emojiView, position: emojiViewFrame.center)
+                }
+                emojiTransition.setBounds(view: emojiView, bounds: CGRect(origin: CGPoint(), size: emojiViewFrame.size))
+                emojiAlphaTransition.setAlpha(view: emojiView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+                
+                if self.displayEmojiTooltip {
+                    let emojiTooltipView: EmojiTooltipView
+                    var emojiTooltipTransition = transition
+                    var animateIn = false
+                    if let current = self.emojiTooltipView {
+                        emojiTooltipView = current
+                    } else {
+                        emojiTooltipTransition = emojiTooltipTransition.withAnimation(.none)
+                        emojiTooltipView = EmojiTooltipView(text: params.state.strings.Call_EncryptionKeyTooltip)
+                        animateIn = true
+                        self.emojiTooltipView = emojiTooltipView
+                        self.addSubview(emojiTooltipView)
+                    }
+                    
+                    let emojiTooltipSize = emojiTooltipView.update(constrainedWidth: params.size.width - 32.0 * 2.0, subjectWidth: emojiViewSize.width * 0.5)
+                    let emojiTooltipFrame = CGRect(origin: CGPoint(x: emojiViewFrame.minX + floor((emojiViewFrame.width - emojiTooltipSize.width) * 0.5), y: emojiViewFrame.maxY + 8.0), size: emojiTooltipSize)
+                    emojiTooltipTransition.setFrame(view: emojiTooltipView, frame: emojiTooltipFrame)
+                    
+                    if animateIn && !transition.animation.isImmediate {
+                        emojiTooltipView.animateIn()
+                    }
+                } else if let emojiTooltipView = self.emojiTooltipView {
+                    self.emojiTooltipView = nil
+                    emojiTooltipView.animateOut(completion: { [weak emojiTooltipView] in
+                        emojiTooltipView?.removeFromSuperview()
+                    })
+                }
+            }
         }
         
         if case let .active(activeState) = params.state.lifecycleState, activeState.signalInfo.quality <= 0.2, !self.isEmojiKeyExpanded, (!self.displayEmojiTooltip || !havePrimaryVideo) {

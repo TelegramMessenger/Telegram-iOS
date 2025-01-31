@@ -1803,8 +1803,34 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.updateStarsBalance(peerId: accountPeerId, balance: balance)
             case let .updateStarsRevenueStatus(peer, status):
                 updatedState.updateStarsRevenueStatus(peerId: peer.peerId, status: StarsRevenueStats.Balances(apiStarsRevenueStatus: status))
-            case let .updatePaidReactionPrivacy(isPrivate):
-                updatedState.updateStarsReactionsAreAnonymousByDefault(isAnonymous: isPrivate == .boolTrue)
+            case let .updatePaidReactionPrivacy(privacy):
+                let mappedPrivacy: TelegramPaidReactionPrivacy
+                switch privacy {
+                case .paidReactionPrivacyDefault:
+                    mappedPrivacy = .default
+                case .paidReactionPrivacyAnonymous:
+                    mappedPrivacy = .anonymous
+                case let .paidReactionPrivacyPeer(peer):
+                    let peerId: PeerId
+                    switch peer {
+                    case let .inputPeerChannel(channelId, _):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    case let .inputPeerChannelFromMessage(_, _, channelId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    case let .inputPeerChat(chatId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                    case .inputPeerEmpty:
+                        peerId = accountPeerId
+                    case .inputPeerSelf:
+                        peerId = accountPeerId
+                    case let .inputPeerUser(userId, _):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    case let .inputPeerUserFromMessage(_, _, userId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    }
+                    mappedPrivacy = .peer(peerId)
+                }
+                updatedState.updateStarsReactionsDefaultPrivacy(privacy: mappedPrivacy)
             default:
                 break
         }
@@ -3296,7 +3322,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddQuickReplyMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsAreAnonymousByDefault, .ReportMessageDelivery:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedSavedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic, .UpdateStory, .UpdateReadStories, .UpdateStoryStealthMode, .UpdateStorySentReaction, .UpdateNewAuthorization, .UpdateWallpaper, .UpdateRevenueBalances, .UpdateStarsBalance, .UpdateStarsRevenueStatus, .UpdateStarsReactionsDefaultPrivacy, .ReportMessageDelivery:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3434,7 +3460,7 @@ func replayFinalState(
     var updatedRevenueBalances: [PeerId: RevenueStats.Balances] = [:]
     var updatedStarsBalance: [PeerId: StarsAmount] = [:]
     var updatedStarsRevenueStatus: [PeerId: StarsRevenueStats.Balances] = [:]
-    var updatedStarsReactionsAreAnonymousByDefault: Bool?
+    var updatedStarsReactionsDefaultPrivacy: TelegramPaidReactionPrivacy?
     var reportMessageDelivery = Set<MessageId>()
     
     var holesFromPreviousStateMessageIds: [MessageId] = []
@@ -4868,8 +4894,8 @@ func replayFinalState(
                 updatedStarsBalance[peerId] = StarsAmount(apiAmount: balance)
             case let .UpdateStarsRevenueStatus(peerId, status):
                 updatedStarsRevenueStatus[peerId] = status
-            case let .UpdateStarsReactionsAreAnonymousByDefault(value):
-                updatedStarsReactionsAreAnonymousByDefault = value
+            case let .UpdateStarsReactionsDefaultPrivacy(value):
+                updatedStarsReactionsDefaultPrivacy = value
             case let .ReportMessageDelivery(messageIds):
                 reportMessageDelivery = Set(messageIds)
         }
@@ -5366,8 +5392,8 @@ func replayFinalState(
         }
     }
     
-    if let updatedStarsReactionsAreAnonymousByDefault {
-        _internal_setStarsReactionDefaultToPrivate(isPrivate: updatedStarsReactionsAreAnonymousByDefault, transaction: transaction)
+    if let updatedStarsReactionsDefaultPrivacy {
+        _internal_setStarsReactionDefaultPrivacy(privacy: updatedStarsReactionsDefaultPrivacy, transaction: transaction)
     }
     
     return AccountReplayedFinalState(

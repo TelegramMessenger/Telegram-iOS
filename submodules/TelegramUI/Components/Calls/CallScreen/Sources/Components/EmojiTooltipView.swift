@@ -67,7 +67,7 @@ final class EmojiTooltipView: OverlayMaskContainerView {
     }
     
     func animateIn() {
-        let anchorPoint = CGPoint(x: self.bounds.width - 46.0, y: 0.0)
+        let anchorPoint = CGPoint(x: self.bounds.width * 0.5, y: 0.0)
         
         self.layer.animateSpring(from: 0.001 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -75,7 +75,7 @@ final class EmojiTooltipView: OverlayMaskContainerView {
     }
     
     func animateOut(completion: @escaping () -> Void) {
-        let anchorPoint = CGPoint(x: self.bounds.width - 46.0, y: 0.0)
+        let anchorPoint = CGPoint(x: self.bounds.width * 0.5, y: 0.0)
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
             completion()
         })
@@ -126,7 +126,7 @@ final class EmojiTooltipView: OverlayMaskContainerView {
             addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(x: 0.0, y: arrowHeight), size: CGSize(width: size.width, height: size.height - arrowHeight)), radius: 14.0)
             context.fillPath()
             
-            context.translateBy(x: size.width - floor(params.subjectWidth * 0.5) - 20.0, y: 0.0)
+            context.translateBy(x: size.width * 0.5 - 10.0, y: 0.0)
             let _ = try? drawSvgPath(context, path: "M9.0981,1.1979 C9.547,0.6431 10.453,0.6431 10.9019,1.1979 C12.4041,3.0542 15.6848,6.5616 20,8 H-0.0002 C4.3151,6.5616 7.5959,3.0542 9.0981,1.1978 Z ")
         })
         self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)

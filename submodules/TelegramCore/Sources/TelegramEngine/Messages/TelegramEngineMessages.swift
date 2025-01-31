@@ -337,8 +337,8 @@ public extension TelegramEngine {
             ).startStandalone()
         }
         
-        public func sendStarsReaction(id: EngineMessage.Id, count: Int, isAnonymous: Bool?) -> Signal<Bool, NoError> {
-            return _internal_sendStarsReactionsInteractively(account: self.account, messageId: id, count: count, isAnonymous: isAnonymous)
+        public func sendStarsReaction(id: EngineMessage.Id, count: Int, privacy: TelegramPaidReactionPrivacy?) -> Signal<TelegramPaidReactionPrivacy, NoError> {
+            return _internal_sendStarsReactionsInteractively(account: self.account, messageId: id, count: count, privacy: privacy)
         }
         
         public func cancelPendingSendStarsReaction(id: EngineMessage.Id) {
@@ -349,8 +349,8 @@ public extension TelegramEngine {
             let _ = _internal_forceSendPendingSendStarsReaction(account: self.account, messageId: id).startStandalone()
         }
         
-        public func updateStarsReactionIsAnonymous(id: EngineMessage.Id, isAnonymous: Bool) -> Signal<Never, NoError> {
-            return _internal_updateStarsReactionIsAnonymous(account: self.account, messageId: id, isAnonymous: isAnonymous)
+        public func updateStarsReactionPrivacy(id: EngineMessage.Id, privacy: TelegramPaidReactionPrivacy) -> Signal<Never, NoError> {
+            return _internal_updateStarsReactionPrivacy(account: self.account, messageId: id, privacy: privacy)
         }
 
         public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {

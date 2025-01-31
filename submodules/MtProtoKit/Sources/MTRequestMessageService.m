@@ -45,6 +45,24 @@
 
 @end
 
+@interface MTRequestRecaptchaVerificationData : NSObject
+
+@property (nonatomic, strong, readonly) NSString *token;
+
+@end
+
+@implementation MTRequestRecaptchaVerificationData
+
+- (instancetype)initWithToken:(NSString *)token {
+    self = [super init];
+    if (self != nil) {
+        _token = token;
+    }
+    return self;
+}
+
+@end
+
 @interface MTRequestMessageService ()
 {
     MTContext *_context;
@@ -402,7 +420,7 @@
     }
 }
 
-- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi requestVerificationData:(MTRequestVerificationData *)requestVerificationData unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
+- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi requestVerificationData:(MTRequestVerificationData *)requestVerificationData recaptchaVerificationData:(MTRequestRecaptchaVerificationData *)recaptchaVerificationData unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId decoratedDebugDescription:(__autoreleasing NSString **)decoratedDebugDescription
 {
     NSData *currentData = request.payload;
     
@@ -514,6 +532,18 @@
         debugDescription = [debugDescription stringByAppendingFormat:@", apnsSecret(%@, %@)", requestVerificationData.nonce, requestVerificationData.secret];
     }
     
+    if (recaptchaVerificationData != nil) {
+        MTBuffer *buffer = [[MTBuffer alloc] init];
+        
+        [buffer appendInt32:(int32_t)0xadbb0f94];
+        [buffer appendTLString:recaptchaVerificationData.token];
+
+        [buffer appendBytes:currentData.bytes length:currentData.length];
+        currentData = buffer.data;
+        
+        debugDescription = [debugDescription stringByAppendingFormat:@", recaptcha(%@)", recaptchaVerificationData.token];
+    }
+    
     if (decoratedDebugDescription != nil) {
         *decoratedDebugDescription = debugDescription;
     }
@@ -545,6 +575,11 @@
             }
             if (request.errorContext.pendingVerificationData != nil) {
                 if (!request.errorContext.pendingVerificationData.isResolved) {
+                    continue;
+                }
+            }
+            if (request.errorContext.pendingRecaptchaVerificationData != nil) {
+                if (!request.errorContext.pendingRecaptchaVerificationData.isResolved) {
                     continue;
                 }
             }
@@ -588,7 +623,16 @@
                 }
             }
             
-            NSData *decoratedRequestData = [self decorateRequestData:request initializeApi:requestsWillInitializeApi requestVerificationData:requestVerificationData unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId decoratedDebugDescription:&decoratedDebugDescription];
+            MTRequestRecaptchaVerificationData *recaptchaVerificationData = nil;
+            if (request.errorContext != nil) {
+                if (request.errorContext.pendingRecaptchaVerificationData != nil) {
+                    if (request.errorContext.pendingRecaptchaVerificationData.isResolved) {
+                        recaptchaVerificationData = [[MTRequestRecaptchaVerificationData alloc] initWithToken:request.errorContext.pendingRecaptchaVerificationData.token];
+                    }
+                }
+            }
+            
+            NSData *decoratedRequestData = [self decorateRequestData:request initializeApi:requestsWillInitializeApi requestVerificationData:requestVerificationData recaptchaVerificationData:recaptchaVerificationData unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId decoratedDebugDescription:&decoratedDebugDescription];
             
             MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:decoratedRequestData metadata:request.metadata additionalDebugDescription:decoratedDebugDescription shortMetadata:request.shortMetadata messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
@@ -950,6 +994,45 @@
                             }];
                             
                             restartRequest = true;
+                        } else if (rpcError.errorCode == 403 && [rpcError.errorDescription rangeOfString:@"RECAPTCHA_CHECK_"].location != NSNotFound) {
+                            NSString *checkData = [rpcError.errorDescription substringFromIndex:[@"RECAPTCHA_CHECK_" length]];
+                            
+                            NSRange separatorRange = [checkData rangeOfString:@"__"];
+                            NSString *method = nil;
+                            NSString *siteKey = nil;
+                            if (separatorRange.location != NSNotFound) {
+                                method = [checkData substringToIndex:separatorRange.location];
+                                siteKey = [checkData substringFromIndex:separatorRange.location + separatorRange.length];
+                            }
+                            
+                            if (method != nil && siteKey != nil) {
+                                if (request.errorContext == nil) {
+                                    request.errorContext = [[MTRequestErrorContext alloc] init];
+                                }
+                                
+                                request.errorContext.pendingRecaptchaVerificationData = [[MTRequestPendingRecaptchaVerificationData alloc] initWithSiteKey:siteKey];
+                                
+                                __weak MTRequestMessageService *weakSelf = self;
+                                MTQueue *queue = _queue;
+                                id requestId = request.internalId;
+                                request.errorContext.pendingRecaptchaVerificationData.disposable = [[_context performExternalRecaptchaRequestVerificationWithMethod:method siteKey:siteKey] startWithNext:^(id result) {
+                                    [queue dispatchOnQueue:^{
+                                        __strong MTRequestMessageService *strongSelf = weakSelf;
+                                        if (!strongSelf) {
+                                            return;
+                                        }
+                                        for (MTRequest *request in strongSelf->_requests) {
+                                            if (request.internalId == requestId) {
+                                                request.errorContext.pendingRecaptchaVerificationData.token = result;
+                                                request.errorContext.pendingRecaptchaVerificationData.isResolved = true;
+                                            }
+                                        }
+                                        [strongSelf->_mtProto requestTransportTransaction];
+                                    }];
+                                }];
+                                
+                                restartRequest = true;
+                            }
                         } else if (rpcError.errorCode == 406) {
                             if (_didReceiveSoftAuthResetError) {
                                 _didReceiveSoftAuthResetError();
