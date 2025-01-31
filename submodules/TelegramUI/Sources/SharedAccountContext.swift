@@ -807,12 +807,32 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
                     
                 if call !== self.call {
+                    let previousCall = self.call
                     self.call = call
                     
                     self.callController?.dismiss()
                     self.callController = nil
                     self.hasOngoingCall.set(false)
                     self.callState.set(.single(nil))
+                    
+                    if let previousCall, let groupCallController = self.groupCallController {
+                        var matches = false
+                        switch groupCallController.call {
+                        case let .conferenceSource(conferenceSource):
+                            if conferenceSource === previousCall {
+                                matches = true
+                            }
+                        case let .group(groupCall):
+                            if (groupCall as? PresentationGroupCallImpl)?.upgradedConferenceCall === previousCall {
+                                matches = true
+                            }
+                        }
+                        
+                        if matches {
+                            self.groupCallController = nil
+                            groupCallController.dismiss(closing: true, manual: false)
+                        }
+                    }
                     
                     self.notificationController?.setBlocking(nil)
                     
@@ -822,7 +842,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     self.callIsConferenceDisposable = nil
                     
                     if let call {
-                        if call.conferenceCall == nil {
+                        if call.conferenceStateValue == nil && call.conferenceCall == nil {
                             self.callState.set(call.state
                             |> map(Optional.init))
                         }
@@ -841,6 +861,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 return
                             }
                             guard let callController = self.callController, callController.call === call else {
+                                if self.callController == nil, call.conferenceStateValue != nil {
+                                    self.callState.set(.single(nil))
+                                    self.presentControllerWithCurrentCall()
+                                    self.notificationController?.setBlocking(nil)
+                                }
                                 return
                             }
                             if call.conferenceStateValue != nil {

@@ -483,12 +483,25 @@ public final class CallController: ViewController {
     }
     
     private func conferenceAddParticipant() {
+        var disablePeerIds: [EnginePeer.Id] = []
+        disablePeerIds.append(self.call.context.account.peerId)
+        disablePeerIds.append(self.call.peerId)
+        let controller = CallController.openConferenceAddParticipant(context: self.call.context, disablePeerIds: disablePeerIds, completion: { [weak self] peerIds in
+            guard let self else {
+                return
+            }
+            
+            let _ = self.call.upgradeToConference(invitePeerIds: peerIds, completion: { _ in
+            })
+        })
+        self.push(controller)
+    }
+    
+    static func openConferenceAddParticipant(context: AccountContext, disablePeerIds: [EnginePeer.Id], completion: @escaping ([EnginePeer.Id]) -> Void) -> ViewController {
         //TODO:localize
-        let context = self.call.context
-        let callPeerId = self.call.peerId
         let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
-        let controller = self.call.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
-            context: self.call.context,
+        let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
+            context: context,
             updatedPresentationData: (initial: presentationData, signal: .single(presentationData)),
             title: "Invite Members",
             mode: .peerSelection(searchChatList: true, searchGroups: false, searchChannels: false),
@@ -496,7 +509,7 @@ public final class CallController: ViewController {
                 guard case let .user(user) = peer else {
                     return false
                 }
-                if user.id == context.account.peerId || user.id == callPeerId {
+                if disablePeerIds.contains(user.id) {
                     return false
                 }
                 if user.botInfo != nil {
@@ -506,11 +519,7 @@ public final class CallController: ViewController {
             }
         ))
         controller.navigationPresentation = .modal
-        let _ = (controller.result |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak self, weak controller] result in
-            guard let self else {
-                controller?.dismiss()
-                return
-            }
+        let _ = (controller.result |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak controller] result in
             guard case let .result(peerIds, _) = result else {
                 controller?.dismiss()
                 return
@@ -532,11 +541,10 @@ public final class CallController: ViewController {
                 }
             }
             
-            let _ = self.call.upgradeToConference(invitePeerIds: invitePeerIds, completion: { _ in
-            })
+            completion(invitePeerIds)
         })
         
-        self.push(controller)
+        return controller
     }
     
     @objc private func backPressed() {

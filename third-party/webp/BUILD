@@ -56,7 +56,7 @@ genrule(
 
     mkdir -p "$$BUILD_DIR/Public/libwebp"
 
-    PATH="$$PATH:$$CMAKE_DIR/cmake-3.23.1-macos-universal/CMake.app/Contents/bin" sh $$BUILD_DIR/build-webp-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/libwebp" "$$BUILD_DIR"
+    PATH="$$PATH:$$CMAKE_DIR/cmake-3.23.1-macos-universal/CMake.app/Contents/bin" sh $$BUILD_DIR/build-webp-bazel.sh $$BUILD_ARCH "$$BUILD_DIR/libwebp" "$$BUILD_DIR" >/dev/null 2>&1
     """ +
     "\n".join([
         "cp -f \"$$BUILD_DIR/libwebp/src/webp/{}\" \"$(location Public/webp/{})\"".format(header, header) for header in headers

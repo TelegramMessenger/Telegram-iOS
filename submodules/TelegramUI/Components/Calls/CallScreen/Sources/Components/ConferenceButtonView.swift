@@ -91,7 +91,7 @@ final class ConferenceButtonView: HighlightTrackingButton, OverlayMaskContainerV
         transition.setFrame(view: self.backdropBackgroundView, frame: CGRect(origin: CGPoint(), size: params.size))
         
         if self.iconView.image == nil {
-            self.iconView.image = UIImage(bundleImageName: "Contact List/AddMemberIcon")?.withRenderingMode(.alwaysTemplate)
+            self.iconView.image = UIImage(bundleImageName: "Call/CallNavigationAddPerson")?.withRenderingMode(.alwaysTemplate)
             self.iconView.tintColor = .white
         }
         

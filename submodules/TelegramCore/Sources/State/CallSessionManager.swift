@@ -137,6 +137,7 @@ public struct CallSessionRingingState: Equatable {
     public let peerId: PeerId
     public let isVideo: Bool
     public let isVideoPossible: Bool
+    public let isConference: Bool
 }
 
 public enum DropCallReason {
@@ -334,6 +335,7 @@ private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.
 private final class CallSessionContext {
     let peerId: PeerId
     let isOutgoing: Bool
+    let isConference: Bool
     var type: CallSession.CallType
     var isVideoPossible: Bool
     let pendingConference: (conference: GroupCallReference, encryptionKey: Data)?
@@ -353,9 +355,10 @@ private final class CallSessionContext {
         }
     }
     
-    init(peerId: PeerId, isOutgoing: Bool, type: CallSession.CallType, isVideoPossible: Bool, pendingConference: (conference: GroupCallReference, encryptionKey: Data)?, state: CallSessionInternalState) {
+    init(peerId: PeerId, isOutgoing: Bool, isConference: Bool, type: CallSession.CallType, isVideoPossible: Bool, pendingConference: (conference: GroupCallReference, encryptionKey: Data)?, state: CallSessionInternalState) {
         self.peerId = peerId
         self.isOutgoing = isOutgoing
+        self.isConference = isConference
         self.type = type
         self.isVideoPossible = isVideoPossible
         self.pendingConference = pendingConference
@@ -547,7 +550,13 @@ private final class CallSessionManagerContext {
         var ringingContexts: [CallSessionRingingState] = []
         for (id, context) in self.contexts {
             if case .ringing = context.state {
-                ringingContexts.append(CallSessionRingingState(id: id, peerId: context.peerId, isVideo: context.type == .video, isVideoPossible: context.isVideoPossible))
+                ringingContexts.append(CallSessionRingingState(
+                    id: id,
+                    peerId: context.peerId,
+                    isVideo: context.type == .video,
+                    isVideoPossible: context.isVideoPossible,
+                    isConference: context.isConference
+                ))
             }
         }
         return ringingContexts
@@ -590,7 +599,7 @@ private final class CallSessionManagerContext {
             //#endif
             
             let internalId = CallSessionManager.getStableIncomingUUID(stableId: stableId)
-            let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, pendingConference: nil, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions, conferenceCall: conferenceCall))
+            let context = CallSessionContext(peerId: peerId, isOutgoing: false, isConference: conferenceCall != nil, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, pendingConference: nil, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions, conferenceCall: conferenceCall))
             self.contexts[internalId] = context
             let queue = self.queue
             
@@ -1164,7 +1173,7 @@ private final class CallSessionManagerContext {
         let randomStatus = SecRandomCopyBytes(nil, 256, aBytes.assumingMemoryBound(to: UInt8.self))
         let a = Data(bytesNoCopy: aBytes, count: 256, deallocator: .free)
         if randomStatus == 0 {
-            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, type: isVideo ? .video : .audio, isVideoPossible: enableVideo || isVideo, pendingConference: conferenceCall, state: .requesting(a: a, conferenceCall: conferenceCall?.conference, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a, maxLayer: self.maxLayer, versions: self.filteredVersions(enableVideo: true), isVideo: isVideo, conferenceCall: conferenceCall?.conference) |> deliverOn(queue)).start(next: { [weak self] result in
+            self.contexts[internalId] = CallSessionContext(peerId: peerId, isOutgoing: true, isConference: conferenceCall != nil, type: isVideo ? .video : .audio, isVideoPossible: enableVideo || isVideo, pendingConference: conferenceCall, state: .requesting(a: a, conferenceCall: conferenceCall?.conference, disposable: (requestCallSession(postbox: self.postbox, network: self.network, peerId: peerId, a: a, maxLayer: self.maxLayer, versions: self.filteredVersions(enableVideo: true), isVideo: isVideo, conferenceCall: conferenceCall?.conference) |> deliverOn(queue)).start(next: { [weak self] result in
                 if let strongSelf = self, let context = strongSelf.contexts[internalId] {
                     if case .requesting = context.state {
                         switch result {

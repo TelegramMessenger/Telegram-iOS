@@ -1609,15 +1609,19 @@ final class VideoChatScreenComponent: Component {
             if let members = self.members, let callState = self.callState {
                 var canInvite = true
                 var inviteIsLink = false
-                if case let .channel(peer) = self.peer {
-                    if peer.flags.contains(.isGigagroup) {
-                        if peer.flags.contains(.isCreator) || peer.adminRights != nil {
-                        } else {
-                            canInvite = false
+                if case let .group(groupCall) = self.currentCall, groupCall.isConference {
+                    canInvite = true
+                } else {
+                    if case let .channel(peer) = self.peer {
+                        if peer.flags.contains(.isGigagroup) {
+                            if peer.flags.contains(.isCreator) || peer.adminRights != nil {
+                            } else {
+                                canInvite = false
+                            }
                         }
-                    }
-                    if case .broadcast = peer.info, !(peer.addressName?.isEmpty ?? true) {
-                        inviteIsLink = true
+                        if case .broadcast = peer.info, !(peer.addressName?.isEmpty ?? true) {
+                            inviteIsLink = true
+                        }
                     }
                 }
                 var inviteType: VideoChatParticipantsComponent.Participants.InviteType?

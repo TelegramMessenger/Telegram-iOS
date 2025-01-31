@@ -90,6 +90,7 @@ public:
                 _audioDeviceModule->StopPlayout();
                 _audioDeviceModule->StopRecording();
             }
+            _audioDeviceModule->ActualTerminate();
             _audioDeviceModule = nullptr;
         } else {
             tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
@@ -97,6 +98,7 @@ public:
                     _audioDeviceModule->StopPlayout();
                     _audioDeviceModule->StopRecording();
                 }
+                _audioDeviceModule->ActualTerminate();
                 _audioDeviceModule = nullptr;
             });
         }
