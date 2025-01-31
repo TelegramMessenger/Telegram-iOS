@@ -38,6 +38,8 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.reminder = peer.id == context.account.peerId
     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
         controller.hasCoverButton = true
+    } else if peer.id == context.account.peerId {
+        controller.hasCoverButton = true
     }
     controller.presentScheduleController = { media, done in
         presentSchedulePicker(media, { time in
