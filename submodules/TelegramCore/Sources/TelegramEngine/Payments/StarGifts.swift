@@ -615,7 +615,7 @@ extension StarGift {
                 return nil
             }
             self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
-        case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, ownerAddress, attributes, availabilityIssued, availabilityTotal):
+        case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, ownerAddress, attributes, availabilityIssued, availabilityTotal, _):
             let owner: StarGift.UniqueGift.Owner
             if let ownerAddress {
                 owner = .address(ownerAddress)

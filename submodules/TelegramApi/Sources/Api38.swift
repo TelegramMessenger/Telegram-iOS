@@ -8152,9 +8152,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendPaidReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, count: Int32, randomId: Int64, `private`: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendPaidReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, count: Int32, randomId: Int64, `private`: Api.PaidReactionPrivacy?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1646877061)
+                    buffer.appendInt32(1488702288)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
@@ -8664,9 +8664,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func togglePaidReactionPrivacy(peer: Api.InputPeer, msgId: Int32, `private`: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func togglePaidReactionPrivacy(peer: Api.InputPeer, msgId: Int32, `private`: Api.PaidReactionPrivacy) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-2070228073)
+                    buffer.appendInt32(1129874869)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     `private`.serialize(buffer, true)

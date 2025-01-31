@@ -715,6 +715,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1282352120] = { return Api.PageRelatedArticle.parse_pageRelatedArticle($0) }
     dict[878078826] = { return Api.PageTableCell.parse_pageTableCell($0) }
     dict[-524237339] = { return Api.PageTableRow.parse_pageTableRow($0) }
+    dict[520887001] = { return Api.PaidReactionPrivacy.parse_paidReactionPrivacyAnonymous($0) }
+    dict[543872158] = { return Api.PaidReactionPrivacy.parse_paidReactionPrivacyDefault($0) }
+    dict[-596837136] = { return Api.PaidReactionPrivacy.parse_paidReactionPrivacyPeer($0) }
     dict[982592842] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoSHA256SHA256PBKDF2HMACSHA512iter100000SHA256ModPow($0) }
     dict[-732254058] = { return Api.PasswordKdfAlgo.parse_passwordKdfAlgoUnknown($0) }
     dict[-368917890] = { return Api.PaymentCharge.parse_paymentCharge($0) }
@@ -914,7 +917,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
     dict[46953416] = { return Api.StarGift.parse_starGift($0) }
-    dict[-218202550] = { return Api.StarGift.parse_starGiftUnique($0) }
+    dict[1549979985] = { return Api.StarGift.parse_starGiftUnique($0) }
     dict[-1809377438] = { return Api.StarGiftAttribute.parse_starGiftAttributeBackdrop($0) }
     dict[970559507] = { return Api.StarGiftAttribute.parse_starGiftAttributeModel($0) }
     dict[-524291476] = { return Api.StarGiftAttribute.parse_starGiftAttributeOriginalDetails($0) }
@@ -1068,7 +1071,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1753886890] = { return Api.Update.parse_updateNewStickerSet($0) }
     dict[405070859] = { return Api.Update.parse_updateNewStoryReaction($0) }
     dict[-1094555409] = { return Api.Update.parse_updateNotifySettings($0) }
-    dict[1372224236] = { return Api.Update.parse_updatePaidReactionPrivacy($0) }
+    dict[-1955438642] = { return Api.Update.parse_updatePaidReactionPrivacy($0) }
     dict[-337610926] = { return Api.Update.parse_updatePeerBlocked($0) }
     dict[-1147422299] = { return Api.Update.parse_updatePeerHistoryTTL($0) }
     dict[-1263546448] = { return Api.Update.parse_updatePeerLocated($0) }
@@ -1939,6 +1942,8 @@ public extension Api {
             case let _1 as Api.PageTableCell:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PageTableRow:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PaidReactionPrivacy:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PasswordKdfAlgo:
                 _1.serialize(buffer, boxed)

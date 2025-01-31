@@ -1069,7 +1069,7 @@ public extension Api {
         case updateNewStickerSet(stickerset: Api.messages.StickerSet)
         case updateNewStoryReaction(storyId: Int32, peer: Api.Peer, reaction: Api.Reaction)
         case updateNotifySettings(peer: Api.NotifyPeer, notifySettings: Api.PeerNotifySettings)
-        case updatePaidReactionPrivacy(private: Api.Bool)
+        case updatePaidReactionPrivacy(private: Api.PaidReactionPrivacy)
         case updatePeerBlocked(flags: Int32, peerId: Api.Peer)
         case updatePeerHistoryTTL(flags: Int32, peer: Api.Peer, ttlPeriod: Int32?)
         case updatePeerLocated(peers: [Api.PeerLocated])
@@ -1912,7 +1912,7 @@ public extension Api {
                     break
                 case .updatePaidReactionPrivacy(let `private`):
                     if boxed {
-                        buffer.appendInt32(1372224236)
+                        buffer.appendInt32(-1955438642)
                     }
                     `private`.serialize(buffer, true)
                     break
@@ -4305,9 +4305,9 @@ public extension Api {
             }
         }
         public static func parse_updatePaidReactionPrivacy(_ reader: BufferReader) -> Update? {
-            var _1: Api.Bool?
+            var _1: Api.PaidReactionPrivacy?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+                _1 = Api.parse(reader, signature: signature) as? Api.PaidReactionPrivacy
             }
             let _c1 = _1 != nil
             if _c1 {
