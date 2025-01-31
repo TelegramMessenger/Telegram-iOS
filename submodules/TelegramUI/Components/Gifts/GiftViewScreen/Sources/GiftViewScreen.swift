@@ -1889,9 +1889,9 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 var addressToOpen: String?
                 var descriptionText: String
-                if let uniqueGift, case let .address(address) = uniqueGift.owner {
+                if let uniqueGift, let address = uniqueGift.giftAddress {
                     addressToOpen = address
-                    descriptionText = strings.Gift_View_TonGiftInfo
+                    descriptionText = strings.Gift_View_TonGiftAddressInfo
                 } else if savedToProfile {
                     descriptionText = isChannelGift ? strings.Gift_View_DisplayedInfoHide_Channel : strings.Gift_View_DisplayedInfoHide
                 } else if let upgradeStars, upgradeStars > 0 && !upgraded {
@@ -2562,8 +2562,10 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         openAddressImpl = { [weak self] address in
             if let navigationController = self?.navigationController as? NavigationController {
+                let configuration = GiftViewConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                let url = configuration.explorerUrl + address
                 Queue.mainQueue().after(0.3) {
-                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Gift_View_ViewTonAddressUrl(address).string, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                    context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
                 }
             }
         }
@@ -3912,5 +3914,25 @@ private final class AvatarComponent: Component {
 
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private struct GiftViewConfiguration {
+    public static var defaultValue: GiftViewConfiguration {
+        return GiftViewConfiguration(explorerUrl: "https://tonviewer.com")
+    }
+    
+    public let explorerUrl: String
+    
+    fileprivate init(explorerUrl: String) {
+        self.explorerUrl = explorerUrl
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> GiftViewConfiguration {
+        if let data = appConfiguration.data, let value = data["ton_blockchain_explorer_url"] as? String {
+            return GiftViewConfiguration(explorerUrl: value)
+        } else {
+            return .defaultValue
+        }
     }
 }

@@ -210,6 +210,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             case ownerAddress
             case attributes
             case availability
+            case giftAddress
         }
         
         public enum Attribute: Equatable, Codable, PostboxCoding {
@@ -449,8 +450,9 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
         public let owner: Owner
         public let attributes: [Attribute]
         public let availability: Availability
+        public let giftAddress: String?
         
-        public init(id: Int64, title: String, number: Int32, slug: String, owner: Owner, attributes: [Attribute], availability: Availability) {
+        public init(id: Int64, title: String, number: Int32, slug: String, owner: Owner, attributes: [Attribute], availability: Availability, giftAddress: String?) {
             self.id = id
             self.title = title
             self.number = number
@@ -458,6 +460,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             self.owner = owner
             self.attributes = attributes
             self.availability = availability
+            self.giftAddress = giftAddress
         }
         
         public init(from decoder: Decoder) throws {
@@ -477,6 +480,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             }
             self.attributes = try container.decode([UniqueGift.Attribute].self, forKey: .attributes)
             self.availability = try container.decode(UniqueGift.Availability.self, forKey: .availability)
+            self.giftAddress = try container.decodeIfPresent(String.self, forKey: .giftAddress)
         }
         
         public init(decoder: PostboxDecoder) {
@@ -495,6 +499,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             }
             self.attributes = (try? decoder.decodeObjectArrayWithCustomDecoderForKey(CodingKeys.attributes.rawValue, decoder: { UniqueGift.Attribute(decoder: $0) })) ?? []
             self.availability = decoder.decodeObjectForKey(CodingKeys.availability.rawValue, decoder: { UniqueGift.Availability(decoder: $0) }) as! UniqueGift.Availability
+            self.giftAddress = decoder.decodeOptionalStringForKey(CodingKeys.giftAddress.rawValue)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -513,6 +518,7 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             }
             try container.encode(self.attributes, forKey: .attributes)
             try container.encode(self.availability, forKey: .availability)
+            try container.encodeIfPresent(self.giftAddress, forKey: .giftAddress)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
@@ -530,6 +536,11 @@ public enum StarGift: Equatable, Codable, PostboxCoding {
             }
             encoder.encodeObjectArray(self.attributes, forKey: CodingKeys.attributes.rawValue)
             encoder.encodeObject(self.availability, forKey: CodingKeys.availability.rawValue)
+            if let giftAddress = self.giftAddress {
+                encoder.encodeString(giftAddress, forKey: CodingKeys.giftAddress.rawValue)
+            } else {
+                encoder.encodeNil(forKey: CodingKeys.giftAddress.rawValue)
+            }
         }
     }
     
@@ -615,7 +626,7 @@ extension StarGift {
                 return nil
             }
             self = .generic(StarGift.Gift(id: id, file: file, price: stars, convertStars: convertStars, availability: availability, soldOut: soldOut, flags: flags, upgradeStars: upgradeStars))
-        case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, ownerAddress, attributes, availabilityIssued, availabilityTotal):
+        case let .starGiftUnique(_, id, title, slug, num, ownerPeerId, ownerName, ownerAddress, attributes, availabilityIssued, availabilityTotal, giftAddress):
             let owner: StarGift.UniqueGift.Owner
             if let ownerAddress {
                 owner = .address(ownerAddress)
@@ -626,7 +637,7 @@ extension StarGift {
             } else {
                 return nil
             }
-            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, slug: slug, owner: owner, attributes: attributes.compactMap { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal)))
+            self = .unique(StarGift.UniqueGift(id: id, title: title, number: num, slug: slug, owner: owner, attributes: attributes.compactMap { UniqueGift.Attribute(apiAttribute: $0) }, availability: UniqueGift.Availability(issued: availabilityIssued, total: availabilityTotal), giftAddress: giftAddress))
         }
     }
 }
@@ -1270,6 +1281,7 @@ public final class ProfileGiftsContext {
                 case canExportDate
                 case upgradeStars
                 case transferStars
+                case giftAddress
             }
             
             public let gift: TelegramCore.StarGift

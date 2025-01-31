@@ -13789,8 +13789,7 @@ Sorry for the inconvenience.";
 "Notification.StarsGift.SentSomeone" = "Someone sent you a gift";
 "Notification.StarsGift.UpgradeChannel" = "A gift was turned into a unique collectible";
 
-"Gift.View.TonGiftInfo" = "This gift is owned by a TON account. [View >]()";
-"Gift.View.ViewTonAddressUrl" = "https://tonviewer.com/%@";
+"Gift.View.TonGiftAddressInfo" = "This gift is in TON Blockchain. [View >]()";
 "Gift.View.CopiedAddress" = "TON address copied to clipboard.";
 
 "NameColor.AddProfileIcons" = "Add Icons To Profile";

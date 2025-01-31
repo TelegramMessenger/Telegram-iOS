@@ -291,6 +291,8 @@ public final class GiftItemComponent: Component {
             var patternFile: TelegramMediaFile?
             var files: [Int64: TelegramMediaFile] = [:]
             
+            var placeholderColor = component.theme.list.mediaPlaceholderColor
+            
             let emoji: ChatTextInputTextCustomEmojiAttribute?
             var animationOffset: CGFloat = 0.0
             switch component.subject {
@@ -326,6 +328,9 @@ public final class GiftItemComponent: Component {
                         backgroundColor = UIColor(rgb: UInt32(bitPattern: outerColorValue))
                         secondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColorValue))
                         patternColor = UIColor(rgb: UInt32(bitPattern: patternColorValue))
+                        if let backgroundColor {
+                            placeholderColor = backgroundColor
+                        }
                     default:
                         break
                     }
@@ -352,7 +357,7 @@ public final class GiftItemComponent: Component {
                     cache: component.context.animationCache,
                     renderer: component.context.animationRenderer,
                     unique: false,
-                    placeholderColor: component.theme.list.mediaPlaceholderColor,
+                    placeholderColor: placeholderColor,
                     pointSize: CGSize(width: iconSize.width * 2.0, height: iconSize.height * 2.0),
                     loopCount: 1
                 )

@@ -458,7 +458,8 @@ final class UserAppearanceScreenComponent: Component {
                                     .pattern(name: "", file: patternFile, rarity: 0),
                                     .backdrop(name: "", innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
                                 ],
-                                availability: StarGift.UniqueGift.Availability(issued: 0, total: 0)
+                                availability: StarGift.UniqueGift.Availability(issued: 0, total: 0),
+                                giftAddress: nil
                             )
                             signal = component.context.engine.accountData.setStarGiftStatus(starGift: gift, expirationDate: emojiStatus.expirationDate)
                         } else {

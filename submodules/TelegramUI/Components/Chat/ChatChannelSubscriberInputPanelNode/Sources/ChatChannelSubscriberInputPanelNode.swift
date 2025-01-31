@@ -411,33 +411,33 @@ public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         let panelHeight = defaultHeight(metrics: metrics)
         
         if self.discussButton.isHidden {
-            if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
-                let buttonWidth = self.button.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
-                self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
-                
-                if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
-                    if case .broadcast = peer.info, interfaceState.starGiftsAvailable {
-                        if self.giftButton.isHidden && !isFirstTime {
-                            self.giftButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            self.giftButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
-                        }
-                        
-                        self.giftButton.isHidden = false
-                        self.helpButton.isHidden = true
-                        
-                        self.presentGiftTooltip()
-                    } else if peer.flags.contains(.isGigagroup) {
-                        self.giftButton.isHidden = true
-                        self.helpButton.isHidden = false
+            if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel {
+                if case .broadcast = peer.info, interfaceState.starGiftsAvailable {
+                    if self.giftButton.isHidden && !isFirstTime {
+                        self.giftButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        self.giftButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                     }
+                    
+                    self.giftButton.isHidden = false
+                    self.helpButton.isHidden = true
+                    
+                    self.presentGiftTooltip()
+                } else if peer.flags.contains(.isGigagroup), self.action == .muteNotifications || self.action == .unmuteNotifications {
+                    self.giftButton.isHidden = true
+                    self.helpButton.isHidden = false
                 } else {
                     self.giftButton.isHidden = true
                     self.helpButton.isHidden = true
                 }
             } else {
-                self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
                 self.giftButton.isHidden = true
                 self.helpButton.isHidden = true
+            }
+            if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
+                let buttonWidth = self.button.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
+                self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+            } else {
+                self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
             }
             self.giftButton.frame = CGRect(x: width - rightInset - panelHeight - 5.0, y: 0.0, width: panelHeight, height: panelHeight)
             self.helpButton.frame = CGRect(x: width - rightInset - panelHeight, y: 0.0, width: panelHeight, height: panelHeight)

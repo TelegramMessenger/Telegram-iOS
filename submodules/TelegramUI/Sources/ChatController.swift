@@ -4538,21 +4538,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            let controller = chatAgeRestrictionAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, completion: { [weak self] alwaysShow in
-                guard let self else {
-                    return
-                }
-                if alwaysShow {
-                    let _ = updateRemoteContentSettingsConfiguration(postbox: context.account.postbox, network: context.account.network, sensitiveContentEnabled: true).start()
-                    
-                    self.present(UndoOverlayController(presentationData: self.presentationData, content: .info(title: nil, text: self.presentationData.strings.SensitiveContent_SettingsInfo, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { [weak self] action in
-                        if case .info = action, let self {
-                            let controller = self.context.sharedContext.makeDataAndStorageController(context: self.context, sensitiveContent: true)
-                            self.push(controller)
-                        }
-                        return false
-                    }), in: .current)
-                }
+            let controller = chatAgeRestrictionAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, completion: { _ in
                 reveal()
             })
             self.present(controller, in: .window(.root))
