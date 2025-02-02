@@ -822,6 +822,7 @@ private final class ChatSendStarsScreenComponent: Component {
     let context: AccountContext
     let peer: EnginePeer
     let myPeer: EnginePeer
+    let defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer
     let channelsForPublicReaction: [EnginePeer]
     let messageId: EngineMessage.Id
     let maxAmount: Int
@@ -835,6 +836,7 @@ private final class ChatSendStarsScreenComponent: Component {
         context: AccountContext,
         peer: EnginePeer,
         myPeer: EnginePeer,
+        defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer,
         channelsForPublicReaction: [EnginePeer],
         messageId: EngineMessage.Id,
         maxAmount: Int,
@@ -847,6 +849,7 @@ private final class ChatSendStarsScreenComponent: Component {
         self.context = context
         self.peer = peer
         self.myPeer = myPeer
+        self.defaultPrivacyPeer = defaultPrivacyPeer
         self.channelsForPublicReaction = channelsForPublicReaction
         self.messageId = messageId
         self.maxAmount = maxAmount
@@ -985,7 +988,7 @@ private final class ChatSendStarsScreenComponent: Component {
         }
     }
     
-    private enum PrivacyPeer: Equatable {
+    enum PrivacyPeer: Equatable {
         case account
         case anonymous
         case peer(EnginePeer)
@@ -1448,6 +1451,14 @@ private final class ChatSendStarsScreenComponent: Component {
                         self.currentMyPeer = peer
                     } else {
                         self.privacyPeer = .account
+                    }
+                } else {
+                    self.privacyPeer = component.defaultPrivacyPeer
+                    switch self.privacyPeer {
+                    case .anonymous, .account:
+                        break
+                    case let .peer(peer):
+                        self.currentMyPeer = peer
                     }
                 }
                 
@@ -2316,6 +2327,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
     public final class InitialData {
         fileprivate let peer: EnginePeer
         fileprivate let myPeer: EnginePeer
+        fileprivate let defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer
         fileprivate let channelsForPublicReaction: [EnginePeer]
         fileprivate let messageId: EngineMessage.Id
         fileprivate let balance: StarsAmount?
@@ -2326,6 +2338,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         fileprivate init(
             peer: EnginePeer,
             myPeer: EnginePeer,
+            defaultPrivacyPeer: ChatSendStarsScreenComponent.PrivacyPeer,
             channelsForPublicReaction: [EnginePeer],
             messageId: EngineMessage.Id,
             balance: StarsAmount?,
@@ -2335,6 +2348,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         ) {
             self.peer = peer
             self.myPeer = myPeer
+            self.defaultPrivacyPeer = defaultPrivacyPeer
             self.channelsForPublicReaction = channelsForPublicReaction
             self.messageId = messageId
             self.balance = balance
@@ -2421,6 +2435,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             context: context,
             peer: initialData.peer,
             myPeer: initialData.myPeer,
+            defaultPrivacyPeer: initialData.defaultPrivacyPeer,
             channelsForPublicReaction: initialData.channelsForPublicReaction,
             messageId: initialData.messageId,
             maxAmount: maxAmount,
@@ -2486,6 +2501,29 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
         
         let channelsForPublicReaction = context.engine.peers.channelsForPublicReaction(useLocalCache: true)
         
+        let defaultPrivacyPeer: Signal<ChatSendStarsScreenComponent.PrivacyPeer, NoError> = context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.StarsReactionDefaultPrivacy()
+        )
+        |> mapToSignal { defaultPrivacy -> Signal<ChatSendStarsScreenComponent.PrivacyPeer, NoError> in
+            switch defaultPrivacy {
+            case .anonymous:
+                return .single(.anonymous)
+            case .default:
+                return .single(.account)
+            case let .peer(peerId):
+                return context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                )
+                |> map { peer -> ChatSendStarsScreenComponent.PrivacyPeer in
+                    if let peer {
+                        return .peer(peer)
+                    } else {
+                        return .anonymous
+                    }
+                }
+            }
+        }
+        
         return combineLatest(
             context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
@@ -2493,9 +2531,10 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
                 EngineDataMap(allPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:)))
             ),
             balance,
-            channelsForPublicReaction
+            channelsForPublicReaction,
+            defaultPrivacyPeer
         )
-        |> map { peerAndTopPeerMap, balance, channelsForPublicReaction -> InitialData? in
+        |> map { peerAndTopPeerMap, balance, channelsForPublicReaction, defaultPrivacyPeer -> InitialData? in
             let (peer, myPeer, topPeerMap) = peerAndTopPeerMap
             guard let peer, let myPeer else {
                 return nil
@@ -2505,6 +2544,7 @@ public class ChatSendStarsScreen: ViewControllerComponentContainer {
             return InitialData(
                 peer: peer,
                 myPeer: myPeer,
+                defaultPrivacyPeer: defaultPrivacyPeer,
                 channelsForPublicReaction: channelsForPublicReaction,
                 messageId: messageId,
                 balance: balance,
