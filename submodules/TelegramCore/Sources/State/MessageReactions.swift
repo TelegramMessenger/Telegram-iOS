@@ -187,7 +187,15 @@ func _internal_sendStarsReactionsInteractively(account: Account, messageId: Mess
             for attribute in attributes {
                 if let attribute = attribute as? ReactionsMessageAttribute {
                     if let myReaction = attribute.topPeers.first(where: { $0.isMy }) {
-                        resolvedPrivacy = myReaction.isAnonymous ? .anonymous : .default
+                        if myReaction.isAnonymous {
+                            resolvedPrivacy = .anonymous
+                        } else if myReaction.peerId == account.peerId {
+                            resolvedPrivacy = .default
+                        } else if let peerId = myReaction.peerId {
+                            resolvedPrivacy = .peer(peerId)
+                        } else {
+                            resolvedPrivacy = .anonymous
+                        }
                     }
                 }
             }
