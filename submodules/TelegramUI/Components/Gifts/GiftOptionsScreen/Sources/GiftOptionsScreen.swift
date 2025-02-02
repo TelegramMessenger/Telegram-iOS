@@ -275,7 +275,7 @@ final class GiftOptionsScreenComponent: Component {
             
             let starsTitleOffset: CGFloat
             let starsTitleFraction: CGFloat
-            if contentOffset > 350 {
+            if contentOffset > 350, self.starsTitle.view != nil {
                 starsTitleOffset = contentOffset + max(0.0, min(1.0, (contentOffset - 350.0) / starsTitleOffsetDelta)) * 10.0
                 starsTitleFraction = max(0.0, min(1.0, (starsTitleOffset - 350.0) / starsTitleOffsetDelta))
                 if contentOffset > 380.0 {

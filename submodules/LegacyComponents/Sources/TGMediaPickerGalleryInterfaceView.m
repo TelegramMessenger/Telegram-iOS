@@ -233,17 +233,6 @@
             [_wrapperView addSubview:_recipientLabel];
         }
         
-        if (hasCameraButton)
-        {
-            _cameraButton = [[TGMediaPickerCameraButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 44.0f, 44.0f)];
-            _cameraButton.adjustsImageWhenHighlighted = false;
-            [_cameraButton addTarget:self action:@selector(cameraButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            
-            [_wrapperView addSubview:_cameraButton];
-            
-            //if (_selectionContext != nil)
-            //    [_cameraButton setHidden:true animated:false];
-        }
                     
         if (_selectionContext != nil)
         {
@@ -427,6 +416,15 @@
             _coverGalleryButton.hidden = true;
             [_coverGalleryButton addTarget:self action:@selector(coverGalleryButtonPressed) forControlEvents:UIControlEventTouchUpInside];
             [_wrapperView addSubview:_coverGalleryButton];
+        }
+        
+        if (hasCameraButton)
+        {
+            _cameraButton = [[TGMediaPickerCameraButton alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 44.0f, 44.0f)];
+            _cameraButton.adjustsImageWhenHighlighted = false;
+            [_cameraButton addTarget:self action:@selector(cameraButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            
+            [_wrapperView addSubview:_cameraButton];
         }
         
         TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : TGPhotoEditorDoneButtonSend;

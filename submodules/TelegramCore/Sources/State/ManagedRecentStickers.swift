@@ -322,7 +322,8 @@ func managedUniqueStarGifts(accountPeerId: PeerId, postbox: Postbox, network: Ne
                                         .pattern(name: "", file: patternFile, rarity: 0),
                                         .backdrop(name: "", innerColor: innerColor, outerColor: outerColor, patternColor: patternColor, textColor: textColor, rarity: 0)
                                     ],
-                                    availability: StarGift.UniqueGift.Availability(issued: 0, total: 0)
+                                    availability: StarGift.UniqueGift.Availability(issued: 0, total: 0),
+                                    giftAddress: nil
                                 )
                                 if let entry = CodableEntry(RecentStarGiftItem(gift)) {
                                     items.append(OrderedItemListEntry(id: RecentStarGiftItemId(id).rawValue, contents: entry))

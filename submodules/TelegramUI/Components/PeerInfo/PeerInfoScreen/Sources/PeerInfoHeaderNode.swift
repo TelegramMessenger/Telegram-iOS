@@ -1152,13 +1152,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             title = title.replacingOccurrences(of: "\u{1160}", with: "").replacingOccurrences(of: "\u{3164}", with: "")
+            if title.replacingOccurrences(of: "\u{fe0e}", with: "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                title = "" //"\u{00A0}"
+            }
             if title.isEmpty {
                 if let peer = peer as? TelegramUser, let phone = peer.phone {
                     title = formatPhoneNumber(context: self.context, number: phone)
                 } else if let addressName = peer.addressName {
                     title = "@\(addressName)"
                 } else {
-                    title = " "
+                    title = "_"
                 }
             }
 
