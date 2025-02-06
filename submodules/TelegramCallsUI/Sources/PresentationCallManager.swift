@@ -61,9 +61,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private var currentCallDisposable = MetaDisposable()
     private let removeCurrentCallDisposable = MetaDisposable()
     private let removeCurrentGroupCallDisposable = MetaDisposable()
+    private var callToConferenceDisposable: Disposable?
+    private var currentUpgradedToConferenceCallId: CallSessionInternalId?
     
-    private var currentGroupCallValue: PresentationGroupCallImpl?
-    private var currentGroupCall: PresentationGroupCallImpl? {
+    private var currentGroupCallValue: VideoChatCall?
+    private var currentGroupCall: VideoChatCall? {
         return self.currentGroupCallValue
     }
     
@@ -95,8 +97,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         return self.currentCallPromise.get()
     }
     
-    private let currentGroupCallPromise = Promise<PresentationGroupCall?>(nil)
-    public var currentGroupCallSignal: Signal<PresentationGroupCall?, NoError> {
+    private let currentGroupCallPromise = Promise<VideoChatCall?>(nil)
+    public var currentGroupCallSignal: Signal<VideoChatCall?, NoError> {
         return self.currentGroupCallPromise.get()
     }
     
@@ -297,14 +299,21 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         self.startCallDisposable.dispose()
         self.proxyServerDisposable?.dispose()
         self.callSettingsDisposable?.dispose()
+        self.callToConferenceDisposable?.dispose()
     }
     
     private func ringingStatesUpdated(_ ringingStates: [(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
         if let firstState = ringingStates.first {
             if self.currentCall == nil && self.currentGroupCall == nil {
-                self.currentCallDisposable.set((combineLatest(firstState.0.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1))
+                self.currentCallDisposable.set((combineLatest(
+                    firstState.0.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1),
+                    accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1)
+                )
                 |> deliverOnMainQueue).start(next: { [weak self] preferences, sharedData in
                     guard let strongSelf = self else {
+                        return
+                    }
+                    if strongSelf.currentUpgradedToConferenceCallId == firstState.2.id {
                         return
                     }
                     
@@ -338,18 +347,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
-                    strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActivePersonalCallsPromise.set(true)
-                    strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
-                    |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
-                        if value, let strongSelf = self, let call = call {
-                            if strongSelf.currentCall === call {
-                                strongSelf.updateCurrentCall(nil)
-                                strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActivePersonalCallsPromise.set(false)
-                            }
-                        }
-                    }))
                 }))
             } else {
                 for (context, _, state, _, _) in ringingStates {
@@ -370,12 +367,15 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             alreadyInCallWithPeerId = call.peerId
         } else if let currentGroupCall = self.currentGroupCallValue {
             alreadyInCall = true
-            alreadyInCallWithPeerId = currentGroupCall.peerId
+            switch currentGroupCall {
+            case let .conferenceSource(conferenceSource):
+                alreadyInCallWithPeerId = conferenceSource.peerId
+            case let .group(groupCall):
+                alreadyInCallWithPeerId = groupCall.peerId
+            }
         } else {
-            if #available(iOS 10.0, *) {
-                if CXCallObserver().calls.contains(where: { $0.hasEnded == false }) {
-                    alreadyInCall = true
-                }
+            if CXCallObserver().calls.contains(where: { $0.hasEnded == false }) {
+                alreadyInCall = true
             }
         }
         
@@ -456,12 +456,22 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     begin()
                 }))
             } else if let currentGroupCall = self.currentGroupCallValue {
-                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { _ in
-                    begin()
-                }))
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    self.startCallDisposable.set((conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                case let .group(groupCall):
+                    self.startCallDisposable.set((groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                }
             } else {
                 begin()
             }
@@ -478,12 +488,22 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     begin()
                 }))
             } else if let currentGroupCall = self.currentGroupCallValue {
-                self.startCallDisposable.set((currentGroupCall.leave(terminateIfPossible: false)
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { _ in
-                    begin()
-                }))
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    self.startCallDisposable.set((conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                case let .group(groupCall):
+                    self.startCallDisposable.set((groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                }
             } else {
                 begin()
             }
@@ -540,9 +560,18 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 return context.account.callSessionManager.request(peerId: peerId, isVideo: isVideo, enableVideo: isVideoPossible, conferenceCall: nil, internalId: internalId)
             }
             
-            return (combineLatest(queue: .mainQueue(), request, networkType |> take(1), context.account.postbox.peerView(id: peerId) |> map { peerView -> Bool in
-                return peerView.peerIsContact
-            } |> take(1), context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1), accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1), areVideoCallsAvailable)
+            return (combineLatest(queue: .mainQueue(),
+                request,
+                networkType |> take(1),
+                context.account.postbox.peerView(id: peerId)
+                |> map { peerView -> Bool in
+                    return peerView.peerIsContact
+                }
+                |> take(1),
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.voipConfiguration, PreferencesKeys.appConfiguration]) |> take(1),
+                accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings]) |> take(1),
+                areVideoCallsAvailable
+            )
             |> deliverOnMainQueue
             |> beforeNext { internalId, currentNetworkType, isContact, preferences, sharedData, areVideoCallsAvailable in
                 if let strongSelf = self, accessEnabled {
@@ -586,18 +615,6 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         preferredVideoCodec: experimentalSettings.preferredVideoCodec
                     )
                     strongSelf.updateCurrentCall(call)
-                    strongSelf.currentCallPromise.set(.single(call))
-                    strongSelf.hasActivePersonalCallsPromise.set(true)
-                    strongSelf.removeCurrentCallDisposable.set((call.canBeRemoved
-                    |> deliverOnMainQueue).start(next: { [weak call] value in
-                        if value, let strongSelf = self, let call = call {
-                            if strongSelf.currentCall === call {
-                                strongSelf.updateCurrentCall(nil)
-                                strongSelf.currentCallPromise.set(.single(nil))
-                                strongSelf.hasActivePersonalCallsPromise.set(false)
-                            }
-                        }
-                    }))
                 }
             })
             |> mapToSignal { value -> Signal<Bool, NoError> in
@@ -613,7 +630,48 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             self.resumeMedia = self.isMediaPlaying()
         }
         
-        self.currentCallValue = value
+        if self.currentCallValue !== value {
+            self.currentCallValue = value
+            
+            self.callToConferenceDisposable?.dispose()
+            self.callToConferenceDisposable = nil
+            self.currentUpgradedToConferenceCallId = nil
+            
+            if let currentCallValue = self.currentCallValue {
+                self.callToConferenceDisposable = (currentCallValue.conferenceState
+                |> filter { conferenceState in
+                    return conferenceState != nil
+                }
+                |> take(1)
+                |> deliverOnMainQueue).startStrict(next: { [weak self, weak currentCallValue] _ in
+                    guard let self, let currentCallValue, self.currentCallValue === currentCallValue else {
+                        return
+                    }
+                    
+                    self.currentUpgradedToConferenceCallId = currentCallValue.internalId
+                    self.removeCurrentCallDisposable.set(nil)
+                    
+                    self.updateCurrentGroupCall(.conferenceSource(currentCallValue))
+                    self.updateCurrentCall(nil)
+                })
+                
+                self.currentCallPromise.set(.single(currentCallValue))
+                self.hasActivePersonalCallsPromise.set(true)
+                self.removeCurrentCallDisposable.set((currentCallValue.canBeRemoved
+                |> deliverOnMainQueue).start(next: { [weak self, weak currentCallValue] value in
+                    if value, let self, let currentCallValue {
+                        if self.currentCall === currentCallValue {
+                            self.updateCurrentCall(nil)
+                            self.currentCallPromise.set(.single(nil))
+                            self.hasActivePersonalCallsPromise.set(false)
+                        }
+                    }
+                }))
+            } else {
+                self.currentCallPromise.set(.single(nil))
+                self.hasActivePersonalCallsPromise.set(false)
+            }
+        }
         
         if !wasEmpty && isEmpty && self.resumeMedia {
             self.resumeMedia = false
@@ -621,14 +679,76 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
     }
     
-    private func updateCurrentGroupCall(_ value: PresentationGroupCallImpl?) {
+    private func updateCurrentGroupCall(_ value: VideoChatCall?) {
         let wasEmpty = self.currentGroupCallValue == nil
         let isEmpty = value == nil
         if wasEmpty && !isEmpty {
             self.resumeMedia = self.isMediaPlaying()
         }
         
-        self.currentGroupCallValue = value
+        if self.currentGroupCallValue != value {
+            self.currentGroupCallValue = value
+            
+            if let value {
+                switch value {
+                case let .conferenceSource(conferenceSource):
+                    self.callToConferenceDisposable?.dispose()
+                    self.callToConferenceDisposable = (conferenceSource.conferenceState
+                    |> filter { value in
+                        if let value, case .ready = value {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    |> take(1)
+                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak conferenceSource] _ in
+                        guard let self, let conferenceSource, self.currentGroupCallValue == .conferenceSource(conferenceSource) else {
+                            return
+                        }
+                        guard let groupCall = conferenceSource.conferenceCall else {
+                            return
+                        }
+                        self.updateCurrentGroupCall(.group(groupCall))
+                    })
+                    
+                    self.currentGroupCallPromise.set(.single(.conferenceSource(conferenceSource)))
+                    self.hasActiveGroupCallsPromise.set(true)
+                    self.removeCurrentGroupCallDisposable.set((conferenceSource.canBeRemoved
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self, weak conferenceSource] value in
+                        guard let self, let conferenceSource else {
+                            return
+                        }
+                        if value {
+                            if self.currentGroupCall == .conferenceSource(conferenceSource) {
+                                self.updateCurrentGroupCall(nil)
+                            }
+                        }
+                    }))
+                case let .group(groupCall):
+                    self.currentGroupCallPromise.set(.single(.group(groupCall)))
+                    self.hasActiveGroupCallsPromise.set(true)
+                    self.removeCurrentGroupCallDisposable.set((groupCall.canBeRemoved
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self, weak groupCall] value in
+                        guard let self, let groupCall else {
+                            return
+                        }
+                        if value {
+                            if self.currentGroupCall == .group(groupCall) {
+                                self.updateCurrentGroupCall(nil)
+                            }
+                        }
+                    }))
+                }
+            } else {
+                self.currentGroupCallPromise.set(.single(nil))
+                self.hasActiveGroupCallsPromise.set(false)
+            }
+        }
         
         if !wasEmpty && isEmpty && self.resumeMedia {
             self.resumeMedia = false
@@ -671,7 +791,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         )
         |> deliverOnMainQueue
         |> mapToSignal { [weak self, weak parentController] accessEnabled, peer -> Signal<Bool, NoError> in
-            guard let strongSelf = self else {
+            guard let self else {
                 return .single(false)
             }
             
@@ -684,93 +804,36 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 isChannel = true
             }
             
-            if shouldUseV2VideoChatImpl(context: accountContext) {
-                if let parentController {
-                    parentController.push(ScheduleVideoChatSheetScreen(
-                        context: accountContext,
-                        scheduleAction: { timestamp in
-                            guard let self else {
-                                return
-                            }
-                            
-                            let call = PresentationGroupCallImpl(
-                                accountContext: accountContext,
-                                audioSession: self.audioSession,
-                                callKitIntegration: nil,
-                                getDeviceAccessData: self.getDeviceAccessData,
-                                initialCall: nil,
-                                internalId: internalId,
-                                peerId: peerId,
-                                isChannel: isChannel,
-                                invite: nil,
-                                joinAsPeerId: nil,
-                                isStream: false,
-                                encryptionKey: nil,
-                                conferenceFromCallId: nil,
-                                isConference: false,
-                                sharedAudioContext: nil
-                            )
-                            call.schedule(timestamp: timestamp)
-                            
-                            self.updateCurrentGroupCall(call)
-                            self.currentGroupCallPromise.set(.single(call))
-                            self.hasActiveGroupCallsPromise.set(true)
-                            self.removeCurrentGroupCallDisposable.set((call.canBeRemoved
-                            |> filter { $0 }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak self, weak call] value in
-                                guard let self, let call else {
-                                    return
-                                }
-                                if value {
-                                    if self.currentGroupCall === call {
-                                        self.updateCurrentGroupCall(nil)
-                                        self.currentGroupCallPromise.set(.single(nil))
-                                        self.hasActiveGroupCallsPromise.set(false)
-                                    }
-                                }
-                            }))
+            if let parentController {
+                parentController.push(ScheduleVideoChatSheetScreen(
+                    context: accountContext,
+                    scheduleAction: { [weak self] timestamp in
+                        guard let self else {
+                            return
                         }
-                    ))
-                }
-                
-                return .single(true)
-            } else {
-                let call = PresentationGroupCallImpl(
-                    accountContext: accountContext,
-                    audioSession: strongSelf.audioSession,
-                    callKitIntegration: nil,
-                    getDeviceAccessData: strongSelf.getDeviceAccessData,
-                    initialCall: nil,
-                    internalId: internalId,
-                    peerId: peerId,
-                    isChannel: isChannel,
-                    invite: nil,
-                    joinAsPeerId: nil,
-                    isStream: false,
-                    encryptionKey: nil,
-                    conferenceFromCallId: nil,
-                    isConference: false,
-                    sharedAudioContext: nil
-                )
-                strongSelf.updateCurrentGroupCall(call)
-                strongSelf.currentGroupCallPromise.set(.single(call))
-                strongSelf.hasActiveGroupCallsPromise.set(true)
-                strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak call] value in
-                    guard let strongSelf = self, let call = call else {
-                        return
+                        
+                        let call = PresentationGroupCallImpl(
+                            accountContext: accountContext,
+                            audioSession: self.audioSession,
+                            callKitIntegration: nil,
+                            getDeviceAccessData: self.getDeviceAccessData,
+                            initialCall: nil,
+                            internalId: internalId,
+                            peerId: peerId,
+                            isChannel: isChannel,
+                            invite: nil,
+                            joinAsPeerId: nil,
+                            isStream: false,
+                            encryptionKey: nil,
+                            conferenceFromCallId: nil,
+                            isConference: false,
+                            sharedAudioContext: nil
+                        )
+                        call.schedule(timestamp: timestamp)
+                        
+                        self.updateCurrentGroupCall(.group(call))
                     }
-                    if value {
-                        if strongSelf.currentGroupCall === call {
-                            strongSelf.updateCurrentGroupCall(nil)
-                            strongSelf.currentGroupCallPromise.set(.single(nil))
-                            strongSelf.hasActiveGroupCallsPromise.set(false)
-                        }
-                    }
-                }))
+                ))
             }
         
             return .single(true)
@@ -787,15 +850,29 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         
         if let currentGroupCall = self.currentGroupCallValue {
             if endCurrentIfAny {
-                let endSignal = currentGroupCall.leave(terminateIfPossible: false)
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue
-                self.startCallDisposable.set(endSignal.start(next: { _ in
-                    begin()
-                }))
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    self.startCallDisposable.set((conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                case let .group(groupCall):
+                    self.startCallDisposable.set((groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                }
             } else {
-                return .alreadyInProgress(currentGroupCall.peerId)
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    return .alreadyInProgress(conferenceSource.peerId)
+                case let .group(groupCall):
+                    return .alreadyInProgress(groupCall.peerId)
+                }
             }
         } else if let currentCall = self.currentCall {
             if endCurrentIfAny {
@@ -832,15 +909,29 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         
         if let currentGroupCall = self.currentGroupCallValue {
             if endCurrentIfAny {
-                let endSignal = currentGroupCall.leave(terminateIfPossible: false)
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue
-                self.startCallDisposable.set(endSignal.start(next: { _ in
-                    begin()
-                }))
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    self.startCallDisposable.set((conferenceSource.hangUp()
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                case let .group(groupCall):
+                    self.startCallDisposable.set((groupCall.leave(terminateIfPossible: false)
+                    |> filter { $0 }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { _ in
+                        begin()
+                    }))
+                }
             } else {
-                return .alreadyInProgress(currentGroupCall.peerId)
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    return .alreadyInProgress(conferenceSource.peerId)
+                case let .group(groupCall):
+                    return .alreadyInProgress(groupCall.peerId)
+                }
             }
         } else if let currentCall = self.currentCall {
             if endCurrentIfAny {
@@ -919,48 +1010,51 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 return .single(false)
             }
 
-            var isChannel = false
-            if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
-                isChannel = true
-            }
-                    
-            let call = PresentationGroupCallImpl(
+            strongSelf.createGroupCall(
                 accountContext: accountContext,
-                audioSession: strongSelf.audioSession,
-                callKitIntegration: nil,
-                getDeviceAccessData: strongSelf.getDeviceAccessData,
+                peerId: peerId,
+                peer: peer,
                 initialCall: initialCall,
                 internalId: internalId,
-                peerId: peerId,
-                isChannel: isChannel,
                 invite: invite,
-                joinAsPeerId: joinAsPeerId,
-                isStream: initialCall.isStream ?? false,
-                encryptionKey: nil,
-                conferenceFromCallId: nil,
-                isConference: false,
-                sharedAudioContext: nil
+                joinAsPeerId: joinAsPeerId
             )
-            strongSelf.updateCurrentGroupCall(call)
-            strongSelf.currentGroupCallPromise.set(.single(call))
-            strongSelf.hasActiveGroupCallsPromise.set(true)
-            strongSelf.removeCurrentGroupCallDisposable.set((call.canBeRemoved
-            |> filter { $0 }
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak call] value in
-                guard let strongSelf = self, let call = call else {
-                    return
-                }
-                if value {
-                    if strongSelf.currentGroupCall === call {
-                        strongSelf.updateCurrentGroupCall(nil)
-                        strongSelf.currentGroupCallPromise.set(.single(nil))
-                        strongSelf.hasActiveGroupCallsPromise.set(false)
-                    }
-                }
-            }))
         
             return .single(true)
         }
+    }
+    
+    private func createGroupCall(
+        accountContext: AccountContext,
+        peerId: EnginePeer.Id,
+        peer: EnginePeer?,
+        initialCall: EngineGroupCallDescription,
+        internalId: CallSessionInternalId,
+        invite: String?,
+        joinAsPeerId: EnginePeer.Id?
+    ) {
+        var isChannel = false
+        if let peer = peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+            isChannel = true
+        }
+                
+        let call = PresentationGroupCallImpl(
+            accountContext: accountContext,
+            audioSession: self.audioSession,
+            callKitIntegration: nil,
+            getDeviceAccessData: self.getDeviceAccessData,
+            initialCall: initialCall,
+            internalId: internalId,
+            peerId: peerId,
+            isChannel: isChannel,
+            invite: invite,
+            joinAsPeerId: joinAsPeerId,
+            isStream: initialCall.isStream ?? false,
+            encryptionKey: nil,
+            conferenceFromCallId: nil,
+            isConference: false,
+            sharedAudioContext: nil
+        )
+        self.updateCurrentGroupCall(.group(call))
     }
 }

@@ -62,6 +62,15 @@ final class SharedCallAudioContext {
                         audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
                         audioSessionControl.setup(synchronous: true)
                     }
+                    
+                    let audioSessionActive: Signal<Bool, NoError>
+                    if let callKitIntegration = self.callKitIntegration {
+                        audioSessionActive = callKitIntegration.audioSessionActive
+                    } else {
+                        audioSessionControl.activate({ _ in })
+                        audioSessionActive = .single(true)
+                    }
+                    self.isAudioSessionActivePromise.set(audioSessionActive)
                 }
             }
         }, deactivate: { [weak self] _ in
@@ -130,7 +139,7 @@ final class SharedCallAudioContext {
             guard let self else {
                 return
             }
-            let _ = self
+            self.audioDevice?.setIsAudioSessionActive(value)
         })
     }
     

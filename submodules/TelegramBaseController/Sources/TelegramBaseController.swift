@@ -260,10 +260,13 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             case let .peer(peerId):
                 let currentGroupCall: Signal<PresentationGroupCall?, NoError> = callManager.currentGroupCallSignal
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
-                    return lhs?.internalId == rhs?.internalId
+                    return lhs == rhs
                 })
                 |> map { call -> PresentationGroupCall? in
-                    guard let call = call, call.peerId == peerId && call.account.peerId == context.account.peerId else {
+                    guard case let .group(call) = call else {
+                        return nil
+                    }
+                    guard call.peerId == peerId && call.account.peerId == context.account.peerId else {
                         return nil
                     }
                     return call

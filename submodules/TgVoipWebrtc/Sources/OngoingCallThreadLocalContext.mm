@@ -71,58 +71,537 @@ public:
     virtual ~SharedAudioDeviceModule() = default;
     
 public:
-    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() = 0;
+    virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> audioDeviceModule() = 0;
+    virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule() = 0;
     virtual void start() = 0;
 };
 
 }
 
+class WrappedAudioDeviceModuleIOS : public tgcalls::DefaultWrappedAudioDeviceModule, public webrtc::AudioTransport {
+public:
+    WrappedAudioDeviceModuleIOS(webrtc::scoped_refptr<webrtc::AudioDeviceModule> impl) :
+    tgcalls::DefaultWrappedAudioDeviceModule(impl) {
+    }
+
+    virtual ~WrappedAudioDeviceModuleIOS() {
+        ActualStop();
+    }
+
+    virtual int32_t ActiveAudioLayer(AudioLayer *audioLayer) const override {
+        return 0;
+    }
+    
+    void UpdateAudioCallback(webrtc::AudioTransport *previousAudioCallback, webrtc::AudioTransport *audioCallback) {
+        if (audioCallback == nil) {
+            if (_currentAudioTransport == previousAudioCallback) {
+                _currentAudioTransport = nil;
+            }
+        } else {
+            _currentAudioTransport = audioCallback;
+        }
+    }
+
+    virtual int32_t RegisterAudioCallback(webrtc::AudioTransport *audioCallback) override {
+        return 0;
+    }
+
+    virtual int32_t Init() override {
+        return 0;
+    }
+
+    virtual int32_t Terminate() override {
+        return 0;
+    }
+
+    virtual bool Initialized() const override {
+        return true;
+    }
+
+    virtual int16_t PlayoutDevices() override {
+        return 0;
+    }
+
+    virtual int16_t RecordingDevices() override {
+        return 0;
+    }
+
+    virtual int32_t PlayoutDeviceName(uint16_t index, char name[webrtc::kAdmMaxDeviceNameSize], char guid[webrtc::kAdmMaxGuidSize]) override {
+        return -1;
+    }
+
+    virtual int32_t RecordingDeviceName(uint16_t index, char name[webrtc::kAdmMaxDeviceNameSize], char guid[webrtc::kAdmMaxGuidSize]) override {
+        return -1;
+    }
+
+    virtual int32_t SetPlayoutDevice(uint16_t index) override {
+        return 0;
+    }
+
+    virtual int32_t SetPlayoutDevice(WindowsDeviceType device) override {
+        return 0;
+    }
+
+    virtual int32_t SetRecordingDevice(uint16_t index) override {
+        return 0;
+    }
+
+    virtual int32_t SetRecordingDevice(WindowsDeviceType device) override {
+        return 0;
+    }
+
+    virtual int32_t PlayoutIsAvailable(bool *available) override {
+        return 0;
+    }
+
+    virtual int32_t InitPlayout() override {
+        return 0;
+    }
+
+    virtual bool PlayoutIsInitialized() const override {
+        return true;
+    }
+
+    virtual int32_t RecordingIsAvailable(bool *available) override {
+        if (available) {
+            *available = true;
+        }
+        return 0;
+    }
+
+    virtual int32_t InitRecording() override {
+        return 0;
+    }
+
+    virtual bool RecordingIsInitialized() const override {
+        return true;
+    }
+
+    virtual int32_t StartPlayout() override {
+        return 0;
+    }
+
+    virtual int32_t StopPlayout() override {
+        return 0;
+    }
+
+    virtual bool Playing() const override {
+        return true;
+    }
+
+    virtual int32_t StartRecording() override {
+        return 0;
+    }
+
+    virtual int32_t StopRecording() override {
+        return 0;
+    }
+
+    virtual bool Recording() const override {
+        return true;
+    }
+
+    virtual int32_t InitSpeaker() override {
+        return 0;
+    }
+
+    virtual bool SpeakerIsInitialized() const override {
+        return true;
+    }
+
+    virtual int32_t InitMicrophone() override {
+        return 0;
+    }
+
+    virtual bool MicrophoneIsInitialized() const override {
+        return true;
+    }
+
+    virtual int32_t SpeakerVolumeIsAvailable(bool *available) override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetSpeakerVolume(uint32_t volume) override {
+        return 0;
+    }
+
+    virtual int32_t SpeakerVolume(uint32_t* volume) const override {
+        if (volume) {
+            *volume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t MaxSpeakerVolume(uint32_t *maxVolume) const override {
+        if (maxVolume) {
+            *maxVolume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t MinSpeakerVolume(uint32_t *minVolume) const override {
+        if (minVolume) {
+            *minVolume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t MicrophoneVolumeIsAvailable(bool *available) override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetMicrophoneVolume(uint32_t volume) override {
+        return 0;
+    }
+
+    virtual int32_t MicrophoneVolume(uint32_t *volume) const override {
+        if (volume) {
+            *volume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t MaxMicrophoneVolume(uint32_t *maxVolume) const override {
+        if (maxVolume) {
+            *maxVolume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t MinMicrophoneVolume(uint32_t *minVolume) const override {
+        if (minVolume) {
+            *minVolume = 0;
+        }
+        return 0;
+    }
+
+    virtual int32_t SpeakerMuteIsAvailable(bool *available) override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetSpeakerMute(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t SpeakerMute(bool *enabled) const override {
+        if (enabled) {
+            *enabled = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t MicrophoneMuteIsAvailable(bool *available) override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetMicrophoneMute(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t MicrophoneMute(bool *enabled) const override {
+        if (enabled) {
+            *enabled = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t StereoPlayoutIsAvailable(bool *available) const override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetStereoPlayout(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t StereoPlayout(bool *enabled) const override {
+        if (enabled) {
+            *enabled = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t StereoRecordingIsAvailable(bool *available) const override {
+        if (available) {
+            *available = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t SetStereoRecording(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t StereoRecording(bool *enabled) const override {
+        if (enabled) {
+            *enabled = false;
+        }
+        return 0;
+    }
+
+    virtual int32_t PlayoutDelay(uint16_t* delayMS) const override {
+        if (delayMS) {
+            *delayMS = 0;
+        }
+        return 0;
+    }
+
+    virtual bool BuiltInAECIsAvailable() const override {
+        return true;
+    }
+
+    virtual bool BuiltInAGCIsAvailable() const override {
+        return true;
+    }
+
+    virtual bool BuiltInNSIsAvailable() const override {
+        return true;
+    }
+
+    virtual int32_t EnableBuiltInAEC(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t EnableBuiltInAGC(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t EnableBuiltInNS(bool enable) override {
+        return 0;
+    }
+
+    virtual int32_t GetPlayoutUnderrunCount() const override {
+        return 0;
+    }
+    
+    virtual int GetPlayoutAudioParameters(webrtc::AudioParameters *params) const override {
+        return WrappedInstance()->GetPlayoutAudioParameters(params);
+    }
+    
+    virtual int GetRecordAudioParameters(webrtc::AudioParameters *params) const override {
+        return WrappedInstance()->GetRecordAudioParameters(params);
+    }
+    
+public:
+    virtual int32_t RecordedDataIsAvailable(
+        const void* audioSamples,
+        size_t nSamples,
+        size_t nBytesPerSample,
+        size_t nChannels,
+        uint32_t samplesPerSec,
+        uint32_t totalDelayMS,
+        int32_t clockDrift,
+        uint32_t currentMicLevel,
+        bool keyPressed,
+        uint32_t& newMicLevel
+    ) override {
+        if (_currentAudioTransport) {
+            return _currentAudioTransport->RecordedDataIsAvailable(
+                audioSamples,
+                nSamples,
+                nBytesPerSample,
+                nChannels,
+                samplesPerSec,
+                totalDelayMS,
+                clockDrift,
+                currentMicLevel,
+                keyPressed,
+                newMicLevel
+            );
+        } else {
+            return 0;
+        }
+    }
+    
+    virtual int32_t RecordedDataIsAvailable(
+        const void *audioSamples,
+        size_t nSamples,
+        size_t nBytesPerSample,
+        size_t nChannels,
+        uint32_t samplesPerSec,
+        uint32_t totalDelayMS,
+        int32_t clockDrift,
+        uint32_t currentMicLevel,
+        bool keyPressed,
+        uint32_t& newMicLevel,
+        absl::optional<int64_t> estimatedCaptureTimeNS
+    ) override {
+        if (_currentAudioTransport) {
+            return _currentAudioTransport->RecordedDataIsAvailable(
+                audioSamples,
+                nSamples,
+                nBytesPerSample,
+                nChannels,
+                samplesPerSec,
+                totalDelayMS,
+                clockDrift,
+                currentMicLevel,
+                keyPressed,
+                newMicLevel,
+                estimatedCaptureTimeNS
+            );
+        } else {
+            return 0;
+        }
+    }
+
+    // Implementation has to setup safe values for all specified out parameters.
+    virtual int32_t NeedMorePlayData(
+        size_t nSamples,
+        size_t nBytesPerSample,
+        size_t nChannels,
+        uint32_t samplesPerSec,
+        void* audioSamples,
+        size_t& nSamplesOut,
+        int64_t* elapsed_time_ms,
+        int64_t* ntp_time_ms
+    ) override {
+        if (_currentAudioTransport) {
+            return _currentAudioTransport->NeedMorePlayData(
+                nSamples,
+                nBytesPerSample,
+                nChannels,
+                samplesPerSec,
+                audioSamples,
+                nSamplesOut,
+                elapsed_time_ms,
+                ntp_time_ms
+            );
+        } else {
+            nSamplesOut = 0;
+            return 0;
+        }
+    }
+
+    virtual void PullRenderData(
+        int bits_per_sample,
+        int sample_rate,
+        size_t number_of_channels,
+        size_t number_of_frames,
+        void* audio_data,
+        int64_t* elapsed_time_ms,
+        int64_t* ntp_time_ms
+    ) override {
+        if (_currentAudioTransport) {
+            _currentAudioTransport->PullRenderData(
+                bits_per_sample,
+                sample_rate,
+                number_of_channels,
+                number_of_frames,
+                audio_data,
+                elapsed_time_ms,
+                ntp_time_ms
+            );
+        }
+    }
+    
+public:
+    virtual void Start() {
+        if (!_isStarted) {
+            _isStarted = true;
+            WrappedInstance()->Init();
+            
+            WrappedInstance()->RegisterAudioCallback(this);
+            
+            if (!WrappedInstance()->Playing()) {
+                WrappedInstance()->InitPlayout();
+                WrappedInstance()->StartPlayout();
+                WrappedInstance()->InitRecording();
+                WrappedInstance()->StartRecording();
+            }
+        }
+    }
+
+    virtual void Stop() override {
+    }
+    
+    virtual void ActualStop() {
+        if (_isStarted) {
+            _isStarted = false;
+            WrappedInstance()->StopPlayout();
+            WrappedInstance()->StopRecording();
+            WrappedInstance()->Terminate();
+        }
+    }
+    
+private:
+    bool _isStarted = false;
+    webrtc::AudioTransport *_currentAudioTransport = nullptr;
+};
+
+class WrappedChildAudioDeviceModule : public tgcalls::DefaultWrappedAudioDeviceModule {
+public:
+    WrappedChildAudioDeviceModule(webrtc::scoped_refptr<WrappedAudioDeviceModuleIOS> impl) :
+    tgcalls::DefaultWrappedAudioDeviceModule(impl) {
+    }
+    
+    virtual ~WrappedChildAudioDeviceModule() {
+    }
+    
+    virtual int32_t RegisterAudioCallback(webrtc::AudioTransport *audioCallback) override {
+        auto previousAudioCallback = _audioCallback;
+        _audioCallback = audioCallback;
+        
+        ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, audioCallback);
+        
+        return 0;
+    }
+    
+private:
+    webrtc::AudioTransport *_audioCallback = nullptr;
+};
+
 class SharedAudioDeviceModuleImpl: public tgcalls::SharedAudioDeviceModule {
 public:
     SharedAudioDeviceModuleImpl(bool disableAudioInput, bool enableSystemMute) {
         RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
-        _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, enableSystemMute, disableAudioInput ? 2 : 1);
+        auto sourceDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, enableSystemMute, disableAudioInput ? 2 : 1);
+        _audioDeviceModule = rtc::make_ref_counted<WrappedAudioDeviceModuleIOS>(sourceDeviceModule);
     }
     
     virtual ~SharedAudioDeviceModuleImpl() override {
         if (tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent()) {
-            if (_audioDeviceModule->Playing()) {
-                _audioDeviceModule->StopPlayout();
-                _audioDeviceModule->StopRecording();
-            }
+            _audioDeviceModule->ActualStop();
             _audioDeviceModule = nullptr;
         } else {
             tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
-                if (_audioDeviceModule->Playing()) {
-                    _audioDeviceModule->StopPlayout();
-                    _audioDeviceModule->StopRecording();
-                }
+                _audioDeviceModule->ActualStop();
                 _audioDeviceModule = nullptr;
             });
         }
     }
     
 public:
-    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() override {
+    virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> audioDeviceModule() override {
         return _audioDeviceModule;
+    }
+    
+    rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule() override {
+        return rtc::make_ref_counted<WrappedChildAudioDeviceModule>(_audioDeviceModule);
     }
     
     virtual void start() override {
         RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
         
-        _audioDeviceModule->Init();
-        if (!_audioDeviceModule->Playing()) {
-            _audioDeviceModule->InitPlayout();
-            //_audioDeviceModule->InitRecording();
-            if (_audioDeviceModule->PlayoutIsInitialized()) {
-                _audioDeviceModule->InternalStartPlayout();
-            }
-            //_audioDeviceModule->InternalStartRecording();
-        }
+        _audioDeviceModule->Start();
     }
     
 private:
-    rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _audioDeviceModule;
+    rtc::scoped_refptr<WrappedAudioDeviceModuleIOS> _audioDeviceModule;
 };
 
 @implementation SharedCallAudioDevice {
@@ -145,7 +624,8 @@ private:
 
 - (void)setTone:(CallAudioTone * _Nullable)tone {
     _audioDeviceModule->perform([tone](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
-        audioDeviceModule->audioDeviceModule()->setTone([tone asTone]);
+        //audioDeviceModule->audioDeviceModule()->setTone([tone asTone]);
+        //TODO:implement
     });
 }
 
@@ -1303,6 +1783,13 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     return resultModule;
                 }
             },
+            .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
+                if (audioDeviceModule) {
+                    return audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                } else {
+                    return nullptr;
+                }
+            },
             .directConnectionChannel = directConnectionChannel
         });
         _state = OngoingCallStateInitializing;
@@ -1998,6 +2485,13 @@ isConference:(bool)isConference {
                         }
                     }];
                     return resultModule;
+                }
+            },
+            .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
+                if (audioDeviceModule) {
+                    return audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                } else {
+                    return nullptr;
                 }
             },
             .onMutedSpeechActivityDetected = [weakSelf, queue](bool value) {

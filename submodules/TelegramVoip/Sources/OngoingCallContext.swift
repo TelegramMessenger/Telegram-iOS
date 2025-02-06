@@ -1328,15 +1328,17 @@ public final class OngoingCallContext {
                         self?.audioLevelPromise.set(.single(level))
                     }
                     
-                    strongSelf.audioSessionActiveDisposable.set((audioSessionActive
-                    |> deliverOn(queue)).start(next: { isActive in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.withContext { context in
-                            context.nativeSetIsAudioSessionActive(isActive: isActive)
-                        }
-                    }))
+                    if audioDevice == nil {
+                        strongSelf.audioSessionActiveDisposable.set((audioSessionActive
+                        |> deliverOn(queue)).start(next: { isActive in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.withContext { context in
+                                context.nativeSetIsAudioSessionActive(isActive: isActive)
+                            }
+                        }))
+                    }
                     
                     strongSelf.networkTypeDisposable = (updatedNetworkType
                     |> deliverOn(queue)).start(next: { networkType in

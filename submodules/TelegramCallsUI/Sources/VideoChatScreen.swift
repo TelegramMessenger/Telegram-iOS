@@ -24,16 +24,7 @@ import TelegramAudio
 import LegacyComponents
 import TooltipUI
 
-extension VideoChatCall {
-    var accountContext: AccountContext {
-        switch self {
-        case let .group(group):
-            return group.accountContext
-        case let .conferenceSource(conferenceSource):
-            return conferenceSource.context
-        }
-    }
-    
+extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
         switch self {
         case let .group(group):

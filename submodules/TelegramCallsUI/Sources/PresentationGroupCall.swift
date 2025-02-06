@@ -1111,6 +1111,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.conferenceFromCallId = conferenceFromCallId
         self.isConference = isConference
         self.encryptionKey = encryptionKey
+        
+        var sharedAudioContext = sharedAudioContext
+        if sharedAudioContext == nil && accountContext.sharedContext.immediateExperimentalUISettings.conferenceCalls {
+            let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+            sharedAudioContext = sharedAudioContextValue
+        }
+        
         self.sharedAudioContext = sharedAudioContext
         
         if self.sharedAudioContext == nil && !accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
@@ -1906,7 +1913,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     var encryptionKey: Data?
                     encryptionKey = self.encryptionKey?.key
-                    encryptionKey = nil
                     
                     let contextAudioSessionActive: Signal<Bool, NoError>
                     if self.sharedAudioContext != nil {
@@ -2875,18 +2881,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let _ = (callManager.currentGroupCallSignal
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] call in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return
                     }
-                    if let call = call, call !== strongSelf {
-                        strongSelf.wasRemoved.set(.single(true))
+                    if let call = call, call != .group(self) {
+                        self.wasRemoved.set(.single(true))
                         return
                     }
 
-                    strongSelf.beginTone(tone: .groupLeft)
+                    self.beginTone(tone: .groupLeft)
                     
                     Queue.mainQueue().after(1.0, {
-                        strongSelf.wasRemoved.set(.single(true))
+                        self.wasRemoved.set(.single(true))
                     })
                 })
             }
