@@ -811,7 +811,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             modalContainer.update(layout: modalContainer.isFlat ? globalOverlayLayout : layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
             
             if modalContainer.supernode == nil && modalContainer.isReady {
-                if let previousModalContainer = previousModalContainer {
+                if let previousModalContainer {
+                    assert(previousModalContainer.supernode != nil)
+                }
+                
+                if let previousModalContainer, previousModalContainer.supernode != nil {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: previousModalContainer)
                 } else if let inCallStatusBar = self.inCallStatusBar {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: inCallStatusBar)
@@ -1601,6 +1605,16 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func setViewControllers(_ viewControllers: [UIViewController], animated: Bool, completion: @escaping () -> Void) {
+        let requestedViewControllers = viewControllers
+        var viewControllers: [UIViewController] = []
+        for controller in requestedViewControllers {
+            if !viewControllers.contains(where: { $0 === controller }) {
+                viewControllers.append(controller)
+            } else {
+                assert(true)
+            }
+        }
+        
         for i in 0 ..< viewControllers.count {
             guard let controller = viewControllers[i] as? ViewController else {
                 continue

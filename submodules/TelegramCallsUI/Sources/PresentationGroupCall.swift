@@ -770,7 +770,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public let account: Account
     public let accountContext: AccountContext
     private let audioSession: ManagedAudioSession
-    private let callKitIntegration: CallKitIntegration?
+    public let callKitIntegration: CallKitIntegration?
     public var isIntegratedWithCallKit: Bool {
         return self.callKitIntegration != nil
     }
@@ -1057,6 +1057,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    private let conferenceSourceId: CallSessionInternalId?
+    public var conferenceSource: CallSessionInternalId? {
+        return self.conferenceSourceId
+    }
+    
     var internal_isRemoteConnected = Promise<Bool>()
     private var internal_isRemoteConnectedDisposable: Disposable?
     
@@ -1081,6 +1086,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         isStream: Bool,
         encryptionKey: (key: Data, fingerprint: Int64)?,
         conferenceFromCallId: CallId?,
+        conferenceSourceId: CallSessionInternalId?,
         isConference: Bool,
         sharedAudioContext: SharedCallAudioContext?
     ) {
@@ -1109,6 +1115,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.hasScreencast = false
         self.isStream = isStream
         self.conferenceFromCallId = conferenceFromCallId
+        self.conferenceSourceId = conferenceSourceId
         self.isConference = isConference
         self.encryptionKey = encryptionKey
         

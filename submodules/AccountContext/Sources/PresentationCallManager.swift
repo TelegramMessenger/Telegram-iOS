@@ -414,6 +414,7 @@ public protocol PresentationGroupCall: AnyObject {
     
     var isStream: Bool { get }
     var isConference: Bool { get }
+    var conferenceSource: CallSessionInternalId? { get }
     var encryptionKeyValue: Data? { get }
     
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }

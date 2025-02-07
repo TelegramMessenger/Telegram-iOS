@@ -2275,6 +2275,10 @@ isConference:(bool)isConference {
             auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
             memcpy(encryptionKeyValue->data(), encryptionKey.bytes, encryptionKey.length);
             
+            #if DEBUG
+            NSLog(@"Encryption key: %@", [encryptionKey base64EncodedStringWithOptions:0]);
+            #endif
+            
             mappedEncryptionKey = tgcalls::EncryptionKey(encryptionKeyValue, true);
         }
 

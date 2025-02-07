@@ -230,6 +230,11 @@ final class VideoChatParticipantAvatarComponent: Component {
             let previousComponent = self.component
             self.component = component
             
+            if let previousComponent, previousComponent.call != component.call {
+                self.audioLevelDisposable?.dispose()
+                self.audioLevelDisposable = nil
+            }
+            
             let avatarNode: AvatarNode
             if let current = self.avatarNode {
                 avatarNode = current

@@ -94,6 +94,10 @@ public final class CallKitIntegration {
     public func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
         sharedProviderDelegate?.applyVoiceChatOutputMode(outputMode: outputMode)
     }
+    
+    public func updateCallIsConference(uuid: UUID) {
+        sharedProviderDelegate?.updateCallIsConference(uuid: uuid)
+    }
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
@@ -274,6 +278,20 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         Logger.shared.log("CallKitIntegration", "report call connected \(uuid)")
         
         self.provider.reportOutgoingCall(with: uuid, connectedAt: date)
+    }
+    
+    func updateCallIsConference(uuid: UUID) {
+        let update = CXCallUpdate()
+        let handle = CXHandle(type: .generic, value: "\(uuid)")
+        update.remoteHandle = handle
+        //TODO:localize
+        update.localizedCallerName = "Group Call"
+        update.supportsHolding = false
+        update.supportsGrouping = false
+        update.supportsUngrouping = false
+        update.supportsDTMF = false
+        
+        self.provider.reportCall(with: uuid, updated: update)
     }
     
     func providerDidReset(_ provider: CXProvider) {

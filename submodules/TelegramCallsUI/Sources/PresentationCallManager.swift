@@ -62,6 +62,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     private let removeCurrentCallDisposable = MetaDisposable()
     private let removeCurrentGroupCallDisposable = MetaDisposable()
     private var callToConferenceDisposable: Disposable?
+    private var isConferenceReadyDisposable: Disposable?
     private var currentUpgradedToConferenceCallId: CallSessionInternalId?
     
     private var currentGroupCallValue: VideoChatCall?
@@ -251,7 +252,19 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         
         endCallImpl = { [weak self] uuid in
-            if let strongSelf = self, let currentCall = strongSelf.currentCall {
+            guard let self else {
+                return .single(false)
+            }
+            
+            if let currentGroupCall = self.currentGroupCall {
+                switch currentGroupCall {
+                case let .conferenceSource(conferenceSource):
+                    return conferenceSource.hangUp()
+                case let .group(groupCall):
+                    return groupCall.leave(terminateIfPossible: false)
+                }
+            }
+            if let currentCall = self.currentCall {
                 return currentCall.hangUp()
             } else {
                 return .single(false)
@@ -300,6 +313,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         self.proxyServerDisposable?.dispose()
         self.callSettingsDisposable?.dispose()
         self.callToConferenceDisposable?.dispose()
+        self.isConferenceReadyDisposable?.dispose()
     }
     
     private func ringingStatesUpdated(_ ringingStates: [(AccountContext, Peer, CallSessionRingingState, Bool, NetworkType)], enableCallKit: Bool) {
@@ -334,7 +348,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         internalId: firstState.2.id,
                         peerId: firstState.2.peerId,
                         isOutgoing: false,
-                        isIncomingConference: firstState.2.isConference,
+                        isIncomingConference: firstState.2.isIncomingConference,
                         peer: EnginePeer(firstState.1),
                         proxyServer: strongSelf.proxyServer,
                         auxiliaryServers: [],
@@ -687,13 +701,21 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         }
         
         if self.currentGroupCallValue != value {
+            if case let .group(groupCall) = self.currentGroupCallValue, let conferenceSourceId = groupCall.conferenceSource {
+                groupCall.accountContext.account.callSessionManager.drop(internalId: conferenceSourceId, reason: .hangUp, debugLog: .single(nil))
+                (groupCall as! PresentationGroupCallImpl).callKitIntegration?.dropCall(uuid: conferenceSourceId)
+            }
+            
             self.currentGroupCallValue = value
+            
+            self.isConferenceReadyDisposable?.dispose()
+            self.isConferenceReadyDisposable = nil
             
             if let value {
                 switch value {
                 case let .conferenceSource(conferenceSource):
-                    self.callToConferenceDisposable?.dispose()
-                    self.callToConferenceDisposable = (conferenceSource.conferenceState
+                    self.isConferenceReadyDisposable?.dispose()
+                    self.isConferenceReadyDisposable = (conferenceSource.conferenceState
                     |> filter { value in
                         if let value, case .ready = value {
                             return true
@@ -709,6 +731,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         guard let groupCall = conferenceSource.conferenceCall else {
                             return
                         }
+                        (conferenceSource as! PresentationCallImpl).resetAsMovedToConference()
                         self.updateCurrentGroupCall(.group(groupCall))
                     })
                     
@@ -826,6 +849,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                             isStream: false,
                             encryptionKey: nil,
                             conferenceFromCallId: nil,
+                            conferenceSourceId: nil,
                             isConference: false,
                             sharedAudioContext: nil
                         )
@@ -1052,6 +1076,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
             isStream: initialCall.isStream ?? false,
             encryptionKey: nil,
             conferenceFromCallId: nil,
+            conferenceSourceId: nil,
             isConference: false,
             sharedAudioContext: nil
         )
