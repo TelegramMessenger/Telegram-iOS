@@ -1241,8 +1241,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         let titleSize = self.titleView.update(
             string: titleString,
-            fontSize: !havePrimaryVideo ? 28.0 : 17.0,
-            fontWeight: !havePrimaryVideo ? 0.0 : 0.25,
+            fontSize: 28.0,
+            fontWeight: 0.0,
             color: .white,
             constrainedWidth: params.size.width - 16.0 * 2.0,
             transition: transition
@@ -1301,7 +1301,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if currentAreControlsHidden {
             titleY = -8.0 - titleSize.height - statusSize.height
         } else if havePrimaryVideo {
-            titleY = params.insets.top + 2.0
+            if case .active = params.state.lifecycleState {
+                titleY = params.insets.top + 2.0 + 54.0
+            } else {
+                titleY = params.insets.top + 2.0
+            }
         } else {
             titleY = collapsedAvatarFrame.maxY + 39.0
         }
@@ -1313,7 +1317,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             size: titleSize
         )
         transition.setFrame(view: self.titleView, frame: titleFrame)
-        genericAlphaTransition.setAlpha(view: self.titleView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+        genericAlphaTransition.setAlpha(view: self.titleView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall || (havePrimaryVideo && self.isEmojiKeyExpanded)) ? 0.0 : 1.0)
         
         var emojiViewSizeValue: CGSize?
         var emojiTransition = transition
@@ -1392,15 +1396,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         }
         
-        var statusEmojiWidth: CGFloat = 0.0
-        let statusEmojiSpacing: CGFloat = 8.0
-        if !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
-            statusEmojiWidth = statusEmojiSpacing + emojiViewSize.width
-        }
         let statusFrame = CGRect(
             origin: CGPoint(
-                x: (params.size.width - statusSize.width - statusEmojiWidth) * 0.5,
-                y: titleFrame.maxY + (havePrimaryVideo ? 0.0 : 4.0)
+                x: (params.size.width - statusSize.width) * 0.5,
+                y: titleFrame.maxY + 4.0
             ),
             size: statusSize
         )
@@ -1414,12 +1413,19 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         } else {
             transition.setFrame(view: self.statusView, frame: statusFrame)
-            genericAlphaTransition.setAlpha(view: self.statusView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+            genericAlphaTransition.setAlpha(view: self.statusView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall || (havePrimaryVideo && self.isEmojiKeyExpanded)) ? 0.0 : 1.0)
         }
         
         if case .active = params.state.lifecycleState {
             if let emojiView = self.emojiView, !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
-                let emojiViewFrame = CGRect(origin: CGPoint(x: statusFrame.maxX + statusEmojiSpacing, y: statusFrame.minY + floorToScreenPixels((statusFrame.height - emojiViewSize.height) * 0.5)), size: emojiViewSize)
+                let emojiViewY: CGFloat
+                if currentAreControlsHidden {
+                    emojiViewY = -8.0 - emojiViewSize.height
+                } else {
+                    emojiViewY = params.insets.top + 14.0
+                }
+                
+                let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: emojiViewY), size: emojiViewSize)
                 
                 if case let .curve(duration, curve) = transition.animation, emojiViewWasExpanded {
                     let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)

@@ -24,16 +24,7 @@ import TelegramAudio
 import LegacyComponents
 import TooltipUI
 
-extension VideoChatCall {
-    var accountContext: AccountContext {
-        switch self {
-        case let .group(group):
-            return group.accountContext
-        case let .conferenceSource(conferenceSource):
-            return conferenceSource.context
-        }
-    }
-    
+extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
         switch self {
         case let .group(group):
@@ -172,6 +163,16 @@ final class VideoChatScreenComponent: Component {
     }
 
     static func ==(lhs: VideoChatScreenComponent, rhs: VideoChatScreenComponent) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.initialData !== rhs.initialData {
+            return false
+        }
+        if lhs.initialCall != rhs.initialCall {
+            return false
+        }
+        
         return true
     }
     
@@ -1091,7 +1092,12 @@ final class VideoChatScreenComponent: Component {
                 self.callState = component.initialData.callState
             }
             
-            var call = self.currentCall ?? component.initialCall
+            var call: VideoChatCall
+            if let previousComponent = self.component, previousComponent.initialCall != component.initialCall {
+                call = component.initialCall
+            } else {
+                call = self.currentCall ?? component.initialCall
+            }
             if case let .conferenceSource(conferenceSource) = call, let conferenceCall = conferenceSource.conferenceCall, conferenceSource.conferenceStateValue == .ready {
                 call = .group(conferenceCall)
             }
@@ -2524,6 +2530,17 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
     
     deinit {
         self.idleTimerExtensionDisposable?.dispose()
+    }
+    
+    func updateCall(call: VideoChatCall) {
+        self.call = call
+        if let component = self.component.wrapped as? VideoChatScreenComponent {
+            // This is only to clear the reference to regular call
+            self.updateComponent(component: AnyComponent(VideoChatScreenComponent(
+                initialData: component.initialData,
+                initialCall: call
+            )), transition: .immediate)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {

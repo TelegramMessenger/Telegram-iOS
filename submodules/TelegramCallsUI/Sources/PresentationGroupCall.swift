@@ -770,7 +770,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     public let account: Account
     public let accountContext: AccountContext
     private let audioSession: ManagedAudioSession
-    private let callKitIntegration: CallKitIntegration?
+    public let callKitIntegration: CallKitIntegration?
     public var isIntegratedWithCallKit: Bool {
         return self.callKitIntegration != nil
     }
@@ -1057,6 +1057,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
+    private let conferenceSourceId: CallSessionInternalId?
+    public var conferenceSource: CallSessionInternalId? {
+        return self.conferenceSourceId
+    }
+    
     var internal_isRemoteConnected = Promise<Bool>()
     private var internal_isRemoteConnectedDisposable: Disposable?
     
@@ -1081,6 +1086,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         isStream: Bool,
         encryptionKey: (key: Data, fingerprint: Int64)?,
         conferenceFromCallId: CallId?,
+        conferenceSourceId: CallSessionInternalId?,
         isConference: Bool,
         sharedAudioContext: SharedCallAudioContext?
     ) {
@@ -1109,8 +1115,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.hasScreencast = false
         self.isStream = isStream
         self.conferenceFromCallId = conferenceFromCallId
+        self.conferenceSourceId = conferenceSourceId
         self.isConference = isConference
         self.encryptionKey = encryptionKey
+        
+        var sharedAudioContext = sharedAudioContext
+        if sharedAudioContext == nil && accountContext.sharedContext.immediateExperimentalUISettings.conferenceCalls {
+            let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+            sharedAudioContext = sharedAudioContextValue
+        }
+        
         self.sharedAudioContext = sharedAudioContext
         
         if self.sharedAudioContext == nil && !accountContext.sharedContext.immediateExperimentalUISettings.liveStreamV2 {
@@ -1906,7 +1920,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     
                     var encryptionKey: Data?
                     encryptionKey = self.encryptionKey?.key
-                    encryptionKey = nil
                     
                     let contextAudioSessionActive: Signal<Bool, NoError>
                     if self.sharedAudioContext != nil {
@@ -2875,18 +2888,18 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 let _ = (callManager.currentGroupCallSignal
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self] call in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return
                     }
-                    if let call = call, call !== strongSelf {
-                        strongSelf.wasRemoved.set(.single(true))
+                    if let call = call, call != .group(self) {
+                        self.wasRemoved.set(.single(true))
                         return
                     }
 
-                    strongSelf.beginTone(tone: .groupLeft)
+                    self.beginTone(tone: .groupLeft)
                     
                     Queue.mainQueue().after(1.0, {
-                        strongSelf.wasRemoved.set(.single(true))
+                        self.wasRemoved.set(.single(true))
                     })
                 })
             }

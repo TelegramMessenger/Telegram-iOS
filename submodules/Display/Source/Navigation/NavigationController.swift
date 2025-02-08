@@ -77,12 +77,34 @@ private final class GlobalOverlayContainerParent: ASDisplayNode {
 }
 
 private final class NavigationControllerNode: ASDisplayNode {
+    private final class View: UIView {
+        private var scheduledWithLayout: (() -> Void)?
+        
+        func schedule(layout f: @escaping () -> Void) {
+            self.scheduledWithLayout = f
+            self.setNeedsLayout()
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            
+            if let scheduledWithLayout = self.scheduledWithLayout {
+                self.scheduledWithLayout = nil
+                scheduledWithLayout()
+            }
+        }
+    }
+    
     private weak var controller: NavigationController?
     
     init(controller: NavigationController) {
         self.controller = controller
         
         super.init()
+        
+        self.setViewBlock({
+            return View(frame: CGRect())
+        })
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -99,6 +121,10 @@ private final class NavigationControllerNode: ASDisplayNode {
             return true
         }
         return false
+    }
+    
+    func schedule(layout f: @escaping () -> Void) {
+        (self.view as? View)?.schedule(layout: f)
     }
 }
 
@@ -376,6 +402,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.loadView()
         }
         self.validLayout = layout
+        
+        self.scheduledLayoutTransitionRequest = nil
+        
         self.updateContainers(layout: layout, transition: transition)
     }
     
@@ -782,7 +811,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             modalContainer.update(layout: modalContainer.isFlat ? globalOverlayLayout : layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
             
             if modalContainer.supernode == nil && modalContainer.isReady {
-                if let previousModalContainer = previousModalContainer {
+                if let previousModalContainer {
+                    assert(previousModalContainer.supernode != nil)
+                }
+                
+                if let previousModalContainer, previousModalContainer.supernode != nil {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: previousModalContainer)
                 } else if let inCallStatusBar = self.inCallStatusBar {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: inCallStatusBar)
@@ -1572,6 +1605,16 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func setViewControllers(_ viewControllers: [UIViewController], animated: Bool, completion: @escaping () -> Void) {
+        let requestedViewControllers = viewControllers
+        var viewControllers: [UIViewController] = []
+        for controller in requestedViewControllers {
+            if !viewControllers.contains(where: { $0 === controller }) {
+                viewControllers.append(controller)
+            } else {
+                assert(true)
+            }
+        }
+        
         for i in 0 ..< viewControllers.count {
             guard let controller = viewControllers[i] as? ViewController else {
                 continue
@@ -1805,18 +1848,11 @@ open class NavigationController: UINavigationController, ContainableController, 
         return nil
     }
     
-    private func scheduleAfterLayout(_ f: @escaping () -> Void) {
-        (self.view as? UITracingLayerView)?.schedule(layout: {
-            f()
-        })
-        self.view.setNeedsLayout()
-    }
-    
     private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {
         let requestId = self.scheduledLayoutTransitionRequestId
         self.scheduledLayoutTransitionRequestId += 1
         self.scheduledLayoutTransitionRequest = (requestId, transition)
-        (self.view as? UITracingLayerView)?.schedule(layout: { [weak self] in
+        (self.displayNode as? NavigationControllerNode)?.schedule(layout: { [weak self] in
             if let strongSelf = self {
                 if let (currentRequestId, currentRequestTransition) = strongSelf.scheduledLayoutTransitionRequest, currentRequestId == requestId {
                     strongSelf.scheduledLayoutTransitionRequest = nil
@@ -1869,7 +1905,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             if let layout = self.validLayout {
                 inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallNode: forceInCallStatusBar, animated: false)
-                self.containerLayoutUpdated(layout, transition: transition)
+                self.scheduleLayoutTransitionRequest(transition)
+                //self.containerLayoutUpdated(layout, transition: transition)
             } else {
                 self.updateInCallStatusBarState = forceInCallStatusBar
             }
@@ -1879,7 +1916,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 inCallStatusBar?.removeFromSupernode()
             })
             if let layout = self.validLayout {
-                self.containerLayoutUpdated(layout, transition: transition)
+                let _ = layout
+                self.scheduleLayoutTransitionRequest(transition)
+                //self.containerLayoutUpdated(layout, transition: transition)
             }
         }
     }

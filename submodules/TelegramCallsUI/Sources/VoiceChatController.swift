@@ -248,6 +248,8 @@ public protocol VoiceChatController: ViewController {
     var onViewDidAppear: (() -> Void)? { get set }
     var onViewDidDisappear: (() -> Void)? { get set }
     
+    func updateCall(call: VideoChatCall)
+    
     func dismiss(closing: Bool, manual: Bool)
 }
 
@@ -6936,6 +6938,9 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
         if let currentOverlayController = self.currentOverlayController {
             currentOverlayController.animateOut(reclaim: false, targetPosition: CGPoint(), completion: { _ in })
         }
+    }
+    
+    func updateCall(call: VideoChatCall) {
     }
     
     override public func loadDisplayNode() {

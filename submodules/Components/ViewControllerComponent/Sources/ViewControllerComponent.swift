@@ -236,7 +236,7 @@ open class ViewControllerComponentContainer: ViewController {
     
     private let context: AccountContext
     private var theme: Theme
-    private let component: AnyComponent<ViewControllerComponentContainer.Environment>
+    public private(set) var component: AnyComponent<ViewControllerComponentContainer.Environment>
     
     private var presentationDataDisposable: Disposable?
     public private(set) var validLayout: ContainerViewLayout?
@@ -387,6 +387,7 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) {
+        self.component = component
         self.node.updateComponent(component: component, transition: transition)
     }
 }

@@ -163,17 +163,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public var callManager: PresentationCallManager?
     let hasInAppPurchases: Bool
     
-    private var callDisposable: Disposable?
     private var callStateDisposable: Disposable?
     
     private(set) var currentCallStatusBarNode: CallStatusBarNodeImpl?
     
+    private var callDisposable: Disposable?
     private var groupCallDisposable: Disposable?
     
     private var callController: CallController?
-    private var call: PresentationCall?
+    
+    private var currentCall: PresentationCurrentCall?
+    
     public let hasOngoingCall = ValuePromise<Bool>(false)
-    private let callState = Promise<PresentationCallState?>(nil)
     private var awaitingCallConnectionDisposable: Disposable?
     private var callPeerDisposable: Disposable?
     private var callIsConferenceDisposable: Disposable?
@@ -182,7 +183,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public var currentGroupCallController: ViewController? {
         return self.groupCallController
     }
-    private let hasGroupCallOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private var hasGroupCallOnScreenValue: Bool = false
+    private let hasGroupCallOnScreenPromise = Promise<Bool>(false)
     public var hasGroupCallOnScreen: Signal<Bool, NoError> {
         return self.hasGroupCallOnScreenPromise.get()
     }
@@ -805,8 +807,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 guard let self else {
                     return
                 }
-                    
-                if call !== self.call {
+                
+                if let call {
+                    self.updateCurrentCall(call: .call(call))
+                } else if let current = self.currentCall, case .call = current {
+                    self.updateCurrentCall(call: nil)
+                }
+                
+                /*if call !== self.call {
                     let previousCall = self.call
                     self.call = call
                     
@@ -842,11 +850,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     self.callIsConferenceDisposable = nil
                     
                     if let call {
-                        if call.conferenceStateValue == nil && call.conferenceCall == nil {
-                            self.callState.set(call.state
-                            |> map(Optional.init))
-                        }
-                        
                         self.hasOngoingCall.set(true)
                         setNotificationCall(call)
                         
@@ -862,14 +865,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             }
                             guard let callController = self.callController, callController.call === call else {
                                 if self.callController == nil, call.conferenceStateValue != nil {
-                                    self.callState.set(.single(nil))
                                     self.presentControllerWithCurrentCall()
                                     self.notificationController?.setBlocking(nil)
                                 }
                                 return
                             }
                             if call.conferenceStateValue != nil {
-                                self.callState.set(.single(nil))
                                 self.presentControllerWithCurrentCall()
                             }
                         })
@@ -932,168 +933,99 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         self.awaitingCallConnectionDisposable = nil
                         setNotificationCall(nil)
                     }
-                }
+                }*/
             })
             
             self.groupCallDisposable = (callManager.currentGroupCallSignal
             |> deliverOnMainQueue).start(next: { [weak self] call in
-                if let strongSelf = self {
-                    if call.flatMap(VideoChatCall.group) != strongSelf.groupCallController?.call {
-                        strongSelf.groupCallController?.dismiss(closing: true, manual: false)
-                        strongSelf.groupCallController = nil
-                        strongSelf.hasOngoingCall.set(false)
+                guard let self else {
+                    return
+                }
+                
+                if let call {
+                    self.updateCurrentCall(call: .group(call))
+                } else if let current = self.currentCall, case .group = current {
+                    self.updateCurrentCall(call: nil)
+                }
+                
+                /*if call.flatMap(VideoChatCall.group) != self.groupCallController?.call {
+                    self.groupCallController?.dismiss(closing: true, manual: false)
+                    self.groupCallController = nil
+                    self.hasOngoingCall.set(false)
+                    
+                    if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
+                        mainWindow.hostView.containerView.endEditing(true)
                         
-                        if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
-                            mainWindow.hostView.containerView.endEditing(true)
+                        if call.isStream {
+                            self.hasGroupCallOnScreenPromise.set(true)
+                            let groupCallController = MediaStreamComponentController(call: call)
+                            groupCallController.onViewDidAppear = { [weak self] in
+                                if let self {
+                                    self.hasGroupCallOnScreenPromise.set(true)
+                                }
+                            }
+                            groupCallController.onViewDidDisappear = { [weak self] in
+                                if let self {
+                                    self.hasGroupCallOnScreenPromise.set(false)
+                                }
+                            }
+                            groupCallController.navigationPresentation = .flatModal
+                            groupCallController.parentNavigationController = navigationController
+                            self.groupCallController = groupCallController
+                            navigationController.pushViewController(groupCallController)
+                        } else {
+                            self.hasGroupCallOnScreenPromise.set(true)
                             
-                            if call.isStream {
-                                strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                let groupCallController = MediaStreamComponentController(call: call)
+                            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: call.accountContext, call: .group(call))
+                            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] initialData in
+                                guard let self, let navigationController else {
+                                    return
+                                }
+                                
+                                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: call.accountContext, call: .group(call), initialData: initialData, sourceCallController: nil)
                                 groupCallController.onViewDidAppear = { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    if let self {
+                                        self.hasGroupCallOnScreenPromise.set(true)
                                     }
                                 }
                                 groupCallController.onViewDidDisappear = { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    if let self {
+                                        self.hasGroupCallOnScreenPromise.set(false)
                                     }
                                 }
                                 groupCallController.navigationPresentation = .flatModal
                                 groupCallController.parentNavigationController = navigationController
                                 strongSelf.groupCallController = groupCallController
                                 navigationController.pushViewController(groupCallController)
-                            } else {
-                                strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                
-                                let _ = (makeVoiceChatControllerInitialData(sharedContext: strongSelf, accountContext: call.accountContext, call: .group(call))
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf, weak navigationController] initialData in
-                                    guard let strongSelf, let navigationController else {
-                                        return
-                                    }
-                                    
-                                    let groupCallController = makeVoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: .group(call), initialData: initialData, sourceCallController: nil)
-                                    groupCallController.onViewDidAppear = { [weak strongSelf] in
-                                        if let strongSelf {
-                                            strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                        }
-                                    }
-                                    groupCallController.onViewDidDisappear = { [weak strongSelf] in
-                                        if let strongSelf {
-                                            strongSelf.hasGroupCallOnScreenPromise.set(false)
-                                        }
-                                    }
-                                    groupCallController.navigationPresentation = .flatModal
-                                    groupCallController.parentNavigationController = navigationController
-                                    strongSelf.groupCallController = groupCallController
-                                    navigationController.pushViewController(groupCallController)
-                                })
-                            }
-                            
-                            strongSelf.hasOngoingCall.set(true)
-                        } else {
-                            strongSelf.hasOngoingCall.set(false)
+                            })
                         }
-                    }
-                }
-            })
-            
-            let callSignal: Signal<(PresentationCall?, PresentationGroupCall?), NoError> = .single((nil, nil))
-            |> then(
-                callManager.currentCallSignal
-                |> deliverOnMainQueue
-                |> mapToSignal { call -> Signal<(PresentationCall?, PresentationGroupCall?), NoError> in
-                    guard let call else {
-                        return .single((nil, nil))
-                    }
-                    return call.state
-                    |> map { [weak call] state -> (PresentationCall?, PresentationGroupCall?) in
-                        guard let call else {
-                            return (nil, nil)
-                        }
-                        switch state.state {
-                        case .ringing:
-                            return (nil, nil)
-                        case .terminating, .terminated:
-                            return (nil, nil)
-                        default:
-                            return (call, nil)
-                        }
-                    }
-                }
-                |> distinctUntilChanged(isEqual: { lhs, rhs in
-                    return lhs.0 === rhs.0 && lhs.1 === rhs.1
-                })
-            )
-            let groupCallSignal: Signal<PresentationGroupCall?, NoError> = .single(nil)
-            |> then(
-                callManager.currentGroupCallSignal
-            )
-            
-            self.callStateDisposable = combineLatest(queue: .mainQueue(),
-                callSignal,
-                groupCallSignal,
-                self.hasGroupCallOnScreenPromise.get()
-            ).start(next: { [weak self] call, groupCall, hasGroupCallOnScreen in
-                if let strongSelf = self {
-                    var (call, conferenceCall) = call
-                    var groupCall = groupCall
-                    if let conferenceCall {
-                        call = nil
-                        groupCall = conferenceCall
-                    }
-                    
-                    let statusBarContent: CallStatusBarNodeImpl.Content?
-                    if let call, !hasGroupCallOnScreen {
-                        statusBarContent = .call(strongSelf, call.context.account, call)
-                    } else if let groupCall = groupCall, !hasGroupCallOnScreen {
-                        statusBarContent = .groupCall(strongSelf, groupCall.account, groupCall)
+                        
+                        self.hasOngoingCall.set(true)
                     } else {
-                        statusBarContent = nil
+                        self.hasOngoingCall.set(false)
                     }
-                    
-                    var resolvedCallStatusBarNode: CallStatusBarNodeImpl?
-                    if let statusBarContent = statusBarContent {
-                        if let current = strongSelf.currentCallStatusBarNode {
-                            resolvedCallStatusBarNode = current
-                        } else {
-                            resolvedCallStatusBarNode = CallStatusBarNodeImpl()
-                            strongSelf.currentCallStatusBarNode = resolvedCallStatusBarNode
-                        }
-                        resolvedCallStatusBarNode?.update(content: statusBarContent)
-                    } else {
-                        strongSelf.currentCallStatusBarNode = nil
-                    }
-                    
-                    if let navigationController = strongSelf.mainWindow?.viewController as? NavigationController {
-                        navigationController.setForceInCallStatusBar(resolvedCallStatusBarNode)
-                    }
-                }
+                }*/
             })
             
             mainWindow.inCallNavigate = { [weak self] in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                if let callController = strongSelf.callController {
-                    if callController.isNodeLoaded {
-                        mainWindow.hostView.containerView.endEditing(true)
-                        if callController.view.superview == nil {
-                            if useFlatModalCallsPresentation(context: callController.call.context) {
-                                (mainWindow.viewController as? NavigationController)?.pushViewController(callController)
-                            } else {
-                                mainWindow.present(callController, on: .calls)
-                            }
+                if let callController = self.callController {
+                    mainWindow.hostView.containerView.endEditing(true)
+                    if callController.view.superview == nil {
+                        if useFlatModalCallsPresentation(context: callController.call.context) {
+                            (mainWindow.viewController as? NavigationController)?.pushViewController(callController)
                         } else {
-                            callController.expandFromPipIfPossible()
+                            mainWindow.present(callController, on: .calls)
                         }
+                    } else {
+                        callController.expandFromPipIfPossible()
                     }
-                } else if let groupCallController = strongSelf.groupCallController {
-                    if groupCallController.isNodeLoaded {
-                        mainWindow.hostView.containerView.endEditing(true)
-                        if groupCallController.view.superview == nil {
-                            (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
-                        }
+                } else if let groupCallController = self.groupCallController {
+                    mainWindow.hostView.containerView.endEditing(true)
+                    if groupCallController.view.superview == nil {
+                        (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                     }
                 }
             }
@@ -1236,8 +1168,291 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
+    private func updateCurrentCall(call: PresentationCurrentCall?) {
+        if self.currentCall == call {
+            return
+        }
+        
+        if let currentCall = self.currentCall {
+            if case .call = currentCall {
+                self.callPeerDisposable?.dispose()
+                self.callPeerDisposable = nil
+                
+                self.awaitingCallConnectionDisposable?.dispose()
+                self.awaitingCallConnectionDisposable = nil
+                
+                self.notificationController?.setBlocking(nil)
+            }
+        }
+        
+        self.currentCall = call
+        
+        let beginDisplayingCallStatusBar = Promise<Void>()
+        
+        var shouldResetGroupCallOnScreen = true
+        
+        var transitioningToConferenceCallController: CallController?
+        if let call, case let .group(groupCall) = call, case let .conferenceSource(conferenceSource) = groupCall, let callController = self.callController, callController.call === conferenceSource {
+            transitioningToConferenceCallController = callController
+            if callController.navigationPresentation != .flatModal {
+                callController.dismissWithoutAnimation()
+            }
+            self.callController = nil
+            shouldResetGroupCallOnScreen = false
+        }
+        
+        if let callController = self.callController {
+            self.callController = nil
+            callController.dismiss()
+        }
+        if let groupCallController = self.groupCallController {
+            if case let .group(groupCall) = call, case let .group(groupCall) = groupCall, let conferenceSourceId = groupCall.conferenceSource {
+                if case let .conferenceSource(conferenceSource) = groupCallController.call, conferenceSource.internalId == conferenceSourceId {
+                    groupCallController.updateCall(call: .group(groupCall))
+                    
+                    self.updateInCallStatusBarData(hasGroupCallOnScreen: self.hasGroupCallOnScreenValue)
+                    
+                    return
+                }
+            }
+            
+            self.groupCallController = nil
+            groupCallController.dismiss()
+        }
+        
+        if shouldResetGroupCallOnScreen {
+            self.hasGroupCallOnScreenPromise.set(.single(false))
+        }
+        
+        self.callStateDisposable?.dispose()
+        self.callStateDisposable = nil
+        
+        if case let .call(call) = call {
+            let callController = CallController(sharedContext: self, account: call.context.account, call: call, easyDebugAccess: !GlobalExperimentalSettings.isAppStoreBuild)
+            self.callController = callController
+            let thisCallIsOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+            callController.restoreUIForPictureInPicture = { [weak self, weak callController] completion in
+                guard let self, let callController else {
+                    completion(false)
+                    return
+                }
+                if callController.window == nil {
+                    if useFlatModalCallsPresentation(context: callController.call.context) {
+                        (self.mainWindow?.viewController as? NavigationController)?.pushViewController(callController)
+                    } else {
+                        self.mainWindow?.present(callController, on: .calls)
+                    }
+                }
+                completion(true)
+            }
+            callController.onViewDidAppear = {
+                thisCallIsOnScreenPromise.set(true)
+            }
+            callController.onViewDidDisappear = {
+                thisCallIsOnScreenPromise.set(false)
+            }
+            
+            if call.isOutgoing {
+                self.mainWindow?.hostView.containerView.endEditing(true)
+                
+                thisCallIsOnScreenPromise.set(true)
+                self.hasGroupCallOnScreenPromise.set(thisCallIsOnScreenPromise.get())
+                
+                if useFlatModalCallsPresentation(context: callController.call.context) {
+                    (self.mainWindow?.viewController as? NavigationController)?.pushViewController(callController)
+                } else {
+                    self.mainWindow?.present(callController, on: .calls)
+                }
+            } else {
+                self.hasGroupCallOnScreenPromise.set(thisCallIsOnScreenPromise.get())
+                
+                if !call.isIntegratedWithCallKit {
+                    self.callPeerDisposable = (call.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))
+                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak call] peer in
+                        guard let self, let call, let peer else {
+                            return
+                        }
+                        if self.currentCall != .call(call) {
+                            return
+                        }
+                        
+                        let presentationData = self.currentPresentationData.with({ $0 })
+                        self.notificationController?.setBlocking(ChatCallNotificationItem(
+                            context: call.context,
+                            strings: presentationData.strings,
+                            nameDisplayOrder: presentationData.nameDisplayOrder,
+                            peer: peer,
+                            isVideo: call.isVideo,
+                            action: { [weak call] answerAction in
+                                guard let call else {
+                                    return
+                                }
+                                if answerAction {
+                                    self.notificationController?.setBlocking(nil)
+                                    call.answer()
+                                } else {
+                                    self.notificationController?.setBlocking(nil)
+                                    call.rejectBusy()
+                                }
+                            }
+                        ))
+                    })
+                }
+                
+                self.awaitingCallConnectionDisposable = (call.state
+                |> filter { state in
+                    switch state.state {
+                    case .ringing:
+                        return false
+                    case .terminating, .terminated:
+                        return false
+                    default:
+                        return true
+                    }
+                }
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self, weak callController] _ in
+                    guard let self, let callController, self.callController === callController else {
+                        return
+                    }
+                    self.notificationController?.setBlocking(nil)
+                    
+                    self.callPeerDisposable?.dispose()
+                    self.callPeerDisposable = nil
+                    
+                    thisCallIsOnScreenPromise.set(true)
+                    if useFlatModalCallsPresentation(context: callController.call.context) {
+                        (self.mainWindow?.viewController as? NavigationController)?.pushViewController(callController)
+                    } else {
+                        self.mainWindow?.present(callController, on: .calls)
+                    }
+                })
+            }
+            
+            beginDisplayingCallStatusBar.set(call.state
+            |> filter { state in
+                switch state.state {
+                case .ringing:
+                    return false
+                case .terminating, .terminated:
+                    return false
+                default:
+                    return true
+                }
+            }
+            |> take(1)
+            |> map { _ -> Void in
+                return Void()
+            })
+        }
+        
+        if case let .group(groupCall) = call {
+            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: groupCall.accountContext, call: groupCall)
+            |> deliverOnMainQueue).start(next: { [weak self, weak transitioningToConferenceCallController] initialData in
+                guard let self else {
+                    return
+                }
+                guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
+                    return
+                }
+                
+                let thisCallIsOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+                
+                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: groupCall.accountContext, call: groupCall, initialData: initialData, sourceCallController: transitioningToConferenceCallController)
+                groupCallController.onViewDidAppear = {
+                    thisCallIsOnScreenPromise.set(true)
+                }
+                groupCallController.onViewDidDisappear = {
+                    thisCallIsOnScreenPromise.set(false)
+                }
+                groupCallController.navigationPresentation = .flatModal
+                groupCallController.parentNavigationController = navigationController
+                self.groupCallController = groupCallController
+                
+                self.mainWindow?.hostView.containerView.endEditing(true)
+                
+                thisCallIsOnScreenPromise.set(true)
+                self.hasGroupCallOnScreenPromise.set(thisCallIsOnScreenPromise.get())
+                beginDisplayingCallStatusBar.set(.single(Void()))
+                
+                if let transitioningToConferenceCallController {
+                    transitioningToConferenceCallController.onViewDidAppear = nil
+                    transitioningToConferenceCallController.onViewDidDisappear = nil
+                }
+                
+                if let transitioningToConferenceCallController {
+                    var viewControllers = navigationController.viewControllers
+                    if let index = viewControllers.firstIndex(where: { $0 === transitioningToConferenceCallController }) {
+                        viewControllers.insert(groupCallController, at: index)
+                        navigationController.setViewControllers(viewControllers, animated: false)
+                        viewControllers.remove(at: index + 1)
+                        navigationController.setViewControllers(viewControllers, animated: false)
+                    } else {
+                        navigationController.pushViewController(groupCallController)
+                    }
+                } else {
+                    navigationController.pushViewController(groupCallController)
+                }
+            })
+        }
+        
+        if self.currentCall != nil {
+            self.callStateDisposable = (combineLatest(queue: .mainQueue(),
+                self.hasGroupCallOnScreenPromise.get(),
+                beginDisplayingCallStatusBar.get()
+            )
+            |> deliverOnMainQueue).startStrict(next: { [weak self] hasGroupCallOnScreen, _ in
+                guard let self else {
+                    return
+                }
+                self.hasGroupCallOnScreenValue = hasGroupCallOnScreen
+                self.updateInCallStatusBarData(hasGroupCallOnScreen: hasGroupCallOnScreen)
+            })
+        } else {
+            self.hasGroupCallOnScreenValue = false
+            self.currentCallStatusBarNode = nil
+            if let navigationController = self.mainWindow?.viewController as? NavigationController {
+                navigationController.setForceInCallStatusBar(nil)
+            }
+        }
+    }
+    
+    private func updateInCallStatusBarData(hasGroupCallOnScreen: Bool) {
+        var statusBarContent: CallStatusBarNodeImpl.Content?
+        if !hasGroupCallOnScreen, let currentCall = self.currentCall {
+            switch currentCall {
+            case let .call(call):
+                statusBarContent = .call(self, call.context.account, call)
+            case let .group(groupCall):
+                switch groupCall {
+                case let .conferenceSource(conferenceSource):
+                    statusBarContent = .call(self, conferenceSource.context.account, conferenceSource)
+                case let .group(groupCall):
+                    statusBarContent = .groupCall(self, groupCall.account, groupCall)
+                }
+            }
+        }
+        
+        var resolvedCallStatusBarNode: CallStatusBarNodeImpl?
+        if let statusBarContent {
+            if let current = self.currentCallStatusBarNode {
+                resolvedCallStatusBarNode = current
+            } else {
+                resolvedCallStatusBarNode = CallStatusBarNodeImpl()
+                self.currentCallStatusBarNode = resolvedCallStatusBarNode
+            }
+            resolvedCallStatusBarNode?.update(content: statusBarContent)
+        } else {
+            self.currentCallStatusBarNode = nil
+        }
+        
+        if let navigationController = self.mainWindow?.viewController as? NavigationController {
+            navigationController.setForceInCallStatusBar(resolvedCallStatusBarNode)
+        }
+    }
+    
     private func presentControllerWithCurrentCall() {
-        guard let call = self.call else {
+        /*guard let call = self.call else {
             return
         }
         
@@ -1360,7 +1575,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             } else {
                 self.mainWindow?.present(callController, on: .calls)
             }
-        }
+        }*/
     }
     
     public func updateNotificationTokensRegistration() {

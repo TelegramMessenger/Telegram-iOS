@@ -1038,6 +1038,9 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         fatalError("init(coder:) has not been implemented")
     }
     
+    public func updateCall(call: VideoChatCall) {
+    }
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         

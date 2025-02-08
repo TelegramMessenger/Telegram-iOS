@@ -599,6 +599,6 @@ public final class PendingStarsReactionsMessageAttribute: MessageAttribute {
             encoder.encodeNil(forKey: "ap")
         }
         encoder.encodeInt32(self.count, forKey: "cnt")
-        encoder.encodeCodable(self.privacy, forKey: "priv")
+        encoder.encode(self.privacy, forKey: "priv")
     }
 }
