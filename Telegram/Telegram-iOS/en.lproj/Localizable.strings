@@ -13568,6 +13568,7 @@ Sorry for the inconvenience.";
 
 "Notification.StarGift.Unpack" = "Unpack";
 
+"Notification.StarGift.Collectible" = "Collectible";
 "Notification.StarGift.Model" = "Model";
 "Notification.StarGift.Backdrop" = "Backdrop";
 "Notification.StarGift.Symbol" = "Symbol";
