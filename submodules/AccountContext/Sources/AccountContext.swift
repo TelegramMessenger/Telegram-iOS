@@ -190,6 +190,7 @@ public enum ResolvedUrlSettingsSection {
     case autoremoveMessages
     case twoStepAuth
     case enableLog
+    case phonePrivacy
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {

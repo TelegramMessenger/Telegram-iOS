@@ -4603,7 +4603,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self.privacySettings.set(.single(nil))
             }
             
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, privacySettings: self.privacySettings.get())
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, privacySettings: self.privacySettings.get(), forceHasGifts: initialPaneKey == .gifts)
                        
             var previousTimestamp: Double?
             self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
@@ -6497,16 +6497,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }
                         
                         let boostTitle: String
-                        var isNew = false
                         switch channel.info {
                         case .group:
                             boostTitle = presentationData.strings.PeerInfo_Group_Boost
-                            isNew = true
                         case .broadcast:
                             boostTitle = presentationData.strings.PeerInfo_Channel_Boost
                         }
-                        
-                        items.append(.action(ContextMenuActionItem(text: boostTitle, badge: isNew ? ContextMenuActionBadge(value: presentationData.strings.Settings_New, color: .accent, style: .label) : nil, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: boostTitle, badge: nil, icon: { theme in
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Boost"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)

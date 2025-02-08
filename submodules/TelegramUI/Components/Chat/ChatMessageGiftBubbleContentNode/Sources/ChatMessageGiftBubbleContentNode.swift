@@ -426,7 +426,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 peerName = EnginePeer(channel).compactDisplayTitle
                             }
                             title = item.presentationData.strings.Notification_StarsGiveaway_Title
-                            text = item.presentationData.strings.Notification_StarsGiveaway_Subtitle(peerName, item.presentationData.strings.Notification_StarsGiveaway_Subtitle_Stars(Int32(count))).string
+                            let starsString = item.presentationData.strings.Notification_StarsGiveaway_Subtitle_Stars(Int32(count)).replacingOccurrences(of: " ", with: "\u{00A0}")
+                            text = item.presentationData.strings.Notification_StarsGiveaway_Subtitle(peerName, starsString).string
                         case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue, _, _, _, _, giftText, giftEntities):
                             if channelId == nil {
                                 months = monthsValue
@@ -523,7 +524,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         }
                                         if peerName.isEmpty {
                                             if let convertStars, convertStars > 0 {
-                                                text = item.presentationData.strings.Notification_StarGift_Subtitle(item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars))).string
+                                                let starsString = item.presentationData.strings.Notification_StarGift_Subtitle_Stars(Int32(convertStars)).replacingOccurrences(of: " ", with: "\u{00A0}")
+                                                text = item.presentationData.strings.Notification_StarGift_Subtitle(starsString).string
                                             } else {
                                                 text =  item.presentationData.strings.Notification_StarGift_Bot_Subtitle
                                             }
@@ -531,7 +533,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                             if upgradeStars != nil {
                                                 text =  item.presentationData.strings.Notification_StarGift_Subtitle_Upgrade_Other(peerName).string
                                             } else if let convertStars, convertStars > 0 {
-                                                let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars)))
+                                                let starsString = item.presentationData.strings.Notification_StarGift_Subtitle_Other_Stars(Int32(convertStars)).replacingOccurrences(of: " ", with: "\u{00A0}")
+                                                let formattedString = item.presentationData.strings.Notification_StarGift_Subtitle_Other(peerName, starsString)
                                                 text = formattedString.string
                                                 if let starsRange = formattedString.ranges.last {
                                                     entities.append(MessageTextEntity(range: starsRange.range.lowerBound ..< starsRange.range.upperBound, type: .Bold))
@@ -560,6 +563,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .starGiftUnique(gift, isUpgrade, _, _, _, _, isRefunded, _, _, _):
                             if case let .unique(uniqueGift) = gift {
                                 isStarGift = true
+                                
+                                let isSelfGift = item.message.id.peerId == item.context.account.peerId
                                 let authorName: String
                                 if isUpgrade {
                                     if item.message.author?.id == item.context.account.peerId {
@@ -570,12 +575,14 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     authorName = item.message.author.flatMap { EnginePeer($0) }?.compactDisplayTitle ?? ""
                                 }
-                                if item.message.id.peerId.isTelegramNotifications {
+                                if isSelfGift {
+                                    title = item.presentationData.strings.Notification_StarGift_Self_Title
+                                } else if item.message.id.peerId.isTelegramNotifications {
                                     title = item.presentationData.strings.Notification_StarGift_TitleShort
                                 } else {
                                     title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
                                 }
-                                text =  isStoryEntity ? "**Collectible #\(uniqueGift.number)**" : "**\(uniqueGift.title) #\(uniqueGift.number)**"
+                                text =  isStoryEntity ? "**\(item.presentationData.strings.Notification_StarGift_Collectible) #\(uniqueGift.number)**" : "**\(uniqueGift.title) #\(uniqueGift.number)**"
                                 ribbonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_Gift
                                 buttonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_View
                                 modelTitle = item.presentationData.strings.Notification_StarGift_Model

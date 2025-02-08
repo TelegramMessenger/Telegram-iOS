@@ -1273,9 +1273,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
                 self.isReady.set(.single(true))
             }
         }
-        if let previousCurrentPaneKey = previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey {
-            self.currentPaneUpdated?(self.expandOnSwitch)
-            self.expandOnSwitch = false
+        if let previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey || self.expandOnSwitch {
+            if self.currentPaneKey == nil && previousCurrentPaneKey == .gifts {
+            } else {
+                self.currentPaneUpdated?(self.expandOnSwitch)
+                self.expandOnSwitch = false
+            }
         }
         if updateCurrentPaneStatus {
             self.currentPaneStatusPromise.set(self.currentPane?.node.status ?? .single(nil))
