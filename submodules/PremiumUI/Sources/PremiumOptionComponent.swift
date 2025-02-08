@@ -153,8 +153,7 @@ final class PremiumOptionComponent: CombinedComponent {
                     transition: context.transition
                 )
                 
-                let discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0)
-                
+                let discountPosition = CGPoint(x: insets.left + title.size.width + 6.0 + discountSize.width / 2.0, y: insets.top + title.size.height / 2.0 - 2.0)
                 context.add(discountBackground
                     .position(discountPosition)
                 )

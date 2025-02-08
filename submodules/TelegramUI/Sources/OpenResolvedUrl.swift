@@ -703,6 +703,18 @@ func openResolvedUrlImpl(
                         navigationController.setViewControllers(controllers, animated: true)
                     }
                 }
+            case .phonePrivacy:
+                let privacySignal = context.engine.privacy.requestAccountPrivacySettings()
+                let _ = (privacySignal
+                |> deliverOnMainQueue).start(next: { info in
+                    let current: SelectivePrivacySettings = info.phoneNumber
+                    if let navigationController = navigationController {
+                        let controller = selectivePrivacySettingsController(context: context, kind: .phoneNumber, current: current, phoneDiscoveryEnabled: info.phoneDiscoveryEnabled, updated: { _, _, _, _ in
+                        })
+                        controller.navigationPresentation = .modal
+                        navigationController.pushViewController(controller)
+                    }
+                })
             }
         case let .premiumOffer(reference):
             dismissInput()

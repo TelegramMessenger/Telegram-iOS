@@ -402,7 +402,7 @@ final class UserAppearanceScreenComponent: Component {
                         if case .info = action {
                             var replaceImpl: ((ViewController) -> Void)?
                             let controller = component.context.sharedContext.makePremiumDemoController(context: component.context, subject: .colors, forceDark: false, action: {
-                                let controller = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .settings, forceDark: false, dismissed: nil)
+                                let controller = component.context.sharedContext.makePremiumIntroController(context: component.context, source: .nameColor, forceDark: false, dismissed: nil)
                                 replaceImpl?(controller)
                             }, dismissed: nil)
                             replaceImpl = { [weak controller] c in
