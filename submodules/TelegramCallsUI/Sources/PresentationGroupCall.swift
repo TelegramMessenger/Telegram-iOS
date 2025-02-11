@@ -1127,9 +1127,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.encryptionKey = encryptionKey
         
         var sharedAudioContext = sharedAudioContext
-        if sharedAudioContext == nil && accountContext.sharedContext.immediateExperimentalUISettings.conferenceCalls {
-            let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
-            sharedAudioContext = sharedAudioContextValue
+        if sharedAudioContext == nil {
+            var useSharedAudio = true
+            if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_group_shared_audio"] != nil {
+                useSharedAudio = false
+            }
+            
+            if useSharedAudio {
+                let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+                sharedAudioContext = sharedAudioContextValue
+            }
         }
         
         self.sharedAudioContext = sharedAudioContext
