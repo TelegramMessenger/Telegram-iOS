@@ -909,7 +909,7 @@ public final class PresentationCallImpl: PresentationCall {
                 self.conferenceCallImpl = conferenceCall
                 conferenceCall.upgradedConferenceCall = self
                 
-                conferenceCall.setInvitedPeers(self.pendingInviteToConferencePeerIds)
+                conferenceCall.setConferenceInvitedPeers(self.pendingInviteToConferencePeerIds)
                 for peerId in self.pendingInviteToConferencePeerIds {
                     let _ = conferenceCall.invitePeer(peerId)
                 }
@@ -990,8 +990,6 @@ public final class PresentationCallImpl: PresentationCall {
                         return
                     }
                     
-                    self.ongoingContext?.stop(debugLogValue: Promise())
-                    self.ongoingContext = nil
                     self.ongoingContextStateDisposable?.dispose()
                     
                     self.conferenceStateValue = .ready
@@ -1197,6 +1195,8 @@ public final class PresentationCallImpl: PresentationCall {
                                                 tone = .busy
                                             case .hungUp, .missed:
                                                 tone = .ended
+                                            case .switchedToConference:
+                                                tone = nil
                                         }
                                     case .error:
                                         tone = .failed

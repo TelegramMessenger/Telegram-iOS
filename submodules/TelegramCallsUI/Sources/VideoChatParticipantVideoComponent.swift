@@ -428,6 +428,15 @@ final class VideoChatParticipantVideoComponent: Component {
                 alphaTransition.setAlpha(view: titleView, alpha: controlsAlpha)
             }
             
+            var previousVideoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
+            if let previousComponent {
+                if previousComponent.isMyPeer && previousComponent.isPresentation {
+                    previousVideoDescription = nil
+                } else {
+                    previousVideoDescription = previousComponent.maxVideoQuality == 0 ? nil : (previousComponent.isPresentation ? previousComponent.participant.presentationDescription : previousComponent.participant.videoDescription)
+                }
+            }
+            
             let videoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
             if component.isMyPeer && component.isPresentation {
                 videoDescription = nil
@@ -506,8 +515,13 @@ final class VideoChatParticipantVideoComponent: Component {
                 }
                 
                 let videoLayer: PrivateCallVideoLayer
+                var resetVideoSource = false
                 if let current = self.videoLayer {
                     videoLayer = current
+                    
+                    if let previousVideoDescription, previousVideoDescription.endpointId != videoDescription.endpointId {
+                        resetVideoSource = true
+                    }
                 } else {
                     videoLayer = PrivateCallVideoLayer()
                     self.videoLayer = videoLayer
@@ -517,6 +531,10 @@ final class VideoChatParticipantVideoComponent: Component {
                     
                     videoLayer.blurredLayer.opacity = 0.0
                     
+                    resetVideoSource = true
+                }
+                
+                if resetVideoSource {
                     if let input = component.call.video(endpointId: videoDescription.endpointId) {
                         let videoSource = AdaptedCallVideoSource(videoStreamSignal: input)
                         self.videoSource = videoSource

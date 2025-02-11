@@ -1891,7 +1891,8 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
             self.updateDecorationsColors()
                         
             let invitedPeers: Signal<[EnginePeer], NoError> = self.call.invitedPeers
-            |> mapToSignal { ids -> Signal<[EnginePeer], NoError> in
+            |> mapToSignal { peers -> Signal<[EnginePeer], NoError> in
+                let ids = peers.map(\.id)
                 return context.engine.data.get(EngineDataList(
                     ids.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                 ))

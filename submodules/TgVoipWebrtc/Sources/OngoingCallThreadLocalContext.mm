@@ -66,6 +66,29 @@
 
 namespace tgcalls {
 
+class WrappedChildAudioDeviceModuleControl {
+public:
+    WrappedChildAudioDeviceModuleControl() {
+    }
+    
+    virtual ~WrappedChildAudioDeviceModuleControl() {
+        _mutex.Lock();
+        _mutex.Unlock();
+    }
+    
+public:
+    void setActive() {
+        _mutex.Lock();
+        
+        
+        
+        _mutex.Unlock();
+    }
+    
+private:
+    webrtc::Mutex _mutex;
+};
+
 class SharedAudioDeviceModule {
 public:
     virtual ~SharedAudioDeviceModule() = default;
@@ -93,12 +116,15 @@ public:
     }
     
     void UpdateAudioCallback(webrtc::AudioTransport *previousAudioCallback, webrtc::AudioTransport *audioCallback) {
-        if (audioCallback == nil) {
-            if (_currentAudioTransport == previousAudioCallback) {
-                _currentAudioTransport = nil;
+        if (audioCallback) {
+            _audioTransports.push_back(audioCallback);
+        } else if (previousAudioCallback) {
+            for (size_t i = 0; i < _audioTransports.size(); i++) {
+                if (_audioTransports[i] == previousAudioCallback) {
+                    _audioTransports.erase(_audioTransports.begin() + i);
+                    break;
+                }
             }
-        } else {
-            _currentAudioTransport = audioCallback;
         }
     }
 
@@ -409,19 +435,26 @@ public:
         bool keyPressed,
         uint32_t& newMicLevel
     ) override {
-        if (_currentAudioTransport) {
-            return _currentAudioTransport->RecordedDataIsAvailable(
-                audioSamples,
-                nSamples,
-                nBytesPerSample,
-                nChannels,
-                samplesPerSec,
-                totalDelayMS,
-                clockDrift,
-                currentMicLevel,
-                keyPressed,
-                newMicLevel
-            );
+        if (!_audioTransports.empty()) {
+            for (size_t i = 0; i < _audioTransports.size(); i++) {
+                auto result = _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                    audioSamples,
+                    nSamples,
+                    nBytesPerSample,
+                    nChannels,
+                    samplesPerSec,
+                    totalDelayMS,
+                    clockDrift,
+                    currentMicLevel,
+                    keyPressed,
+                    newMicLevel
+                );
+                if (i == _audioTransports.size() - 1) {
+                    return result;
+                }
+            }
+            
+            return 0;
         } else {
             return 0;
         }
@@ -440,20 +473,26 @@ public:
         uint32_t& newMicLevel,
         absl::optional<int64_t> estimatedCaptureTimeNS
     ) override {
-        if (_currentAudioTransport) {
-            return _currentAudioTransport->RecordedDataIsAvailable(
-                audioSamples,
-                nSamples,
-                nBytesPerSample,
-                nChannels,
-                samplesPerSec,
-                totalDelayMS,
-                clockDrift,
-                currentMicLevel,
-                keyPressed,
-                newMicLevel,
-                estimatedCaptureTimeNS
-            );
+        if (!_audioTransports.empty()) {
+            for (size_t i = 0; i < _audioTransports.size(); i++) {
+                auto result = _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                    audioSamples,
+                    nSamples,
+                    nBytesPerSample,
+                    nChannels,
+                    samplesPerSec,
+                    totalDelayMS,
+                    clockDrift,
+                    currentMicLevel,
+                    keyPressed,
+                    newMicLevel,
+                    estimatedCaptureTimeNS
+                );
+                if (i == _audioTransports.size() - 1) {
+                    return result;
+                }
+            }
+            return 0;
         } else {
             return 0;
         }
@@ -470,8 +509,8 @@ public:
         int64_t* elapsed_time_ms,
         int64_t* ntp_time_ms
     ) override {
-        if (_currentAudioTransport) {
-            return _currentAudioTransport->NeedMorePlayData(
+        if (!_audioTransports.empty()) {
+            return _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
                 nSamples,
                 nBytesPerSample,
                 nChannels,
@@ -496,8 +535,8 @@ public:
         int64_t* elapsed_time_ms,
         int64_t* ntp_time_ms
     ) override {
-        if (_currentAudioTransport) {
-            _currentAudioTransport->PullRenderData(
+        if (!_audioTransports.empty()) {
+            _audioTransports[_audioTransports.size() - 1]->PullRenderData(
                 bits_per_sample,
                 sample_rate,
                 number_of_channels,
@@ -540,7 +579,7 @@ public:
     
 private:
     bool _isStarted = false;
-    webrtc::AudioTransport *_currentAudioTransport = nullptr;
+    std::vector<webrtc::AudioTransport *> _audioTransports;
 };
 
 class WrappedChildAudioDeviceModule : public tgcalls::DefaultWrappedAudioDeviceModule {
@@ -556,13 +595,28 @@ public:
         auto previousAudioCallback = _audioCallback;
         _audioCallback = audioCallback;
         
-        ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, audioCallback);
+        if (_isActive) {
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, audioCallback);
+        }
         
         return 0;
     }
     
+public:
+    void setIsActive() {
+        if (_isActive) {
+            return;
+        }
+        _isActive = true;
+        
+        if (_audioCallback) {
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(nullptr, _audioCallback);
+        }
+    }
+    
 private:
     webrtc::AudioTransport *_audioCallback = nullptr;
+    bool _isActive = false;
 };
 
 class SharedAudioDeviceModuleImpl: public tgcalls::SharedAudioDeviceModule {
@@ -1785,7 +1839,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             },
             .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    return audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                    ((WrappedChildAudioDeviceModule *)result.get())->setIsActive();
+                    return result;
                 } else {
                     return nullptr;
                 }
@@ -2493,7 +2549,9 @@ isConference:(bool)isConference {
             },
             .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    return audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
+                    ((WrappedChildAudioDeviceModule *)result.get())->setIsActive();
+                    return result;
                 } else {
                     return nullptr;
                 }
@@ -2835,10 +2893,7 @@ isConference:(bool)isConference {
     }
 }
 
-- (void)addRemoteConnectedEvent:(bool)isRemoteConnected {
-    if (_instance) {
-        _instance->internal_addCustomNetworkEvent(isRemoteConnected);
-    }
+- (void)activateIncomingAudio {
 }
 
 @end
