@@ -503,21 +503,27 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         self.update(transition: .easeInOut(duration: 0.25))
     }
     
-    public func takeIncomingVideoLayer() -> (CALayer, VideoSource.Output?)? {
-        var remoteVideoContainerKey: VideoContainerView.Key?
+    public func takeIncomingVideoLayer() -> ((CALayer, VideoSource.Output?), Bool)? {
+        var activeVideoSources: [(VideoContainerView.Key, Bool)] = []
         if self.swapLocalAndRemoteVideo {
+            if let _ = self.activeLocalVideoSource {
+                activeVideoSources.append((.background, false))
+            }
             if let _ = self.activeRemoteVideoSource {
-                remoteVideoContainerKey = .foreground
+                activeVideoSources.append((.foreground, true))
             }
         } else {
             if let _ = self.activeRemoteVideoSource {
-                remoteVideoContainerKey = .background
+                activeVideoSources.append((.background, true))
+            }
+            if let _ = self.activeLocalVideoSource {
+                activeVideoSources.append((.foreground, false))
             }
         }
         
-        if let remoteVideoContainerKey, let videoContainerView = self.videoContainerViews.first(where: { $0.key == remoteVideoContainerKey }) {
+        if let videoSource = activeVideoSources.first, let videoContainerView = self.videoContainerViews.first(where: { $0.key == videoSource.0 }) {
             videoContainerView.videoContainerLayerTaken = true
-            return (videoContainerView.videoContainerLayer, videoContainerView.currentVideoOutput)
+            return ((videoContainerView.videoContainerLayer, videoContainerView.currentVideoOutput), videoSource.1)
         }
         
         return nil

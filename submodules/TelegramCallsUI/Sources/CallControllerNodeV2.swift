@@ -470,7 +470,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
                         }
                     case .busy:
                         mappedReason = .busy
-                    case .hungUp:
+                    case .hungUp, .switchedToConference:
                         if self.callStartTimestamp != nil {
                             mappedReason = .hangUp
                         } else {
@@ -687,12 +687,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     func animateOutToGroupChat(completion: @escaping () -> Void) -> CallController.AnimateOutToGroupChat {
         self.callScreen.animateOutToGroupChat(completion: completion)
         
-        let takenIncomingVideoLayer = self.callScreen.takeIncomingVideoLayer()
+        let takeSource = self.callScreen.takeIncomingVideoLayer()
         return CallController.AnimateOutToGroupChat(
             containerView: self.containerView,
-            incomingPeerId: self.call.peerId,
-            incomingVideoLayer: takenIncomingVideoLayer?.0,
-            incomingVideoPlaceholder: takenIncomingVideoLayer?.1
+            incomingPeerId: (takeSource?.1 ?? true) ? self.call.peerId : self.call.context.account.peerId,
+            incomingVideoLayer: takeSource?.0.0,
+            incomingVideoPlaceholder: takeSource?.0.1
         )
     }
     

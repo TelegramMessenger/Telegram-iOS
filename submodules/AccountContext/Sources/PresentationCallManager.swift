@@ -401,6 +401,22 @@ public extension GroupCallParticipantsContext.Participant {
     }
 }
 
+public struct PresentationGroupCallInvitedPeer: Equatable {
+    public enum State {
+        case requesting
+        case ringing
+        case connecting
+    }
+    
+    public var id: EnginePeer.Id
+    public var state: State?
+    
+    public init(id: EnginePeer.Id, state: State?) {
+        self.id = id
+        self.state = state
+    }
+}
+
 public protocol PresentationGroupCall: AnyObject {
     var account: Account { get }
     var accountContext: AccountContext { get }
@@ -468,7 +484,7 @@ public protocol PresentationGroupCall: AnyObject {
     
     func invitePeer(_ peerId: EnginePeer.Id) -> Bool
     func removedPeer(_ peerId: EnginePeer.Id)
-    var invitedPeers: Signal<[EnginePeer.Id], NoError> { get }
+    var invitedPeers: Signal<[PresentationGroupCallInvitedPeer], NoError> { get }
     
     var inviteLinks: Signal<GroupCallInviteLinks?, NoError> { get }
     

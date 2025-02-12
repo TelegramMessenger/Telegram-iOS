@@ -601,6 +601,10 @@ private final class ScreencastEmbeddedIPCContext: ScreencastIPCContext {
 }
 
 private final class PendingConferenceInvitationContext {
+    enum State {
+        case ringing
+    }
+    
     private let callSessionManager: CallSessionManager
     private var requestDisposable: Disposable?
     private var stateDisposable: Disposable?
@@ -608,7 +612,7 @@ private final class PendingConferenceInvitationContext {
     
     private var didNotifyEnded: Bool = false
     
-    init(callSessionManager: CallSessionManager, groupCall: GroupCallReference, encryptionKey: Data, peerId: PeerId, onEnded: @escaping () -> Void) {
+    init(callSessionManager: CallSessionManager, groupCall: GroupCallReference, encryptionKey: Data, peerId: PeerId, onStateUpdated: @escaping (State) -> Void, onEnded: @escaping (Bool) -> Void) {
         self.callSessionManager = callSessionManager
         
         self.requestDisposable = (callSessionManager.request(peerId: peerId, isVideo: false, enableVideo: true, conferenceCall: (groupCall, encryptionKey))
@@ -624,10 +628,14 @@ private final class PendingConferenceInvitationContext {
                     return
                 }
                 switch state.state {
-                case .dropping, .terminated:
+                case let .requesting(ringing, _):
+                    if ringing {
+                        onStateUpdated(.ringing)
+                    }
+                case let .dropping(reason), let .terminated(_, reason, _):
                     if !self.didNotifyEnded {
                         self.didNotifyEnded = true
-                        onEnded()
+                        onEnded(reason == .ended(.switchedToConference))
                     }
                 default:
                     break
@@ -972,15 +980,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.membersPromise.get()
     }
     
-    private var invitedPeersValue: [EnginePeer.Id] = [] {
+    private var invitedPeersValue: [PresentationGroupCallInvitedPeer] = [] {
         didSet {
             if self.invitedPeersValue != oldValue {
                 self.inivitedPeersPromise.set(self.invitedPeersValue)
             }
         }
     }
-    private let inivitedPeersPromise = ValuePromise<[EnginePeer.Id]>([])
-    public var invitedPeers: Signal<[EnginePeer.Id], NoError> {
+    private let inivitedPeersPromise = ValuePromise<[PresentationGroupCallInvitedPeer]>([])
+    public var invitedPeers: Signal<[PresentationGroupCallInvitedPeer], NoError> {
         return self.inivitedPeersPromise.get()
     }
     
@@ -1062,14 +1070,13 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         return self.conferenceSourceId
     }
     
-    var internal_isRemoteConnected = Promise<Bool>()
-    private var internal_isRemoteConnectedDisposable: Disposable?
-    
     public var onMutedSpeechActivityDetected: ((Bool) -> Void)?
     
     let debugLog = Promise<String?>()
     
     public weak var upgradedConferenceCall: PresentationCallImpl?
+    public var pendingDisconnedUpgradedConferenceCall: PresentationCallImpl?
+    private var pendingDisconnedUpgradedConferenceCallTimer: Foundation.Timer?
     private var conferenceInvitationContexts: [PeerId: PendingConferenceInvitationContext] = [:]
     
     init(
@@ -1120,9 +1127,16 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.encryptionKey = encryptionKey
         
         var sharedAudioContext = sharedAudioContext
-        if sharedAudioContext == nil && accountContext.sharedContext.immediateExperimentalUISettings.conferenceCalls {
-            let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
-            sharedAudioContext = sharedAudioContextValue
+        if sharedAudioContext == nil {
+            var useSharedAudio = true
+            if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_group_shared_audio"] != nil {
+                useSharedAudio = false
+            }
+            
+            if useSharedAudio {
+                let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+                sharedAudioContext = sharedAudioContextValue
+            }
         }
         
         self.sharedAudioContext = sharedAudioContext
@@ -1428,14 +1442,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         self.audioOutputStateDisposable?.dispose()
-        
         self.removedChannelMembersDisposable?.dispose()
-
         self.peerUpdatesSubscription?.dispose()
-
         self.screencastStateDisposable?.dispose()
-        
-        self.internal_isRemoteConnectedDisposable?.dispose()
+        self.pendingDisconnedUpgradedConferenceCallTimer?.invalidate()
     }
     
     private func switchToTemporaryParticipantsContext(sourceContext: GroupCallParticipantsContext?, oldMyPeerId: PeerId) {
@@ -1529,7 +1539,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         topParticipants.append(participant)
                     }
 
-                    if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
+                    if let index = updatedInvitedPeers.firstIndex(where: { $0.id == participant.peer.id }) {
                         updatedInvitedPeers.remove(at: index)
                         didUpdateInvitedPeers = true
                     }
@@ -1986,6 +1996,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                         lastTimestamp = CFAbsoluteTimeGetCurrent()
                         self.hasActiveIncomingDataValue = true
+                        
+                        self.activateIncomingAudioIfNeeded()
                     })
                     
                     self.hasActiveIncomingDataTimer?.invalidate()
@@ -2002,15 +2014,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     })
                     
                     self.signalBarsPromise.set(callContext.signalBars)
-                    
-                    self.internal_isRemoteConnectedDisposable = (self.internal_isRemoteConnected.get()
-                    |> distinctUntilChanged
-                    |> deliverOnMainQueue).startStrict(next: { [weak callContext] isRemoteConnected in
-                        guard let callContext else {
-                            return
-                        }
-                        callContext.addRemoteConnectedEvent(isRemoteConntected: isRemoteConnected)
-                    })
                 }
             }
             
@@ -2645,7 +2648,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                         }
                         
-                        if let index = updatedInvitedPeers.firstIndex(of: participant.peer.id) {
+                        if let index = updatedInvitedPeers.firstIndex(where: { $0.id == participant.peer.id }) {
                             updatedInvitedPeers.remove(at: index)
                             didUpdateInvitedPeers = true
                         }
@@ -2738,6 +2741,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             } else if case let .active(callInfo) = internalState, callInfo.scheduleTimestamp != nil {
                 self.switchToTemporaryScheduledParticipantsContext()
             }
+        }
+    }
+    
+    private func activateIncomingAudioIfNeeded() {
+        if let genericCallContext = self.genericCallContext, case let .call(groupCall) = genericCallContext {
+            groupCall.activateIncomingAudio()
         }
     }
     
@@ -3643,42 +3652,68 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if conferenceInvitationContexts[peerId] != nil {
                 return false
             }
-            var onEnded: (() -> Void)?
+            var onStateUpdated: ((PendingConferenceInvitationContext.State) -> Void)?
+            var onEnded: ((Bool) -> Void)?
             var didEndAlready = false
             let invitationContext = PendingConferenceInvitationContext(
                 callSessionManager: self.accountContext.account.callSessionManager,
                 groupCall: GroupCallReference(id: initialCall.id, accessHash: initialCall.accessHash),
                 encryptionKey: encryptionKey.key,
                 peerId: peerId,
-                onEnded: {
+                onStateUpdated: { state in
+                    onStateUpdated?(state)
+                },
+                onEnded: { success in
                     didEndAlready = true
-                    onEnded?()
+                    onEnded?(success)
                 }
             )
             if !didEndAlready {
                 conferenceInvitationContexts[peerId] = invitationContext
-                if !self.invitedPeersValue.contains(peerId) {
-                    self.invitedPeersValue.append(peerId)
+                if !self.invitedPeersValue.contains(where: { $0.id == peerId }) {
+                    self.invitedPeersValue.append(PresentationGroupCallInvitedPeer(id: peerId, state: .requesting))
                 }
-                onEnded = { [weak self, weak invitationContext] in
+                onStateUpdated = { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    if let index = self.invitedPeersValue.firstIndex(where: { $0.id == peerId }) {
+                        var invitedPeer = self.invitedPeersValue[index]
+                        switch state {
+                        case .ringing:
+                            invitedPeer.state = .ringing
+                        }
+                        self.invitedPeersValue[index] = invitedPeer
+                    }
+                }
+                onEnded = { [weak self, weak invitationContext] success in
                     guard let self, let invitationContext else {
                         return
                     }
                     if self.conferenceInvitationContexts[peerId] === invitationContext {
                         self.conferenceInvitationContexts.removeValue(forKey: peerId)
-                        self.invitedPeersValue.removeAll(where: { $0 == peerId })
+                        
+                        if success {
+                            if let index = self.invitedPeersValue.firstIndex(where: { $0.id == peerId }) {
+                                var invitedPeer = self.invitedPeersValue[index]
+                                invitedPeer.state = .connecting
+                                self.invitedPeersValue[index] = invitedPeer
+                            }
+                        } else {
+                            self.invitedPeersValue.removeAll(where: { $0.id == peerId })
+                        }
                     }
                 }
             }
             
             return false
         } else {
-            guard let callInfo = self.internalState.callInfo, !self.invitedPeersValue.contains(peerId) else {
+            guard let callInfo = self.internalState.callInfo, !self.invitedPeersValue.contains(where: { $0.id == peerId }) else {
                 return false
             }
             
             var updatedInvitedPeers = self.invitedPeersValue
-            updatedInvitedPeers.insert(peerId, at: 0)
+            updatedInvitedPeers.insert(PresentationGroupCallInvitedPeer(id: peerId, state: nil), at: 0)
             self.invitedPeersValue = updatedInvitedPeers
             
             let _ = self.accountContext.engine.calls.inviteToGroupCall(callId: callInfo.id, accessHash: callInfo.accessHash, peerId: peerId).start()
@@ -3687,13 +3722,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
     }
     
-    func setInvitedPeers(_ peerIds: [PeerId]) {
-        self.invitedPeersValue = peerIds
+    func setConferenceInvitedPeers(_ peerIds: [PeerId]) {
+        self.invitedPeersValue = peerIds.map {
+            PresentationGroupCallInvitedPeer(id: $0, state: .requesting)
+        }
     }
     
     public func removedPeer(_ peerId: PeerId) {
         var updatedInvitedPeers = self.invitedPeersValue
-        updatedInvitedPeers.removeAll(where: { $0 == peerId})
+        updatedInvitedPeers.removeAll(where: { $0.id == peerId})
         self.invitedPeersValue = updatedInvitedPeers
     }
     
@@ -3858,6 +3895,26 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             return EmptyDisposable
         }
         |> runOn(.mainQueue())
+    }
+    
+    func moveConferenceCall(source: PresentationCall) {
+        guard let source = source as? PresentationCallImpl else {
+            return
+        }
+        
+        self.pendingDisconnedUpgradedConferenceCall?.resetAsMovedToConference()
+        self.pendingDisconnedUpgradedConferenceCall = source
+        
+        self.pendingDisconnedUpgradedConferenceCallTimer?.invalidate()
+        self.pendingDisconnedUpgradedConferenceCallTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            if let pendingDisconnedUpgradedConferenceCall = self.pendingDisconnedUpgradedConferenceCall {
+                self.pendingDisconnedUpgradedConferenceCall = nil
+                pendingDisconnedUpgradedConferenceCall.resetAsMovedToConference()
+            }
+        })
     }
 }
 

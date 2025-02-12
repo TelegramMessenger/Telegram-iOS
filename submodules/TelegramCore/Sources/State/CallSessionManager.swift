@@ -19,6 +19,7 @@ public enum CallSessionEndedType {
     case hungUp
     case busy
     case missed
+    case switchedToConference
 }
 
 public enum CallSessionTerminationReason: Equatable {
@@ -709,7 +710,7 @@ private final class CallSessionManagerContext {
                 case .missed:
                     mappedReason = .ended(.missed)
                 case .switchToConference:
-                    mappedReason = .ended(.hungUp)
+                    mappedReason = .ended(.switchedToConference)
                 }
                 context.state = .dropping(reason: mappedReason, disposable: (dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: reason)
                 |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
@@ -763,7 +764,7 @@ private final class CallSessionManagerContext {
             
             if let (id, accessHash) = dropData {
                 self.contextIdByStableId.removeValue(forKey: id)
-                context.state = .dropping(reason: .ended(.hungUp), disposable: (dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: .switchToConference(encryptedGroupKey: encryptedGroupKey))
+                context.state = .dropping(reason: .ended(.switchedToConference), disposable: (dropCallSession(network: self.network, addUpdates: self.addUpdates, stableId: id, accessHash: accessHash, isVideo: isVideo, reason: .switchToConference(encryptedGroupKey: encryptedGroupKey))
                 |> deliverOn(self.queue)).start(next: { [weak self] reportRating, sendDebugLogs in
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
@@ -962,11 +963,15 @@ private final class CallSessionManagerContext {
                         case .phoneCallDiscardReasonDisconnect:
                             parsedReason = .error(.disconnected)
                         case .phoneCallDiscardReasonHangup:
-                            parsedReason = .ended(.hungUp)
+                            if context.pendingConference != nil {
+                                parsedReason = .ended(.switchedToConference)
+                            } else {
+                                parsedReason = .ended(.hungUp)
+                            }
                         case .phoneCallDiscardReasonMissed:
                             parsedReason = .ended(.missed)
                         case .phoneCallDiscardReasonAllowGroupCall:
-                            parsedReason = .ended(.hungUp)
+                            parsedReason = .ended(.switchedToConference)
                         }
                     } else {
                         parsedReason = .ended(.hungUp)

@@ -731,7 +731,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                         guard let groupCall = conferenceSource.conferenceCall else {
                             return
                         }
-                        (conferenceSource as! PresentationCallImpl).resetAsMovedToConference()
+                        (groupCall as! PresentationGroupCallImpl).moveConferenceCall(source: conferenceSource)
                         self.updateCurrentGroupCall(.group(groupCall))
                     })
                     
