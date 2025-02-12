@@ -429,6 +429,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openStarsPurchase: { _ in
+        }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in
@@ -874,12 +876,12 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 let member: PeerInfoMember = .account(peer: RenderedPeer(peer: peer._asPeer()))
                 items[.accounts]!.append(PeerInfoScreenMemberItem(id: member.id, context: mappedContext, enclosingPeer: nil, member: member, badge: badgeCount > 0 ? "\(compactNumericCountString(Int(badgeCount), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" : nil, isAccount: true, action: { action in
                     switch action {
-                        case .open:
-                            interaction.switchToAccount(peerAccountContext.account.id)
-                        case .remove:
-                            interaction.logoutAccount(peerAccountContext.account.id)
-                        default:
-                            break
+                    case .open:
+                        interaction.switchToAccount(peerAccountContext.account.id)
+                    case .remove:
+                        interaction.logoutAccount(peerAccountContext.account.id)
+                    default:
+                        break
                     }
                 }, contextAction: { node, gesture in
                     interaction.accountContextMenu(peerAccountContext.account.id, node, gesture)
@@ -899,10 +901,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
             let proxyType: String
             if settings.proxySettings.enabled, let activeServer = settings.proxySettings.activeServer {
                 switch activeServer.connection {
-                    case .mtp:
-                        proxyType = presentationData.strings.SocksProxySetup_ProxyTelegram
-                    case .socks5:
-                        proxyType = presentationData.strings.SocksProxySetup_ProxySocks5
+                case .mtp:
+                    proxyType = presentationData.strings.SocksProxySetup_ProxyTelegram
+                case .socks5:
+                    proxyType = presentationData.strings.SocksProxySetup_ProxySocks5
                 }
             } else {
                 proxyType = presentationData.strings.Settings_ProxyDisabled
@@ -991,27 +993,36 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     }))
     
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-    if !premiumConfiguration.isPremiumDisabled {
+    let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+    if !isPremiumDisabled || context.isPremium {
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: presentationData.strings.Settings_Premium, icon: PresentationResourcesSettings.premium, action: {
             interaction.openSettings(.premium)
         }))
-        if let starsState = data.starsState {
-            let balanceText: String
-            if starsState.balance > StarsAmount.zero {
-                balanceText = presentationStringsFormattedNumber(starsState.balance, presentationData.dateTimeFormat.groupingSeparator)
-            } else {
-                balanceText = ""
-            }
+    }
+    if let starsState = data.starsState {
+        let balanceText: String
+        if starsState.balance > StarsAmount.zero {
+            balanceText = presentationStringsFormattedNumber(starsState.balance, presentationData.dateTimeFormat.groupingSeparator)
+        } else {
+            balanceText = ""
+        }
+        if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
             items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(balanceText), text: presentationData.strings.Settings_Stars, icon: PresentationResourcesSettings.stars, action: {
                 interaction.openSettings(.stars)
             }))
         }
+    }
+    if !isPremiumDisabled || context.isPremium {
         items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 103, label: .text(""), additionalBadgeLabel: presentationData.strings.Settings_New, text: presentationData.strings.Settings_Business, icon: PresentationResourcesSettings.business, action: {
             interaction.openSettings(.businessSetup)
         }))
-        items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
-            interaction.openSettings(.premiumGift)
-        }))
+    }
+    if let starsState = data.starsState {
+        if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 104, label: .text(""), text: presentationData.strings.Settings_SendGift, icon: PresentationResourcesSettings.premiumGift, action: {
+                interaction.openSettings(.premiumGift)
+            }))
+        }
     }
     
     if let settings = data.globalSettings {
@@ -3681,6 +3692,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, editMessageFactCheck: { _ in
         }, sendGift: { _ in
         }, openUniqueGift: { _ in
+        }, openMessageFeeException: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -4459,7 +4471,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     sourceFrame = source.view.convert(source.bounds, to: strongSelf.view)
                 }
                 strongSelf.openPostStory(sourceFrame: sourceFrame)
-            case .editPhoto, .editVideo, .moreToSearch:
+            case .editPhoto, .editVideo, .moreSearchSort:
                 break
             }
         }
@@ -10921,10 +10933,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        guard let data = self.data, let channel = data.peer as? TelegramChannel, let giftsContext = data.profileGiftsContext else {
+        guard let data = self.data, let giftsContext = data.profileGiftsContext else {
             return
         }
-                
+        
+        var hasVisibility = false
+        if let channel = data.peer as? TelegramChannel, channel.hasPermission(.sendSomething) {
+            hasVisibility = true
+        } else if data.peer?.id == self.context.account.peerId {
+            hasVisibility = true
+        }
+            
         let strings = self.presentationData.strings
         let items: Signal<ContextController.Items, NoError> = giftsContext.state
         |> map { state in
@@ -11007,7 +11026,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 switchToFilter(.unique)
             })))
             
-            if channel.hasPermission(.sendSomething) {
+            if hasVisibility {
                 items.append(.separator)
                 
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Displayed, icon: { theme in
@@ -12053,9 +12072,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .more, isForExpandedView: true))
                             }
                         case .gifts:
-                            if let data = self.data, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info {
+                            //if let data = self.data, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info {
                                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .sort, isForExpandedView: true))
-                            }
+                            //}
                         default:
                             break
                         }

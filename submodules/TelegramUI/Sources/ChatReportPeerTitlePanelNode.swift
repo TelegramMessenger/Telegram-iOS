@@ -566,7 +566,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             
             let plainText = interfaceState.strings.Chat_PanelCustomStatusInfo(".")
-            let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: plainText.string, font: Font.regular(13.0), textColor: interfaceState.theme.rootController.navigationBar.secondaryTextColor, paragraphAlignment: .center))
+            let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: plainText.string, font: Font.regular(12.0), textColor: interfaceState.theme.rootController.navigationBar.secondaryTextColor, paragraphAlignment: .center))
             for range in plainText.ranges {
                 attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiStatus.fileId, file: nil), range: range.range)
             }

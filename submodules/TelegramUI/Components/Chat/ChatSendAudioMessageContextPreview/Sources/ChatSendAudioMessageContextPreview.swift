@@ -490,6 +490,7 @@ public final class ChatSendGroupMediaMessageContextPreview: UIView, ChatSendMess
         }, editMessageFactCheck: { _ in
         }, sendGift: { _ in
         }, openUniqueGift: { _ in
+        }, openMessageFeeException: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

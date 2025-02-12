@@ -1336,4 +1336,19 @@ public struct PresentationResourcesChat {
             })
         })
     }
+    
+    public static func chatEmptyStateStarIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatEmptyStateStarIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Item List/PremiumIcon") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    if let cgImage = image.cgImage {
+                        context.draw(cgImage, in: bounds.insetBy(dx: 1.0, dy: 1.0).offsetBy(dx: -1.0, dy: 0.0), byTiling: false)
+                    }
+                })
+            }
+            return nil
+        })
+    }
 }

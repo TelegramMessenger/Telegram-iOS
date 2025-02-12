@@ -205,6 +205,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     private var chatImportStatusPanel: ChatImportStatusPanel?
     
     private(set) var adPanelNode: ChatAdPanelNode?
+    private(set) var feePanelNode: ChatFeePanelNode?
     
     private let titleAccessoryPanelContainer: ChatControllerTitlePanelNodeContainer
     private var titleAccessoryPanelNode: ChatTitleAccessoryPanelNode?
@@ -1470,8 +1471,6 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 dismissedAdPanelNode = self.adPanelNode
                 self.adPanelNode = adPanelNode
                 self.titleAccessoryPanelContainer.addSubnode(adPanelNode)
-                
-                adPanelNode.clipsToBounds = true
             }
             
             let height = adPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
@@ -1488,6 +1487,46 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         } else if let adPanelNode = self.adPanelNode {
             dismissedAdPanelNode = adPanelNode
             self.adPanelNode = nil
+        }
+        
+        var dismissedFeePanelNode: ChatFeePanelNode?
+        var feePanelHeight: CGFloat?
+        
+        var displayFeePanel = false
+        if let user = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo == nil, let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
+            if !self.chatPresentationInterfaceState.peerIsBlocked, let paidMessageStars = self.chatPresentationInterfaceState.contactStatus?.peerStatusSettings?.paidMessageStars, paidMessageStars.value > 0 {
+                displayFeePanel = true
+            }
+        }
+        if displayFeePanel {
+            var animateAppearance = false
+            let feePanelNode: ChatFeePanelNode
+            if let current = self.feePanelNode {
+                feePanelNode = current
+            } else {
+                feePanelNode = ChatFeePanelNode(context: self.context)
+                feePanelNode.controllerInteraction = self.controllerInteraction
+                feePanelNode.clipsToBounds = true
+                animateAppearance = true
+            }
+            
+            if self.feePanelNode != feePanelNode {
+                dismissedFeePanelNode = self.feePanelNode
+                self.feePanelNode = feePanelNode
+                self.titleAccessoryPanelContainer.addSubnode(feePanelNode)
+            }
+            
+            let height = feePanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+            
+            feePanelHeight = height
+            if transition.isAnimated && animateAppearance {
+                feePanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                feePanelNode.subnodeTransform = CATransform3DMakeTranslation(0.0, -height, 0.0)
+                transition.updateSublayerTransformOffset(layer: feePanelNode.layer, offset: CGPoint())
+            }
+        } else if let feePanelNode = self.feePanelNode {
+            dismissedFeePanelNode = feePanelNode
+            self.feePanelNode = nil
         }
         
         var inputPanelNodeBaseHeight: CGFloat = 0.0
@@ -1798,6 +1837,13 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         var adPanelFrame: CGRect?
         if let _ = self.adPanelNode, let panelHeight = adPanelHeight {
             adPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
+            insets.top += panelHeight
+            extraNavigationBarHeight += panelHeight
+        }
+        
+        var feePanelFrame: CGRect?
+        if let _ = self.feePanelNode, let panelHeight = feePanelHeight {
+            feePanelFrame = CGRect(origin: CGPoint(x: 0.0, y: extraNavigationBarHeight), size: CGSize(width: layout.size.width, height: panelHeight))
             insets.top += panelHeight
             extraNavigationBarHeight += panelHeight
         }
@@ -2253,6 +2299,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             adPanelNode.frame = adPanelFrame
         }
         
+        if let feePanelNode = self.feePanelNode, let feePanelFrame, !feePanelNode.frame.equalTo(feePanelFrame) {
+            feePanelNode.frame = feePanelFrame
+        }
+        
         if let secondaryInputPanelNode = self.secondaryInputPanelNode, let apparentSecondaryInputPanelFrame = apparentSecondaryInputPanelFrame, !secondaryInputPanelNode.frame.equalTo(apparentSecondaryInputPanelFrame) {
             if immediatelyLayoutSecondaryInputPanelAndAnimateAppearance {
                 secondaryInputPanelNode.frame = apparentSecondaryInputPanelFrame.offsetBy(dx: 0.0, dy: apparentSecondaryInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentSecondaryInputPanelFrame.maxY)
@@ -2375,6 +2425,15 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             transition.updateAlpha(node: dismissedAdPanelNode, alpha: 0.0)
             transition.updateFrame(node: dismissedAdPanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedAdPanelNode] _ in
                 dismissedAdPanelNode?.removeFromSupernode()
+            })
+        }
+        
+        if let dismissedFeePanelNode {
+            var dismissedPanelFrame = dismissedFeePanelNode.frame
+            dismissedPanelFrame.origin.y = -dismissedPanelFrame.size.height
+            transition.updateAlpha(node: dismissedFeePanelNode, alpha: 0.0)
+            transition.updateFrame(node: dismissedFeePanelNode, frame: dismissedPanelFrame, completion: { [weak dismissedFeePanelNode] _ in
+                dismissedFeePanelNode?.removeFromSupernode()
             })
         }
         
@@ -4156,6 +4215,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
+                                                        
                             var webpage: TelegramMediaWebpage?
                             if let urlPreview = self.chatPresentationInterfaceState.urlPreview {
                                 if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreviews.contains(urlPreview.url) {
@@ -4232,7 +4292,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                             messages.append(.forward(source: id, threadId: replyThreadId, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }
-                    
+                                        
                     var usedCorrelationId: Int64?
 
                     if !messages.isEmpty, case .message = messages[messages.count - 1] {

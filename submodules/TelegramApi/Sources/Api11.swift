@@ -647,6 +647,7 @@ public extension Api {
         case inputPrivacyKeyBirthday
         case inputPrivacyKeyChatInvite
         case inputPrivacyKeyForwards
+        case inputPrivacyKeyNoPaidMessages
         case inputPrivacyKeyPhoneCall
         case inputPrivacyKeyPhoneNumber
         case inputPrivacyKeyPhoneP2P
@@ -684,6 +685,12 @@ public extension Api {
                 case .inputPrivacyKeyForwards:
                     if boxed {
                         buffer.appendInt32(-1529000952)
+                    }
+                    
+                    break
+                case .inputPrivacyKeyNoPaidMessages:
+                    if boxed {
+                        buffer.appendInt32(-1111124044)
                     }
                     
                     break
@@ -744,6 +751,8 @@ public extension Api {
                 return ("inputPrivacyKeyChatInvite", [])
                 case .inputPrivacyKeyForwards:
                 return ("inputPrivacyKeyForwards", [])
+                case .inputPrivacyKeyNoPaidMessages:
+                return ("inputPrivacyKeyNoPaidMessages", [])
                 case .inputPrivacyKeyPhoneCall:
                 return ("inputPrivacyKeyPhoneCall", [])
                 case .inputPrivacyKeyPhoneNumber:
@@ -775,6 +784,9 @@ public extension Api {
         }
         public static func parse_inputPrivacyKeyForwards(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyForwards
+        }
+        public static func parse_inputPrivacyKeyNoPaidMessages(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyNoPaidMessages
         }
         public static func parse_inputPrivacyKeyPhoneCall(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyPhoneCall

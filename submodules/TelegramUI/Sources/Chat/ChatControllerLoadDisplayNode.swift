@@ -1394,8 +1394,8 @@ extension ChatControllerImpl {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
-            
-            strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
+            //TODO:unmock
+            strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false).updatedAcknowledgedPaidMessage(false) })
         }
         
         if case let .customChatContents(customChatContents) = self.subject {
@@ -4362,8 +4362,46 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            let controller = PremiumIntroScreen(context: self.context, source: .settings)
+            let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .messageTags, forceDark: false, dismissed: nil)
             self.push(controller)
+        }, openStarsPurchase: { [weak self] requiredStars in
+            guard let self, let starsContext = self.context.starsContext else {
+                return
+            }
+            let _ = (self.context.engine.payments.starsTopUpOptions()
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makeStarsPurchaseScreen(context: self.context, starsContext: starsContext, options: options, purpose: .generic, completion: { _ in
+                })
+                self.push(controller)
+            })
+        }, openMessagePayment: { [weak self] in
+            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
+                return
+            }
+            var amount: StarsAmount?
+            if let cachedUserData = self.peerView?.cachedData as? CachedUserData {
+                amount = cachedUserData.sendPaidMessageStars
+            }
+            if let amount {
+                let controller = chatMessagePaymentAlertController(
+                    context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
+                    peer: peer,
+                    amount: amount,
+                    completion: { [weak self] dontAskAgain in
+                        guard let self else {
+                            return
+                        }
+                        self.updateChatPresentationInterfaceState(interactive: true) { state in
+                            return state.updatedAcknowledgedPaidMessage(true)
+                        }
+                    })
+                self.present(controller, in: .window(.root))
+            }
         }, openBoostToUnrestrict: { [weak self] in
             guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return

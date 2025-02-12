@@ -33,6 +33,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/Stars/StarsImageComponent",
         "//submodules/TelegramUI/Components/PremiumPeerShortcutComponent",
+        "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
         "//submodules/ConfettiEffect",
     ],
     visibility = [

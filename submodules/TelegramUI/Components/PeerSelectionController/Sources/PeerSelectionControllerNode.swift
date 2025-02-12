@@ -778,6 +778,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openStarsPurchase: { _ in
+        }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in

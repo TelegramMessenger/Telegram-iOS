@@ -440,7 +440,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
     case topic(EnginePeer, ChatListItemContent.ThreadInfo, Int, PresentationTheme, PresentationStrings, ChatListSearchSectionExpandType)
     case recentlySearchedPeer(EnginePeer, EnginePeer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PeerStoryStats?, Bool)
     case localPeer(EnginePeer, EnginePeer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, ChatListSearchSectionExpandType, PeerStoryStats?, Bool, Bool)
-    case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, ChatListSearchSectionExpandType, PeerStoryStats?, Bool, String?)
+    case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, ChatListSearchSectionExpandType, PeerStoryStats?, Bool, String?, Bool)
     case message(EngineMessage, EngineRenderedPeer, EnginePeerReadCounters?, EngineMessageHistoryThread.Info?, ChatListPresentationData, Int32, Bool?, Bool, MessageOrderingKey, (id: String, size: Int64, isFirstInList: Bool)?, MessageSection, Bool, PeerStoryStats?, Bool, TelegramSearchPeersScope)
     case messagePlaceholder(Int32, ChatListPresentationData, TelegramSearchPeersScope)
     case emptyMessagesFooter(ChatListPresentationData, TelegramSearchPeersScope, String?)
@@ -454,7 +454,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             return .localPeerId(peer.id)
         case let .localPeer(peer, _, _, _, _, _, _, _, _, _, _, _):
             return .localPeerId(peer.id)
-        case let .globalPeer(peer, _, _, _, _, _, _, _, _, _, _):
+        case let .globalPeer(peer, _, _, _, _, _, _, _, _, _, _, _):
             return .globalPeerId(peer.peer.id)
         case let .message(message, _, _, _, _, _, _, _, _, _, section, _, _, _, _):
             return .messageId(message.id, section)
@@ -487,8 +487,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             } else {
                 return false
             }
-        case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder, lhsExpandType, lhsStoryStats, lhsRequiresPremiumForMessaging, lhsQuery):
-            if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder, rhsExpandType, rhsStoryStats, rhsRequiresPremiumForMessaging, rhsQuery) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 && lhsExpandType == rhsExpandType && lhsStoryStats == rhsStoryStats && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging, lhsQuery == rhsQuery {
+        case let .globalPeer(lhsPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder, lhsExpandType, lhsStoryStats, lhsRequiresPremiumForMessaging, lhsQuery, lhsIsAd):
+            if case let .globalPeer(rhsPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder, rhsExpandType, rhsStoryStats, rhsRequiresPremiumForMessaging, rhsQuery, rhsIsAd) = rhs, lhsPeer == rhsPeer && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 && lhsExpandType == rhsExpandType && lhsStoryStats == rhsStoryStats && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging, lhsQuery == rhsQuery, lhsIsAd == rhsIsAd {
                 return true
             } else {
                 return false
@@ -623,11 +623,11 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
             case .globalPeer, .message, .messagePlaceholder, .emptyMessagesFooter, .addContact:
                 return true
             }
-        case let .globalPeer(_, _, lhsIndex, _, _, _, _, _, _, _, _):
+        case let .globalPeer(_, _, lhsIndex, _, _, _, _, _, _, _, _, _):
             switch rhs {
             case .topic, .recentlySearchedPeer, .localPeer:
                 return false
-            case let .globalPeer(_, _, rhsIndex, _, _, _, _, _, _, _, _):
+            case let .globalPeer(_, _, rhsIndex, _, _, _, _, _, _, _, _, _):
                 return lhsIndex <= rhsIndex
             case .message, .messagePlaceholder, .emptyMessagesFooter, .addContact:
                 return true
@@ -942,7 +942,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         openStories(peer.id, sourceNode.avatarNode)
                     }
                 })
-            case let .globalPeer(peer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType, storyStats, requiresPremiumForMessaging, query):
+            case let .globalPeer(peer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType, storyStats, requiresPremiumForMessaging, query, isAd):
                 var enabled = true
                 if filter.contains(.onlyWriteable) {
                     enabled = canSendMessagesToPeer(peer.peer)
@@ -1002,7 +1002,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     isSavedMessages = true
                 }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: EnginePeer(peer.peer), chatPeer: EnginePeer(peer.peer)), status: .addressName(suffixString), badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, searchQuery: query, action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: isSavedMessages), peer: .peer(peer: EnginePeer(peer.peer), chatPeer: EnginePeer(peer.peer)), status: .addressName(suffixString), badge: badge, requiresPremiumForMessaging: requiresPremiumForMessaging, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, searchQuery: query, isAd: isAd, action: { _ in
                     interaction.peerSelected(EnginePeer(peer.peer), nil, nil, nil, false)
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(EnginePeer(peer.peer), nil, requiresPremiumForMessaging ? .premiumRequired : .generic)
@@ -1019,6 +1019,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     if let sourceNode = sourceNode as? ContactsPeerItemNode {
                         openStories(peer.id, sourceNode.avatarNode)
                     }
+                }, adButtonAction: { node in
+                    interaction.openAdInfo(node)
                 })
             case let .message(message, peer, readState, threadInfo, presentationData, _, selected, displayCustomHeader, orderingKey, _, section, allPaused, storyStats, requiresPremiumForMessaging, searchScope):
                 let header: ChatListSearchItemHeader
@@ -2964,8 +2966,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                         
                         if !existingPeerIds.contains(peer.peer.id), filteredPeer(EnginePeer(peer.peer), EnginePeer(accountPeer)) {
+                            //TODO:unmock
+                            var isAd = !"".isEmpty
+                            #if DEBUG
+                            isAd = numberOfGlobalPeers == 0
+                            #endif
+                            
                             existingPeerIds.insert(peer.peer.id)
-                            entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType, nil, false, finalQuery))
+                            entries.append(.globalPeer(peer, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType, nil, false, finalQuery, isAd))
                             index += 1
                             numberOfGlobalPeers += 1
                         }
@@ -3251,6 +3259,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {
+        }, openAdInfo: { node in
+            interaction.openAdInfo(node)
         })
         chatListInteraction.isSearchMode = true
         
@@ -3379,7 +3389,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     if case let .user(user) = peer, user.flags.contains(.requirePremium) {
                         requiresPremiumForMessagingPeerIds.append(peer.id)
                     }
-                case let .globalPeer(foundPeer, _, _, _, _, _, _, _, _, _, _):
+                case let .globalPeer(foundPeer, _, _, _, _, _, _, _, _, _, _, _):
                     storyStatsIds.append(foundPeer.peer.id)
                     if let user = foundPeer.peer as? TelegramUser, user.flags.contains(.requirePremium) {
                         requiresPremiumForMessagingPeerIds.append(foundPeer.peer.id)
@@ -3420,8 +3430,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         mappedItems[i] = .recentlySearchedPeer(peer, associatedPeer, unreadBadge, index, theme, strings, sortOrder, displayOrder, stats[peer.id] ?? nil, requiresPremiumForMessaging[peer.id] ?? false)
                     case let .localPeer(peer, associatedPeer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, _, _, isSelf):
                         mappedItems[i] = .localPeer(peer, associatedPeer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, stats[peer.id] ?? nil, requiresPremiumForMessaging[peer.id] ?? false, isSelf)
-                    case let .globalPeer(peer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, _, _, searchQuery):
-                        mappedItems[i] = .globalPeer(peer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, stats[peer.peer.id] ?? nil, requiresPremiumForMessaging[peer.peer.id] ?? false, searchQuery)
+                    case let .globalPeer(peer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, _, _, searchQuery, isAd):
+                        mappedItems[i] = .globalPeer(peer, unreadBadge, index, theme, strings, sortOrder, displayOrder, expandType, stats[peer.peer.id] ?? nil, requiresPremiumForMessaging[peer.peer.id] ?? false, searchQuery, isAd)
                     case let .message(message, peer, combinedPeerReadState, threadInfo, presentationData, totalCount, selected, displayCustomHeader, key, resourceId, section, allPaused, _, _, searchScope):
                         mappedItems[i] = .message(message, peer, combinedPeerReadState, threadInfo, presentationData, totalCount, selected, displayCustomHeader, key, resourceId, section, allPaused, stats[peer.peerId] ?? nil, requiresPremiumForMessaging[peer.peerId] ?? false, searchScope)
                     default:
@@ -5220,6 +5230,7 @@ public final class ChatListSearchShimmerNode: ASDisplayNode {
             }, editPeer: { _ in
             }, openWebApp: { _ in
             }, openPhotoSetup: {
+            }, openAdInfo: { _ in
             })
             var isInlineMode = false
             if case .topics = key {

@@ -132,6 +132,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case prizeStars(amount: Int64, isUnclaimed: Bool, boostPeerId: PeerId?, transactionId: String?, giveawayMessageId: MessageId?)
     case starGift(gift: StarGift, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, isRefunded: Bool, upgradeMessageId: Int32?, peerId: EnginePeer.Id?, senderId: EnginePeer.Id?, savedId: Int64?)
     case starGiftUnique(gift: StarGift, isUpgrade: Bool, isTransferred: Bool, savedToProfile: Bool, canExportDate: Int32?, transferStars: Int64?, isRefunded: Bool, peerId: EnginePeer.Id?, senderId: EnginePeer.Id?, savedId: Int64?)
+    case paidMessage(stars: Int64)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -256,6 +257,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .starGift(gift: decoder.decodeObjectForKey("gift", decoder: { StarGift(decoder: $0) }) as! StarGift, convertStars: decoder.decodeOptionalInt64ForKey("convertStars"), text: decoder.decodeOptionalStringForKey("text"), entities: decoder.decodeOptionalObjectArrayWithDecoderForKey("entities"), nameHidden: decoder.decodeBoolForKey("nameHidden", orElse: false), savedToProfile: decoder.decodeBoolForKey("savedToProfile", orElse: false), converted: decoder.decodeBoolForKey("converted", orElse: false), upgraded: decoder.decodeBoolForKey("upgraded", orElse: false), canUpgrade: decoder.decodeBoolForKey("canUpgrade", orElse: false), upgradeStars: decoder.decodeOptionalInt64ForKey("upgradeStars"), isRefunded: decoder.decodeBoolForKey("isRefunded", orElse: false), upgradeMessageId: decoder.decodeOptionalInt32ForKey("upgradeMessageId"), peerId: decoder.decodeOptionalInt64ForKey("peerId").flatMap { EnginePeer.Id($0) }, senderId: decoder.decodeOptionalInt64ForKey("senderId").flatMap { EnginePeer.Id($0) }, savedId: decoder.decodeOptionalInt64ForKey("savedId"))
         case 45:
             self = .starGiftUnique(gift: decoder.decodeObjectForKey("gift", decoder: { StarGift(decoder: $0) }) as! StarGift, isUpgrade: decoder.decodeBoolForKey("isUpgrade", orElse: false), isTransferred: decoder.decodeBoolForKey("isTransferred", orElse: false), savedToProfile: decoder.decodeBoolForKey("savedToProfile", orElse: false), canExportDate: decoder.decodeOptionalInt32ForKey("canExportDate"), transferStars: decoder.decodeOptionalInt64ForKey("transferStars"), isRefunded: decoder.decodeBoolForKey("isRefunded", orElse: false), peerId: decoder.decodeOptionalInt64ForKey("peerId").flatMap { EnginePeer.Id($0) }, senderId: decoder.decodeOptionalInt64ForKey("senderId").flatMap { EnginePeer.Id($0) }, savedId: decoder.decodeOptionalInt64ForKey("savedId"))
+        case 46:
+            self = .paidMessage(stars: decoder.decodeInt64ForKey("stars", orElse: 0))
         default:
             self = .unknown
         }
@@ -626,6 +629,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "savedId")
             }
+        case let .paidMessage(stars):
+            encoder.encodeInt32(46, forKey: "_rawValue")
+            encoder.encodeInt64(stars, forKey: "stars")
         }
     }
     

@@ -621,6 +621,7 @@ public class AdsInfoScreen: ViewController {
     public enum Mode: Equatable {
         case channel
         case bot
+        case search
     }
     
     final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {

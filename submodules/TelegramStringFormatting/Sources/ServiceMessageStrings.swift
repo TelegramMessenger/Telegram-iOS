@@ -739,7 +739,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if !forAdditionalServiceMessage {
                     attributedString = NSAttributedString(string: strings.Notification_Gift, font: titleFont, textColor: primaryTextColor)
                 } else {
-                    let price = formatCurrencyAmount(amount, currency: currency)
+                    let price: String
+                    if currency == "XTR" {
+                        price = "\(amount) Stars"
+                    } else {
+                        price = formatCurrencyAmount(amount, currency: currency)
+                    }
                     if message.author?.id == accountPeerId {
                         attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_SentYou(price)._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     } else {
@@ -1163,6 +1168,17 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             }
                         }
                     }
+                }
+            case let .paidMessage(stars):
+                if message.author?.id == accountPeerId {
+                    let starsString = strings.Notification_PaidMessage_Stars(Int32(stars))
+                    let resultTitleString = strings.Notification_PaidMessageYou(starsString)
+                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    let starsString = strings.Notification_PaidMessage_Stars(Int32(stars))
+                    let resultTitleString = strings.Notification_PaidMessage(peerName, starsString)
+                    attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
                 }
             case .unknown:
                 attributedString = nil

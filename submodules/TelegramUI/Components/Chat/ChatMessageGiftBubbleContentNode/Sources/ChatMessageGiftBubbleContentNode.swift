@@ -1073,7 +1073,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             if let backgroundContent = strongSelf.mediaBackgroundContent {
                                 if ribbonTextLayout.size.width > 0.0, uniqueBackgroundColor == nil {
                                     let backgroundMaskFrame = mediaBackgroundFrame.insetBy(dx: -2.0, dy: -2.0)
-                                    backgroundContent.frame = backgroundMaskFrame
                                     animation.animator.updateFrame(layer: backgroundContent.layer, frame: backgroundMaskFrame, completion: nil)
                                     backgroundContent.cornerRadius = 0.0
                                     

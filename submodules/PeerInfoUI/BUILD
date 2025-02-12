@@ -79,6 +79,7 @@ swift_library(
         "//submodules/TelegramUI/Components/GroupStickerPackSetupController",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
+        "//submodules/TelegramUI/Components/PeerInfo/MessagePriceItem",
     ],
     visibility = [
         "//visibility:public",

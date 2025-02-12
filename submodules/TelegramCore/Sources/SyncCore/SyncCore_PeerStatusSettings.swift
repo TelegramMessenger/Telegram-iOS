@@ -39,6 +39,7 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     public var requestChatDate: Int32?
     public var requestChatIsChannel: Bool?
     public var managingBot: ManagingBot?
+    public var paidMessageStars: StarsAmount?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
@@ -46,15 +47,17 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatTitle = nil
         self.requestChatDate = nil
         self.managingBot = nil
+        self.paidMessageStars = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil, managingBot: ManagingBot? = nil) {
+    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil, managingBot: ManagingBot? = nil, paidMessageStars: StarsAmount? = nil) {
         self.flags = flags
         self.geoDistance = geoDistance
         self.requestChatTitle = requestChatTitle
         self.requestChatDate = requestChatDate
         self.requestChatIsChannel = requestChatIsChannel
         self.managingBot = managingBot
+        self.paidMessageStars = paidMessageStars
     }
     
     public init(decoder: PostboxDecoder) {
@@ -64,6 +67,7 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatDate = decoder.decodeOptionalInt32ForKey("requestChatDate")
         self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
         self.managingBot = decoder.decodeCodable(ManagingBot.self, forKey: "managingBot")
+        self.paidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "paidMessageStars")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -92,6 +96,11 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
             encoder.encodeCodable(managingBot, forKey: "managingBot")
         } else {
             encoder.encodeNil(forKey: "managingBot")
+        }
+        if let paidMessageStars = self.paidMessageStars {
+            encoder.encodeCodable(paidMessageStars, forKey: "paidMessageStars")
+        } else {
+            encoder.encodeNil(forKey: "paidMessageStars")
         }
     }
     
