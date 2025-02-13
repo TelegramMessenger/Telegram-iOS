@@ -4580,6 +4580,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openUrl("https://t.me/nft/\(slug)", concealed: false)
+        }, openMessageFeeException: { [weak self] in
+            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
+                return
+            }
+            
+            let _ = (self.context.engine.peers.getPaidMessagesRevenue(peerId: peer.id)
+            |> deliverOnMainQueue).start(next: { [weak self] revenue in
+                guard let self else {
+                    return
+                }
+                let controller = chatMessageRemovePaymentAlertController(
+                    context: self.context,
+                    updatedPresentationData: self.updatedPresentationData,
+                    peer: peer,
+                    amount: (revenue?.value ?? 0) > 0 ? revenue : nil,
+                    completion: { [weak self] refund in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.context.engine.peers.addNoPaidMessagesException(peerId: peer.id, refundCharged: refund).start()
+                    }
+                )
+                self.present(controller, in: .window(.root))
+            })
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -5712,12 +5736,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
                         var businessIntro: TelegramBusinessIntro?
+                        var sendPaidMessageStars: StarsAmount?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedData = peerView.cachedData as? CachedUserData {
                                 contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
+                                sendPaidMessageStars = cachedData.sendPaidMessageStars
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -5940,6 +5966,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedCopyProtectionEnabled(copyProtectionEnabled)
                              .updatedHasSearchTags(hasSearchTags)
                              .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
+                             .updatedSendPaidMessageStars(sendPaidMessageStars)
                              .updatedHasSavedChats(hasSavedChats)
                              .updatedAppliedBoosts(appliedBoosts)
                              .updatedBoostsToUnrestrict(boostsToUnrestrict)
@@ -9193,6 +9220,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             return message.withUpdatedAttributes { attributes in
                 var attributes = attributes
+                
+                if self.presentationInterfaceState.acknowledgedPaidMessage, let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
+                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars))
+                }
+                
                 if silentPosting || scheduleTime != nil {
                     for i in (0 ..< attributes.count).reversed() {
                         if attributes[i] is NotificationInfoMessageAttribute {

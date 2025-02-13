@@ -14,6 +14,7 @@ import TextFormat
 import ItemShimmeringLoadingComponent
 import AvatarNode
 import PeerInfoCoverComponent
+import Markdown
 
 public final class GiftItemComponent: Component {
     public enum Subject: Equatable {
@@ -96,6 +97,7 @@ public final class GiftItemComponent: Component {
     let subject: GiftItemComponent.Subject
     let title: String?
     let subtitle: String?
+    let label: String?
     let ribbon: Ribbon?
     let isLoading: Bool
     let isHidden: Bool
@@ -110,6 +112,7 @@ public final class GiftItemComponent: Component {
         subject: GiftItemComponent.Subject,
         title: String? = nil,
         subtitle: String? = nil,
+        label: String? = nil,
         ribbon: Ribbon? = nil,
         isLoading: Bool = false,
         isHidden: Bool = false,
@@ -123,6 +126,7 @@ public final class GiftItemComponent: Component {
         self.subject = subject
         self.title = title
         self.subtitle = subtitle
+        self.label = label
         self.ribbon = ribbon
         self.isLoading = isLoading
         self.isHidden = isHidden
@@ -142,6 +146,9 @@ public final class GiftItemComponent: Component {
             return false
         }
         if lhs.subject != rhs.subject {
+            return false
+        }
+        if lhs.label != rhs.label {
             return false
         }
         if lhs.title != rhs.title {
@@ -184,6 +191,7 @@ public final class GiftItemComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
+        private let label = ComponentView<Empty>()
         private let ribbon = UIImageView()
         private let ribbonText = ComponentView<Empty>()
         
@@ -226,12 +234,15 @@ public final class GiftItemComponent: Component {
                 themeUpdated = true
             }
             
-            let size: CGSize
+            var size: CGSize
             let iconSize: CGSize
             let cornerRadius: CGFloat
             switch component.mode {
             case .generic:
                 size = CGSize(width: availableSize.width, height: component.title != nil ? 178.0 : 154.0)
+                if let _ = component.label {
+                    size.height += 23.0
+                }
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .profile:
@@ -460,8 +471,8 @@ public final class GiftItemComponent: Component {
                     price = priceValue
                 case .uniqueGift:
                     buttonColor = UIColor.white
-                    starsColor = UIColor.white
-                    price = ""
+                    //TODO:localize
+                    price = "Transfer"
                 }
                 
                 let buttonSize = self.button.update(
@@ -477,12 +488,54 @@ public final class GiftItemComponent: Component {
                     environment: {},
                     containerSize: availableSize
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 10.0), size: buttonSize)
+                var bottomOffset: CGFloat = 10.0
+                if let _ = component.label {
+                    bottomOffset += 23.0
+                }
+                let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - bottomOffset), size: buttonSize)
                 if let buttonView = self.button.view {
                     if buttonView.superview == nil {
                         self.addSubview(buttonView)
                     }
                     transition.setFrame(view: buttonView, frame: buttonFrame)
+                }
+                
+                if let label = component.label {
+                    let attributes = MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(11.0), textColor: UIColor(rgb: 0xd3720a)),
+                        bold: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: UIColor(rgb: 0xd3720a)),
+                        link: MarkdownAttributeSet(font: Font.regular(11.0), textColor: UIColor(rgb: 0xd3720a)),
+                        linkAttribute: { contents in
+                            return (TelegramTextAttributes.URL, contents)
+                        }
+                    )
+                    let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(label, attributes: attributes))
+                    if let range = labelText.string.range(of: "#") {
+                        labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: labelText.string))
+                    }
+                    
+                    let labelSize = self.label.update(
+                        transition: transition,
+                        component: AnyComponent(
+                            MultilineTextWithEntitiesComponent(
+                                context: component.context,
+                                animationCache: component.context.animationCache,
+                                animationRenderer: component.context.animationRenderer,
+                                placeholderColor: .white,
+                                text: .plain(labelText),
+                                horizontalAlignment: .center
+                            )
+                        ),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - labelSize.width) / 2.0), y: 178.0), size: labelSize)
+                    if let labelView = self.label.view {
+                        if labelView.superview == nil {
+                            self.addSubview(labelView)
+                        }
+                        transition.setFrame(view: labelView, frame: labelFrame)
+                    }
                 }
             }
             

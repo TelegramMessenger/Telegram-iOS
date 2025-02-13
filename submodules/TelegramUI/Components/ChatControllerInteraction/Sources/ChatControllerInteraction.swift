@@ -269,6 +269,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let editMessageFactCheck: (MessageId) -> Void
     public let sendGift: (EnginePeer.Id) -> Void
     public let openUniqueGift: (String) -> Void
+    public let openMessageFeeException: () -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -404,6 +405,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         editMessageFactCheck: @escaping (MessageId) -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void,
         openUniqueGift: @escaping (String) -> Void,
+        openMessageFeeException: @escaping () -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -518,6 +520,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.editMessageFactCheck = editMessageFactCheck
         self.sendGift = sendGift
         self.openUniqueGift = openUniqueGift
+        self.openMessageFeeException = openMessageFeeException
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures

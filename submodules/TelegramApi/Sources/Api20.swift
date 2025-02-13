@@ -1185,6 +1185,7 @@ public extension Api {
         case privacyKeyBirthday
         case privacyKeyChatInvite
         case privacyKeyForwards
+        case privacyKeyNoPaidMessages
         case privacyKeyPhoneCall
         case privacyKeyPhoneNumber
         case privacyKeyPhoneP2P
@@ -1222,6 +1223,12 @@ public extension Api {
                 case .privacyKeyForwards:
                     if boxed {
                         buffer.appendInt32(1777096355)
+                    }
+                    
+                    break
+                case .privacyKeyNoPaidMessages:
+                    if boxed {
+                        buffer.appendInt32(399722706)
                     }
                     
                     break
@@ -1282,6 +1289,8 @@ public extension Api {
                 return ("privacyKeyChatInvite", [])
                 case .privacyKeyForwards:
                 return ("privacyKeyForwards", [])
+                case .privacyKeyNoPaidMessages:
+                return ("privacyKeyNoPaidMessages", [])
                 case .privacyKeyPhoneCall:
                 return ("privacyKeyPhoneCall", [])
                 case .privacyKeyPhoneNumber:
@@ -1313,6 +1322,9 @@ public extension Api {
         }
         public static func parse_privacyKeyForwards(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyForwards
+        }
+        public static func parse_privacyKeyNoPaidMessages(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyNoPaidMessages
         }
         public static func parse_privacyKeyPhoneCall(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyPhoneCall

@@ -114,7 +114,7 @@ func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network,
             return .single([])
         }
         
-        return network.request(Api.functions.channels.getSendAs(peer: inputPeer))
+        return network.request(Api.functions.channels.getSendAs(flags: 0, peer: inputPeer))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.channels.SendAsPeers?, NoError> in
             return .single(nil)

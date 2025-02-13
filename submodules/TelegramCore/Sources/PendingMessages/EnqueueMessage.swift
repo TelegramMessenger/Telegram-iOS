@@ -254,6 +254,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             return true
         case _ as ForwardVideoTimestampAttribute:
             return true
+        case _ as PaidStarsMessageAttribute:
+            return true
         default:
             return false
         }
@@ -280,6 +282,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as MediaSpoilerMessageAttribute:
                 return true
             case _ as InvertMediaMessageAttribute:
+                return true
+            case _ as PaidStarsMessageAttribute:
                 return true
             case let attribute as ReplyMessageAttribute:
                 if attribute.quote != nil {

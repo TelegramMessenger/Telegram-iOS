@@ -196,6 +196,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let actionIcon: ContactsPeerItemActionIcon
     let buttonAction: ContactsPeerItemButtonAction?
     let searchQuery: String?
+    let isAd: Bool
     let alwaysShowLastSeparator: Bool
     let action: ((ContactsPeerItemPeer) -> Void)?
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
@@ -208,6 +209,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let animationRenderer: MultiAnimationRenderer?
     let storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
     let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
+    let adButtonAction: ((ASDisplayNode) -> Void)?
     
     public let selectable: Bool
     
@@ -240,6 +242,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         index: SortIndex?,
         header: ListViewItemHeader?,
         searchQuery: String? = nil,
+        isAd: Bool = false,
         alwaysShowLastSeparator: Bool = false,
         action: ((ContactsPeerItemPeer) -> Void)?,
         disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil,
@@ -250,7 +253,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         animationCache: AnimationCache? = nil,
         animationRenderer: MultiAnimationRenderer? = nil,
         storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)? = nil,
-        openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil
+        openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil,
+        adButtonAction: ((ASDisplayNode) -> Void)? = nil
     ) {
         self.presentationData = presentationData
         self.style = style
@@ -274,6 +278,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.actionIcon = actionIcon
         self.buttonAction = buttonAction
         self.searchQuery = searchQuery
+        self.isAd = isAd
         self.alwaysShowLastSeparator = alwaysShowLastSeparator
         self.action = action
         self.disabledAction = disabledAction
@@ -288,6 +293,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.animationRenderer = animationRenderer
         self.storyStats = storyStats
         self.openStories = openStories
+        self.adButtonAction = adButtonAction
         
         if let index = index {
             var letter: String = "#"
@@ -456,6 +462,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var moreButtonNode: MoreButtonNode?
     private var arrowButtonNode: HighlightableButtonNode?
     private var rightLabelTextNode: TextNode?
+    
+    private var adButton: HighlightableButtonNode?
     
     private var actionButtonNode: HighlightTrackingButtonNode?
     private var actionButtonTitleNode: TextNode?
@@ -1794,6 +1802,13 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             })
         }
+    }
+    
+    @objc private func adButtonPressed() {
+        guard let item = self.item, let button = self.adButton else {
+            return
+        }
+        item.adButtonAction?(button)
     }
     
     @objc private func actionButtonPressed(_ sender: HighlightableButtonNode) {

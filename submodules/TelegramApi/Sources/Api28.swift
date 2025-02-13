@@ -751,6 +751,42 @@ public extension Api.account {
     }
 }
 public extension Api.account {
+    enum PaidMessagesRevenue: TypeConstructorDescription {
+        case paidMessagesRevenue(starsAmount: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .paidMessagesRevenue(let starsAmount):
+                    if boxed {
+                        buffer.appendInt32(504403720)
+                    }
+                    serializeInt64(starsAmount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .paidMessagesRevenue(let starsAmount):
+                return ("paidMessagesRevenue", [("starsAmount", starsAmount as Any)])
+    }
+    }
+    
+        public static func parse_paidMessagesRevenue(_ reader: BufferReader) -> PaidMessagesRevenue? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.account.PaidMessagesRevenue.paidMessagesRevenue(starsAmount: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.account {
     enum Password: TypeConstructorDescription {
         case password(flags: Int32, currentAlgo: Api.PasswordKdfAlgo?, srpB: Buffer?, srpId: Int64?, hint: String?, emailUnconfirmedPattern: String?, newAlgo: Api.PasswordKdfAlgo, newSecureAlgo: Api.SecurePasswordKdfAlgo, secureRandom: Buffer, pendingResetDate: Int32?, loginEmailPattern: String?)
     
@@ -1324,64 +1360,6 @@ public extension Api.account {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.account {
-    enum Themes: TypeConstructorDescription {
-        case themes(hash: Int64, themes: [Api.Theme])
-        case themesNotModified
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .themes(let hash, let themes):
-                    if boxed {
-                        buffer.appendInt32(-1707242387)
-                    }
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(themes.count))
-                    for item in themes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-                case .themesNotModified:
-                    if boxed {
-                        buffer.appendInt32(-199313886)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .themes(let hash, let themes):
-                return ("themes", [("hash", hash as Any), ("themes", themes as Any)])
-                case .themesNotModified:
-                return ("themesNotModified", [])
-    }
-    }
-    
-        public static func parse_themes(_ reader: BufferReader) -> Themes? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: [Api.Theme]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Theme.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.account.Themes.themes(hash: _1!, themes: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_themesNotModified(_ reader: BufferReader) -> Themes? {
-            return Api.account.Themes.themesNotModified
         }
     
     }

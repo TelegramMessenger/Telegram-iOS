@@ -601,7 +601,7 @@ final class StarsTransactionsScreenComponent: Component {
     
             contentHeight += descriptionSize.height
             contentHeight += 29.0
-            
+                        
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
@@ -617,7 +617,7 @@ final class StarsTransactionsScreenComponent: Component {
                             count: self.starsState?.balance ?? StarsAmount.zero,
                             rate: nil,
                             actionTitle: environment.strings.Stars_Intro_Buy,
-                            actionAvailable: !premiumConfiguration.areStarsDisabled,
+                            actionAvailable: !premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled,
                             actionIsEnabled: true,
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
@@ -626,7 +626,7 @@ final class StarsTransactionsScreenComponent: Component {
                                 component.buy()
                             },
                             buyAds: nil,
-                            additionalAction: premiumConfiguration.starsGiftsPurchaseAvailable ? AnyComponent(
+                            additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled) ? AnyComponent(
                                 Button(
                                     content: AnyComponent(
                                         HStack([

@@ -1916,7 +1916,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                     placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
                                 }
                             } else {
-                                placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                                if interfaceState.acknowledgedPaidMessage {
+                                    //TODO:localize
+                                    placeholder = "Prepaid Message"
+                                } else {
+                                    placeholder = interfaceState.strings.Conversation_InputTextPlaceholder
+                                }
                             }
                         }
                     }

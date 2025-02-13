@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TelegramStringFormatting
 import ItemListUI
 import PresentationDataUtils
 import OverlayStatusController
@@ -19,6 +20,7 @@ import Markdown
 import UndoUI
 import Postbox
 import OldChannelsController
+import MessagePriceItem
 
 private final class ChannelPermissionsControllerArguments {
     let context: AccountContext
@@ -35,9 +37,10 @@ private final class ChannelPermissionsControllerArguments {
     let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
     let updateUnrestrictBoosters: (Int32) -> Void
+    let updateStarsAmount: (StarsAmount?) -> Void
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, updateStarsAmount: @escaping (StarsAmount?) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -51,6 +54,7 @@ private final class ChannelPermissionsControllerArguments {
         self.openChannelExample = openChannelExample
         self.updateSlowmode = updateSlowmode
         self.updateUnrestrictBoosters = updateUnrestrictBoosters
+        self.updateStarsAmount = updateStarsAmount
         self.toggleIsOptionExpanded = toggleIsOptionExpanded
     }
 }
@@ -59,6 +63,8 @@ private enum ChannelPermissionsSection: Int32 {
     case permissions
     case slowmode
     case conversion
+    case chargeForMessages
+    case messagePrice
     case unrestrictBoosters
     case kicked
     case exceptions
@@ -82,6 +88,14 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case slowmodeHeader(PresentationTheme, String)
     case slowmode(PresentationTheme, PresentationStrings, Int32)
     case slowmodeInfo(PresentationTheme, String)
+    
+    case chargeForMessages(PresentationTheme, String, Bool)
+    case chargeForMessagesInfo(PresentationTheme, String)
+    
+    case messagePriceHeader(PresentationTheme, String)
+    case messagePrice(PresentationTheme, StarsAmount, String)
+    case messagePriceInfo(PresentationTheme, String)
+    
     case unrestrictBoostersSwitch(PresentationTheme, String, Bool)
     case unrestrictBoosters(PresentationTheme, PresentationStrings, Int32)
     case unrestrictBoostersInfo(PresentationTheme, String)
@@ -101,6 +115,10 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ChannelPermissionsSection.slowmode.rawValue
             case .conversionHeader, .conversion, .conversionInfo:
                 return ChannelPermissionsSection.conversion.rawValue
+            case .chargeForMessages, .chargeForMessagesInfo:
+                return ChannelPermissionsSection.chargeForMessages.rawValue
+            case .messagePriceHeader, .messagePrice, .messagePriceInfo:
+                return ChannelPermissionsSection.messagePrice.rawValue
             case .unrestrictBoostersSwitch, .unrestrictBoosters, .unrestrictBoostersInfo:
                 return ChannelPermissionsSection.unrestrictBoosters.rawValue
             case .kicked:
@@ -122,24 +140,34 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return .index(999)
             case .conversionInfo:
                 return .index(1000)
-            case .unrestrictBoostersSwitch:
+            case .chargeForMessages:
                 return .index(1001)
-            case .unrestrictBoosters:
+            case .chargeForMessagesInfo:
                 return .index(1002)
-            case .unrestrictBoostersInfo:
+            case .messagePriceHeader:
                 return .index(1003)
-            case .slowmodeHeader:
+            case .messagePrice:
                 return .index(1004)
-            case .slowmode:
+            case .messagePriceInfo:
                 return .index(1005)
-            case .slowmodeInfo:
+            case .unrestrictBoostersSwitch:
                 return .index(1006)
-            case .kicked:
+            case .unrestrictBoosters:
                 return .index(1007)
-            case .exceptionsHeader:
+            case .unrestrictBoostersInfo:
                 return .index(1008)
-            case .add:
+            case .slowmodeHeader:
                 return .index(1009)
+            case .slowmode:
+                return .index(1010)
+            case .slowmodeInfo:
+                return .index(1011)
+            case .kicked:
+                return .index(1012)
+            case .exceptionsHeader:
+                return .index(1013)
+            case .add:
+                return .index(1014)
             case let .peerItem(_, _, _, _, _, participant, _, _, _, _):
                 return .peer(participant.peer.id)
         }
@@ -191,6 +219,36 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }
             case let .conversionInfo(lhsTheme, lhsValue):
                 if case let .conversionInfo(rhsTheme, rhsValue) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .chargeForMessages(lhsTheme, lhsTitle, lhsValue):
+                if case let .chargeForMessages(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .chargeForMessagesInfo(lhsTheme, lhsText):
+                if case let .chargeForMessagesInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messagePriceHeader(lhsTheme, lhsText):
+                if case let .messagePriceHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messagePrice(lhsTheme, lhsValue, lhsPrice):
+            if case let .messagePrice(rhsTheme, rhsValue, rhsPrice) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsPrice == rhsPrice {
+                    return true
+                } else {
+                    return false
+                }
+            case let .messagePriceInfo(lhsTheme, lhsText):
+                if case let .messagePriceInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -358,6 +416,20 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(value), sectionId: self.section) { _ in
                     arguments.openChannelExample()
                 }
+            case let .chargeForMessages(_, title, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateStarsAmount(value ? StarsAmount(value: 400, nanos: 0) : nil)
+                })
+            case let .chargeForMessagesInfo(_, value):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
+            case let .messagePriceHeader(_, value):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
+            case let .messagePrice(_, value, price):
+                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 10, maxValue: 9000, value: value.value, price: price, sectionId: self.section, updated: { value in
+                    arguments.updateStarsAmount(StarsAmount(value: value, nanos: 0))
+                })
+            case let .messagePriceInfo(_, value):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
             case let .unrestrictBoostersSwitch(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateUnrestrictBoosters(value ? 1 : 0)
@@ -423,6 +495,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var modifiedRightsFlags: TelegramChatBannedRightsFlags?
     var modifiedSlowmodeTimeout: Int32?
     var modifiedUnrestrictBoosters: Int32?
+    var modifiedStarsAmount: StarsAmount?
     var expandedPermissions = Set<TelegramChatBannedRightsFlags>()
 }
 
@@ -591,7 +664,7 @@ func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> Tele
     }
 }
 
-private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?) -> [ChannelPermissionsEntry] {
+private func channelPermissionsControllerEntries(context: AccountContext, presentationData: PresentationData, view: PeerView, state: ChannelPermissionsControllerState, participants: [RenderedChannelParticipant]?, configuration: StarsSubscriptionConfiguration) -> [ChannelPermissionsEntry] {
     var entries: [ChannelPermissionsEntry] = []
     
     if let channel = view.peers[view.peerId] as? TelegramChannel, let participants = participants, let cachedData = view.cachedData as? CachedChannelData, let defaultBannedRights = channel.defaultBannedRights {
@@ -647,11 +720,28 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
+        let chargeEnabled = state.modifiedStarsAmount != nil
+        
+        entries.append(.chargeForMessages(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessages, chargeEnabled))
+        entries.append(.chargeForMessagesInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessagesInfo))
+        
+        if chargeEnabled {
+            var price: String = ""
+            if let amount = state.modifiedStarsAmount {
+                var usdRate = 0.012
+                if let usdWithdrawRate = configuration.usdWithdrawRate {
+                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                }
+                price = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
+            }
+            entries.append(.messagePriceHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePrice))
+            entries.append(.messagePrice(presentationData.theme, state.modifiedStarsAmount ?? StarsAmount(value: 4000, nanos: 0), price))
+            entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo(price).string))
+        }
+        
         let canSendText = !effectiveRightsFlags.contains(.banSendText)
         let canSendMedia = banSendMediaSubList().allSatisfy({ !effectiveRightsFlags.contains($0.0) })
-        
         let slowModeTimeout = state.modifiedSlowmodeTimeout ?? (cachedData.slowModeTimeout ?? 0)
-        
         if !canSendText || !canSendMedia || slowModeTimeout > 0 {
             let unrestrictBoosters = state.modifiedUnrestrictBoosters ?? (cachedData.boostsToUnrestrict ?? 0)
             let unrestrictEnabled = unrestrictBoosters > 0
@@ -725,6 +815,8 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     let updateState: ((ChannelPermissionsControllerState) -> ChannelPermissionsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
+    
+    let configuration = StarsSubscriptionConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -1154,6 +1246,12 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             updateUnrestrictBoostersDisposable.set((context.engine.peers.updateChannelBoostsToUnlockRestrictions(peerId: view.peerId, boosts: value)
             |> deliverOnMainQueue).start())
         })
+    }, updateStarsAmount: { value in
+        updateState { state in
+            var state = state
+            state.modifiedStarsAmount = value
+            return state
+        }
     }, toggleIsOptionExpanded: { flags in
         updateState { state in
             var state = state
@@ -1245,7 +1343,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.GroupInfo_Permissions_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelPermissionsControllerEntries(context: context, presentationData: presentationData, view: view, state: state, participants: participants, configuration: configuration), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }

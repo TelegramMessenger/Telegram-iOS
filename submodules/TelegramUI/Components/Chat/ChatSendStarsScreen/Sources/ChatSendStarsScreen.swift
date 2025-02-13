@@ -22,6 +22,7 @@ import CheckNode
 import TextFormat
 import CheckComponent
 import ContextUI
+import StarsBalanceOverlayComponent
 
 private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
@@ -1003,6 +1004,8 @@ private final class ChatSendStarsScreenComponent: Component {
         private let scrollContentView: UIView
         private let hierarchyTrackingNode: HierarchyTrackingNode
         
+        private var balanceOverlay = ComponentView<Empty>()
+        
         private let leftButton = ComponentView<Empty>()
         private let peerSelectorButton = ComponentView<Empty>()
         private let closeButton = ComponentView<Empty>()
@@ -1242,6 +1245,11 @@ private final class ChatSendStarsScreenComponent: Component {
             if let buttonDescriptionTextView = self.buttonDescriptionText.view {
                 buttonDescriptionTextView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             }
+            
+            if let view = self.balanceOverlay.view {
+                view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }
         }
         
         private var previousSliderValue: Float = 0.0
@@ -1431,6 +1439,31 @@ private final class ChatSendStarsScreenComponent: Component {
                 fillingSize = min(availableSize.width, 428.0) - environment.safeInsets.left * 2.0
             }
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
+            
+            let balanceSize = self.balanceOverlay.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    StarsBalanceOverlayComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        action: {
+                            
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let view = self.balanceOverlay.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                    
+                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    view.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - balanceSize.width) / 2.0), y: environment.statusBarHeight + 5.0), size: balanceSize)
+            }
             
             if self.component == nil {
                 self.currentMyPeer = component.myPeer

@@ -306,9 +306,9 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                         credibilityIcon = .fake
                     } else if peer.isScam {
                         credibilityIcon = .scam
-                    } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                    } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
                         credibilityIcon = .emojiStatus(emojiStatus)
-                    } else if case let .channel(channel) = peer, let emojiStatus = channel.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+                    } else if case let .channel(channel) = peer, let emojiStatus = channel.emojiStatus {
                         credibilityIcon = .emojiStatus(emojiStatus)
                     } else if peer.isVerified {
                         credibilityIcon = .verified

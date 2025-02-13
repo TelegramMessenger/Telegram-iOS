@@ -20,6 +20,7 @@ import PresentationDataUtils
 import StarsImageComponent
 import ConfettiEffect
 import PremiumPeerShortcutComponent
+import StarsBalanceOverlayComponent
 
 private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment

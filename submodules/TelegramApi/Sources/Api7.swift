@@ -946,32 +946,36 @@ public extension Api {
 }
 public extension Api {
     enum GlobalPrivacySettings: TypeConstructorDescription {
-        case globalPrivacySettings(flags: Int32)
+        case globalPrivacySettings(flags: Int32, noncontactPeersPaidStars: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .globalPrivacySettings(let flags):
+                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars):
                     if boxed {
-                        buffer.appendInt32(1934380235)
+                        buffer.appendInt32(-908533988)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt64(noncontactPeersPaidStars!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .globalPrivacySettings(let flags):
-                return ("globalPrivacySettings", [("flags", flags as Any)])
+                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars):
+                return ("globalPrivacySettings", [("flags", flags as Any), ("noncontactPeersPaidStars", noncontactPeersPaidStars as Any)])
     }
     }
     
         public static func parse_globalPrivacySettings(_ reader: BufferReader) -> GlobalPrivacySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 5) != 0 {_2 = reader.readInt64() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!)
+            let _c2 = (Int(_1!) & Int(1 << 5) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, noncontactPeersPaidStars: _2)
             }
             else {
                 return nil

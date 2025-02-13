@@ -960,13 +960,13 @@ public extension Api {
 }
 public extension Api {
     enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?, businessBotId: Int64?, businessBotManageUrl: String?)
+        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?, businessBotId: Int64?, businessBotManageUrl: String?, chargePaidMessageStars: Int64?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl, let chargePaidMessageStars):
                     if boxed {
-                        buffer.appendInt32(-1395233698)
+                        buffer.appendInt32(-1469866638)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
@@ -974,14 +974,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(requestChatDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {serializeInt64(businessBotId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {serializeString(businessBotManageUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt64(chargePaidMessageStars!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
-                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any), ("businessBotId", businessBotId as Any), ("businessBotManageUrl", businessBotManageUrl as Any)])
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl, let chargePaidMessageStars):
+                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any), ("businessBotId", businessBotId as Any), ("businessBotManageUrl", businessBotManageUrl as Any), ("chargePaidMessageStars", chargePaidMessageStars as Any)])
     }
     }
     
@@ -998,14 +999,17 @@ public extension Api {
             if Int(_1!) & Int(1 << 13) != 0 {_5 = reader.readInt64() }
             var _6: String?
             if Int(_1!) & Int(1 << 13) != 0 {_6 = parseString(reader) }
+            var _7: Int64?
+            if Int(_1!) & Int(1 << 14) != 0 {_7 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 9) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 13) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 13) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6)
+            let _c7 = (Int(_1!) & Int(1 << 14) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6, chargePaidMessageStars: _7)
             }
             else {
                 return nil

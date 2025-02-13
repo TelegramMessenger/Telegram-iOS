@@ -13801,3 +13801,40 @@ Sorry for the inconvenience.";
 
 "Notification.StarsGift.TransferToChannel" = "%@ transferred a unique collectible to %@";
 "Notification.StarsGift.TransferToChannelYou" = "You transferred a unique collectible to %@";
+
+"AvatarEditor.PremiumNeeded.Background" = "Subscribe to Telegram Premium to choose this background.";
+"AvatarEditor.PremiumNeeded.Emoji" = "Subscribe to Telegram Premium to choose this emoji.";
+"AvatarEditor.PremiumNeeded.Sticker" = "Subscribe to Telegram Premium to choose this sticker.";
+
+"PremiumNeeded.Title" = "Premium Needed";
+"PremiumNeeded.Subscribe" = "Subscribe";
+
+"Gift.Convert.Success.ChannelText" = "**%1$@** were sent to channel's balance.";
+"Gift.Convert.Success.ChannelText.Stars_1" = "%@ Star";
+"Gift.Convert.Success.ChannelText.Stars_any" = "%@ Stars";
+
+"GroupInfo.Permissions.ChargeForMessages" = "Charge for Messages";
+"GroupInfo.Permissions.ChargeForMessagesInfo" = "If you turn this on, regular members of the group will have to pay Stars to send messages.";
+"GroupInfo.Permissions.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
+"GroupInfo.Permissions.MessagePriceInfo" = "Your group will receive 85% of the selected fee (%1$@) for each incoming message.";
+
+"Privacy.Messages.ChargeForMessages" = "Charge for Messages";
+"Privacy.Messages.ChargeForMessagesInfo" = "Charge a fee for messages from people outide your contacts or those you haven't messaged first.";
+"Privacy.Messages.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
+"Privacy.Messages.MessagePriceInfo" = "Your will receive 85% of the selected fee (%1$@) for each incoming message.";
+
+"Privacy.Messages.RemoveFeeHeader" = "EXCEPTIONS";
+"Privacy.Messages.RemoveFee" = "Remove Fee";
+"Privacy.Messages.RemoveFeeInfo" = "Add users or entire groups who won't be charged for sending messages to you.";
+
+"Privacy.Messages.Exceptions.Title" = "Remove Fee";
+
+"Chat.EmptyStatePaidMessaging.Text" = "**%1$@** charges **%2$@**\nfor each message.";
+"Chat.EmptyStatePaidMessagingDisabled.Text" = "**%1$@** charges **%2$@**\nfor each message.";
+"Chat.EmptyStatePaidMessaging.Action" = "Buy Stars";
+
+"Notification.PaidMessage.Stars_1" = "%@ Star";
+"Notification.PaidMessage.Stars_any" = "%@ Stars";
+
+"Notification.PaidMessage" = "%1$@ paid %2$@ to send a message";
+"Notification.PaidMessageYou" = "You paid %1$@ to send a message";

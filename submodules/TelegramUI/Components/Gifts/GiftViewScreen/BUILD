@@ -48,6 +48,7 @@ swift_library(
         "//submodules/PasswordSetupUI",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/PremiumLockButtonSubtitleComponent",
+        "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
     ],
     visibility = [
         "//visibility:public",

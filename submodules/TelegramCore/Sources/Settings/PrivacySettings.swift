@@ -130,12 +130,13 @@ public struct AccountPrivacySettings: Equatable {
     public var bio: SelectivePrivacySettings
     public var birthday: SelectivePrivacySettings
     public var giftsAutoSave: SelectivePrivacySettings
+    public var noPaidMessages: SelectivePrivacySettings
     
     public var globalSettings: GlobalPrivacySettings
     public var accountRemovalTimeout: Int32
     public var messageAutoremoveTimeout: Int32?
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, birthday: SelectivePrivacySettings, giftsAutoSave: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, bio: SelectivePrivacySettings, birthday: SelectivePrivacySettings, giftsAutoSave: SelectivePrivacySettings, noPaidMessages: SelectivePrivacySettings, globalSettings: GlobalPrivacySettings, accountRemovalTimeout: Int32, messageAutoremoveTimeout: Int32?) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -148,6 +149,7 @@ public struct AccountPrivacySettings: Equatable {
         self.bio = bio
         self.birthday = birthday
         self.giftsAutoSave = giftsAutoSave
+        self.noPaidMessages = noPaidMessages
         self.globalSettings = globalSettings
         self.accountRemovalTimeout = accountRemovalTimeout
         self.messageAutoremoveTimeout = messageAutoremoveTimeout
@@ -188,6 +190,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.giftsAutoSave != rhs.giftsAutoSave {
+            return false
+        }
+        if lhs.noPaidMessages != rhs.noPaidMessages {
             return false
         }
         if lhs.globalSettings != rhs.globalSettings {
@@ -288,32 +293,67 @@ func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f:
 }
 
 public struct GlobalPrivacySettings: Equatable, Codable {
+    public enum NonContactChatsPrivacy: Equatable, Codable {
+        case everybody
+        case requirePremium
+        case paidMessages(StarsAmount)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+            switch (try? container.decode(Int32.self, forKey: "t")) ?? 0 {
+            case 0:
+                self = .everybody
+            case 1:
+                self = .requirePremium
+            case 2:
+                self = .paidMessages(StarsAmount(value: try container.decodeIfPresent(Int64.self, forKey: "stars") ?? 0, nanos: 0))
+            default:
+                assertionFailure()
+                self = .everybody
+            }
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: StringCodingKey.self)
+            switch self {
+            case .everybody:
+                try container.encode(0 as Int32, forKey: "t")
+            case .requirePremium:
+                try container.encode(1 as Int32, forKey: "t")
+            case let .paidMessages(amount):
+                try container.encode(2 as Int32, forKey: "t")
+                try container.encode(amount.value, forKey: "stars")
+            }
+        }
+    }
+    
     public static var `default` = GlobalPrivacySettings(
         automaticallyArchiveAndMuteNonContacts: false,
         keepArchivedUnmuted: true,
         keepArchivedFolders: true,
         hideReadTime: false,
-        nonContactChatsRequirePremium: false
+        nonContactChatsPrivacy: .everybody
     )
 
     public var automaticallyArchiveAndMuteNonContacts: Bool
     public var keepArchivedUnmuted: Bool
     public var keepArchivedFolders: Bool
     public var hideReadTime: Bool
-    public var nonContactChatsRequirePremium: Bool
+    public var nonContactChatsPrivacy: NonContactChatsPrivacy
 
     public init(
         automaticallyArchiveAndMuteNonContacts: Bool,
         keepArchivedUnmuted: Bool,
         keepArchivedFolders: Bool,
         hideReadTime: Bool,
-        nonContactChatsRequirePremium: Bool
+        nonContactChatsPrivacy: NonContactChatsPrivacy
     ) {
         self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
         self.keepArchivedUnmuted = keepArchivedUnmuted
         self.keepArchivedFolders = keepArchivedFolders
         self.hideReadTime = hideReadTime
-        self.nonContactChatsRequirePremium = nonContactChatsRequirePremium
+        self.nonContactChatsPrivacy = nonContactChatsPrivacy
     }
 }
 
