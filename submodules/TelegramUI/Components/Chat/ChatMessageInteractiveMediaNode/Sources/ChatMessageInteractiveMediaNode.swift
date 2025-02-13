@@ -1952,17 +1952,17 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     videoNode.isUserInteractionEnabled = false
                                     var firstTime = true
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
-                                        if let strongSelf = self {
+                                        if let strongSelf = self, let videoNode = strongSelf.videoNode {
                                             if firstTime {
                                                 firstTime = false
                                                 if startFromSavedPosition, let videoTimestamp {
                                                     videoNode.seek(Double(videoTimestamp))
                                                 }
                                             }
-                                            strongSelf.videoNode?.isHidden = !owns
+                                            videoNode.isHidden = !owns
                                             if owns {
-                                                strongSelf.videoNode?.setBaseRate(1.0)
-                                                strongSelf.videoNode?.continuePlayingWithoutSound()
+                                                videoNode.setBaseRate(1.0)
+                                                videoNode.continuePlayingWithoutSound()
                                             }
                                         }
                                     }
