@@ -733,8 +733,13 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     public var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
     }
+    private var didSetReady: Bool = false
+    
+    private let initTimestamp: Double
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tag: HistoryViewInputTag?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, rotated: Bool = false, isChatPreview: Bool, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
+        self.initTimestamp = CFAbsoluteTimeGetCurrent()
+        
         var tag = tag
         if case .pinnedMessages = subject {
             tag = .tag(.pinned)
@@ -1698,6 +1703,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         }
         |> distinctUntilChanged
         
+        let startTime = CFAbsoluteTimeGetCurrent()
+        var measure_isFirstTime = true
         let messageViewQueue = Queue.mainQueue()
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
@@ -1727,6 +1734,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             contentSettings
         ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
+            
+            if measure_isFirstTime {
+                measure_isFirstTime = false
+                #if DEBUG
+                let deltaTime = (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0
+                print("Chat load time: \(deltaTime) ms")
+                #endif
+            }
             
             func applyHole() {
                 Queue.mainQueue().async {
@@ -4051,6 +4066,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                 strongSelf.dequeueHistoryViewTransitions()
                 
                 strongSelf._isReady.set(true)
+                
+                if !strongSelf.didSetReady {
+                    strongSelf.didSetReady = true
+                    #if DEBUG
+                    let deltaTime = (CFAbsoluteTimeGetCurrent() - strongSelf.initTimestamp) * 1000.0
+                    print("Chat init to dequeue time: \(deltaTime) ms")
+                    #endif
+                }
             }
         }
         

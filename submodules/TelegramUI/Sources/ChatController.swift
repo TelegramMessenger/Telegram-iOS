@@ -627,6 +627,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var currentSendStarsUndoMessageId: EngineMessage.Id?
     var currentSendStarsUndoCount: Int = 0
     
+    let initTimestamp: Double
+    
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
@@ -675,6 +677,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         customChatNavigationStack: [EnginePeer.Id]? = nil,
         params: ChatControllerParams? = nil
     ) {
+        self.initTimestamp = CFAbsoluteTimeGetCurrent()
+        
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }

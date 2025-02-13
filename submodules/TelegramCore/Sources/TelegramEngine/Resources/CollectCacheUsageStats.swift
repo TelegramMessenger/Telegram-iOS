@@ -583,12 +583,10 @@ func _internal_reindexCacheInBackground(account: Account, lowImpact: Bool) -> Si
                         }
                         processResource(mediaMessages, file.resource, MediaResourceUserContentType(file: file))
                         for alternativeRepresentation in file.alternativeRepresentations {
-                            if let alternativeRepresentation = alternativeRepresentation as? TelegramMediaFile {
-                                for representation in alternativeRepresentation.previewRepresentations {
-                                    processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
-                                }
-                                processResource(mediaMessages, alternativeRepresentation.resource, MediaResourceUserContentType(file: file))
+                            for representation in alternativeRepresentation.previewRepresentations {
+                                processResource(mediaMessages, representation.resource, MediaResourceUserContentType(file: file))
                             }
+                            processResource(mediaMessages, alternativeRepresentation.resource, MediaResourceUserContentType(file: file))
                         }
                     } else if let webpage = media as? TelegramMediaWebpage {
                         if case let .Loaded(content) = webpage.content {

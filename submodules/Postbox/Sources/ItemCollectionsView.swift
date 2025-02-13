@@ -42,9 +42,19 @@ public struct ItemCollectionViewEntry {
     }
 }
 
-private func fetchLowerEntries(namespaces: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32, itemIndex: ItemCollectionItemIndex, count: Int, lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> [ItemCollectionViewEntry] {
+public struct RawItemCollectionViewEntry {
+    public let index: ItemCollectionViewEntryIndex
+    public let data: Data
     
-    var entries: [ItemCollectionViewEntry] = []
+    public init(index: ItemCollectionViewEntryIndex, data: Data) {
+        self.index = index
+        self.data = data
+    }
+}
+
+private func fetchLowerEntries(namespaces: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32, itemIndex: ItemCollectionItemIndex, count: Int, lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, lowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> [RawItemCollectionViewEntry] {
+    
+    var entries: [RawItemCollectionViewEntry] = []
     
     var currentCollectionIndex = collectionIndex
     var currentCollectionId = collectionId
@@ -75,9 +85,9 @@ private func fetchLowerEntries(namespaces: [ItemCollectionId.Namespace], collect
     return entries
 }
 
-private func fetchHigherEntries(namespaces: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32, itemIndex: ItemCollectionItemIndex, count: Int, higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> [ItemCollectionViewEntry] {
+private func fetchHigherEntries(namespaces: [ItemCollectionId.Namespace], collectionId: ItemCollectionId, collectionIndex: Int32, itemIndex: ItemCollectionItemIndex, count: Int, higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?, higherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> [RawItemCollectionViewEntry] {
     
-    var entries: [ItemCollectionViewEntry] = []
+    var entries: [RawItemCollectionViewEntry] = []
     
     var currentCollectionIndex = collectionIndex
     var currentCollectionId = collectionId
@@ -115,11 +125,11 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
                            lowerCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?,
                            fetchLowerItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem],
                            higherCollectionId: (_ namespaceList: [ItemCollectionId.Namespace], _ collectionId: ItemCollectionId, _ collectionIndex: Int32) -> (ItemCollectionId, Int32)?,
-                           fetchHigherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> ([ItemCollectionViewEntry], ItemCollectionViewEntry?, ItemCollectionViewEntry?) {
-    var lowerEntries: [ItemCollectionViewEntry] = []
-    var upperEntries: [ItemCollectionViewEntry] = []
-    var lower: ItemCollectionViewEntry?
-    var upper: ItemCollectionViewEntry?
+                           fetchHigherItems: (_ collectionId: ItemCollectionId, _ itemIndex: ItemCollectionItemIndex, _ count: Int) -> [ItemCollectionItem]) -> ([RawItemCollectionViewEntry], RawItemCollectionViewEntry?, RawItemCollectionViewEntry?) {
+    var lowerEntries: [RawItemCollectionViewEntry] = []
+    var upperEntries: [RawItemCollectionViewEntry] = []
+    var lower: RawItemCollectionViewEntry?
+    var upper: RawItemCollectionViewEntry?
     
     let selectedAroundIndex: ItemCollectionViewEntryIndex
     if let aroundIndex = aroundIndex, let aroundCollectionIndex = collectionIndexById(aroundIndex.collectionId) {
@@ -153,7 +163,7 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
     }
     
     if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
-        var additionalLowerEntries: [ItemCollectionViewEntry] = fetchLowerEntries(namespaces: namespaces, collectionId: lowerEntries.last!.index.collectionId, collectionIndex: lowerEntries.last!.index.collectionIndex, itemIndex: lowerEntries.last!.index.itemIndex, count: count - lowerEntries.count - upperEntries.count + 1, lowerCollectionId: lowerCollectionId, lowerItems: fetchLowerItems)
+        var additionalLowerEntries: [RawItemCollectionViewEntry] = fetchLowerEntries(namespaces: namespaces, collectionId: lowerEntries.last!.index.collectionId, collectionIndex: lowerEntries.last!.index.collectionIndex, itemIndex: lowerEntries.last!.index.itemIndex, count: count - lowerEntries.count - upperEntries.count + 1, lowerCollectionId: lowerCollectionId, lowerItems: fetchLowerItems)
         
         if additionalLowerEntries.count >= count - lowerEntries.count + upperEntries.count + 1 {
             lower = additionalLowerEntries.last
@@ -162,7 +172,7 @@ private func aroundEntries(namespaces: [ItemCollectionId.Namespace],
         lowerEntries.append(contentsOf: additionalLowerEntries)
     }
     
-    var entries: [ItemCollectionViewEntry] = []
+    var entries: [RawItemCollectionViewEntry] = []
     entries.append(contentsOf: lowerEntries.reversed())
     entries.append(contentsOf: upperEntries)
     return (entries: entries, lower: lower, upper: upper)

@@ -1,19 +1,25 @@
+import Foundation
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 public final class StickerPackItem: ItemCollectionItem, Equatable {
     public let index: ItemCollectionItemIndex
     public let file: TelegramMediaFile
+    public let serializedFile: Data
     public let indexKeys: [MemoryBuffer]
     
     public init(index: ItemCollectionItemIndex, file: TelegramMediaFile, indexKeys: [MemoryBuffer]) {
         self.index = index
         self.file = file
+        self.serializedFile = file.encodeToFlatBuffersData()
         self.indexKeys = indexKeys
     }
     
     public init(decoder: PostboxDecoder) {
         self.index = ItemCollectionItemIndex(index: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt64ForKey("i.i", orElse: 0))
         self.file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
+        self.serializedFile = decoder.decodeDataForKey("fd") ?? self.file.encodeToFlatBuffersData()
         self.indexKeys = decoder.decodeBytesArrayForKey("s")
     }
     
@@ -21,6 +27,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
         encoder.encodeInt32(self.index.index, forKey: "i.n")
         encoder.encodeInt64(self.index.id, forKey: "i.i")
         encoder.encodeObject(self.file, forKey: "f")
+        encoder.encodeData(self.serializedFile, forKey: "fd")
         encoder.encodeBytesArray(self.indexKeys, forKey: "s")
     }
     

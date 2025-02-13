@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
 func dimensionsForFileAttributes(_ attributes: [TelegramMediaFileAttribute]) -> PixelDimensions? {
     for attribute in attributes {
         switch attribute {
@@ -183,7 +182,7 @@ func telegramMediaFileFromApiDocument(_ document: Api.Document, altDocuments: [A
                 }
             }
         
-            var alternativeRepresentations: [Media] = []
+            var alternativeRepresentations: [TelegramMediaFile] = []
             if let altDocuments {
                 alternativeRepresentations = altDocuments.compactMap { telegramMediaFileFromApiDocument($0, altDocuments: []) }
             }

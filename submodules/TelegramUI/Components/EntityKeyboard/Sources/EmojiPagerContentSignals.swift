@@ -7,6 +7,8 @@ import SwiftSignalKit
 import AnimationCache
 import MultiAnimationRenderer
 import TelegramNotices
+import FlatBuffers
+import FlatSerialization
 
 public extension EmojiPagerContentComponent {    
     private static func hasPremium(context: AccountContext, chatPeerId: EnginePeer.Id?, premiumIfSavedMessages: Bool) -> Signal<Bool, NoError> {
@@ -1365,6 +1367,14 @@ public extension EmojiPagerContentComponent {
                     guard let item = entry.item as? StickerPackItem else {
                         continue
                     }
+                    
+                    #if DEBUG && false
+                    let fbData = item.file.encodeToFlatBuffersData()
+                    var byteBuffer = ByteBuffer(data: fbData)
+                    let flatBuffersObject: TelegramCore_TelegramMediaFile = try! getCheckedRoot(byteBuffer: &byteBuffer)
+                    let fbObject = try! TelegramMediaFile(flatBuffersObject: flatBuffersObject)
+                    assert(item.file == fbObject)
+                    #endif
                     
                     var icon: EmojiPagerContentComponent.Item.Icon = .none
                     if [.reaction(onlyTop: false), .quickReaction].contains(subject), !hasPremium {
