@@ -180,7 +180,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             remoteVideo: nil,
             isRemoteBatteryLow: false,
             isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
-            isConferencePossible: self.sharedContext.immediateExperimentalUISettings.conferenceCalls
+            isConferencePossible: true
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted

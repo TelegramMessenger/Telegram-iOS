@@ -336,7 +336,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         continue
                     }
                     
-                    availableGifSearchEmojies.append(EntityKeyboardComponent.GifSearchEmoji(emoji: reaction, file: file, title: title))
+                    availableGifSearchEmojies.append(EntityKeyboardComponent.GifSearchEmoji(emoji: reaction, file: file._parse(), title: title))
                 }
             }
                         
@@ -649,7 +649,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 }
                             }
                         })
-                    } else if let file = item.itemFile {
+                    } else if let file = item.itemFile?._parse() {
                         var text = "."
                         var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
@@ -970,11 +970,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     if itemFile.isPremiumEmoji && !hasPremium {
                                         continue
                                     }
-                                    let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                    let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                                     let item = EmojiPagerContentComponent.Item(
                                         animationData: animationData,
                                         content: .animation(animationData),
-                                        itemFile: itemFile,
+                                        itemFile: TelegramMediaFile.Accessor(itemFile),
                                         subgroupId: nil,
                                         icon: .none,
                                         tintMode: animationData.isTemplate ? .primary : .none
@@ -1086,11 +1086,11 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 continue
                             }
                             existingIds.insert(itemFile.fileId)
-                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                             let item = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
                                 content: .animation(animationData),
-                                itemFile: itemFile,
+                                itemFile: TelegramMediaFile.Accessor(itemFile),
                                 subgroupId: nil,
                                 icon: .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
@@ -1177,7 +1177,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                     guard let interaction else {
                         return
                     }
-                    guard let file = item.itemFile else {
+                    guard let file = item.itemFile?._parse() else {
                         if case .icon(.add) = item.content {
                             interaction.openStickerEditor()
                         }
@@ -1433,11 +1433,12 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 continue
                             }
                             existingIds.insert(itemFile.fileId)
-                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                             let item = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
                                 content: .animation(animationData),
-                                itemFile: itemFile, subgroupId: nil,
+                                itemFile: TelegramMediaFile.Accessor(itemFile),
+                                subgroupId: nil,
                                 icon: itemFile.isPremiumSticker ? .premium : .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
                             )
@@ -2316,10 +2317,10 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     
                     if groupId == AnyHashable("featuredTop") {
                     } else {
-                        if let file = item.itemFile {
+                        if let file = item.itemFile?._parse() {
                             var text = "."
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
-                        loop: for attribute in file.attributes {
+                            loop: for attribute in file.attributes {
                             switch attribute {
                             case let .CustomEmoji(_, _, displayText, _):
                                 text = displayText

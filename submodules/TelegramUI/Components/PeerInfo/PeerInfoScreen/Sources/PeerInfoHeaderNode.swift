@@ -952,7 +952,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                     }
                                     |> mapToSignal { result -> Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError> in
                                         if case let .result(_, items, _) = result {
-                                            return .single(items.first.flatMap { ($0.file, result) })
+                                            return .single(items.first.flatMap { ($0.file._parse(), result) })
                                         } else {
                                             return .complete()
                                         }

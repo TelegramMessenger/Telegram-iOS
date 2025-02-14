@@ -149,7 +149,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         if let availableReactions = availableReactions {
                             for availableReaction in availableReactions.reactions {
                                 if availableReaction.value == reaction {
-                                    self.file = availableReaction.centerAnimation
+                                    self.file = availableReaction.centerAnimation?._parse()
                                     self.updateReactionLayer()
                                     break
                                 }
@@ -168,7 +168,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         if let availableReactions = availableReactions {
                             for availableReaction in availableReactions.reactions {
                                 if availableReaction.value == reaction {
-                                    self.file = availableReaction.centerAnimation
+                                    self.file = availableReaction.centerAnimation?._parse()
                                     self.updateReactionLayer()
                                     break
                                 }
@@ -567,7 +567,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             if let availableReactions = self.availableReactions {
                                 for availableReaction in availableReactions.reactions {
                                     if availableReaction.value == reaction {
-                                        self.file = availableReaction.centerAnimation
+                                        self.file = availableReaction.centerAnimation?._parse()
                                         self.updateReactionLayer()
                                         self.updateReactionAccentColor(theme: presentationData.theme)
                                         break
@@ -588,7 +588,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             if let availableReactions = self.availableReactions {
                                 for availableReaction in availableReactions.reactions {
                                     if availableReaction.value == reaction {
-                                        self.file = availableReaction.centerAnimation
+                                        self.file = availableReaction.centerAnimation?._parse()
                                         self.updateReactionLayer()
                                         self.updateReactionAccentColor(theme: presentationData.theme)
                                         break

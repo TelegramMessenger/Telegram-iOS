@@ -276,7 +276,7 @@ extension ChatControllerImpl {
                                                     placeholderColor: .clear,
                                                     attemptSynchronous: true
                                                 ),
-                                                file: items.first?.file,
+                                                file: items.first?.file._parse(),
                                                 action: action)
                                             return .single(actions)
                                         } else {

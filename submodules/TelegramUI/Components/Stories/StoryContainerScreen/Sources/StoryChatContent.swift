@@ -1876,7 +1876,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
             for reaction in availableReactions.reactions {
                 for value in builtinReactions {
                     if case .builtin(value) = reaction.value {
-                        files.append(reaction.selectAnimation)
+                        files.append(reaction.selectAnimation._parse())
                     }
                 }
             }
@@ -2110,7 +2110,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                 for reaction in availableReactions.reactions {
                     for value in builtinReactions {
                         if case .builtin(value) = reaction.value {
-                            files.append(reaction.selectAnimation)
+                            files.append(reaction.selectAnimation._parse())
                         }
                     }
                 }

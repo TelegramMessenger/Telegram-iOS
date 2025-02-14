@@ -1577,7 +1577,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 if let view = views.views[stickersKey] as? OrderedItemListView {
                     for item in view.items {
                         if let mediaItem = item.contents.get(RecentMediaItem.self) {
-                            let file = mediaItem.media
+                            let file = mediaItem.media._parse()
                             strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
                             if let effect = file.videoThumbnails.first {
                                 strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: effect.resource).start())

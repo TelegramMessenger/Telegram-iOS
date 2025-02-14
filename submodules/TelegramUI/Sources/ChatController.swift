@@ -1692,6 +1692,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 case let .custom(fileId):
                                     if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                        let itemFile = TelegramMediaFile.Accessor(itemFile)
                                         reactionItem = ReactionItem(
                                             reaction: ReactionItem.Reaction(rawValue: chosenReaction),
                                             appearAnimation: itemFile,
@@ -1879,6 +1880,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     case let .custom(fileId):
                                         if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                            let itemFile = TelegramMediaFile.Accessor(itemFile)
                                             reactionItem = ReactionItem(
                                                 reaction: ReactionItem.Reaction(rawValue: chosenReaction),
                                                 appearAnimation: itemFile,
@@ -4424,7 +4426,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> take(1)
                             |> mapToSignal { result -> Signal<PremiumSource, NoError> in
                                 if case let .result(_, items, _) = result {
-                                    return .single(.emojiStatus(peerId, peerStatus, items.first?.file, result))
+                                    return .single(.emojiStatus(peerId, peerStatus, items.first?.file._parse(), result))
                                 } else {
                                     return .single(.emojiStatus(peerId, peerStatus, nil, nil))
                                 }

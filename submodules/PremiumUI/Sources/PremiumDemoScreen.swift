@@ -607,14 +607,14 @@ private final class DemoSheetContent: CombinedComponent {
                     if let items = items {
                         for item in items {
                             if let mediaItem = item.contents.get(RecentMediaItem.self) {
-                                result.append(mediaItem.media)
+                                result.append(mediaItem.media._parse())
                             }
                         }
                     }
                     return (reactions.reactions.filter({ $0.isPremium }).map { reaction -> AvailableReactions.Reaction in
                         var aroundAnimation = reaction.aroundAnimation
                         if let replacementFile = reactionOverrides[reaction.value] {
-                            aroundAnimation = replacementFile
+                            aroundAnimation = TelegramMediaFile.Accessor(replacementFile)
                         }
                         
                         return AvailableReactions.Reaction(
@@ -622,13 +622,13 @@ private final class DemoSheetContent: CombinedComponent {
                             isPremium: reaction.isPremium,
                             value: reaction.value,
                             title: reaction.title,
-                            staticIcon: reaction.staticIcon,
-                            appearAnimation: reaction.appearAnimation,
-                            selectAnimation: reaction.selectAnimation,
-                            activateAnimation: reaction.activateAnimation,
-                            effectAnimation: reaction.effectAnimation,
-                            aroundAnimation: aroundAnimation,
-                            centerAnimation: reaction.centerAnimation
+                            staticIcon: reaction.staticIcon._parse(),
+                            appearAnimation: reaction.appearAnimation._parse(),
+                            selectAnimation: reaction.selectAnimation._parse(),
+                            activateAnimation: reaction.activateAnimation._parse(),
+                            effectAnimation: reaction.effectAnimation._parse(),
+                            aroundAnimation: aroundAnimation?._parse(),
+                            centerAnimation: reaction.centerAnimation?._parse()
                         )
                     }, result.map { file -> TelegramMediaFile in
                         for attribute in file.attributes {

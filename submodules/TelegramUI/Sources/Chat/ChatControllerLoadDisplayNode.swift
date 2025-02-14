@@ -1750,6 +1750,7 @@ extension ChatControllerImpl {
                                                 }
                                             case let .custom(fileId):
                                                 if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                                    let itemFile = TelegramMediaFile.Accessor(itemFile)
                                                     reactionItem = ReactionItem(
                                                         reaction: ReactionItem.Reaction(rawValue: updatedReaction),
                                                         appearAnimation: itemFile,

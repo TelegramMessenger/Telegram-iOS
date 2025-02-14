@@ -245,7 +245,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
                     var animation: TelegramMediaFile?
                     for reaction in availableReactions.reactions {
                         if reaction.value == updateReaction.reaction {
-                            animation = reaction.selectAnimation
+                            animation = reaction.selectAnimation._parse()
                             break
                         }
                     }
@@ -274,7 +274,7 @@ public class DrawingReactionEntityView: DrawingStickerEntityView {
                     var animation: TelegramMediaFile?
                     for reaction in availableReactions.reactions {
                         if reaction.value == updateReaction.reaction {
-                            animation = reaction.selectAnimation
+                            animation = reaction.selectAnimation._parse()
                             break
                         }
                     }

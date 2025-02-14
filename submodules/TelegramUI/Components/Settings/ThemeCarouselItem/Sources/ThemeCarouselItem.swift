@@ -875,7 +875,7 @@ public class ThemeCarouselThemeItemNode: ListViewItemNode, ItemListItemNode {
                             hasCurrentTheme = true
                         }
                         let emojiFile = theme.emoticon.flatMap { item.animatedEmojiStickers[$0]?.first?.file }
-                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: emojiFile, themeReference: theme, nightMode: item.nightMode, channelMode: item.channelMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil))
+                        entries.append(ThemeCarouselThemeEntry(index: index, emojiFile: emojiFile?._parse(), themeReference: theme, nightMode: item.nightMode, channelMode: item.channelMode, themeSpecificAccentColors: item.themeSpecificAccentColors, themeSpecificChatWallpapers: item.themeSpecificChatWallpapers, selected: selected, theme: item.theme, strings: item.strings, wallpaper: nil))
                         index += 1
                     }
                     

@@ -125,8 +125,8 @@ public final class ReactionImageNode: ASDisplayNode {
         if let availableReactions = availableReactions {
             for availableReaction in availableReactions.reactions {
                 if availableReaction.value == reaction {
-                    file = availableReaction.staticIcon
-                    animationFile = availableReaction.centerAnimation
+                    file = availableReaction.staticIcon._parse()
+                    animationFile = availableReaction.centerAnimation?._parse()
                     break
                 }
             }

@@ -263,7 +263,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, cha
                     let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                     for stringRepresentation in stringRepresentations {
                         if stringRepresentation == query {
-                            result.append((stringRepresentation, item.file, stringRepresentation))
+                            result.append((stringRepresentation, item.file._parse(), stringRepresentation))
                             break
                         }
                     }
@@ -313,7 +313,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, cha
                         let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                         for stringRepresentation in stringRepresentations {
                             if let keyword = allEmoticons[stringRepresentation] {
-                                result.append((stringRepresentation, item.file, keyword))
+                                result.append((stringRepresentation, item.file._parse(), keyword))
                                 break
                             }
                         }

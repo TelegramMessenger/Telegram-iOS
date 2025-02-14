@@ -961,7 +961,7 @@ public final class WallpaperDataResource: TelegramMediaResource {
 
 public func TelegramMediaResource_parse(flatBuffersData data: Data) throws -> TelegramMediaResource {
     var byteBuffer = ByteBuffer(data: data)
-    let flatBuffersObject: TelegramCore_TelegramMediaResource = try getCheckedRoot(byteBuffer: &byteBuffer)
+    let flatBuffersObject: TelegramCore_TelegramMediaResource = getRoot(byteBuffer: &byteBuffer)
     
     return try TelegramMediaResource_parse(flatBuffersObject: flatBuffersObject)
 }

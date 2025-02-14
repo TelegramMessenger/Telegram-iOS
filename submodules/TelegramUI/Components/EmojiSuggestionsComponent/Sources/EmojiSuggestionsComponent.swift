@@ -77,7 +77,7 @@ public final class EmojiSuggestionsComponent: Component {
                     if stringRepresentation == query || (!normalizedQuery.isEmpty && stringRepresentation == normalizedQuery) {
                         if !existingIds.contains(item.file.fileId) {
                             existingIds.insert(item.file.fileId)
-                            result.append(item.file)
+                            result.append(item.file._parse())
                         }
                         break
                     }
@@ -86,19 +86,14 @@ public final class EmojiSuggestionsComponent: Component {
             
             for featuredPack in featuredEmojiPacks {
                 for item in featuredPack.topItems {
-                    for attribute in item.file.attributes {
-                        switch attribute {
-                        case let .CustomEmoji(_, _, alt, _):
-                            if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
-                                if !item.file.isPremiumEmoji || hasPremium {
-                                    if !existingIds.contains(item.file.fileId) {
-                                        existingIds.insert(item.file.fileId)
-                                        result.append(item.file)
-                                    }
+                    if let alt = item.file.customEmojiAlt {
+                        if alt == query || (!normalizedQuery.isEmpty && alt == normalizedQuery) {
+                            if !item.file.isPremiumEmoji || hasPremium {
+                                if !existingIds.contains(item.file.fileId) {
+                                    existingIds.insert(item.file.fileId)
+                                    result.append(item.file._parse())
                                 }
                             }
-                        default:
-                            break
                         }
                     }
                 }

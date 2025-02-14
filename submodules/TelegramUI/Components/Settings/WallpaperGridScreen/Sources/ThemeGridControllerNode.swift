@@ -418,7 +418,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 if let selectedWallpaper, !selectedWallpaper.isEmoticon {
                     entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: selectedWallpaper, channelMode: true, isEditable: false, isSelected: true))
                 } else {
-                    let emojiFile = context.animatedEmojiStickersValue["❌"]?.first?.file
+                    let emojiFile = context.animatedEmojiStickersValue["❌"]?.first?.file._parse()
                     entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: .color(0), isEmpty: true, emoji: emojiFile, channelMode: true, isEditable: false, isSelected: selectedWallpaper == nil))
                 }
                 index += 1
@@ -441,7 +441,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     }
 
                     let emoji = context.animatedEmojiStickersValue[themeEmoticon]
-                    entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: updatedWallpaper, emoji: emoji?.first?.file, channelMode: true, isEditable: false, isSelected: isSelected))
+                    entries.append(ThemeGridControllerEntry(index: index, theme: presentationData.theme, wallpaper: updatedWallpaper, emoji: emoji?.first?.file._parse(), channelMode: true, isEditable: false, isSelected: isSelected))
                     index += 1
                 }
             } else {

@@ -568,7 +568,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, StickerPreviewPeekItem.pack(item.file))
+                return (itemNode, StickerPreviewPeekItem.pack(item.file._parse()))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
@@ -576,7 +576,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, StickerPreviewPeekItem.pack(item.file))
+                        return (node, StickerPreviewPeekItem.pack(item.file._parse()))
                     }
                 }
             }
