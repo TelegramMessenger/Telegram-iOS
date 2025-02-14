@@ -344,98 +344,93 @@ final class GiftSetupScreenComponent: Component {
                 let entities = generateChatInputTextEntities(self.textInputState.text)
                 let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
                 
-                let inputData = BotCheckoutController.InputData.fetch(context: component.context, source: source)
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
-                    return .single(nil)
-                }
                 
                 let completion = component.completion
                 
-                let _ = (inputData
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] inputData in
-                    guard let inputData else {
+                let signal = BotCheckoutController.InputData.fetch(context: component.context, source: source)
+                |> `catch` { _ -> Signal<BotCheckoutController.InputData, SendBotPaymentFormError> in
+                    return .fail(.generic)
+                }
+                |> mapToSignal { inputData -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+                    return component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
+                }
+                |> deliverOnMainQueue
+                                
+                let _ = signal.start(next: { [weak self] result in
+                    guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
                         return
                     }
-                    let _ = (component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)
-                    |> deliverOnMainQueue).start(next: { [weak self] result in
-                        if let self, peerId.namespace == Namespaces.Peer.CloudChannel, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
-                            navigationController.setViewControllers(controllers, animated: true)
-                            
-                            let tooltipController = UndoOverlayController(
-                                presentationData: presentationData,
-                                content: .sticker(
-                                    context: context,
-                                    file: starGift.file,
-                                    loop: true,
-                                    title: nil,
-                                    text: presentationData.strings.Gift_Send_Success(self.peerMap[peerId]?.compactDisplayTitle ?? "", presentationData.strings.Gift_Send_Success_Stars(Int32(starGift.price))).string,
-                                    undoText: nil,
-                                    customAction: nil
-                                ),
-                                action: { _ in return true }
-                            )
-                            (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
-                            
-                            navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
-                        }
+
+                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                        navigationController.setViewControllers(controllers, animated: true)
                         
-                        if let completion {
-                            completion()
-                            
-                            if let self, let controller = self.environment?.controller() {
-                                controller.dismiss()
-                            }
-                        } else {
-                            guard let self, let controller = self.environment?.controller(), let navigationController = controller.navigationController as? NavigationController else {
-                                return
-                            }
-                            
-                            if peerId.namespace != Namespaces.Peer.CloudChannel {
-                                var controllers = navigationController.viewControllers
-                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                                var foundController = false
-                                for controller in controllers.reversed() {
-                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                        chatController.hintPlayNextOutgoingGift()
-                                        foundController = true
-                                        break
-                                    }
-                                }
-                                if !foundController {
-                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                    chatController.hintPlayNextOutgoingGift()
-                                    controllers.append(chatController)
-                                }
-                                navigationController.setViewControllers(controllers, animated: true)
+                        let tooltipController = UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .sticker(
+                                context: context,
+                                file: starGift.file,
+                                loop: true,
+                                title: nil,
+                                text: presentationData.strings.Gift_Send_Success(self.peerMap[peerId]?.compactDisplayTitle ?? "", presentationData.strings.Gift_Send_Success_Stars(Int32(starGift.price))).string,
+                                undoText: nil,
+                                customAction: nil
+                            ),
+                            action: { _ in return true }
+                        )
+                        (navigationController.viewControllers.last as? ViewController)?.present(tooltipController, in: .current)
+                        
+                        navigationController.view.addSubview(ConfettiView(frame: navigationController.view.bounds))
+                    } else if peerId.namespace == Namespaces.Peer.CloudUser {
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                        var foundController = false
+                        for controller in controllers.reversed() {
+                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                chatController.hintPlayNextOutgoingGift()
+                                foundController = true
+                                break
                             }
                         }
-                        
-                        starsContext.load(force: true)
-                    }, error: { [weak self] error in
-                        guard let self, let controller = self.environment?.controller() else {
-                            return
+                        if !foundController {
+                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                            chatController.hintPlayNextOutgoingGift()
+                            controllers.append(chatController)
                         }
+                        navigationController.setViewControllers(controllers, animated: true)
+                    }
+                    
+                    if let completion {
+                        completion()
                         
-                        self.inProgress = false
-                        self.state?.updated()
-                        
-                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                        var errorText: String?
-                        switch error {
-                        case .starGiftOutOfStock:
-                            errorText = presentationData.strings.Gift_Send_ErrorOutOfStock
-                        default:
-                            errorText = presentationData.strings.Gift_Send_ErrorUnknown
+                        if let controller = self.environment?.controller() {
+                            controller.dismiss()
                         }
-                        
-                        if let errorText = errorText {
-                            let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                            controller.present(alertController, in: .window(.root))
-                        }
-                    })
+                    }
+                    
+                    starsContext.load(force: true)
+                }, error: { [weak self] error in
+                    guard let self, let controller = self.environment?.controller() else {
+                        return
+                    }
+                    
+                    self.inProgress = false
+                    self.state?.updated()
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    var errorText: String?
+                    switch error {
+                    case .starGiftOutOfStock:
+                        errorText = presentationData.strings.Gift_Send_ErrorOutOfStock
+                    default:
+                        errorText = presentationData.strings.Gift_Send_ErrorUnknown
+                    }
+                    
+                    if let errorText = errorText {
+                        let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        controller.present(alertController, in: .window(.root))
+                    }
                 })
             }
             

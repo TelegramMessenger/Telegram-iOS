@@ -293,9 +293,11 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: background.size.height / 2.0))
             )
             
+            var isExtendedMedia = false
             let subject: StarsImageComponent.Subject
             if !component.extendedMedia.isEmpty {
                 subject = .extendedMedia(component.extendedMedia)
+                isExtendedMedia = true
             } else if let peer = state.botPeer {
                 if let photo = component.invoice.photo {
                     subject = .photo(photo)
@@ -381,7 +383,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += title.size.height
             contentSize.height += 13.0
             
-            if isBot, let peer = state.botPeer {
+            if isBot && !isExtendedMedia, let peer = state.botPeer {
                 contentSize.height -= 3.0
                 let peerShortcut = peerShortcut.update(
                     component: PremiumPeerShortcutComponent(
@@ -650,48 +652,49 @@ private final class SheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + button.size.height / 2.0))
             )
             contentSize.height += button.size.height
-            if isSubscription  {
-                contentSize.height += 14.0
-                
-                let termsTextFont = Font.regular(13.0)
-                let termsTextColor = theme.actionSheet.secondaryTextColor
-                let termsLinkColor = theme.actionSheet.controlAccentColor
-                let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsTextFont, textColor: termsLinkColor), linkAttribute: { contents in
-                    return (TelegramTextAttributes.URL, contents)
-                })
-                let info = info.update(
-                    component: BalancedTextComponent(
-                        text: .markdown(
-                            text: strings.Stars_Subscription_Terms,
-                            attributes: termsMarkdownAttributes
-                        ),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.2,
-                        highlightColor: linkColor.withAlphaComponent(0.2),
-                        highlightAction: { attributes in
-                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                            } else {
-                                return nil
-                            }
-                        },
-                        tapAction: { [weak controller] attributes, _ in
-                            if let controller, let navigationController = controller.navigationController as? NavigationController {
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: strings.Stars_Subscription_Terms_URL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
-                            }
-                        }
+            
+            let termsText = isSubscription ? strings.Stars_Subscription_Terms : strings.Stars_Transfer_Terms
+            let termsURL = isSubscription ? strings.Stars_Subscription_Terms_URL : strings.Stars_Transfer_Terms_URL
+            
+            contentSize.height += 14.0
+            
+            let termsTextFont = Font.regular(13.0)
+            let termsTextColor = theme.actionSheet.secondaryTextColor
+            let termsLinkColor = theme.actionSheet.controlAccentColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsTextFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsTextFont, textColor: termsLinkColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+            let info = info.update(
+                component: BalancedTextComponent(
+                    text: .markdown(
+                        text: termsText,
+                        attributes: termsMarkdownAttributes
                     ),
-                    availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
-                    transition: .immediate
-                )
-                context.add(info
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + info.size.height / 2.0))
-                )
-                contentSize.height += info.size.height
-
-            }
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2,
+                    highlightColor: linkColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { [weak controller] attributes, _ in
+                        if let controller, let navigationController = controller.navigationController as? NavigationController {
+                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                            component.context.sharedContext.openExternalUrl(context: component.context, urlContext: .generic, url: termsURL, forceExternal: false, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: constrainedTitleWidth, height: context.availableSize.height),
+                transition: .immediate
+            )
+            context.add(info
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentSize.height + info.size.height / 2.0))
+            )
+            contentSize.height += info.size.height
             
             contentSize.height += 48.0
             

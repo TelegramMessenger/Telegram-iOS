@@ -13801,3 +13801,10 @@ Sorry for the inconvenience.";
 
 "Notification.StarsGift.TransferToChannel" = "%@ transferred a unique collectible to %@";
 "Notification.StarsGift.TransferToChannelYou" = "You transferred a unique collectible to %@";
+
+"Gift.Convert.Success.ChannelText" = "**%1$@** were sent to channel's balance.";
+"Gift.Convert.Success.ChannelText.Stars_1" = "%@ Star";
+"Gift.Convert.Success.ChannelText.Stars_any" = "%@ Stars";
+
+"Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
+"Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
