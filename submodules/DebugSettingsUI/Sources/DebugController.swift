@@ -105,7 +105,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case disableReloginTokens(Bool)
     case liveStreamV2(Bool)
     case experimentalCallMute(Bool)
-    case conferenceCalls(Bool)
     case playerV2(Bool)
     case devRequests(Bool)
     case fakeAds(Bool)
