@@ -1385,7 +1385,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     if let index = viewControllers.firstIndex(where: { $0 === transitioningToConferenceCallController }) {
                         viewControllers.insert(groupCallController, at: index)
                         navigationController.setViewControllers(viewControllers, animated: false)
-                        viewControllers.remove(at: index + 1)
+                        #if DEBUG
+                        assert(viewControllers[index + 1] === transitioningToConferenceCallController)
+                        #endif
+                        viewControllers.removeAll(where: { $0 === transitioningToConferenceCallController })
                         navigationController.setViewControllers(viewControllers, animated: false)
                     } else {
                         navigationController.pushViewController(groupCallController)

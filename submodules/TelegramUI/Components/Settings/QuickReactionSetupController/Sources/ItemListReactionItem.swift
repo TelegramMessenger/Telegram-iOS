@@ -331,7 +331,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                         if let availableReactions = item.availableReactions {
                             for reaction in availableReactions.reactions {
                                 if reaction.value == item.reaction {
-                                    animationContent = .file(file: reaction.selectAnimation)
+                                    animationContent = .file(file: reaction.selectAnimation._parse())
                                     break
                                 }
                             }
@@ -342,7 +342,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                         if let availableReactions = item.availableReactions {
                             for reaction in availableReactions.reactions {
                                 if reaction.value == item.reaction {
-                                    animationContent = .file(file: reaction.selectAnimation)
+                                    animationContent = .file(file: reaction.selectAnimation._parse())
                                     break
                                 }
                             }

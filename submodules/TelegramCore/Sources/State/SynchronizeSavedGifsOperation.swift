@@ -45,7 +45,7 @@ public func removeSavedGif(postbox: Postbox, mediaId: MediaId) -> Signal<Void, N
     return postbox.transaction { transaction -> Void in
         if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(RecentMediaItem.self) {
             let file = item.media
-            if let resource = file.resource as? CloudDocumentMediaResource {
+            if let resource = file._parse().resource as? CloudDocumentMediaResource {
                 transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, itemId: entry.id)
                 addSynchronizeSavedGifsOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
             }

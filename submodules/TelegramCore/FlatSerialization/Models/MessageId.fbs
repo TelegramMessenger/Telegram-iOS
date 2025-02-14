@@ -1,0 +1,9 @@
+include "PeerId.fbs";
+
+namespace TelegramCore;
+
+struct MessageId {
+    peerId: PeerId (id: 0);
+    namespace: int32 (id: 1);
+    id: int32 (id: 2);
+}

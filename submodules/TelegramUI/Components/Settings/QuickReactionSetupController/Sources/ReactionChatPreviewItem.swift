@@ -194,6 +194,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             return
                         }
                         if let itemFile = files[fileId] {
+                            let itemFile = TelegramMediaFile.Accessor(itemFile)
                             let reactionItem = ReactionItem(
                                 reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
                                 appearAnimation: itemFile,

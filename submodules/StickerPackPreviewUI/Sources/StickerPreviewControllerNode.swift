@@ -133,11 +133,13 @@ final class StickerPreviewControllerNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.item = item
         
-        for case let .Sticker(text, _, _) in item.file.attributes {
+        let itemFile = item.file._parse()
+        
+        for case let .Sticker(text, _, _) in itemFile.attributes {
             self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(32.0), textColor: .black)
             break
         }
-        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: false, onlyFullSize: false))
+        self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: itemFile, small: false, onlyFullSize: false))
         
         if let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)

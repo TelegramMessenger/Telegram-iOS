@@ -73,10 +73,8 @@ public final class NativeVideoContent: UniversalVideoContent {
     
     public static func isHLSVideo(file: TelegramMediaFile) -> Bool {
         for alternativeRepresentation in file.alternativeRepresentations {
-            if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
-                if alternativeFile.mimeType == "application/x-mpegurl" {
-                    return true
-                }
+            if alternativeRepresentation.mimeType == "application/x-mpegurl" {
+                return true
             }
         }
         return false

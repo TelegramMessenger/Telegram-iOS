@@ -36,7 +36,8 @@ func _internal_addStickerPackInteractively(postbox: Postbox, info: StickerPackCo
                 
                 var indexedItems: [ItemCollectionItem] = []
                 for item in items {
-                    indexedItems.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(indexedItems.count), id: item.index.id), file: item.file, indexKeys: item.indexKeys))
+                    let item = StickerPackItem(index: ItemCollectionItemIndex(index: Int32(indexedItems.count), id: item.index.id), file: item.file._parse(), indexKeys: item.indexKeys)
+                    indexedItems.append(item)
                 }
                 transaction.replaceItemCollectionItems(collectionId: mappedInfo.id, items: indexedItems)
             }

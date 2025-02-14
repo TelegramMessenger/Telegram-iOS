@@ -893,7 +893,7 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, ASScrollViewDelega
                 guard let emoticon = theme.emoticon else {
                     continue
                 }
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon?.strippedEmoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file._parse(), themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon?.strippedEmoji, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in

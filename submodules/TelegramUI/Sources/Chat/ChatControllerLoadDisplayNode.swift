@@ -986,6 +986,8 @@ extension ChatControllerImpl {
             //effectiveCachedDataReady = .single(true)
             effectiveCachedDataReady = self.cachedDataReady.get()
         }
+        var measure_isFirstTime = true
+        let initTimestamp = self.initTimestamp
         self.ready.set(combineLatest(queue: .mainQueue(),
             self.chatDisplayNode.historyNode.historyState.get(),
             self._chatLocationInfoReady.get(),
@@ -997,7 +999,16 @@ extension ChatControllerImpl {
         |> map { _, chatLocationInfoReady, cachedDataReady, _, wallpaperReady, presentationReady in
             return chatLocationInfoReady && cachedDataReady && wallpaperReady && presentationReady
         }
-        |> distinctUntilChanged)
+        |> distinctUntilChanged
+        |> beforeNext { value in
+            if measure_isFirstTime {
+                measure_isFirstTime = false
+                #if DEBUG
+                let deltaTime = (CFAbsoluteTimeGetCurrent() - initTimestamp) * 1000.0
+                print("Chat controller init to ready: \(deltaTime) ms")
+                #endif
+            }
+        })
         
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()
@@ -1739,6 +1750,7 @@ extension ChatControllerImpl {
                                                 }
                                             case let .custom(fileId):
                                                 if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                                    let itemFile = TelegramMediaFile.Accessor(itemFile)
                                                     reactionItem = ReactionItem(
                                                         reaction: ReactionItem.Reaction(rawValue: updatedReaction),
                                                         appearAnimation: itemFile,

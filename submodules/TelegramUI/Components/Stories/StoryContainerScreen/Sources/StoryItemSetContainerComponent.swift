@@ -1738,7 +1738,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             if let availableReactions = component.availableReactions {
                                                 for availableReaction in availableReactions.reactionItems {
                                                     if availableReaction.reaction.rawValue == value {
-                                                        centerAnimation = availableReaction.listAnimation
+                                                        centerAnimation = availableReaction.listAnimation._parse()
                                                         break
                                                     }
                                                 }
@@ -1749,7 +1749,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             if let availableReactions = component.availableReactions {
                                                 for availableReaction in availableReactions.reactionItems {
                                                     if availableReaction.reaction.rawValue == value {
-                                                        centerAnimation = availableReaction.listAnimation
+                                                        centerAnimation = availableReaction.listAnimation._parse()
                                                         break
                                                     }
                                                 }
@@ -2951,7 +2951,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 if let availableReactions = component.availableReactions {
                                     for availableReaction in availableReactions.reactionItems {
                                         if availableReaction.reaction.rawValue == value {
-                                            centerAnimation = availableReaction.listAnimation
+                                            centerAnimation = availableReaction.listAnimation._parse()
                                             break
                                         }
                                     }
@@ -2962,7 +2962,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 if let availableReactions = component.availableReactions {
                                     for availableReaction in availableReactions.reactionItems {
                                         if availableReaction.reaction.rawValue == value {
-                                            centerAnimation = availableReaction.listAnimation
+                                            centerAnimation = availableReaction.listAnimation._parse()
                                             break
                                         }
                                     }
@@ -4582,7 +4582,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     var animation: TelegramMediaFile?
                                     for reaction in availableReactions.reactions {
                                         if reaction.value == updateReaction.reaction {
-                                            animation = reaction.centerAnimation
+                                            animation = reaction.centerAnimation?._parse()
                                             break
                                         }
                                     }
@@ -5989,7 +5989,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         placeholderColor: .clear,
                                         attemptSynchronous: true
                                     ),
-                                    file: items.first?.file,
+                                    file: items.first?.file._parse(),
                                     action: action)
                                 return .single(tip)
                             } else {

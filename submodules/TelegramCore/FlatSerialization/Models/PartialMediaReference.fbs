@@ -1,0 +1,57 @@
+include "MessageId.fbs";
+include "PeerId.fbs";
+include "PeerReference.fbs";
+include "StickerPackReference.fbs";
+
+namespace TelegramCore;
+
+table MessageReference {
+    peer:PeerReference (id: 0, required);
+    author:PeerReference (id: 1);
+    messageId:MessageId (id: 2, required);
+    timestamp:int32 (id: 3);
+    incoming:bool (id: 4);
+    secret:bool (id: 5);
+    threadId:int64 (id: 6);
+}
+
+table WebpageReference {
+    webpageId:int64 (id: 0);
+    url:string (id: 1, required);
+}
+
+table PartialMediaReference_Message {
+    message:MessageReference (id: 0);
+}
+
+table PartialMediaReference_WebPage {
+    webPage:WebpageReference (id: 0);
+}
+
+table PartialMediaReference_StickerPack {
+    stickerPack:StickerPackReference (id: 0, required);
+}
+
+table PartialMediaReference_SavedGif {
+}
+
+table PartialMediaReference_SavedSticker {
+}
+
+table PartialMediaReference_RecentSticker {
+}
+
+union PartialMediaReference_Value {
+    PartialMediaReference_Message,
+    PartialMediaReference_WebPage,
+    PartialMediaReference_StickerPack,
+    PartialMediaReference_SavedGif,
+    PartialMediaReference_SavedSticker,
+    PartialMediaReference_RecentSticker
+}
+
+table PartialMediaReference {
+    value:PartialMediaReference_Value (id: 1, required);
+}
+
+root_type PartialMediaReference;

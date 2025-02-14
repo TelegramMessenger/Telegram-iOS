@@ -62,7 +62,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var dynamicStreaming: Bool
     public var enableLocalTranslation: Bool
     public var autoBenchmarkReflectors: Bool?
-    public var conferenceCalls: Bool
     public var playerV2: Bool
     public var devRequests: Bool
     public var fakeAds: Bool
@@ -106,7 +105,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             dynamicStreaming: false,
             enableLocalTranslation: false,
             autoBenchmarkReflectors: nil,
-            conferenceCalls: false,
             playerV2: false,
             devRequests: false,
             fakeAds: false
@@ -151,7 +149,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         dynamicStreaming: Bool,
         enableLocalTranslation: Bool,
         autoBenchmarkReflectors: Bool?,
-        conferenceCalls: Bool,
         playerV2: Bool,
         devRequests: Bool,
         fakeAds: Bool
@@ -193,7 +190,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = dynamicStreaming
         self.enableLocalTranslation = enableLocalTranslation
         self.autoBenchmarkReflectors = autoBenchmarkReflectors
-        self.conferenceCalls = conferenceCalls
         self.playerV2 = playerV2
         self.devRequests = devRequests
         self.fakeAds = fakeAds
@@ -239,7 +235,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = try container.decodeIfPresent(Bool.self, forKey: "dynamicStreaming_v2") ?? false
         self.enableLocalTranslation = try container.decodeIfPresent(Bool.self, forKey: "enableLocalTranslation") ?? false
         self.autoBenchmarkReflectors = try container.decodeIfPresent(Bool.self, forKey: "autoBenchmarkReflectors")
-        self.conferenceCalls = try container.decodeIfPresent(Bool.self, forKey: "conferenceCalls") ?? false
         self.playerV2 = try container.decodeIfPresent(Bool.self, forKey: "playerV2") ?? false
         self.devRequests = try container.decodeIfPresent(Bool.self, forKey: "devRequests") ?? false
         self.fakeAds = try container.decodeIfPresent(Bool.self, forKey: "fakeAds") ?? false
@@ -285,7 +280,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.dynamicStreaming, forKey: "dynamicStreaming")
         try container.encode(self.enableLocalTranslation, forKey: "enableLocalTranslation")
         try container.encodeIfPresent(self.autoBenchmarkReflectors, forKey: "autoBenchmarkReflectors")
-        try container.encodeIfPresent(self.conferenceCalls, forKey: "conferenceCalls")
         try container.encodeIfPresent(self.playerV2, forKey: "playerV2")
         try container.encodeIfPresent(self.devRequests, forKey: "devRequests")
         try container.encodeIfPresent(self.fakeAds, forKey: "fakeAds")

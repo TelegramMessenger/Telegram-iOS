@@ -179,18 +179,18 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                 .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                     f(.default)
                                 
-                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode.view, itemNode.bounds, nil, [])
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, false, nil, true, itemNode.view, itemNode.bounds, nil, [])
                                 })),
                                 .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                     f(.default)
                                     
                                     if let strongSelf = self {
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file._parse(), saved: !isStarred)
                                         |> deliverOnMainQueue).startStandalone(next: { result in
                                             switch result {
                                                 case .generic:
-                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file._parse(), loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -199,7 +199,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                                     } else {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                     }
-                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file._parse(), loop: true, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                         if let strongSelf = self {
                                                             if case .info = action {
                                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -217,7 +217,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     f(.default)
                                 
                                     if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                        loop: for attribute in item.file.attributes {
+                                        loop: for attribute in item.file._parse().attributes {
                                             switch attribute {
                                             case let .Sticker(_, packReference, _):
                                                 if let packReference = packReference {
@@ -240,7 +240,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     }
                                 }))
                             ]
-                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file._parse()), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }

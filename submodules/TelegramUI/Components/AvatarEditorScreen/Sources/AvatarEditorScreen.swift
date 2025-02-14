@@ -114,7 +114,7 @@ final class AvatarEditorScreenComponent: Component {
                     self.fileDisposable = (context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
                     |> map { pack -> TelegramMediaFile? in
                         if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
-                            return item.file
+                            return item.file._parse()
                         }
                         return nil
                     }
@@ -249,7 +249,7 @@ final class AvatarEditorScreenComponent: Component {
             self.data = data
             
             if wasEmpty && self.state?.selectedFile == nil {
-                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile?._parse()
             }
                         
             let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void = { [weak self] query in
@@ -295,7 +295,7 @@ final class AvatarEditorScreenComponent: Component {
                             |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
                                 let hasPremium = true
                                 
-                                var emoji: [(String, TelegramMediaFile?, String)] = []
+                                var emoji: [(String, TelegramMediaFile.Accessor?, String)] = []
                                 
                                 var existingEmoticons = Set<String>()
                                 var allEmoticons: [String: String] = [:]
@@ -310,18 +310,13 @@ final class AvatarEditorScreenComponent: Component {
                                     guard let item = entry.item as? StickerPackItem else {
                                         continue
                                     }
-                                    for attribute in item.file.attributes {
-                                        switch attribute {
-                                        case let .CustomEmoji(_, _, alt, _):
-                                            if !item.file.isPremiumEmoji || hasPremium {
-                                                if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                    emoji.append((alt, item.file, keyword))
-                                                } else if alt == query {
-                                                    emoji.append((alt, item.file, alt))
-                                                }
+                                    if let alt = item.file.customEmojiAlt {
+                                        if !item.file.isPremiumEmoji || hasPremium {
+                                            if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                                emoji.append((alt, item.file, keyword))
+                                            } else if alt == query {
+                                                emoji.append((alt, item.file, alt))
                                             }
-                                        default:
-                                            break
                                         }
                                     }
                                 }
@@ -355,11 +350,11 @@ final class AvatarEditorScreenComponent: Component {
                                         }
                                         
                                         existingIds.insert(sticker.file.fileId)
-                                        let animationData = EntityKeyboardAnimationData(file: sticker.file)
+                                        let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(sticker.file))
                                         let item = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
-                                            itemFile: sticker.file,
+                                            itemFile: TelegramMediaFile.Accessor(sticker.file),
                                             subgroupId: nil,
                                             icon: .none,
                                             tintMode: .none
@@ -441,11 +436,12 @@ final class AvatarEditorScreenComponent: Component {
                                 continue
                             }
                             existingIds.insert(itemFile.fileId)
-                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                             let item = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
                                 content: .animation(animationData),
-                                itemFile: itemFile, subgroupId: nil,
+                                itemFile: TelegramMediaFile.Accessor(itemFile),
+                                subgroupId: nil,
                                 icon: .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
                             )
@@ -520,7 +516,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedFile = item.itemFile
+                    self.state?.selectedFile = item.itemFile?._parse()
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,
@@ -655,7 +651,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedFile = item.itemFile
+                    self.state?.selectedFile = item.itemFile?._parse()
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,

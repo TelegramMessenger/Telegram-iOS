@@ -135,7 +135,7 @@ public func updateMessageReactionsInteractively(account: Account, messageIds: [M
                                     recentReactionItem = RecentReactionItem(.builtin(value))
                                 case let .custom(fileId, file):
                                     if let file = file ?? (transaction.getMedia(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)) as? TelegramMediaFile) {
-                                        recentReactionItem = RecentReactionItem(.custom(file))
+                                        recentReactionItem = RecentReactionItem(.custom(TelegramMediaFile.Accessor(file)))
                                     } else {
                                         continue
                                     }

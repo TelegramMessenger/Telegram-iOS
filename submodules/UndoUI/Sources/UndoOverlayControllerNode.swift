@@ -555,12 +555,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     }
                     resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
                 } else if let item = topItem {
-                    if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                        thumbnailItem = .animated(EngineMediaResource(item.file.resource), item.file.dimensions ?? PixelDimensions(width: 512, height: 512), item.file.isVideoSticker)
-                        resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
-                    } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                    let itemFile = item.file._parse()
+                    if itemFile.isAnimatedSticker || itemFile.isVideoSticker {
+                        thumbnailItem = .animated(EngineMediaResource(itemFile.resource), itemFile.dimensions ?? PixelDimensions(width: 512, height: 512), itemFile.isVideoSticker)
+                        resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: itemFile.resource)
+                    } else if let dimensions = itemFile.dimensions, let resource = chatMessageStickerResource(file: itemFile, small: true) as? TelegramMediaResource {
                         thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                        resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+                        resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: resource)
                     }
                 }
                 
@@ -668,7 +669,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                                 case let .result(_, items, _):
                                     let item = items[Int(value)]
 
-                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file._parse().resource), width: 120, height: 120, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                                 default:
                                     break
                             }
