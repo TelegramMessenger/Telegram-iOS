@@ -214,9 +214,11 @@ public extension EmojiPagerContentComponent {
             ApplicationSpecificNotice.dismissedTrendingEmojiPacks(accountManager: context.sharedContext.accountManager)
         )
         |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji, peerSpecificPack, dismissedTrendingEmojiPacks -> EmojiPagerContentComponent in
-            #if DEBUG || true
+            #if DEBUG
             if isFirstTime {
-                var files: [TelegramMediaFile] = []
+                isFirstTime = false
+                
+                /*var files: [TelegramMediaFile] = []
                 files.removeAll()
                 
                 if "".isEmpty {
@@ -249,13 +251,13 @@ public extension EmojiPagerContentComponent {
                     Thread.current.threadDictionary["afwefw"] = files
                 }
                 
-                isFirstTime = false
-                let measuredTime = CFAbsoluteTimeGetCurrent() - measure_startTime
                 for file in files {
                     if file.fileId.id == 123 {
                         print("Interesting")
                     }
-                }
+                }*/
+                
+                let measuredTime = CFAbsoluteTimeGetCurrent() - measure_startTime
                 print("emojiInputData init isMainThread: \(Thread.isMainThread): \(measuredTime * 1000.0) ms")
             }
             #endif
