@@ -1952,6 +1952,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     videoNode.isUserInteractionEnabled = false
                                     var firstTime = true
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                                        /*#if DEBUG
+                                        // Debug memory leak
+                                        let _ = videoNode.videoQualityState()
+                                        #endif*/
+                                        
                                         if let strongSelf = self, let videoNode = strongSelf.videoNode {
                                             if firstTime {
                                                 firstTime = false
