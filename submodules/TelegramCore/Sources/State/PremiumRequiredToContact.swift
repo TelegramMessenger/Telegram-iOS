@@ -26,7 +26,10 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
     } |> mapToSignal { inputUsers, premiumRequired, reqIds -> Signal<[EnginePeer.Id], NoError> in
         
         if !inputUsers.isEmpty {
-            return account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: inputUsers))
+            //TODO:release
+            return .single(premiumRequired)
+            
+            /*return account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: inputUsers))
             |> retryRequest
             |> mapToSignal { result in
                 return account.postbox.transaction { transaction in
@@ -51,7 +54,7 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
                     let result = requiredPeerIds + premiumRequired
                     return result
                 }
-            }
+            }*/
         } else {
             return .single(premiumRequired)
         }

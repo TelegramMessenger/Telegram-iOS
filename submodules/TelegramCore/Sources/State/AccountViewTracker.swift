@@ -1462,7 +1462,9 @@ public final class AccountViewTracker {
                                 slice.append(inputPeers[i])
                             }
                             startIndex += batchCount
-                            requests.append(account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: slice.map(\.1)))
+                            //TODO:release
+                            requests.append(.complete())
+                            /*requests.append(account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: slice.map(\.1)))
                             |> `catch` { _ -> Signal<[Api.Bool], NoError> in
                                 return .single([])
                             }
@@ -1486,7 +1488,7 @@ public final class AccountViewTracker {
                                     }
                                 }
                                 |> ignoreValues
-                            })
+                            })*/
                         }
                         
                         return combineLatest(requests)

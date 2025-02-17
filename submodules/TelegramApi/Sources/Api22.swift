@@ -477,6 +477,66 @@ public extension Api {
     }
 }
 public extension Api {
+    enum RequirementToContact: TypeConstructorDescription {
+        case requirementToContactEmpty
+        case requirementToContactPaidMessages(starsAmount: Int64)
+        case requirementToContactPremium
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .requirementToContactEmpty:
+                    if boxed {
+                        buffer.appendInt32(84580409)
+                    }
+                    
+                    break
+                case .requirementToContactPaidMessages(let starsAmount):
+                    if boxed {
+                        buffer.appendInt32(-1258914157)
+                    }
+                    serializeInt64(starsAmount, buffer: buffer, boxed: false)
+                    break
+                case .requirementToContactPremium:
+                    if boxed {
+                        buffer.appendInt32(-444472087)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .requirementToContactEmpty:
+                return ("requirementToContactEmpty", [])
+                case .requirementToContactPaidMessages(let starsAmount):
+                return ("requirementToContactPaidMessages", [("starsAmount", starsAmount as Any)])
+                case .requirementToContactPremium:
+                return ("requirementToContactPremium", [])
+    }
+    }
+    
+        public static func parse_requirementToContactEmpty(_ reader: BufferReader) -> RequirementToContact? {
+            return Api.RequirementToContact.requirementToContactEmpty
+        }
+        public static func parse_requirementToContactPaidMessages(_ reader: BufferReader) -> RequirementToContact? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.RequirementToContact.requirementToContactPaidMessages(starsAmount: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_requirementToContactPremium(_ reader: BufferReader) -> RequirementToContact? {
+            return Api.RequirementToContact.requirementToContactPremium
+        }
+    
+    }
+}
+public extension Api {
     enum RestrictionReason: TypeConstructorDescription {
         case restrictionReason(platform: String, reason: String, text: String)
     
