@@ -1088,7 +1088,9 @@ public final class OngoingGroupCallContext {
         }
         
         func activateIncomingAudio() {
+            #if os(iOS)
             self.context.activateIncomingAudio()
+            #endif
         }
     }
     
