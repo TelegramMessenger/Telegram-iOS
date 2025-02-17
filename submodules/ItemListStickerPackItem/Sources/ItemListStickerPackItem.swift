@@ -495,12 +495,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 }
                 resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
             } else if let item = item.topItem {
-                if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker, item.file.isCustomTemplateEmoji)
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
-                } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                let itemFile = item.file._parse()
+                if itemFile.isAnimatedSticker || itemFile.isVideoSticker {
+                    thumbnailItem = .animated(itemFile.resource, itemFile.dimensions ?? PixelDimensions(width: 100, height: 100), itemFile.isVideoSticker, itemFile.isCustomTemplateEmoji)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: itemFile.resource)
+                } else if let dimensions = itemFile.dimensions, let resource = chatMessageStickerResource(file: itemFile, small: true) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: resource)
                 }
             }
             
@@ -848,7 +849,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 imageSize = PixelDimensions(width: 100, height: 100)
                             }
                             immediateThumbnailData = data
-                        } else if let data = item.topItem?.file.immediateThumbnailData {
+                        } else if let data = item.topItem?.file._parse().immediateThumbnailData {
                             immediateThumbnailData = data
                         }
                         

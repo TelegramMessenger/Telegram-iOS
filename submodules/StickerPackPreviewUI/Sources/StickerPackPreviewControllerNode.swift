@@ -222,9 +222,9 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, ASScrol
                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode.view, animationNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file._parse()), animationNode.view, animationNode.bounds)
                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode.view, imageNode.bounds)
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file._parse()), imageNode.view, imageNode.bounds)
                                             }
                                         }
                                         f(.default)
@@ -234,13 +234,13 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, ASScrol
                                     f(.default)
                                     
                                     if let strongSelf = self {
-                                        let _ = strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred).start(next: { result in
+                                        let _ = strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file._parse(), saved: !isStarred).start(next: { result in
                                             
                                         })
                                     }
                                 })))
                             }
-                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item.file._parse()), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
                                 
                             }))
                         } else {

@@ -156,12 +156,13 @@ public func tagMessageReactions(context: AccountContext, subPeerId: EnginePeer.I
                 }
                 existingIds.insert(.custom(file.fileId.id))
                 
+                let itemFile = TelegramMediaFile.Accessor(file)
                 result.append(ReactionItem(
                     reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
-                    appearAnimation: file,
-                    stillAnimation: file,
-                    listAnimation: file,
-                    largeListAnimation: file,
+                    appearAnimation: itemFile,
+                    stillAnimation: itemFile,
+                    listAnimation: itemFile,
+                    largeListAnimation: itemFile,
                     applicationAnimation: nil,
                     largeApplicationAnimation: nil,
                     isCustom: true
@@ -441,6 +442,7 @@ public func topMessageReactions(context: AccountContext, message: Message, subPe
                     break
                 case let .custom(fileId):
                     if let file = allowedReactionsAndFiles.files[fileId] {
+                        let file = TelegramMediaFile.Accessor(file)
                         result.append(ReactionItem(
                             reaction: ReactionItem.Reaction(rawValue: .custom(file.fileId.id)),
                             appearAnimation: file,
@@ -499,7 +501,7 @@ public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionI
             }
             existingIds.insert(messageEffect.id)
             
-            let mainFile: TelegramMediaFile = messageEffect.effectSticker
+            let mainFile = TelegramMediaFile.Accessor(messageEffect.effectSticker)
             
             result.append(ReactionItem(
                 reaction: ReactionItem.Reaction(rawValue: .custom(messageEffect.id)),

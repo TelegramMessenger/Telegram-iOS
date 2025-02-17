@@ -3569,6 +3569,7 @@ final class StoryItemSetContainerSendMessage {
             let _ = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
             |> deliverOnMainQueue).start(next: { files in
                 if let itemFile = files[fileId] {
+                    let itemFile = TelegramMediaFile.Accessor(itemFile)
                     let reactionItem = ReactionItem(
                         reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
                         appearAnimation: itemFile,

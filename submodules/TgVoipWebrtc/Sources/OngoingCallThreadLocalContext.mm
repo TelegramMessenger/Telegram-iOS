@@ -474,7 +474,7 @@ public:
         absl::optional<int64_t> estimatedCaptureTimeNS
     ) override {
         if (!_audioTransports.empty()) {
-            for (size_t i = 0; i < _audioTransports.size(); i++) {
+            for (size_t i = _audioTransports.size() - 1; i < _audioTransports.size(); i++) {
                 auto result = _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,

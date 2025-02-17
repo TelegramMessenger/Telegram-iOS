@@ -200,7 +200,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 itemId: .animation(.file(file.fileId))
             )
             if let itemLayer = self.visibleItemLayers[itemId] {
-                return (file, itemLayer)
+                return (file._parse(), itemLayer)
             }
         }
         return nil
@@ -209,7 +209,7 @@ final class StickerPackEmojisItemNode: GridItemNode {
     @objc private func tapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
-            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let (item, _) = self.item(atPoint: location), let file = item.itemFile {
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation, let (item, _) = self.item(atPoint: location), let file = item.itemFile?._parse() {
                 if case .tap = gesture {
                     var text = "."
                     var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?

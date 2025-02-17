@@ -314,12 +314,12 @@ private func mediaForSticker(documentId: Int64, account: Account) -> Signal<Tele
         for view in view.orderedItemListsViews {
             for entry in view.items {
                 if let file = entry.contents.get(SavedStickerItem.self)?.file {
-                    if file.id?.id == documentId {
-                        return file
+                    if file.id.id == documentId {
+                        return file._parse()
                     }
                 } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
-                    if file.id?.id == documentId {
-                        return file
+                    if file.id.id == documentId {
+                        return file._parse()
                     }
                 }
             }
@@ -614,12 +614,12 @@ final class WatchStickersHandler: WatchRequestHandler {
                     outer: for view in view.orderedItemListsViews {
                         for entry in view.items {
                             if let file = entry.contents.get(SavedStickerItem.self)?.file {
-                                if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
+                                if let sticker = makeBridgeDocument(file._parse()), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)
                                 }
                             } else if let file = entry.contents.get(RecentMediaItem.self)?.media {
-                                if let sticker = makeBridgeDocument(file), !added.contains(sticker.documentId) {
+                                if let sticker = makeBridgeDocument(file._parse()), !added.contains(sticker.documentId) {
                                     stickers.append(sticker)
                                     added.insert(sticker.documentId)
                                 }

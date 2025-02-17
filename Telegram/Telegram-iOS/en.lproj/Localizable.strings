@@ -13838,3 +13838,6 @@ Sorry for the inconvenience.";
 
 "Notification.PaidMessage" = "%1$@ paid %2$@ to send a message";
 "Notification.PaidMessageYou" = "You paid %1$@ to send a message";
+
+"Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
+"Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";

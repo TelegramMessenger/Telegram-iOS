@@ -135,7 +135,7 @@ public class PremiumLimitsListScreen: ViewController {
                     }
                 }
                 
-                var result: [TelegramMediaFile] = []
+                var result: [TelegramMediaFile.Accessor] = []
                 if let items = items {
                     for item in items {
                         if let mediaItem = item.contents.get(RecentMediaItem.self) {
@@ -144,26 +144,22 @@ public class PremiumLimitsListScreen: ViewController {
                     }
                 }
                 return (result.map { file -> TelegramMediaFile in
-                    for attribute in file.attributes {
-                        switch attribute {
-                        case let .Sticker(displayText, _, _):
-                            if let replacementFile = stickerOverrides[.builtin(displayText)], let dimensions = replacementFile.dimensions {
-                                let _ = dimensions
-                                return TelegramMediaFile(
-                                    fileId: file.fileId,
-                                    partialReference: file.partialReference,
-                                    resource: file.resource,
-                                    previewRepresentations: file.previewRepresentations,
-                                    videoThumbnails: [TelegramMediaFile.VideoThumbnail(dimensions: dimensions, resource: replacementFile.resource)],
-                                    immediateThumbnailData: file.immediateThumbnailData,
-                                    mimeType: file.mimeType,
-                                    size: file.size,
-                                    attributes: file.attributes,
-                                    alternativeRepresentations: file.alternativeRepresentations
-                                )
-                            }
-                        default:
-                            break
+                    let file = file._parse()
+                    if let displayText = TelegramMediaFile.Accessor(file).stickerDisplayText {
+                        if let replacementFile = stickerOverrides[.builtin(displayText)], let dimensions = replacementFile.dimensions {
+                            let _ = dimensions
+                            return TelegramMediaFile(
+                                fileId: file.fileId,
+                                partialReference: file.partialReference,
+                                resource: file.resource,
+                                previewRepresentations: file.previewRepresentations,
+                                videoThumbnails: [TelegramMediaFile.VideoThumbnail(dimensions: dimensions, resource: replacementFile.resource)],
+                                immediateThumbnailData: file.immediateThumbnailData,
+                                mimeType: file.mimeType,
+                                size: file.size,
+                                attributes: file.attributes,
+                                alternativeRepresentations: file.alternativeRepresentations
+                            )
                         }
                     }
                     return file

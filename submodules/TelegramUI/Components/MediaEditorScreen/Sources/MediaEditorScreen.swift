@@ -3112,10 +3112,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             }
             self.entitiesView.canInteract = { [weak self] in
                 if let self, let controller = self.controller {
-                    return !controller.node.recording.isActive
-                } else {
-                    return true
+                    if controller.node.recording.isActive {
+                        return false
+                    } else if case .avatarEditor = controller.mode, self.drawingScreen == nil {
+                        return false
+                    }
                 }
+                return true
             }
             
             self.availableReactionsDisposable = (allowedStoryReactions(context: controller.context)
@@ -3252,11 +3255,12 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let mediaEntityView = self.entitiesView.add(mediaEntity, announce: false) as? DrawingMediaEntityView {
                 self.entitiesView.sendSubviewToBack(mediaEntityView)
                 mediaEntityView.updated = { [weak self, weak mediaEntity] in
-                    if let self, let mediaEntity {
+                    if let self, let mediaEditor = self.mediaEditor, let mediaEntity {
                         let rotation = mediaEntity.rotation - initialRotation
                         let position = CGPoint(x: mediaEntity.position.x - initialPosition.x, y: mediaEntity.position.y - initialPosition.y)
                         let scale = mediaEntity.scale / initialScale
-                        self.mediaEditor?.setCrop(offset: position, scale: scale, rotation: rotation, mirroring: false)
+                        let mirroring = mediaEditor.values.cropMirroring
+                        mediaEditor.setCrop(offset: position, scale: scale, rotation: rotation, mirroring: mirroring)
                         
                         self.updateMaskDrawingView(position: position, scale: scale, rotation: rotation)
                     }
@@ -3465,6 +3469,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                 }
                                 return false
                             }) as? DrawingStickerEntityView {
+                                #if DEBUG
+                                if let data = result.dayImage.pngData() {
+                                    let path = NSTemporaryDirectory() + "\(Int(Date().timeIntervalSince1970)).png"
+                                    try? data.write(to: URL(fileURLWithPath: path))
+                                }
+                                #endif
+                                
                                 existingEntityView.isNightTheme = isNightTheme
                                 let messageEntity = existingEntityView.entity as! DrawingStickerEntity
                                 messageEntity.renderImage = result.dayImage
@@ -4703,11 +4714,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             |> map { result -> TelegramMediaFile? in
                                 if case let .result(_, items, _) = result, let match = items.first(where: { item in
                                     var displayText: String?
-                                    for attribute in item.file.attributes {
-                                        if case let .CustomEmoji(_, _, alt, _) = attribute {
-                                            displayText = alt
-                                            break
-                                        }
+                                    if let alt = item.file.customEmojiAlt {
+                                        displayText = alt
                                     }
                                     if let displayText, displayText.hasPrefix(flag) {
                                         return true
@@ -4715,7 +4723,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                         return false
                                     }
                                 }) {
-                                    return match.file
+                                    return match.file._parse()
                                 } else {
                                     return nil
                                 }
@@ -5113,7 +5121,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let reaction = self.availableReactions.first(where: { reaction in
                 return reaction.reaction.rawValue == .builtin(heart)
             }) {
-                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: reaction.stillAnimation), .reaction(.builtin(heart), .white)))
+                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: reaction.stillAnimation._parse()), .reaction(.builtin(heart), .white)))
                 self.interaction?.insertEntity(stickerEntity, scale: 1.175)
             }
             
@@ -5613,6 +5621,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                     self.previousDrawingData = self.drawingView.drawingData
                                     self.previousDrawingEntities = self.entitiesView.entities
                                     
+                                    self.cropScrollView?.isUserInteractionEnabled = false
+                                    
                                     self.interaction?.deactivate()
                                     let controller = DrawingScreen(
                                         context: self.context,
@@ -5668,6 +5678,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                         
                                         self.previousDrawingData = nil
                                         self.previousDrawingEntities = nil
+                                        
+                                        self.cropScrollView?.isUserInteractionEnabled = true
                                     }
                                     controller.requestApply = { [weak controller, weak self] in
                                         guard let self else {
@@ -5690,6 +5702,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
 
                                         self.interaction?.activate()
                                         self.entitiesView.selectEntity(nil)
+                                        
+                                        self.cropScrollView?.isUserInteractionEnabled = true
                                     }
                                     self.controller?.present(controller, in: .current)
                                     self.animateOutToTool(tool: mode)
@@ -7594,6 +7608,13 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             let values = mediaEditor.values.withUpdatedCoverDimensions(dimensions)
             makeEditorImageComposition(context: self.node.ciContext, postbox: self.context.account.postbox, inputImage: image, dimensions: storyDimensions, outputDimensions: dimensions.aspectFitted(CGSize(width: 1080, height: 1080)), values: values, time: .zero, textScale: 2.0, completion: { [weak self] resultImage in
                 if let self, let resultImage {
+                    #if DEBUG
+                    if let data = resultImage.jpegData(compressionQuality: 0.7) {
+                        let path = NSTemporaryDirectory() + "\(Int(Date().timeIntervalSince1970)).jpg"
+                        try? data.write(to: URL(fileURLWithPath: path))
+                    }
+                    #endif
+                    
                     self.completion(MediaEditorScreenImpl.Result(media: .image(image: resultImage, dimensions: PixelDimensions(resultImage.size))), { [weak self] finished in
                         self?.node.animateOut(finished: true, saveDraft: false, completion: { [weak self] in
                             self?.dismiss()

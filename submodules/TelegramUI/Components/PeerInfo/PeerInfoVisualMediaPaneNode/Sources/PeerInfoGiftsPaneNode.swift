@@ -141,11 +141,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.updateScrolling(transition: .immediate)
+        self.updateScrolling(interactive: true, transition: .immediate)
     }
     
     private var notify = false
-    func updateScrolling(transition: ComponentTransition) {
+    func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
         if let starsProducts = self.starsProducts, let params = self.currentParams {
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
@@ -644,7 +644,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
         
         let bottomContentOffset = max(0.0, self.scrollNode.view.contentSize.height - self.scrollNode.view.contentOffset.y - self.scrollNode.view.frame.height)
-        if bottomContentOffset < 200.0 {
+        if interactive, bottomContentOffset < 200.0 {
             self.profileGifts.loadMore()
         }
     }

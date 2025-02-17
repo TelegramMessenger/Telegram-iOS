@@ -65,6 +65,10 @@ public struct MessageReference: PostboxCoding, Hashable, Equatable {
         }
     }
     
+    init(content: MessageReferenceContent) {
+        self.content = content
+    }
+    
     public init(_ message: Message) {
         if message.id.namespace != Namespaces.Message.Local, let peer = message.peers[message.id.peerId], let inputPeer = PeerReference(peer) {
             let author: PeerReference?
@@ -144,6 +148,10 @@ public enum MessageReferenceContent: PostboxCoding, Hashable, Equatable {
 
 public struct WebpageReference: PostboxCoding, Hashable, Equatable {
     public let content: WebpageReferenceContent
+    
+    init(content: WebpageReferenceContent) {
+        self.content = content
+    }
     
     public init(_ webPage: TelegramMediaWebpage) {
         if case let .Loaded(content) = webPage.content {

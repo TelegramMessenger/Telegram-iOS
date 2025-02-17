@@ -100,12 +100,12 @@ public final class AvatarVideoNode: ASDisplayNode {
         } else {
             let itemNativeFitSize = self.internalSize.width > 100.0 ? CGSize(width: 192.0, height: 192.0) : CGSize(width: 64.0, height: 64.0)
             
-            let animationData = EntityKeyboardAnimationData(file: animationFile)
+            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(animationFile))
             let itemLayer = EmojiKeyboardItemLayer(
                 item: EmojiPagerContentComponent.Item(
                     animationData: animationData,
                     content: .animation(animationData),
-                    itemFile: animationFile,
+                    itemFile: TelegramMediaFile.Accessor(animationFile),
                     subgroupId: nil,
                     icon: .none,
                     tintMode: animationData.isTemplate ? .primary : .none
@@ -185,7 +185,7 @@ public final class AvatarVideoNode: ASDisplayNode {
             self.fileDisposable.set((self.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
             |> map { pack -> TelegramMediaFile? in
                 if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
-                    return item.file
+                    return item.file._parse()
                 }
                 return nil
             }

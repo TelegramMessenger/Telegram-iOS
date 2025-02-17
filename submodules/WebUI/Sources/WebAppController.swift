@@ -2616,7 +2616,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId)),
                 self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: controller.botId)),
                 self.context.engine.stickers.loadedStickerPack(reference: .iconStatusEmoji, forceActualized: false)
-                |> map { result -> [TelegramMediaFile] in
+                |> map { result -> [TelegramMediaFile.Accessor] in
                     switch result {
                     case let .result(_, items, _):
                         return items.map(\.file)

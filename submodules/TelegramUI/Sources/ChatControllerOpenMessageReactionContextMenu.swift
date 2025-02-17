@@ -48,7 +48,7 @@ extension ChatControllerImpl {
                 reactionFile = self.context.engine.stickers.availableReactions()
                 |> take(1)
                 |> map { availableReactions -> TelegramMediaFile? in
-                    return availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                    return availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation._parse()
                 }
             case let .custom(fileId):
                 reactionFile = self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
@@ -325,7 +325,7 @@ extension ChatControllerImpl {
                                         placeholderColor: .clear,
                                         attemptSynchronous: true
                                     ),
-                                    file: items.first?.file,
+                                    file: items.first?.file._parse(),
                                     action: action)
                                 return .single(tip)
                             } else {
@@ -338,7 +338,7 @@ extension ChatControllerImpl {
                 let reactionFile: TelegramMediaFile?
                 switch value {
                 case .builtin, .stars:
-                    reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                    reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation._parse()
                 case let .custom(fileId):
                     reactionFile = customEmoji[fileId]
                 }

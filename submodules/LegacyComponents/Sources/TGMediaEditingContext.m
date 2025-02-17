@@ -962,7 +962,11 @@
     
     [_coverImageCache setImage:image forKey:itemId attributes:NULL];
     _coverImagePipe.sink([TGMediaImageUpdate imageUpdateWithItem:item representation:image]);
-    [_coverPositions setObject:position forKey:itemId];
+    if (position != nil) {
+        [_coverPositions setObject:position forKey:itemId];
+    } else {
+        [_coverPositions removeObjectForKey:itemId];
+    }
 }
 
 - (void)setFullSizeImage:(UIImage *)image forItem:(id<TGMediaEditableItem>)item

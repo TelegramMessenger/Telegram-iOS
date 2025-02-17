@@ -112,7 +112,8 @@ final class TrendingTopItemNode: ASDisplayNode {
     }
     
     func setup(account: Account, item: StickerPackItem, itemSize: CGSize, synchronousLoads: Bool) {
-        self.file = item.file
+        let file = item.file._parse()
+        self.file = file
         self.itemSize = itemSize
         
         if item.file.isAnimatedSticker || item.file.isVideoSticker {
@@ -134,23 +135,23 @@ final class TrendingTopItemNode: ASDisplayNode {
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
             if item.file.isVideoSticker {
-                self.imageNode.setSignal(chatMessageSticker(postbox: account.postbox, userLocation: .other, file: item.file, small: false, synchronousLoad: synchronousLoads))
+                self.imageNode.setSignal(chatMessageSticker(postbox: account.postbox, userLocation: .other, file: file, small: false, synchronousLoad: synchronousLoads))
             } else {
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, userLocation: .other, file: item.file, small: false, size: fittedDimensions, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, userLocation: .other, file: file, small: false, size: fittedDimensions, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
             }
             animationNode.started = { [weak self] in
                 self?.imageNode.alpha = 0.0
             }
-            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
-            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
+            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
+            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
         } else {
-            self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
+            self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)
             
             if let currentAnimationNode = self.animationNode {
                 self.animationNode = nil
                 currentAnimationNode.removeFromSupernode()
             }
-            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
+            self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
         }
     }
     

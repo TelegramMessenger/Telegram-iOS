@@ -306,7 +306,7 @@ final class BusinessIntroSetupScreenComponent: Component {
                                 return
                             }
                             
-                            self.stickerFile = itemFile
+                            self.stickerFile = itemFile._parse()
                             self.displayStickerInput = false
                             
                             self.stickerSearchDisposable.set(nil)
@@ -490,11 +490,11 @@ final class BusinessIntroSetupScreenComponent: Component {
                                             }
                                             existingIds.insert(itemFile.fileId)
                                             
-                                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                                             let item = EmojiPagerContentComponent.Item(
                                                 animationData: animationData,
                                                 content: .animation(animationData),
-                                                itemFile: itemFile,
+                                                itemFile: TelegramMediaFile.Accessor(itemFile),
                                                 subgroupId: nil,
                                                 icon: .none,
                                                 tintMode: animationData.isTemplate ? .primary : .none
@@ -581,11 +581,12 @@ final class BusinessIntroSetupScreenComponent: Component {
                                             continue
                                         }
                                         existingIds.insert(itemFile.fileId)
-                                        let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                        let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                                         let item = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
-                                            itemFile: itemFile, subgroupId: nil,
+                                            itemFile: TelegramMediaFile.Accessor(itemFile),
+                                            subgroupId: nil,
                                             icon: itemFile.isPremiumSticker ? .premium : .none,
                                             tintMode: animationData.isTemplate ? .primary : .none
                                         )

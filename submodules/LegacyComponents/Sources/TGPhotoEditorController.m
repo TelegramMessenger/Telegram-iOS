@@ -368,9 +368,7 @@
         _scrubberView.delegate = self;
         _scrubberView.clipsToBounds = false;
     }
-    
-    [self detectFaces];
-    
+        
     [self presentTab:_currentTab];
 }
 

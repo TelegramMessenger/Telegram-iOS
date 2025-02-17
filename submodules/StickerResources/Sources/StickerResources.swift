@@ -622,10 +622,11 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
     if let item = items.first as? StickerPackItem {
         if item.file.isAnimatedSticker {
             let signal = Signal<Bool, NoError> { subscriber in
-                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
-                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
-                let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: item.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                let itemFile = item.file._parse()
+                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: FileMediaReference.standalone(media: itemFile).resourceReference(itemFile.resource)).start()
+                let data = account.postbox.mediaBox.resourceData(itemFile.resource).start()
+                let dimensions = itemFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: itemFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                     let hasContent = next._0 != nil || next._1 != nil
                     subscriber.putNext(hasContent)
                     if hasContent {
@@ -641,9 +642,10 @@ public func preloadedStickerPackThumbnail(account: Account, info: StickerPackCol
             return signal
         } else {
             let signal = Signal<Bool, NoError> { subscriber in
-                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
-                let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: item.file, small: true, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                let itemFile = item.file._parse()
+                let data = account.postbox.mediaBox.resourceData(itemFile.resource).start()
+                let dimensions = itemFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: itemFile, small: true, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                     let hasContent = next._0 != nil || next._1 != nil
                     subscriber.putNext(hasContent)
                     if hasContent {

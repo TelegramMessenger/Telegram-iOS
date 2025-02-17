@@ -94,7 +94,7 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
                 case .builtin:
                     for reaction in availableReactions.reactions {
                         if reaction.value == updateReaction.reaction {
-                            file = reaction.centerAnimation
+                            file = reaction.centerAnimation?._parse()
                             break
                         }
                     }
@@ -103,7 +103,7 @@ public final class ChatShareMessageTagView: UIView, UndoOverlayControllerAdditio
                 case .stars:
                     for reaction in availableReactions.reactions {
                         if reaction.value == updateReaction.reaction {
-                            file = reaction.centerAnimation
+                            file = reaction.centerAnimation?._parse()
                             break
                         }
                     }
