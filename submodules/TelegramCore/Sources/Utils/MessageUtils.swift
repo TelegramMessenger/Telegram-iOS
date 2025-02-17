@@ -470,6 +470,24 @@ public extension Message {
         }
         return nil
     }
+    
+    var derivedDataAttribute: DerivedDataMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? DerivedDataMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+    
+    var forwardVideoTimestampAttribute: ForwardVideoTimestampAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 public extension Message {
     var reactionsAttribute: ReactionsMessageAttribute? {
