@@ -99,17 +99,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
     }
     
-    if let _ = chatPresentationInterfaceState.sendPaidMessageStars, !chatPresentationInterfaceState.acknowledgedPaidMessage {
-        if let currentPanel = (currentPanel as? ChatStarsRequiredInputPanelNode) ?? (currentSecondaryPanel as? ChatStarsRequiredInputPanelNode) {
-            currentPanel.interfaceInteraction = interfaceInteraction
-            return (currentPanel, nil)
-        } else {
-            let panel = ChatStarsRequiredInputPanelNode(theme: chatPresentationInterfaceState.theme)
-            panel.context = context
-            panel.interfaceInteraction = interfaceInteraction
-            return (panel, nil)
-        }
-    } else if chatPresentationInterfaceState.isPremiumRequiredForMessaging {
+    if chatPresentationInterfaceState.isPremiumRequiredForMessaging {
         if let currentPanel = (currentPanel as? ChatPremiumRequiredInputPanelNode) ?? (currentSecondaryPanel as? ChatPremiumRequiredInputPanelNode) {
             currentPanel.interfaceInteraction = interfaceInteraction
             return (currentPanel, nil)

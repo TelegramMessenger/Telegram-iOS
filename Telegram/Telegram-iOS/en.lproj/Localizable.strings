@@ -13457,6 +13457,7 @@ Sorry for the inconvenience.";
 "StarsTransaction.StarRefReason.Miniapp" = "Mini App";
 "StarsTransaction.StarRefReason.Affiliate" = "Affiliate";
 "StarsTransaction.StarRefReason.Referred" = "Referred User";
+"StarsTransaction.StarRefReason.Commission" = "Commission";
 
 "Gallery.SaveToGallery.cached" = "cached";
 
@@ -13561,7 +13562,7 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ToastChatsAddedTitleV2" = "Folder {folder} Updated";
 "FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
 
-"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade yort gift into a unique collectible.";
+"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade your gift into a unique collectible.";
 
 "Gift.Send.Upgrade" = "Make Unique for %@";
 "Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";
@@ -13799,7 +13800,7 @@ Sorry for the inconvenience.";
 "NameColor.GiftInfo" = "Apply your collectible's unique look to your profile.";
 "NameColor.WearCollectible" = "Wear Collectible";
 
-"Notification.StarsGift.TransferToChannel" = "%@ transferred a unique collectible to %@";
+"Notification.StarsGift.TransferToChannel" = "%1$@ transferred a unique collectible to %2$@";
 "Notification.StarsGift.TransferToChannelYou" = "You transferred a unique collectible to %@";
 
 "AvatarEditor.PremiumNeeded.Background" = "Subscribe to Telegram Premium to choose this background.";
@@ -13841,3 +13842,14 @@ Sorry for the inconvenience.";
 
 "Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
 "Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
+
+"Settings.Privacy.Messages.ValuePaid" = "Paid";
+
+"Stars.Transaction.PaidMessage_1" = "Fee for %@ Message";
+"Stars.Transaction.PaidMessage_anu" = "Fee for %@ Messages";
+"Stars.Transaction.PaidMessage.Text" = "You receive **%@%** of the price that you charge for each incoming message. [Change Fee >]()";
+"Stars.Intro.Transaction.PaidMessage_1" = "Fee for %@ Message";
+"Stars.Intro.Transaction.PaidMessage_any" = "Fee for %@ Messages";
+
+"Stars.Purchase.SendMessageInfo" = "Buy Stars to send a message to **%@**.";
+"Stars.Purchase.SendGroupMessageInfo" = "Buy Stars to send a message in **%@**.";

@@ -8178,9 +8178,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendMultiMedia(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, multiMedia: [Api.InputSingleMedia], scheduleDate: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendMultiMedia(flags: Int32, peer: Api.InputPeer, replyTo: Api.InputReplyTo?, multiMedia: [Api.InputSingleMedia], scheduleDate: Int32?, sendAs: Api.InputPeer?, quickReplyShortcut: Api.InputQuickReplyShortcut?, effect: Int64?, allowPaidStars: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(934757205)
+                    buffer.appendInt32(469278068)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {replyTo!.serialize(buffer, true)}
@@ -8193,7 +8193,8 @@ public extension Api.functions.messages {
                     if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 17) != 0 {quickReplyShortcut!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 18) != 0 {serializeInt64(effect!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.sendMultiMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyTo", String(describing: replyTo)), ("multiMedia", String(describing: multiMedia)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs)), ("quickReplyShortcut", String(describing: quickReplyShortcut)), ("effect", String(describing: effect))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 21) != 0 {serializeInt64(allowPaidStars!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.sendMultiMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyTo", String(describing: replyTo)), ("multiMedia", String(describing: multiMedia)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs)), ("quickReplyShortcut", String(describing: quickReplyShortcut)), ("effect", String(describing: effect)), ("allowPaidStars", String(describing: allowPaidStars))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -11663,19 +11664,19 @@ public extension Api.functions.users {
                 }
 }
 public extension Api.functions.users {
-                static func getIsPremiumRequiredToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.Bool]>) {
+                static func getRequirementsToContact(id: [Api.InputUser]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.RequirementToContact]>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1507677680)
+                    buffer.appendInt32(-660962397)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(id.count))
                     for item in id {
                         item.serialize(buffer, true)
                     }
-                    return (FunctionDescription(name: "users.getIsPremiumRequiredToContact", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.Bool]? in
+                    return (FunctionDescription(name: "users.getRequirementsToContact", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.RequirementToContact]? in
                         let reader = BufferReader(buffer)
-                        var result: [Api.Bool]?
+                        var result: [Api.RequirementToContact]?
                         if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Bool.self)
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.RequirementToContact.self)
                         }
                         return result
                     })

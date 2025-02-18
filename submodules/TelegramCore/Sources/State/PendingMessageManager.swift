@@ -826,6 +826,7 @@ public final class PendingMessageManager {
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
                 var messageEffect: EffectMessageAttribute?
+                var allowPaidStars: Int64?
                 
                 var flags: Int32 = 0
                 
@@ -862,6 +863,8 @@ public final class PendingMessageManager {
                         flags |= Int32(1 << 16)
                     } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
                         videoTimestamp = attribute.timestamp
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute {
+                        allowPaidStars = attribute.stars.value * Int64(messages.count)
                     }
                 }
                                 
@@ -1063,7 +1066,11 @@ public final class PendingMessageManager {
                         messageEffectId = messageEffect.id
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId))
+                    if let _ = allowPaidStars {
+                        flags |= 1 << 21
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars))
                 }
                 
                 return sendMessageRequest

@@ -452,14 +452,14 @@ public extension Api {
 }
 public extension Api {
     enum User: TypeConstructorDescription {
-        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Api.PeerColor?, profileColor: Api.PeerColor?, botActiveUsers: Int32?, botVerificationIcon: Int64?)
+        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Api.PeerColor?, profileColor: Api.PeerColor?, botActiveUsers: Int32?, botVerificationIcon: Int64?, sendPaidMessagesStars: Int64?)
         case userEmpty(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor, let botActiveUsers, let botVerificationIcon):
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor, let botActiveUsers, let botVerificationIcon, let sendPaidMessagesStars):
                     if boxed {
-                        buffer.appendInt32(1262928766)
+                        buffer.appendInt32(34280482)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -490,6 +490,7 @@ public extension Api {
                     if Int(flags2) & Int(1 << 9) != 0 {profileColor!.serialize(buffer, true)}
                     if Int(flags2) & Int(1 << 12) != 0 {serializeInt32(botActiveUsers!, buffer: buffer, boxed: false)}
                     if Int(flags2) & Int(1 << 14) != 0 {serializeInt64(botVerificationIcon!, buffer: buffer, boxed: false)}
+                    if Int(flags2) & Int(1 << 15) != 0 {serializeInt64(sendPaidMessagesStars!, buffer: buffer, boxed: false)}
                     break
                 case .userEmpty(let id):
                     if boxed {
@@ -502,8 +503,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor, let botActiveUsers, let botVerificationIcon):
-                return ("user", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("phone", phone as Any), ("photo", photo as Any), ("status", status as Any), ("botInfoVersion", botInfoVersion as Any), ("restrictionReason", restrictionReason as Any), ("botInlinePlaceholder", botInlinePlaceholder as Any), ("langCode", langCode as Any), ("emojiStatus", emojiStatus as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any), ("profileColor", profileColor as Any), ("botActiveUsers", botActiveUsers as Any), ("botVerificationIcon", botVerificationIcon as Any)])
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor, let botActiveUsers, let botVerificationIcon, let sendPaidMessagesStars):
+                return ("user", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("phone", phone as Any), ("photo", photo as Any), ("status", status as Any), ("botInfoVersion", botInfoVersion as Any), ("restrictionReason", restrictionReason as Any), ("botInlinePlaceholder", botInlinePlaceholder as Any), ("langCode", langCode as Any), ("emojiStatus", emojiStatus as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any), ("profileColor", profileColor as Any), ("botActiveUsers", botActiveUsers as Any), ("botVerificationIcon", botVerificationIcon as Any), ("sendPaidMessagesStars", sendPaidMessagesStars as Any)])
                 case .userEmpty(let id):
                 return ("userEmpty", [("id", id as Any)])
     }
@@ -566,6 +567,8 @@ public extension Api {
             if Int(_2!) & Int(1 << 12) != 0 {_20 = reader.readInt32() }
             var _21: Int64?
             if Int(_2!) & Int(1 << 14) != 0 {_21 = reader.readInt64() }
+            var _22: Int64?
+            if Int(_2!) & Int(1 << 15) != 0 {_22 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -587,8 +590,9 @@ public extension Api {
             let _c19 = (Int(_2!) & Int(1 << 9) == 0) || _19 != nil
             let _c20 = (Int(_2!) & Int(1 << 12) == 0) || _20 != nil
             let _c21 = (Int(_2!) & Int(1 << 14) == 0) || _21 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 {
-                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18, profileColor: _19, botActiveUsers: _20, botVerificationIcon: _21)
+            let _c22 = (Int(_2!) & Int(1 << 15) == 0) || _22 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 {
+                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18, profileColor: _19, botActiveUsers: _20, botVerificationIcon: _21, sendPaidMessagesStars: _22)
             }
             else {
                 return nil
