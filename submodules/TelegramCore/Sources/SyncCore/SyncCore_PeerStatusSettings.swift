@@ -40,6 +40,9 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     public var requestChatIsChannel: Bool?
     public var managingBot: ManagingBot?
     public var paidMessageStars: StarsAmount?
+    public var registrationDate: String?
+    public var phoneCountry: String?
+    public var locationCountry: String?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
@@ -48,9 +51,23 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatDate = nil
         self.managingBot = nil
         self.paidMessageStars = nil
+        self.registrationDate = nil
+        self.phoneCountry = nil
+        self.locationCountry = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil, managingBot: ManagingBot? = nil, paidMessageStars: StarsAmount? = nil) {
+    public init(
+        flags: PeerStatusSettings.Flags,
+        geoDistance: Int32? = nil,
+        requestChatTitle: String? = nil,
+        requestChatDate: Int32? = nil,
+        requestChatIsChannel: Bool? = nil,
+        managingBot: ManagingBot? = nil,
+        paidMessageStars: StarsAmount? = nil,
+        registrationDate: String? = nil,
+        phoneCountry: String? = nil,
+        locationCountry: String? = nil
+    ) {
         self.flags = flags
         self.geoDistance = geoDistance
         self.requestChatTitle = requestChatTitle
@@ -58,6 +75,9 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatIsChannel = requestChatIsChannel
         self.managingBot = managingBot
         self.paidMessageStars = paidMessageStars
+        self.registrationDate = registrationDate
+        self.phoneCountry = phoneCountry
+        self.locationCountry = locationCountry
     }
     
     public init(decoder: PostboxDecoder) {
@@ -68,6 +88,9 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
         self.managingBot = decoder.decodeCodable(ManagingBot.self, forKey: "managingBot")
         self.paidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "paidMessageStars")
+        self.registrationDate = decoder.decodeOptionalStringForKey("registrationDate")
+        self.phoneCountry = decoder.decodeOptionalStringForKey("phoneCountry")
+        self.locationCountry = decoder.decodeOptionalStringForKey("locationCountry")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -101,6 +124,21 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
             encoder.encodeCodable(paidMessageStars, forKey: "paidMessageStars")
         } else {
             encoder.encodeNil(forKey: "paidMessageStars")
+        }
+        if let registrationDate = self.registrationDate {
+            encoder.encodeString(registrationDate, forKey: "registrationDate")
+        } else {
+            encoder.encodeNil(forKey: "registrationDate")
+        }
+        if let phoneCountry = self.phoneCountry {
+            encoder.encodeString(phoneCountry, forKey: "phoneCountry")
+        } else {
+            encoder.encodeNil(forKey: "phoneCountry")
+        }
+        if let locationCountry = self.locationCountry {
+            encoder.encodeString(locationCountry, forKey: "locationCountry")
+        } else {
+            encoder.encodeNil(forKey: "locationCountry")
         }
     }
     

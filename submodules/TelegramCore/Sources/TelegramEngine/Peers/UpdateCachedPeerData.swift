@@ -794,10 +794,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 let wallpaper = wallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) }
                                                 
                                                 let verification = verification.flatMap { PeerVerification(apiBotVerification: $0) }
-                                                
-                                                //let sendPaidMessageStars = sendPaidMessageStars.flatMap { StarsAmount(value: $0, nanos: 0) }
-                                                let sendPaidMessageStars: StarsAmount? = nil
-                                                
+                                                                                                
                                                 return previous.withUpdatedFlags(channelFlags)
                                                     .withUpdatedAbout(about)
                                                     .withUpdatedParticipantsSummary(CachedChannelParticipantsSummary(memberCount: participantsCount, adminCount: adminsCount, bannedCount: bannedCount, kickedCount: kickedCount))
@@ -832,7 +829,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     .withUpdatedEmojiPack(emojiPack)
                                                     .withUpdatedVerification(verification)
                                                     .withUpdatedStarGiftsCount(starGiftsCount)
-                                                    .withUpdatedSendPaidMessageStars(sendPaidMessageStars)
                                             })
                                         
                                             if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {

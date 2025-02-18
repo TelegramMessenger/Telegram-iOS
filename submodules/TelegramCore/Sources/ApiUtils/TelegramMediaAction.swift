@@ -191,8 +191,6 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return nil
         }
         return TelegramMediaAction(action: .starGiftUnique(gift: gift, isUpgrade: (flags & (1 << 0)) != 0, isTransferred: (flags & (1 << 1)) != 0, savedToProfile: (flags & (1 << 2)) != 0, canExportDate: canExportAt, transferStars: transferStars, isRefunded: (flags & (1 << 5)) != 0, peerId: peer?.peerId, senderId: fromId?.peerId, savedId: savedId))
-    /*case let .messageActionPaidMessage(stars):
-        return TelegramMediaAction(action: .paidMessage(stars: stars))*/
     }
 }
 
