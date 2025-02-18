@@ -43,6 +43,18 @@ func _internal_addNoPaidMessagesException(account: Account, peerId: PeerId, refu
         return account.network.request(Api.functions.account.addNoPaidMessagesException(flags: flags, userId: inputUser))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
+        } |> mapToSignal { _ in
+            return account.postbox.transaction { transaction -> Void in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                    if let cachedData = cachedData as? CachedUserData {
+                        var settings = cachedData.peerStatusSettings ?? .init()
+                        settings.paidMessageStars = nil
+                        return cachedData.withUpdatedPeerStatusSettings(settings)
+                    }
+                    return cachedData
+                })
+            }
+            |> ignoreValues
         }
         |> ignoreValues
     }
