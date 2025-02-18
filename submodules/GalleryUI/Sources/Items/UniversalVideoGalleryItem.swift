@@ -1006,6 +1006,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
         guard let overlayController = self.overlayController else {
             return
         }
+        
         overlayController.removePictureInPictureContent(content: self)
         self.node.canAttachContent = false
         if self.didExpand {
@@ -1413,7 +1414,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if playerStatusValue.duration >= 60.0 * 10.0 {
                 var publicLinkPrefix: ShareControllerSubject.PublicLinkPrefix?
-                if case let .message(message, _) = self.item?.contentInfo, message.id.namespace == Namespaces.Message.Cloud, let peer = message.peers[message.id.peerId] as? TelegramChannel, let username = peer.username {
+                if case let .message(message, _) = self.item?.contentInfo, message.id.namespace == Namespaces.Message.Cloud, let peer = message.peers[message.id.peerId] as? TelegramChannel, let username = peer.username ?? peer.usernames.first?.username {
                     let visibleString = "t.me/\(username)/\(message.id.id)"
                     publicLinkPrefix = ShareControllerSubject.PublicLinkPrefix(
                         visibleString: visibleString,
@@ -1878,23 +1879,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     self.mediaPlaybackStateDisposable.set((throttledSignal
                     |> deliverOnMainQueue).start(next: { [weak self] status in
-                        guard let strongSelf = self, let videoNode = strongSelf.videoNode, videoNode.ownsContentNode else {
+                        guard let self else {
                             return
                         }
 
-                        if let status = status {
-                            let shouldStorePlaybacksState: Bool
-                            shouldStorePlaybacksState = status.duration >= 20.0
-                            
-                            if shouldStorePlaybacksState {
-                                var timestamp: Double?
-                                if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
-                                    timestamp = status.timestamp
-                                }
-                                item.storeMediaPlaybackState(message.id, timestamp, status.baseRate)
-                            } else {
-                                item.storeMediaPlaybackState(message.id, nil, status.baseRate)
-                            }
+                        if let status {
+                            self.maybeStorePlaybackStatus(status: status)
                         }
                     }))
                 }
@@ -2007,6 +1997,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             case let .buffering(_, whilePlaying, _, display):
                                 displayProgress = display
                                 initialBuffering = !whilePlaying
+                                if item.content is HLSVideoContent && display {
+                                    initialBuffering = true
+                                }
                                 isPaused = !whilePlaying
                                 var isStreaming = false
                                 if let fetchStatus = strongSelf.fetchStatus {
@@ -2101,7 +2094,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
-                            strongSelf.footerContentNode.content = .fetch(status: fetchStatus, seekable: seekable)
+                            if item.content is HLSVideoContent {
+                                strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
+                            } else {
+                                strongSelf.footerContentNode.content = .fetch(status: fetchStatus, seekable: seekable)
+                            }
                         }
                     } else {
                         strongSelf.footerContentNode.content = .playback(paused: false, seekable: seekable)
@@ -2369,6 +2366,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                             videoNode.seek(0.0)
                         }
                     } else {
+                        if let status = self.playerStatusValue {
+                            self.maybeStorePlaybackStatus(status: status)
+                        }
                         videoNode.continuePlayingWithoutSound()
                     }
                     self.updateDisplayPlaceholder()
@@ -2444,6 +2444,30 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     }
                 })
             }
+        }
+    }
+    
+    private func maybeStorePlaybackStatus(status: MediaPlayerStatus) {
+        guard let item = self.item else {
+            return
+        }
+        guard let contentInfo = item.contentInfo, case let .message(message, _) = contentInfo else {
+            return
+        }
+        
+        let shouldStorePlaybacksState: Bool
+        shouldStorePlaybacksState = status.duration >= 20.0
+        
+        if shouldStorePlaybacksState {
+            var timestamp: Double?
+            if status.timestamp > 5.0 && status.timestamp < status.duration - 5.0 {
+                timestamp = status.timestamp
+            } else {
+                timestamp = 0.0
+            }
+            item.storeMediaPlaybackState(message.id, timestamp, status.baseRate)
+        } else {
+            item.storeMediaPlaybackState(message.id, nil, status.baseRate)
         }
     }
     
@@ -2634,6 +2658,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     override func animateOut(to node: (ASDisplayNode, CGRect, () -> (UIView?, UIView?)), addToTransitionSurface: (UIView) -> Void, completion: @escaping () -> Void) {
+        if let status = self.playerStatusValue {
+            self.maybeStorePlaybackStatus(status: status)
+        }
+        
         self.isAnimatingOut = true
         
         guard let videoNode = self.videoNode else {
@@ -2785,6 +2813,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             toTransform = CATransform3DScale(videoNode.layer.transform, transformScale, transformScale, 1.0)
             
             if videoNode.hasAttachedContext {
+                if let status = self.playerStatusValue {
+                    self.maybeStorePlaybackStatus(status: status)
+                }
+                
                 if self.isPaused || !self.keepSoundOnDismiss {
                     if let item = self.item, item.content is HLSVideoContent {
                     } else {

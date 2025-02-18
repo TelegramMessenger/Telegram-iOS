@@ -576,7 +576,8 @@ public final class GifPagerContentComponent: Component {
         private let standaloneShimmerEffect: StandaloneShimmerEffect
         
         private let backgroundView: BlurredBackgroundView
-        private var vibrancyEffectView: UIVisualEffectView?
+        private let backgroundTintView: UIView
+        private var vibrancyEffectView: UIView?
         private let mirrorContentScrollView: UIView
         private let scrollView: ContentScrollView
         private let scrollClippingView: UIView
@@ -598,6 +599,7 @@ public final class GifPagerContentComponent: Component {
         
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
+            self.backgroundTintView = UIView()
             
             self.shimmerHostView = PortalSourceView()
             self.standaloneShimmerEffect = StandaloneShimmerEffect()
@@ -620,6 +622,7 @@ public final class GifPagerContentComponent: Component {
             
             super.init(frame: frame)
             
+            self.backgroundView.addSubview(self.backgroundTintView)
             self.addSubview(self.backgroundView)
             
             self.shimmerHostView.alpha = 0.0
@@ -983,15 +986,15 @@ public final class GifPagerContentComponent: Component {
                 }
             } else {
                 if self.vibrancyEffectView == nil {
-                    let style: UIBlurEffect.Style
-                    style = .extraLight
-                    let blurEffect = UIBlurEffect(style: style)
-                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+                    let vibrancyEffectView = UIView()
+                    vibrancyEffectView.backgroundColor = .white
+                    if let filter = CALayer.luminanceToAlpha() {
+                        vibrancyEffectView.layer.filters = [filter]
+                    }
                     self.vibrancyEffectView = vibrancyEffectView
-                    self.backgroundView.addSubview(vibrancyEffectView)
-                    vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
-                    vibrancyEffectView.contentView.addSubview(self.mirrorSearchHeaderContainer)
+                    self.backgroundTintView.mask = vibrancyEffectView
+                    vibrancyEffectView.addSubview(self.mirrorContentScrollView)
+                    vibrancyEffectView.addSubview(self.mirrorSearchHeaderContainer)
                 }
             }
             
@@ -1000,7 +1003,11 @@ public final class GifPagerContentComponent: Component {
             if hideBackground {
                 backgroundColor = backgroundColor.withAlphaComponent(0.01)
             }
-            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            
+            self.backgroundTintView.backgroundColor = backgroundColor
+            transition.setFrame(view: self.backgroundTintView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            self.backgroundView.updateColor(color: .clear, enableBlur: true, forceKeepBlur: true, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
