@@ -174,10 +174,10 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     public let months: Int32
     public let currency: String
     public let amount: Int64
-    public let botUrl: String
+    public let botUrl: String?
     public let storeProductId: String?
     
-    public init(months: Int32, currency: String, amount: Int64, botUrl: String, storeProductId: String?) {
+    public init(months: Int32, currency: String, amount: Int64, botUrl: String?, storeProductId: String?) {
         self.months = months
         self.currency = currency
         self.amount = amount
@@ -189,7 +189,7 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
         self.months = decoder.decodeInt32ForKey("months", orElse: 0)
         self.currency = decoder.decodeStringForKey("currency", orElse: "")
         self.amount = decoder.decodeInt64ForKey("amount", orElse: 0)
-        self.botUrl = decoder.decodeStringForKey("botUrl", orElse: "")
+        self.botUrl = decoder.decodeOptionalStringForKey("botUrl")
         self.storeProductId = decoder.decodeOptionalStringForKey("storeProductId")
     }
     
@@ -197,7 +197,11 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
         encoder.encodeInt32(self.months, forKey: "months")
         encoder.encodeString(self.currency, forKey: "currency")
         encoder.encodeInt64(self.amount, forKey: "amount")
-        encoder.encodeString(self.botUrl, forKey: "botUrl")
+        if let botUrl = self.botUrl {
+            encoder.encodeString(botUrl, forKey: "botUrl")
+        } else {
+            encoder.encodeNil(forKey: "botUrl")
+        }
         if let storeProductId = self.storeProductId {
             encoder.encodeString(storeProductId, forKey: "storeProductId")
         } else {

@@ -2,11 +2,15 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
-    return account.postbox.transaction { transaction -> ([Api.InputUser], [PeerId], [PeerId]) in
+public enum RequirementToContact {
+    case premium
+    case stars(StarsAmount)
+}
+
+internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id: RequirementToContact], NoError> {
+    return account.postbox.transaction { transaction -> ([Api.InputUser], [PeerId]) in
         var inputUsers: [Api.InputUser] = []
-        let premiumRequired: [EnginePeer.Id] = []
-        var ids:[PeerId] = []
+        var ids: [PeerId] = []
         for id in peerIds {
             if let peer = transaction.getPeer(id), let inputUser = apiInputUser(peer) {
                 if peer.isPremium {
@@ -22,38 +26,41 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
                 }
             }
         }
-        return (inputUsers, premiumRequired, ids)
-    } |> mapToSignal { inputUsers, premiumRequired, reqIds -> Signal<[EnginePeer.Id], NoError> in
-        
+        return (inputUsers, ids)
+    } |> mapToSignal { inputUsers, reqIds -> Signal<[EnginePeer.Id: RequirementToContact], NoError> in
         if !inputUsers.isEmpty {
-            return account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: inputUsers))
+            return account.network.request(Api.functions.users.getRequirementsToContact(id: inputUsers))
             |> retryRequest
             |> mapToSignal { result in
                 return account.postbox.transaction { transaction in
-                    var requiredPeerIds: [EnginePeer.Id] = []
+                    var requirements: [EnginePeer.Id: RequirementToContact] = [:]
                     for (i, req) in result.enumerated() {
                         let peerId = reqIds[i]
-                        let required = req == .boolTrue
                         transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
                             let data = cachedData as? CachedUserData ?? CachedUserData()
                             var flags = data.flags
-                            if required {
-                                flags.insert(.premiumRequired)
-                            } else {
+                            var sendPaidMessageStars = data.sendPaidMessageStars
+                            switch req {
+                            case .requirementToContactEmpty:
                                 flags.remove(.premiumRequired)
+                                sendPaidMessageStars = nil
+                            case .requirementToContactPremium:
+                                flags.insert(.premiumRequired)
+                                sendPaidMessageStars = nil
+                                requirements[peerId] = .premium
+                            case let .requirementToContactPaidMessages(starsAmount):
+                                flags.remove(.premiumRequired)
+                                sendPaidMessageStars = StarsAmount(value: starsAmount, nanos: 0)
+                                requirements[peerId] = .stars(StarsAmount(value: starsAmount, nanos: 0))
                             }
-                            return data.withUpdatedFlags(flags)
+                            return data.withUpdatedFlags(flags).withUpdatedSendPaidMessageStars(sendPaidMessageStars)
                         })
-                        if required {
-                            requiredPeerIds.append(peerId)
-                        }
                     }
-                    let result = requiredPeerIds + premiumRequired
-                    return result
+                    return requirements
                 }
             }
         } else {
-            return .single(premiumRequired)
+            return .single([:])
         }
     }
 }
