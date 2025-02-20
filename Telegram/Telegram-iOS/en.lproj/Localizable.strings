@@ -12845,6 +12845,8 @@ Sorry for the inconvenience.";
 
 "Chat.ToastStarsSent.Title_1" = "Star sent!";
 "Chat.ToastStarsSent.Title_any" = "Stars sent!";
+"Chat.ToastStarsSent.TitleChannel_1" = "Star sent as {name}!";
+"Chat.ToastStarsSent.TitleChannel_any" = "Stars sent as {name}!";
 
 "Chat.ToastStarsSent.AnonymousTitle_1" = "Star sent anonymously!";
 "Chat.ToastStarsSent.AnonymousTitle_any" = "Stars sent anonymously!";
@@ -13842,6 +13844,8 @@ Sorry for the inconvenience.";
 
 "Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
 "Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
+
+"StarsTransaction.Commission" = "Commission";
 
 "Settings.Privacy.Messages.ValuePaid" = "Paid";
 

@@ -6,18 +6,26 @@ import Display
 public final class GalleryItemScrubberTransition {
     public final class Scrubber {
         public struct TransitionState: Equatable {
+            public enum Direction {
+                case `in`
+                case out
+            }
+            
             public var sourceSize: CGSize
             public var destinationSize: CGSize
             public var progress: CGFloat
+            public var direction: Direction
             
             public init(
                 sourceSize: CGSize,
                 destinationSize: CGSize,
-                progress: CGFloat
+                progress: CGFloat,
+                direction: Direction
             ) {
                 self.sourceSize = sourceSize
                 self.destinationSize = destinationSize
                 self.progress = progress
+                self.direction = direction
             }
         }
         

@@ -238,8 +238,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             case .Local:
                                 break
                             case .Remote, .Paused:
-                                if let image = cloudFetchIcon {
-                                    statusState = .customIcon(image)
+                                var isHLS = false
+                                if let message = self.currentMessage {
+                                    for media in message.media {
+                                        if let file = media as? TelegramMediaFile {
+                                            isHLS = NativeVideoContent.isHLSVideo(file: file)
+                                            break
+                                        }
+                                    }
+                                }
+                                if isHLS {
+                                    statusState = .none
+                                } else {
+                                    if let image = cloudFetchIcon {
+                                        statusState = .customIcon(image)
+                                    }
                                 }
                         }
                         self.statusNode.transitionToState(statusState, completion: {})
@@ -954,6 +967,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
 
         var messageText = NSMutableAttributedString(string: "")
         var hasCaption = false
+        var mediaDuration: Double?
         for media in message.media {
             if media is TelegramMediaPaidContent {
                 hasCaption = true
@@ -961,6 +975,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 hasCaption = true
             } else if let file = media as? TelegramMediaFile {
                 hasCaption = file.mimeType.hasPrefix("image/") || file.mimeType.hasPrefix("video/")
+                mediaDuration = file.duration
             } else if media is TelegramMediaInvoice {
                 hasCaption = true
             }
@@ -974,6 +989,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                 }
             }
             var text = message.text
+            if let result = addLocallyGeneratedEntities(text, enabledTypes: [.timecode], entities: entities, mediaDuration: mediaDuration) {
+                entities = result
+            }
             if let translateToLanguage, !text.isEmpty {
                 for attribute in message.attributes {
                     if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {

@@ -80,7 +80,11 @@ public final class FFMpegMediaDataReaderV2: MediaDataReader {
             
             if (codecName == "h264" || codecName == "hevc") {
                 passthroughDecoder = false
+                #if targetEnvironment(simulator)
+                useHardwareAcceleration = false
+                #else
                 useHardwareAcceleration = true
+                #endif
             }
             if (codecName == "av1" || codecName == "av01") {
                 passthroughDecoder = false

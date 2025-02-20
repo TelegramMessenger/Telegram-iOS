@@ -2055,9 +2055,16 @@ public final class ShareController: ViewController {
                     shareSignals.append(enqueueMessages(account: currentContext.context.account, peerId: peerId, messages: messages))
                 }
             case let .media(mediaReference, mediaParameters):
+                var forwardSourceMessageId: EngineMessage.Id?
+                if case let .message(message, _) = mediaReference, let sourceMessageId = message.id, (sourceMessageId.peerId.namespace == Namespaces.Peer.CloudUser || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudGroup || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudChannel) {
+                    forwardSourceMessageId = sourceMessageId
+                }
+                
                 var sendTextAsCaption = false
-                if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
-                    sendTextAsCaption = true
+                if forwardSourceMessageId == nil {
+                    if mediaReference.media is TelegramMediaImage || mediaReference.media is TelegramMediaFile {
+                        sendTextAsCaption = true
+                    }
                 }
                 
                 for peerId in peerIds {
@@ -2133,8 +2140,8 @@ public final class ShareController: ViewController {
                     if let startAtTimestamp = mediaParameters?.startAtTimestamp, let startAtTimestampNode = strongSelf.controllerNode.startAtTimestampNode, startAtTimestampNode.value {
                         attributes.append(ForwardVideoTimestampAttribute(timestamp: startAtTimestamp))
                     }
-                    if case let .message(message, _) = mediaReference, let sourceMessageId = message.id, (sourceMessageId.peerId.namespace == Namespaces.Peer.CloudUser || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudGroup || sourceMessageId.peerId.namespace == Namespaces.Peer.CloudChannel) {
-                        messages.append(.forward(source: sourceMessageId, threadId: threadId, grouping: .auto, attributes: attributes, correlationId: nil))
+                    if let forwardSourceMessageId {
+                        messages.append(.forward(source: forwardSourceMessageId, threadId: threadId, grouping: .auto, attributes: attributes, correlationId: nil))
                     } else {
                         messages.append(.message(text: sendTextAsCaption ? text : "", attributes: attributes, inlineStickers: [:], mediaReference: mediaReference, threadId: threadId, replyToMessageId: replyToMessageId.flatMap { EngineMessageReplySubject(messageId: $0, quote: nil) }, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
