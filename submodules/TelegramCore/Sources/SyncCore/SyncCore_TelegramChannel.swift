@@ -1,31 +1,22 @@
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
-public enum TelegramChannelParticipationStatus {
-    case member
-    case left
-    case kicked
+public enum TelegramChannelParticipationStatus: Int32 {
+    case member = 0
+    case left = 1
+    case kicked = 2
     
-    fileprivate var rawValue: Int32 {
-        switch self {
-            case .member:
-                return 0
-            case .left:
-                return 1
-            case .kicked:
-                return 2
-        }
-    }
-    
-    fileprivate init(rawValue: Int32) {
+    public init(rawValue: Int32) {
         switch rawValue {
-            case 0:
-                self = .member
-            case 1:
-                self = .left
-            case 2:
-                self = .kicked
-            default:
-                self = .left
+        case 0:
+            self = .member
+        case 1:
+            self = .left
+        case 2:
+            self = .kicked
+        default:
+            self = .left
         }
     }
 }
@@ -48,6 +39,7 @@ public struct TelegramChannelBroadcastFlags: OptionSet {
 
 public struct TelegramChannelBroadcastInfo: Equatable {
     public let flags: TelegramChannelBroadcastFlags
+    
     public init(flags: TelegramChannelBroadcastFlags) {
         self.flags = flags
     }
@@ -123,6 +115,46 @@ public enum TelegramChannelInfo: Equatable {
         } else {
             return .group(TelegramChannelGroupInfo(flags: TelegramChannelGroupFlags(rawValue: decoder.decodeInt32ForKey("i.f", orElse: 0))))
         }
+    }
+    
+    public init(flatBuffersObject: TelegramCore_TelegramChannelInfo) throws {
+        switch flatBuffersObject.valueType {
+        case .telegramchannelinfoBroadcast:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramChannelInfo_Broadcast.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .broadcast(TelegramChannelBroadcastInfo(flags: TelegramChannelBroadcastFlags(rawValue: value.flags)))
+        case .telegramchannelinfoGroup:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramChannelInfo_Group.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .group(TelegramChannelGroupInfo(flags: TelegramChannelGroupFlags(rawValue: value.flags)))
+        case .none_:
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_TelegramChannelInfo_Value
+        let valueOffset: Offset
+        
+        switch self {
+        case let .broadcast(info):
+            valueType = .telegramchannelinfoBroadcast
+            let start = TelegramCore_TelegramChannelInfo_Broadcast.startTelegramChannelInfo_Broadcast(&builder)
+            TelegramCore_TelegramChannelInfo_Broadcast.add(flags: info.flags.rawValue, &builder)
+            valueOffset = TelegramCore_TelegramChannelInfo_Broadcast.endTelegramChannelInfo_Broadcast(&builder, start: start)
+        case let .group(info):
+            valueType = .telegramchannelinfoGroup
+            let start = TelegramCore_TelegramChannelInfo_Group.startTelegramChannelInfo_Group(&builder)
+            TelegramCore_TelegramChannelInfo_Group.add(flags: info.flags.rawValue, &builder)
+            valueOffset = TelegramCore_TelegramChannelInfo_Group.endTelegramChannelInfo_Group(&builder, start: start)
+        }
+        
+        let start = TelegramCore_TelegramChannelInfo.startTelegramChannelInfo(&builder)
+        TelegramCore_TelegramChannelInfo.add(valueType: valueType, &builder)
+        TelegramCore_TelegramChannelInfo.add(value: valueOffset, &builder)
+        return TelegramCore_TelegramChannelInfo.endTelegramChannelInfo(&builder, start: start)
     }
 }
 
@@ -314,6 +346,17 @@ public final class TelegramChannel: Peer, Equatable {
         self.subscriptionUntilDate = decoder.decodeOptionalInt32ForKey("sud")
         self.verificationIconFileId = decoder.decodeOptionalInt64ForKey("vfid")
         self.sendPaidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "sendPaidMessageStars")
+        
+        #if DEBUG
+        var builder = FlatBufferBuilder(initialSize: 1024)
+        let offset = self.encodeToFlatBuffers(builder: &builder)
+        builder.finish(offset: offset)
+        let serializedData = builder.data
+        var byteBuffer = ByteBuffer(data: serializedData)
+        let deserializedValue = FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramChannel
+        let parsedValue = try! TelegramChannel(flatBuffersObject: deserializedValue)
+        assert(self == parsedValue)
+        #endif
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -543,5 +586,117 @@ public final class TelegramChannel: Peer, Equatable {
     
     public func withUpdatedVerificationIconFileId(_ verificationIconFileId: Int64?) -> TelegramChannel {
         return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames, storiesHidden: self.storiesHidden, nameColor: self.nameColor, backgroundEmojiId: self.backgroundEmojiId, profileColor: self.profileColor, profileBackgroundEmojiId: self.profileBackgroundEmojiId, emojiStatus: self.emojiStatus, approximateBoostLevel: self.approximateBoostLevel, subscriptionUntilDate: self.subscriptionUntilDate, verificationIconFileId: verificationIconFileId, sendPaidMessageStars: self.sendPaidMessageStars)
+    }
+    
+    public init(flatBuffersObject: TelegramCore_TelegramChannel) throws {
+        self.id = PeerId(flatBuffersObject.id)
+        self.accessHash = try flatBuffersObject.accessHash.flatMap(TelegramPeerAccessHash.init)
+        self.title = flatBuffersObject.title
+        self.username = flatBuffersObject.username
+        self.photo = try (0 ..< flatBuffersObject.photoCount).map { try TelegramMediaImageRepresentation(flatBuffersObject: flatBuffersObject.photo(at: $0)!) }
+        self.creationDate = flatBuffersObject.creationDate
+        self.version = flatBuffersObject.version
+        self.participationStatus = TelegramChannelParticipationStatus(rawValue: flatBuffersObject.participationStatus)
+        
+        guard let infoObj = flatBuffersObject.info else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        self.info = try TelegramChannelInfo(flatBuffersObject: infoObj)
+        
+        self.flags = TelegramChannelFlags(rawValue: flatBuffersObject.flags)
+        self.restrictionInfo = try flatBuffersObject.restrictionInfo.flatMap { try PeerAccessRestrictionInfo(flatBuffersObject: $0) }
+        self.adminRights = try flatBuffersObject.adminRights.flatMap { try TelegramChatAdminRights(flatBuffersObject: $0) }
+        self.bannedRights = try flatBuffersObject.bannedRights.flatMap { try TelegramChatBannedRights(flatBuffersObject: $0) }
+        self.defaultBannedRights = try flatBuffersObject.defaultBannedRights.map { try TelegramChatBannedRights(flatBuffersObject: $0) }
+        self.usernames = try (0 ..< flatBuffersObject.usernamesCount).map { try TelegramPeerUsername(flatBuffersObject: flatBuffersObject.usernames(at: $0)!) }
+        self.storiesHidden = flatBuffersObject.storiesHidden?.value
+        self.nameColor = try flatBuffersObject.nameColor.flatMap(PeerNameColor.init(flatBuffersObject:))
+        self.backgroundEmojiId = flatBuffersObject.backgroundEmojiId == Int64.min ? nil : flatBuffersObject.backgroundEmojiId
+        self.profileColor = try flatBuffersObject.profileColor.flatMap(PeerNameColor.init)
+        self.profileBackgroundEmojiId = flatBuffersObject.profileBackgroundEmojiId == Int64.min ? nil : flatBuffersObject.profileBackgroundEmojiId
+        self.emojiStatus = try flatBuffersObject.emojiStatus.flatMap { try PeerEmojiStatus(flatBuffersObject: $0) }
+        self.approximateBoostLevel = flatBuffersObject.approximateBoostLevel == Int32.min ? nil : flatBuffersObject.approximateBoostLevel
+        self.subscriptionUntilDate = flatBuffersObject.subscriptionUntilDate == Int32.min ? nil : flatBuffersObject.subscriptionUntilDate
+        self.verificationIconFileId = flatBuffersObject.verificationIconFileId == Int64.min ? nil : flatBuffersObject.verificationIconFileId
+        self.sendPaidMessageStars = try flatBuffersObject.sendPaidMessageStars.flatMap { try StarsAmount(flatBuffersObject: $0) }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let accessHashOffset = self.accessHash.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        
+        let photoOffsets = self.photo.map { $0.encodeToFlatBuffers(builder: &builder) }
+        let photoOffset = builder.createVector(ofOffsets: photoOffsets, len: photoOffsets.count)
+        
+        let usernamesOffsets = self.usernames.map { $0.encodeToFlatBuffers(builder: &builder) }
+        let usernamesOffset = builder.createVector(ofOffsets: usernamesOffsets, len: usernamesOffsets.count)
+        
+        let titleOffset = builder.create(string: self.title)
+        let usernameOffset = self.username.map { builder.create(string: $0) }
+        let nameColorOffset = self.nameColor.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        let profileColorOffset = self.profileColor.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        
+        let infoOffset = self.info.encodeToFlatBuffers(builder: &builder)
+        
+        let restrictionInfoOffset = self.restrictionInfo?.encodeToFlatBuffers(builder: &builder)
+        let adminRightsOffset = self.adminRights?.encodeToFlatBuffers(builder: &builder)
+        let bannedRightsOffset = self.bannedRights?.encodeToFlatBuffers(builder: &builder)
+        let defaultBannedRightsOffset = self.defaultBannedRights?.encodeToFlatBuffers(builder: &builder)
+        let emojiStatusOffset = self.emojiStatus?.encodeToFlatBuffers(builder: &builder)
+        let sendPaidMessageStarsOffset = self.sendPaidMessageStars?.encodeToFlatBuffers(builder: &builder)
+        
+        let start = TelegramCore_TelegramChannel.startTelegramChannel(&builder)
+        
+        TelegramCore_TelegramChannel.add(id: self.id.asFlatBuffersObject(), &builder)
+        if let accessHashOffset {
+            TelegramCore_TelegramChannel.add(accessHash: accessHashOffset, &builder)
+        }
+        TelegramCore_TelegramChannel.add(title: titleOffset, &builder)
+        if let usernameOffset {
+            TelegramCore_TelegramChannel.add(username: usernameOffset, &builder)
+        }
+        TelegramCore_TelegramChannel.addVectorOf(photo: photoOffset, &builder)
+        TelegramCore_TelegramChannel.add(creationDate: self.creationDate, &builder)
+        TelegramCore_TelegramChannel.add(version: self.version, &builder)
+        TelegramCore_TelegramChannel.add(participationStatus: self.participationStatus.rawValue, &builder)
+        TelegramCore_TelegramChannel.add(info: infoOffset, &builder)
+        TelegramCore_TelegramChannel.add(flags: self.flags.rawValue, &builder)
+        
+        if let restrictionInfoOffset {
+            TelegramCore_TelegramChannel.add(restrictionInfo: restrictionInfoOffset, &builder)
+        }
+        if let adminRightsOffset {
+            TelegramCore_TelegramChannel.add(adminRights: adminRightsOffset, &builder)
+        }
+        if let bannedRightsOffset {
+            TelegramCore_TelegramChannel.add(bannedRights: bannedRightsOffset, &builder)
+        }
+        if let defaultBannedRightsOffset {
+            TelegramCore_TelegramChannel.add(defaultBannedRights: defaultBannedRightsOffset, &builder)
+        }
+        
+        TelegramCore_TelegramChannel.addVectorOf(usernames: usernamesOffset, &builder)
+        
+        if let storiesHidden = self.storiesHidden {
+            TelegramCore_TelegramChannel.add(storiesHidden: TelegramCore_OptionalBool(value: storiesHidden), &builder)
+        }
+        if let nameColorOffset {
+            TelegramCore_TelegramChannel.add(nameColor: nameColorOffset, &builder)
+        }
+        TelegramCore_TelegramChannel.add(backgroundEmojiId: self.backgroundEmojiId ?? Int64.min, &builder)
+        if let profileColorOffset {
+            TelegramCore_TelegramChannel.add(profileColor: profileColorOffset, &builder)
+        }
+        TelegramCore_TelegramChannel.add(profileBackgroundEmojiId: self.profileBackgroundEmojiId ?? Int64.min, &builder)
+        if let emojiStatusOffset {
+            TelegramCore_TelegramChannel.add(emojiStatus: emojiStatusOffset, &builder)
+        }
+        TelegramCore_TelegramChannel.add(approximateBoostLevel: self.approximateBoostLevel ?? Int32.min, &builder)
+        TelegramCore_TelegramChannel.add(subscriptionUntilDate: self.subscriptionUntilDate ?? Int32.min, &builder)
+        TelegramCore_TelegramChannel.add(verificationIconFileId: self.verificationIconFileId ?? Int64.min, &builder)
+        if let sendPaidMessageStarsOffset {
+            TelegramCore_TelegramChannel.add(sendPaidMessageStars: sendPaidMessageStarsOffset, &builder)
+        }
+        
+        return TelegramCore_TelegramChannel.endTelegramChannel(&builder, start: start)
     }
 }

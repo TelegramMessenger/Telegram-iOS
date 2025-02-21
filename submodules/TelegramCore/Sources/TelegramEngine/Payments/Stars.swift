@@ -3,6 +3,8 @@ import Postbox
 import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
+import FlatBuffers
+import FlatSerialization
 
 public struct StarsTopUpOption: Equatable, Codable {
     enum CodingKeys: String, CodingKey {
@@ -278,6 +280,18 @@ public struct StarsAmount: Equatable, Comparable, Hashable, Codable, CustomStrin
     public init(value: Int64, nanos: Int32) {
         self.value = value
         self.nanos = nanos
+    }
+    
+    public init(flatBuffersObject: TelegramCore_StarsAmount) throws {
+        self.value = flatBuffersObject.value
+        self.nanos = flatBuffersObject.nanos
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let start = TelegramCore_StarsAmount.startStarsAmount(&builder)
+        TelegramCore_StarsAmount.add(value: self.value, &builder)
+        TelegramCore_StarsAmount.add(nanos: self.nanos, &builder)
+        return TelegramCore_StarsAmount.endStarsAmount(&builder, start: start)
     }
     
     public var stringValue: String {

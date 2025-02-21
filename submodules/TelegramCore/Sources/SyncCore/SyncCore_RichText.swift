@@ -1,4 +1,6 @@
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 private enum RichTextTypes: Int32 {
     case empty = 0
@@ -290,5 +292,210 @@ public extension RichText {
             case let .anchor(text, _):
                 return text.plainText
         }
+    }
+}
+
+extension RichText {
+    public init(flatBuffersObject: TelegramCore_RichText) throws {
+        switch flatBuffersObject.valueType {
+        case .richtextEmpty:
+            self = .empty
+        case .richtextPlain:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Plain.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .plain(value.text)
+        case .richtextBold:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Bold.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .bold(try RichText(flatBuffersObject: value.text))
+        case .richtextItalic:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Italic.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .italic(try RichText(flatBuffersObject: value.text))
+        case .richtextUnderline:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Underline.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .underline(try RichText(flatBuffersObject: value.text))
+        case .richtextStrikethrough:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Strikethrough.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .strikethrough(try RichText(flatBuffersObject: value.text))
+        case .richtextFixed:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Fixed.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .fixed(try RichText(flatBuffersObject: value.text))
+        case .richtextUrl:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Url.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .url(text: try RichText(flatBuffersObject: value.text), url: value.url, webpageId: value.webpageId.flatMap { MediaId($0) })
+        case .richtextEmail:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Email.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .email(text: try RichText(flatBuffersObject: value.text), 
+                         email: value.email)
+        case .richtextConcat:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Concat.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .concat(try (0..<value.textsCount).map { try RichText(flatBuffersObject: value.texts(at: $0)!) })
+        case .richtextSubscript:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Subscript.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .subscript(try RichText(flatBuffersObject: value.text))
+        case .richtextSuperscript:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Superscript.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .superscript(try RichText(flatBuffersObject: value.text))
+        case .richtextMarked:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Marked.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .marked(try RichText(flatBuffersObject: value.text))
+        case .richtextPhone:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Phone.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .phone(text: try RichText(flatBuffersObject: value.text), 
+                         phone: value.phone)
+        case .richtextImage:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Image.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .image(id: MediaId(value.id), dimensions: PixelDimensions(value.dimensions))
+        case .richtextAnchor:
+            guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Anchor.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .anchor(text: try RichText(flatBuffersObject: value.text), 
+                          name: value.name)
+        case .none_:
+            self = .empty
+        }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_RichText_Value
+        let offset: Offset
+        
+        switch self {
+        case .empty:
+            valueType = .richtextEmpty
+            let start = TelegramCore_RichText_Empty.startRichText_Empty(&builder)
+            offset = TelegramCore_RichText_Empty.endRichText_Empty(&builder, start: start)
+        case let .plain(text):
+            valueType = .richtextPlain
+            let textOffset = builder.create(string: text)
+            let start = TelegramCore_RichText_Plain.startRichText_Plain(&builder)
+            TelegramCore_RichText_Plain.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Plain.endRichText_Plain(&builder, start: start)
+        case let .bold(text):
+            valueType = .richtextBold
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Bold.startRichText_Bold(&builder)
+            TelegramCore_RichText_Bold.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Bold.endRichText_Bold(&builder, start: start)
+        case let .italic(text):
+            valueType = .richtextItalic
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Italic.startRichText_Italic(&builder)
+            TelegramCore_RichText_Italic.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Italic.endRichText_Italic(&builder, start: start)
+        case let .underline(text):
+            valueType = .richtextUnderline
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Underline.startRichText_Underline(&builder)
+            TelegramCore_RichText_Underline.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Underline.endRichText_Underline(&builder, start: start)
+        case let .strikethrough(text):
+            valueType = .richtextStrikethrough
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Strikethrough.startRichText_Strikethrough(&builder)
+            TelegramCore_RichText_Strikethrough.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Strikethrough.endRichText_Strikethrough(&builder, start: start)
+        case let .fixed(text):
+            valueType = .richtextFixed
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Fixed.startRichText_Fixed(&builder)
+            TelegramCore_RichText_Fixed.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Fixed.endRichText_Fixed(&builder, start: start)
+        case let .url(text, url, webpageId):
+            valueType = .richtextUrl
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let urlOffset = builder.create(string: url)
+            let start = TelegramCore_RichText_Url.startRichText_Url(&builder)
+            TelegramCore_RichText_Url.add(text: textOffset, &builder)
+            TelegramCore_RichText_Url.add(url: urlOffset, &builder)
+            if let webpageId {
+                TelegramCore_RichText_Url.add(webpageId: webpageId.asFlatBuffersObject(), &builder)
+            }
+            offset = TelegramCore_RichText_Url.endRichText_Url(&builder, start: start)
+        case let .email(text, email):
+            valueType = .richtextEmail
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let emailOffset = builder.create(string: email)
+            let start = TelegramCore_RichText_Email.startRichText_Email(&builder)
+            TelegramCore_RichText_Email.add(text: textOffset, &builder)
+            TelegramCore_RichText_Email.add(email: emailOffset, &builder)
+            offset = TelegramCore_RichText_Email.endRichText_Email(&builder, start: start)
+        case let .concat(texts):
+            valueType = .richtextConcat
+            let textsOffsets = texts.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let textsOffset = builder.createVector(ofOffsets: textsOffsets, len: textsOffsets.count)
+            let start = TelegramCore_RichText_Concat.startRichText_Concat(&builder)
+            TelegramCore_RichText_Concat.addVectorOf(texts: textsOffset, &builder)
+            offset = TelegramCore_RichText_Concat.endRichText_Concat(&builder, start: start)
+        case let .subscript(text):
+            valueType = .richtextSubscript
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Subscript.startRichText_Subscript(&builder)
+            TelegramCore_RichText_Subscript.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Subscript.endRichText_Subscript(&builder, start: start)
+        case let .superscript(text):
+            valueType = .richtextSuperscript
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Superscript.startRichText_Superscript(&builder)
+            TelegramCore_RichText_Superscript.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Superscript.endRichText_Superscript(&builder, start: start)
+        case let .marked(text):
+            valueType = .richtextMarked
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_RichText_Marked.startRichText_Marked(&builder)
+            TelegramCore_RichText_Marked.add(text: textOffset, &builder)
+            offset = TelegramCore_RichText_Marked.endRichText_Marked(&builder, start: start)
+        case let .phone(text, phone):
+            valueType = .richtextPhone
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let phoneOffset = builder.create(string: phone)
+            let start = TelegramCore_RichText_Phone.startRichText_Phone(&builder)
+            TelegramCore_RichText_Phone.add(text: textOffset, &builder)
+            TelegramCore_RichText_Phone.add(phone: phoneOffset, &builder)
+            offset = TelegramCore_RichText_Phone.endRichText_Phone(&builder, start: start)
+        case let .image(id, dimensions):
+            valueType = .richtextImage
+            let start = TelegramCore_RichText_Image.startRichText_Image(&builder)
+            TelegramCore_RichText_Image.add(id: id.asFlatBuffersObject(), &builder)
+            TelegramCore_RichText_Image.add(dimensions: dimensions.asFlatBuffersObject(), &builder)
+            offset = TelegramCore_RichText_Image.endRichText_Image(&builder, start: start)
+        case let .anchor(text, name):
+            valueType = .richtextAnchor
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let nameOffset = builder.create(string: name)
+            let start = TelegramCore_RichText_Anchor.startRichText_Anchor(&builder)
+            TelegramCore_RichText_Anchor.add(text: textOffset, &builder)
+            TelegramCore_RichText_Anchor.add(name: nameOffset, &builder)
+            offset = TelegramCore_RichText_Anchor.endRichText_Anchor(&builder, start: start)
+        }
+        
+        return TelegramCore_RichText.createRichText(&builder, valueType: valueType, valueOffset: offset)
     }
 }

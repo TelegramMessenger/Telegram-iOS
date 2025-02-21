@@ -17,7 +17,7 @@ public final class SavedStickerItem: Codable, Equatable {
 
         if let serializedFileData = try container.decodeIfPresent(Data.self, forKey: "fd") {
             var byteBuffer = ByteBuffer(data: serializedFileData)
-            self.file = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
+            self.file = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
         } else {
             let file = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: (try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "f")).data)))
             self.file = TelegramMediaFile.Accessor(file)

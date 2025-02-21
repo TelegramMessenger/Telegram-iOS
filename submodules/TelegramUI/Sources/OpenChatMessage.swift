@@ -318,6 +318,11 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 })
             case let .gallery(gallery):
                 params.dismissInput()
+            
+                if GalleryController.maybeExpandPIP(context: params.context, messageId: params.message.id) {
+                    return true
+                }
+            
                 let _ = (gallery
                 |> deliverOnMainQueue).startStandalone(next: { gallery in
                     gallery.centralItemUpdated = { messageId in

@@ -118,21 +118,6 @@ final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
         }))
 
         return index
-
-        /*let index = self.sourcesDisposables.add((signal |> deliverOnMainQueue).start(next: { [weak self] id in
-            if let strongSelf = self {
-                if id != state?.0 {
-                    if let (previousId, previousIndex) = state {
-                        strongSelf.removeHiddenMedia(id: previousId, index: previousIndex)
-                        state = nil
-                    }
-                    if let id = id {
-                        state = (id, strongSelf.addHiddenMedia(id: id))
-                    }
-                }
-            }
-        }))
-        return index*/
     }
     
     func removeSource(_ index: Int) {

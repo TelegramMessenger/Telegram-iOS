@@ -2,6 +2,8 @@ import Foundation
 import Postbox
 import TelegramApi
 import SwiftSignalKit
+import FlatBuffers
+import FlatSerialization
 
 public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
     public struct Value: Equatable, PostboxCoding {
@@ -261,6 +263,16 @@ public enum PeerNameColor: Hashable {
             return value
         }
     }
+    
+    public init(flatBuffersObject: TelegramCore_PeerNameColor) throws {
+        self.init(rawValue: flatBuffersObject.value)
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let start = TelegramCore_PeerNameColor.startPeerNameColor(&builder)
+        TelegramCore_PeerNameColor.add(value: self.rawValue, &builder)
+        return TelegramCore_PeerNameColor.endPeerNameColor(&builder, start: start)
+    }
 }
 
 public struct PeerEmojiStatus: Equatable, Codable {
@@ -320,6 +332,68 @@ public struct PeerEmojiStatus: Equatable, Codable {
                 try container.encode(textColor, forKey: .textColor)
             }
         }
+
+        public init(flatBuffersObject: TelegramCore_PeerEmojiStatusContent) throws {
+            switch flatBuffersObject.valueType {
+            case .peeremojistatuscontentemoji:
+                guard let emoji = flatBuffersObject.value(type: TelegramCore_PeerEmojiStatusContentEmoji.self) else {
+                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                }
+                self = .emoji(fileId: emoji.fileId)
+                
+            case .peeremojistatuscontentstargift:
+                guard let starGift = flatBuffersObject.value(type: TelegramCore_PeerEmojiStatusContentStarGift.self) else {
+                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                }
+                self = .starGift(
+                    id: starGift.id,
+                    fileId: starGift.fileId,
+                    title: starGift.title,
+                    slug: starGift.slug,
+                    patternFileId: starGift.patternFileId,
+                    innerColor: starGift.innerColor,
+                    outerColor: starGift.outerColor,
+                    patternColor: starGift.patternColor,
+                    textColor: starGift.textColor
+                )
+                
+            case .none_:
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+        }
+
+        public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+            let valueType: TelegramCore_PeerEmojiStatusContent_Value
+            let valueOffset: Offset
+            
+            switch self {
+            case let .emoji(fileId):
+                valueType = .peeremojistatuscontentemoji
+                let start = TelegramCore_PeerEmojiStatusContentEmoji.startPeerEmojiStatusContentEmoji(&builder)
+                TelegramCore_PeerEmojiStatusContentEmoji.add(fileId: fileId, &builder)
+                valueOffset = TelegramCore_PeerEmojiStatusContentEmoji.endPeerEmojiStatusContentEmoji(&builder, start: start)
+            case let .starGift(id, fileId, title, slug, patternFileId, innerColor, outerColor, patternColor, textColor):
+                valueType = .peeremojistatuscontentstargift
+                let titleOffset = builder.create(string: title)
+                let slugOffset = builder.create(string: slug)
+                let start = TelegramCore_PeerEmojiStatusContentStarGift.startPeerEmojiStatusContentStarGift(&builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(id: id, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(fileId: fileId, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(title: titleOffset, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(slug: slugOffset, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(patternFileId: patternFileId, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(innerColor: innerColor, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(outerColor: outerColor, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(patternColor: patternColor, &builder)
+                TelegramCore_PeerEmojiStatusContentStarGift.add(textColor: textColor, &builder)
+                valueOffset = TelegramCore_PeerEmojiStatusContentStarGift.endPeerEmojiStatusContentStarGift(&builder, start: start)
+            }
+            
+            let start = TelegramCore_PeerEmojiStatusContent.startPeerEmojiStatusContent(&builder)
+            TelegramCore_PeerEmojiStatusContent.add(valueType: valueType, &builder)
+            TelegramCore_PeerEmojiStatusContent.add(value: valueOffset, &builder)
+            return TelegramCore_PeerEmojiStatusContent.endPeerEmojiStatusContent(&builder, start: start)
+        }
     }
     public var content: Content
     public var expirationDate: Int32?
@@ -347,6 +421,20 @@ public struct PeerEmojiStatus: Equatable, Codable {
         
         try container.encode(self.content, forKey: .content)
         try container.encodeIfPresent(self.expirationDate, forKey: .expirationDate)
+    }
+    
+    public init(flatBuffersObject: TelegramCore_PeerEmojiStatus) throws {
+        self.content = try Content(flatBuffersObject: flatBuffersObject.content)
+        self.expirationDate = flatBuffersObject.expirationDate == Int32.min ? nil : flatBuffersObject.expirationDate
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let contentOffset = self.content.encodeToFlatBuffers(builder: &builder)
+        
+        let start = TelegramCore_PeerEmojiStatus.startPeerEmojiStatus(&builder)
+        TelegramCore_PeerEmojiStatus.add(content: contentOffset, &builder)
+        TelegramCore_PeerEmojiStatus.add(expirationDate: self.expirationDate ?? Int32.min, &builder)
+        return TelegramCore_PeerEmojiStatus.endPeerEmojiStatus(&builder, start: start)
     }
 }
 

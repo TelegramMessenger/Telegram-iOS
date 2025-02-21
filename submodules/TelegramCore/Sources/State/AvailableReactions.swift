@@ -160,7 +160,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let staticIconData = try container.decodeIfPresent(Data.self, forKey: .staticIconData) {
                 var byteBuffer = ByteBuffer(data: staticIconData)
-                self.staticIcon = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, staticIconData)
+                self.staticIcon = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, staticIconData)
             } else {
                 let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
                 self.staticIcon = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data))))
@@ -168,7 +168,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let appearAnimationData = try container.decodeIfPresent(Data.self, forKey: .appearAnimationData) {
                 var byteBuffer = ByteBuffer(data: appearAnimationData)
-                self.appearAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, appearAnimationData)
+                self.appearAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, appearAnimationData)
             } else {
                 let appearAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .appearAnimation)
                 self.appearAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: appearAnimationData.data))))
@@ -176,7 +176,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let selectAnimationData = try container.decodeIfPresent(Data.self, forKey: .selectAnimationData) {
                 var byteBuffer = ByteBuffer(data: selectAnimationData)
-                self.selectAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, selectAnimationData)
+                self.selectAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, selectAnimationData)
             } else {
                 let selectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .selectAnimation)
                 self.selectAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: selectAnimationData.data))))
@@ -184,7 +184,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let activateAnimationData = try container.decodeIfPresent(Data.self, forKey: .activateAnimationData) {
                 var byteBuffer = ByteBuffer(data: activateAnimationData)
-                self.activateAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, activateAnimationData)
+                self.activateAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, activateAnimationData)
             } else {
                 let activateAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .activateAnimation)
                 self.activateAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: activateAnimationData.data))))
@@ -192,7 +192,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let effectAnimationData = try container.decodeIfPresent(Data.self, forKey: .effectAnimationData) {
                 var byteBuffer = ByteBuffer(data: effectAnimationData)
-                self.effectAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, effectAnimationData)
+                self.effectAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, effectAnimationData)
             } else {
                 let effectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation)
                 self.effectAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data))))
@@ -200,7 +200,7 @@ public final class AvailableReactions: Equatable, Codable {
             
             if let aroundAnimationData = try container.decodeIfPresent(Data.self, forKey: .aroundAnimationData) {
                 var byteBuffer = ByteBuffer(data: aroundAnimationData)
-                self.aroundAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, aroundAnimationData)
+                self.aroundAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, aroundAnimationData)
             } else if let aroundAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .aroundAnimation) {
                 self.aroundAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: aroundAnimationData.data))))
             } else {
@@ -209,7 +209,7 @@ public final class AvailableReactions: Equatable, Codable {
                 
             if let centerAnimationData = try container.decodeIfPresent(Data.self, forKey: .centerAnimationData) {
                 var byteBuffer = ByteBuffer(data: centerAnimationData)
-                self.centerAnimation = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, centerAnimationData)
+                self.centerAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, centerAnimationData)
             } else if let centerAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .centerAnimation) {
                 self.centerAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: centerAnimationData.data))))
             } else {

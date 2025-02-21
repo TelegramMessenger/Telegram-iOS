@@ -42,7 +42,7 @@ public final class RecentMediaItem: Codable, Equatable {
         if let serializedFileData = try container.decodeIfPresent(Data.self, forKey: "md") {
             self.serializedFile = serializedFileData
             var byteBuffer = ByteBuffer(data: serializedFileData)
-            self.media = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
+            self.media = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
         } else {
             let mediaData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "m")
             let media = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: mediaData.data)))
@@ -282,7 +282,7 @@ public final class RecentReactionItem: Codable, Equatable {
         
         if let mediaData = try container.decodeIfPresent(Data.self, forKey: "md") {
             var byteBuffer = ByteBuffer(data: mediaData)
-            let file = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, mediaData)
+            let file = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, mediaData)
             self.content = .custom(file)
         } else if let mediaData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: "m") {
             self.content = .custom(TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: mediaData.data)))))
