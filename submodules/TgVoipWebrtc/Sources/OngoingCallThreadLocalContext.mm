@@ -678,8 +678,11 @@ private:
 
 - (void)setTone:(CallAudioTone * _Nullable)tone {
     _audioDeviceModule->perform([tone](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
-        //audioDeviceModule->audioDeviceModule()->setTone([tone asTone]);
-        //TODO:implement
+        #ifdef WEBRTC_IOS
+        WrappedAudioDeviceModuleIOS *deviceModule = (WrappedAudioDeviceModuleIOS *)audioDeviceModule->audioDeviceModule().get();
+        webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS *deviceModule_iOS = (webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS *)deviceModule->WrappedInstance().get();
+        deviceModule_iOS->setTone([tone asTone]);
+        #endif
     });
 }
 
