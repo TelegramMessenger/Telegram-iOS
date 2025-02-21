@@ -15,11 +15,14 @@ internal func _internal_updateIsPremiumRequiredToContact(account: Account, peerI
             if let peer = transaction.getPeer(id), let inputUser = apiInputUser(peer) {
                 if peer.isPremium {
                     if let cachedData = transaction.getPeerCachedData(peerId: id) as? CachedUserData {
-                        if cachedData.flags.contains(.premiumRequired) {
+                        if let _ = cachedData.sendPaidMessageStars {
+                            inputUsers.append(inputUser)
+                            ids.append(id)
+                        } else if cachedData.flags.contains(.premiumRequired) {
                             inputUsers.append(inputUser)
                             ids.append(id)
                         }
-                    } else if let peer = peer as? TelegramUser, peer.flags.contains(.requirePremium), !peer.flags.contains(.mutualContact) {
+                    } else if let peer = peer as? TelegramUser, peer.flags.contains(.requirePremium) || peer.flags.contains(.requireStars), !peer.flags.contains(.mutualContact) {
                         inputUsers.append(inputUser)
                         ids.append(id)
                     }

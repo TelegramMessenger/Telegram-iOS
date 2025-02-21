@@ -258,7 +258,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                             }
                             
                             switch fullUser {
-                            case let .userFull(_, _, _, _, _, _, _, _, userFullNotifySettings, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                            case let .userFull(_, _, _, _, _, _, _, _, userFullNotifySettings, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                                 updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                 transaction.updateCurrentPeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: userFullNotifySettings)])
                             }
@@ -270,7 +270,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     previous = CachedUserData()
                                 }
                                 switch fullUser {
-                                    case let .userFull(userFullFlags, userFullFlags2, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userPremiumGiftOptions, userWallpaper, _, businessWorkHours, businessLocation, greetingMessage, awayMessage, businessIntro, birthday, personalChannelId, personalChannelMessage, starGiftsCount, starRefProgram, verification, sendPaidMessageStars):
+                                    case let .userFull(userFullFlags, userFullFlags2, _, userFullAbout, userFullSettings, personalPhoto, profilePhoto, fallbackPhoto, _, userFullBotInfo, userFullPinnedMsgId, userFullCommonChatsCount, _, userFullTtlPeriod, userFullThemeEmoticon, _, _, _, userWallpaper, _, businessWorkHours, businessLocation, greetingMessage, awayMessage, businessIntro, birthday, personalChannelId, personalChannelMessage, starGiftsCount, starRefProgram, verification, sendPaidMessageStars):
                                         let botInfo = userFullBotInfo.flatMap(BotInfo.init(apiBotInfo:))
                                         let isBlocked = (userFullFlags & (1 << 0)) != 0
                                         let voiceCallsAvailable = (userFullFlags & (1 << 4)) != 0
@@ -328,21 +328,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let personalPhoto = personalPhoto.flatMap { telegramMediaImageFromApiPhoto($0) }
                                         let photo = profilePhoto.flatMap { telegramMediaImageFromApiPhoto($0) }
                                         let fallbackPhoto = fallbackPhoto.flatMap { telegramMediaImageFromApiPhoto($0) }
-                                    
-                                        let premiumGiftOptions: [CachedPremiumGiftOption]
-                                        if let userPremiumGiftOptions = userPremiumGiftOptions {
-                                            premiumGiftOptions = userPremiumGiftOptions.map { apiOption in
-                                                let option: CachedPremiumGiftOption
-                                                switch apiOption {
-                                                    case let .premiumGiftOption(_, months, currency, amount, botUrl, storeProduct):
-                                                        option = CachedPremiumGiftOption(months: months, currency: currency, amount: amount, botUrl: botUrl, storeProductId: storeProduct)
-                                                }
-                                                return option
-                                            }
-                                        } else {
-                                            premiumGiftOptions = []
-                                        }
-                                    
+                                                                        
                                         let wallpaper = userWallpaper.flatMap { TelegramWallpaper(apiWallpaper: $0) }
                                     
                                         var mappedBusinessHours: TelegramBusinessHours?
@@ -421,7 +407,6 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             .withUpdatedPhoto(.known(photo))
                                             .withUpdatedPersonalPhoto(.known(personalPhoto))
                                             .withUpdatedFallbackPhoto(.known(fallbackPhoto))
-                                            .withUpdatedPremiumGiftOptions(premiumGiftOptions)
                                             .withUpdatedVoiceMessagesAvailable(voiceMessagesAvailable)
                                             .withUpdatedWallpaper(wallpaper)
                                             .withUpdatedFlags(flags)
