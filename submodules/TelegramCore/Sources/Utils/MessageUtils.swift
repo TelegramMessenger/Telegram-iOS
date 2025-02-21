@@ -568,6 +568,15 @@ public extension Message {
         }
         return nil
     }
+    
+    var paidStarsAttribute: PaidStarsMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? PaidStarsMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 public extension Message {

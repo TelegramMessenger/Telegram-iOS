@@ -7,6 +7,7 @@ include "TelegramPeerUsername.fbs";
 include "PeerNameColor.fbs";
 include "Optional.fbs";
 include "StarsAmount.fbs";
+
 namespace TelegramCore;
 
 table BotUserInfo {
@@ -34,7 +35,6 @@ table TelegramUser {
     profileBackgroundEmojiId:int64 (id: 16);
     subscriberCount:int32 (id: 17);
     verificationIconFileId:int64 (id: 18);
-    sendPaidMessageStars:StarsAmount (id: 19);
 }
 
 root_type TelegramUser;

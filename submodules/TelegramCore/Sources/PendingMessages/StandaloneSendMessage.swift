@@ -105,6 +105,7 @@ public struct StandaloneSendEnqueueMessage {
     public var forwardOptions: ForwardOptions?
     public var isSilent: Bool = false
     public var groupingKey: Int64? = nil
+    public var sendPaidMessageStars: StarsAmount? = nil
     
     public init(
         content: Content,

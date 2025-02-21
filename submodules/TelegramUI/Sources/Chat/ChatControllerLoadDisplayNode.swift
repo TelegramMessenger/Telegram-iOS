@@ -709,6 +709,14 @@ extension ChatControllerImpl {
                 })
             }
             
+            let premiumGiftOptions: Signal<[CachedPremiumGiftOption], NoError> = .single([])
+            |> then(
+                self.context.engine.payments.premiumGiftCodeOptions(peerId: peerId, onlyCached: true)
+                |> map { options in
+                    return options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                }
+            )
+            
             self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
                 hasPendingMessages,
                 isTopReplyThreadMessageShown,
@@ -716,8 +724,9 @@ extension ChatControllerImpl {
                 customEmojiAvailable,
                 isForum,
                 threadData,
-                forumTopicData
-            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData in
+                forumTopicData,
+                premiumGiftOptions
+            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData, premiumGiftOptions in
                 if let strongSelf = self {
                     let (cachedData, messages) = cachedDataAndMessages
                     
@@ -746,7 +755,6 @@ extension ChatControllerImpl {
                     var slowmodeState: ChatSlowmodeState?
                     var activeGroupCallInfo: ChatActiveGroupCallInfo?
                     var inviteRequestsPending: Int32?
-                    var premiumGiftOptions: [CachedPremiumGiftOption] = []
                     if let cachedData = cachedData as? CachedChannelData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
@@ -768,7 +776,6 @@ extension ChatControllerImpl {
                         callsPrivate = cachedData.callsPrivate
                         pinnedMessageId = cachedData.pinnedMessageId
                         voiceMessagesAvailable = cachedData.voiceMessagesAvailable
-                        premiumGiftOptions = cachedData.premiumGiftOptions
                     } else if let cachedData = cachedData as? CachedGroupData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if let activeCall = cachedData.activeCall {
