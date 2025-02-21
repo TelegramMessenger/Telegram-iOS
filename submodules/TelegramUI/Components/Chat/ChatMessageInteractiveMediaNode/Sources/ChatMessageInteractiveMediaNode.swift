@@ -2048,7 +2048,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 }
                             }
                             
-                            if displayInlineScrubber, let videoTimestamp, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
+                            if displayInlineScrubber, videoTimestamp != nil, let file = media as? TelegramMediaFile, let duration = file.duration, duration > 1.0 {
                                 let timestampContainerView: UIView
                                 if let current = strongSelf.timestampContainerView {
                                     timestampContainerView = current
@@ -2097,12 +2097,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 let videoTimestampBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: imageFrame.height - 3.0), size: CGSize(width: imageFrame.width, height: 3.0))
                                 videoTimestampBackgroundLayer.frame = videoTimestampBackgroundFrame
                                 
-                                var fraction = Double(videoTimestamp) / duration
-                                fraction = max(0.0, min(1.0, fraction))
-                                
-                                let foregroundWidth = round(fraction * videoTimestampBackgroundFrame.width)
-                                let videoTimestampForegroundFrame = CGRect(origin: CGPoint(x: videoTimestampBackgroundFrame.minX, y: videoTimestampBackgroundFrame.minY), size: CGSize(width: foregroundWidth, height: videoTimestampBackgroundFrame.height))
-                                videoTimestampForegroundLayer.frame = videoTimestampForegroundFrame
+                                strongSelf.updatePlaybackPosition()
                             } else {
                                 if let timestampContainerView = strongSelf.timestampContainerView {
                                     strongSelf.timestampContainerView = nil
@@ -2977,6 +2972,52 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                 secretTimer.invalidate()
             }
         }
+        
+        self.updatePlaybackPosition()
+    }
+    
+    private func updatePlaybackPosition() {
+        guard let message = self.message else {
+            return
+        }
+        guard let videoTimestampBackgroundLayer = self.videoTimestampBackgroundLayer, let videoTimestampForegroundLayer = self.videoTimestampForegroundLayer else {
+            return
+        }
+        guard let file = self.media as? TelegramMediaFile, let duration = file.duration else {
+            return
+        }
+        
+        var videoTimestamp: Double?
+        var storedVideoTimestamp: Double?
+        for attribute in message.attributes {
+            if let attribute = attribute as? ForwardVideoTimestampAttribute {
+                videoTimestamp = Double(attribute.timestamp)
+            } else if let attribute = attribute as? DerivedDataMessageAttribute {
+                if let value = attribute.data["mps"]?.get(MediaPlaybackStoredState.self) {
+                    storedVideoTimestamp = value.timestamp
+                }
+            }
+        }
+        if let storedVideoTimestamp {
+            videoTimestamp = storedVideoTimestamp
+        }
+        
+        if let playerStatus = self.playerStatus {
+            videoTimestamp = playerStatus.timestamp
+        }
+        
+        guard let videoTimestamp else {
+            return
+        }
+        
+        let videoTimestampBackgroundFrame = videoTimestampBackgroundLayer.frame
+        
+        var fraction = videoTimestamp / duration
+        fraction = max(0.0, min(1.0, fraction))
+        
+        let foregroundWidth = floorToScreenPixels(fraction * videoTimestampBackgroundFrame.width)
+        let videoTimestampForegroundFrame = CGRect(origin: CGPoint(x: videoTimestampBackgroundFrame.minX, y: videoTimestampBackgroundFrame.minY), size: CGSize(width: foregroundWidth, height: videoTimestampBackgroundFrame.height))
+        videoTimestampForegroundLayer.frame = videoTimestampForegroundFrame
     }
     
     public func reveal() {
@@ -3057,6 +3098,16 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
             } else {
                 self.dateAndStatusNode.isHidden = false
                 self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        }
+        if let timestampContainerView = self.timestampContainerView {
+            if isHidden {
+                timestampContainerView.isHidden = true
+            } else {
+                if timestampContainerView.isHidden {
+                    timestampContainerView.isHidden = false
+                    timestampContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
         }
     }

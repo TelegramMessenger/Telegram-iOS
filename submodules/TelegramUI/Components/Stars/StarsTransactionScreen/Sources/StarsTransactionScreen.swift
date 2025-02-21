@@ -1089,7 +1089,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 if let starrefCommissionPermille = transaction.starrefCommissionPermille, transaction.starrefPeerId != nil {
                     tableItems.append(.init(
                         id: "commission",
-                        title: "Commission",
+                        title: strings.StarsTransaction_Commission,
                         component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(formatPermille(starrefCommissionPermille))%", font: tableFont, textColor: tableTextColor))
                         )),
                         insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)

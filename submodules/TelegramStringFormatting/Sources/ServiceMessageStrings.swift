@@ -1169,7 +1169,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         }
                     }
                 }
-            case let .paidMessage(stars):
+            //TODO:release
+            /*case let .paidMessage(stars):
                 if message.author?.id == accountPeerId {
                     let starsString = strings.Notification_PaidMessage_Stars(Int32(stars))
                     let resultTitleString = strings.Notification_PaidMessageYou(starsString)
@@ -1179,7 +1180,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let starsString = strings.Notification_PaidMessage_Stars(Int32(stars))
                     let resultTitleString = strings.Notification_PaidMessage(peerName, starsString)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes, 1: boldAttributes])
-                }
+                }*/
             case .unknown:
                 attributedString = nil
             }
