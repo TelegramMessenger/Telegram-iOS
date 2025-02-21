@@ -767,7 +767,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-419066241] = { return Api.PostInteractionCounters.parse_postInteractionCountersMessage($0) }
     dict[-1974989273] = { return Api.PostInteractionCounters.parse_postInteractionCountersStory($0) }
     dict[629052971] = { return Api.PremiumGiftCodeOption.parse_premiumGiftCodeOption($0) }
-    dict[2042649079] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
     dict[1596792306] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
     dict[-1303143084] = { return Api.PrepaidGiveaway.parse_prepaidGiveaway($0) }
     dict[-1700956192] = { return Api.PrepaidGiveaway.parse_prepaidStarsGiveaway($0) }
@@ -1143,7 +1142,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
     dict[34280482] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
-    dict[-2057964606] = { return Api.UserFull.parse_userFull($0) }
+    dict[-769438048] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
     dict[1326562017] = { return Api.UserProfilePhoto.parse_userProfilePhotoEmpty($0) }
     dict[164646985] = { return Api.UserStatus.parse_userStatusEmpty($0) }
@@ -2003,8 +2002,6 @@ public extension Api {
             case let _1 as Api.PostInteractionCounters:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumGiftCodeOption:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.PremiumGiftOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumSubscriptionOption:
                 _1.serialize(buffer, boxed)

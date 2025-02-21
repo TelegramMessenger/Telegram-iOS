@@ -928,6 +928,10 @@ public final class PendingMessageManager {
                         flags |= 1 << 17
                     }
                     
+                    if let _ = allowPaidStars {
+                        flags |= 1 << 21
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -935,7 +939,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: nil), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))

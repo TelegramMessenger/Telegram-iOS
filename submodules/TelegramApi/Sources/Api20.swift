@@ -979,62 +979,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PremiumGiftOption: TypeConstructorDescription {
-        case premiumGiftOption(flags: Int32, months: Int32, currency: String, amount: Int64, botUrl: String?, storeProduct: String?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .premiumGiftOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
-                    if boxed {
-                        buffer.appendInt32(2042649079)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(months, buffer: buffer, boxed: false)
-                    serializeString(currency, buffer: buffer, boxed: false)
-                    serializeInt64(amount, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(botUrl!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 0) != 0 {serializeString(storeProduct!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .premiumGiftOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
-                return ("premiumGiftOption", [("flags", flags as Any), ("months", months as Any), ("currency", currency as Any), ("amount", amount as Any), ("botUrl", botUrl as Any), ("storeProduct", storeProduct as Any)])
-    }
-    }
-    
-        public static func parse_premiumGiftOption(_ reader: BufferReader) -> PremiumGiftOption? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = parseString(reader) }
-            var _6: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PremiumGiftOption.premiumGiftOption(flags: _1!, months: _2!, currency: _3!, amount: _4!, botUrl: _5, storeProduct: _6)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum PremiumSubscriptionOption: TypeConstructorDescription {
         case premiumSubscriptionOption(flags: Int32, transaction: String?, months: Int32, currency: String, amount: Int64, botUrl: String, storeProduct: String?)
     
