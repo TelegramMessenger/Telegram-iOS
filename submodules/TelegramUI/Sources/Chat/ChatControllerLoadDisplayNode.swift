@@ -1237,7 +1237,7 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned, postpone in
             guard let strongSelf = self else {
                 return
             }
@@ -1285,7 +1285,7 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime)
+                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime, postpone: postpone)
                 
                 var forwardedMessages: [[EnqueueMessage]] = []
                 var forwardSourcePeerIds = Set<PeerId>()
@@ -2855,8 +2855,8 @@ extension ChatControllerImpl {
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] silentPosting, viewOnce in
-            self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] _ in
-                self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce)
+            self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)
             })
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {

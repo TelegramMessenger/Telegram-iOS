@@ -2132,7 +2132,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 shouldAnimateMessageTransition = true
             }
             
-            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] _ in
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2205,17 +2205,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let messages: [EnqueueMessage]  = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: fileReference.abstract, threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]
                 if silentPosting {
-                    let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                    let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
                     strongSelf.sendMessages(transformedMessages)
                 } else if schedule {
                     strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
                         if let strongSelf = self {
-                            let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                            let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime, postpone: postpone)
                             strongSelf.sendMessages(transformedMessages)
                         }
                     })
                 } else {
-                    let transformedMessages = strongSelf.transformEnqueueMessages(messages)
+                    let transformedMessages = strongSelf.transformEnqueueMessages(messages, postpone: postpone)
                     strongSelf.sendMessages(transformedMessages)
                 }
             })
@@ -9039,9 +9039,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage], postpone: Bool = false) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
-        return transformEnqueueMessages(messages, silentPosting: silentPosting)
+        return transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
     }
     
     @discardableResult func dismissAllUndoControllers() -> UndoOverlayController? {
@@ -9204,7 +9204,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil, postpone: Bool = false) -> [EnqueueMessage] {
         var defaultReplyMessageSubject: EngineMessageReplySubject?
         switch self.chatLocation {
         case .peer:
@@ -9244,7 +9244,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var attributes = attributes
                 
                 if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
-                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: true))
+                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: postpone))
                 }
                 
                 if silentPosting || scheduleTime != nil {
@@ -9281,7 +9281,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return .single(false)
     }
     
-    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
+    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -9320,7 +9320,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages))
+                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -9343,7 +9343,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
                     if let strongSelf = self {
-                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
+                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time, postpone: postpone), commit: true)
                     }
                 })
             }
@@ -9352,15 +9352,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func enqueueMediaMessages(fromGallery: Bool = false, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         if let _ = self.presentationInterfaceState.sendPaidMessageStars {
-            self.presentPaidMessageAlertIfNeeded(count: Int32(signals?.count ?? 1), forceDark: fromGallery, completion: { [weak self] _ in
-                self?.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+            self.presentPaidMessageAlertIfNeeded(count: Int32(signals?.count ?? 1), forceDark: fromGallery, completion: { [weak self] postpone in
+                self?.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
             })
         } else {
             self.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
         }
     }
     
-    private func commitEnqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    private func commitEnqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, postpone: Bool = false, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             guard let strongSelf = self else {
@@ -9493,7 +9493,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                                                     
-                let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
+                let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone)
                 let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {

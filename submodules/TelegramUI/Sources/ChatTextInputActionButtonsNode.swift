@@ -322,7 +322,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         self.backgroundNode.cornerRadius = backgroundSize.height / 2.0
         
-        transition.updateFrame(node: self.backdropNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: size.width + 12.0, height: size.height + 2.0)))
+        transition.updateFrame(node: self.backdropNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: innerSize.width + 12.0, height: size.height + 2.0)))
         if let (rect, containerSize) = self.absoluteRect {
             self.backdropNode.update(rect: rect, within: containerSize)
         }

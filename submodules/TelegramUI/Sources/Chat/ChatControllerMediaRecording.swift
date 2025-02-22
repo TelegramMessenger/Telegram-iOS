@@ -488,7 +488,7 @@ extension ChatControllerImpl {
         self.updateDownButtonVisibility()
     }
     
-    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false, messageEffect: ChatSendMessageEffect? = nil) {
+    func sendMediaRecording(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, viewOnce: Bool = false, messageEffect: ChatSendMessageEffect? = nil, postpone: Bool = false) {
         self.chatDisplayNode.updateRecordedMediaDeleted(false)
         
         guard let recordedMediaPreview = self.presentationInterfaceState.interfaceState.mediaDraftState else {
@@ -537,9 +537,9 @@ extension ChatControllerImpl {
             
             let transformedMessages: [EnqueueMessage]
             if let silentPosting = silentPosting {
-                transformedMessages = self.transformEnqueueMessages(messages, silentPosting: silentPosting)
+                transformedMessages = self.transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
             } else if let scheduleTime = scheduleTime {
-                transformedMessages = self.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                transformedMessages = self.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime, postpone: postpone)
             } else {
                 transformedMessages = self.transformEnqueueMessages(messages)
             }

@@ -273,7 +273,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool) -> Void = { _, _, _, _ in }
+    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool, Bool) -> Void = { _, _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -893,8 +893,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                                 count += 1
                             }
                         }
-                        controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] _ in
-                            self?.sendCurrentMessage()
+                        controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
+                            self?.sendCurrentMessage(postpone: postpone)
                         })
                     } else {
                         self.sendCurrentMessage()
@@ -4070,7 +4070,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             self.historyNode.justSentTextMessage = true
             
@@ -4336,7 +4336,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }, usedCorrelationId)
                     completion()
                     
-                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
+                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1, postpone)
                 }
             }
         }
