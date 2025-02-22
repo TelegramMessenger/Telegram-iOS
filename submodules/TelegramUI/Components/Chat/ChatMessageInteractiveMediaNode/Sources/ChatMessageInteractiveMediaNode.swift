@@ -2137,6 +2137,7 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                         GiftItemComponent(
                                             context: context,
                                             theme: presentationData.theme.theme,
+                                            strings: presentationData.strings,
                                             subject: .uniqueGift(gift: gift),
                                             mode: .preview
                                         )

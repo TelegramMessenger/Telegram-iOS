@@ -3469,6 +3469,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return MiniAppListScreen(context: context, initialData: initialData as! MiniAppListScreen.InitialData)
     }
     
+    public func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController {
+        return incomingMessagePrivacyScreen(context: context, value: value, exceptions: exceptions, update: update)
+    }
+    
     public func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?) {
         openWebAppImpl(context: context, parentController: parentController, updatedPresentationData: updatedPresentationData, botPeer: botPeer, chatPeer: chatPeer, threadId: threadId, buttonText: buttonText, url: url, simple: simple, source: source, skipTermsOfService: skipTermsOfService, payload: payload)
     }

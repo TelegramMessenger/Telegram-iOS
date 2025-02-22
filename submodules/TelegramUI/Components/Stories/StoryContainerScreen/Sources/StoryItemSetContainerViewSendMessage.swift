@@ -1937,7 +1937,7 @@ final class StoryItemSetContainerSendMessage {
             }
             return self.getCaptionPanelView(view: view, peer: peer, mediaPicker: controller)
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
+        controller.legacyCompletion = { _, signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion in
             completion(signals, silently, scheduleTime, messageEffect, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)

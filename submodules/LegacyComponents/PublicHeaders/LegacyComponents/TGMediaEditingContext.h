@@ -47,6 +47,8 @@
 
 @property (nonatomic, readonly) bool inhibitEditing;
 
+@property (nonatomic, assign) int64_t sendPaidMessageStars;
+
 + (instancetype)contextForCaptionsOnly;
 
 - (SSignal *)imageSignalForItem:(NSObject<TGMediaEditableItem> *)item;

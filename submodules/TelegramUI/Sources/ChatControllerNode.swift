@@ -881,11 +881,24 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
-            if let strongSelf = self {
-                if case .scheduledMessages = strongSelf.chatPresentationInterfaceState.subject, strongSelf.chatPresentationInterfaceState.editMessageState == nil {
-                    strongSelf.controllerInteraction.scheduleCurrentMessage(nil)
+            if let self, let controller = self.controller {
+                if case .scheduledMessages = self.chatPresentationInterfaceState.subject, self.chatPresentationInterfaceState.editMessageState == nil {
+                    self.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
-                    strongSelf.sendCurrentMessage()
+                    if let _ = self.chatPresentationInterfaceState.sendPaidMessageStars {
+                        var count: Int32 = 1
+                        if let forwardedCount = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
+                            count = Int32(forwardedCount)
+                            if self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
+                                count += 1
+                            }
+                        }
+                        controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] _ in
+                            self?.sendCurrentMessage()
+                        })
+                    } else {
+                        self.sendCurrentMessage()
+                    }
                 }
             }
         }

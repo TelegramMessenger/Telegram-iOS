@@ -156,7 +156,7 @@ extension ChatControllerImpl {
                 var viewOnceAvailable = false
                 if let peerId = self.chatLocation.peerId {
                     allowLiveUpload = peerId.namespace != Namespaces.Peer.SecretChat
-                    viewOnceAvailable = !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot
+                    viewOnceAvailable = !isScheduledMessages && peerId.namespace == Namespaces.Peer.CloudUser && peerId != self.context.account.peerId && !isBot && self.presentationInterfaceState.sendPaidMessageStars == nil
                 } else if case .customChatContents = self.chatLocation {
                     allowLiveUpload = true
                 }
@@ -249,6 +249,14 @@ extension ChatControllerImpl {
             updatedAction = .preview
         }
         
+        var sendImmediately = false
+        if let _ = self.presentationInterfaceState.sendPaidMessageStars {
+            if case .send = action {
+                updatedAction = .preview
+            }
+            sendImmediately = true
+        }
+        
         if let audioRecorderValue = self.audioRecorderValue {
             switch action {
             case .pause:
@@ -296,6 +304,10 @@ extension ChatControllerImpl {
                             strongSelf.recorderFeedback = nil
                             strongSelf.updateDownButtonVisibility()
                             strongSelf.recorderDataDisposable.set(nil)
+                            
+                            if sendImmediately {
+                                strongSelf.interfaceInteraction?.sendRecordedMedia(false, false)
+                            }
                         }
                     }
                 }))

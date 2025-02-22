@@ -17,6 +17,13 @@
 
 @end
 
+@protocol TGPhotoSendStarsButtonView <NSObject>
+
+- (void)updateFrame:(CGRect)frame;
+- (CGSize)updateCount:(int64_t)count;
+
+@end
+
 
 @protocol TGCaptionPanelView <NSObject>
 
@@ -122,7 +129,7 @@
 
 @property (nonatomic, copy) void (^ _Nullable editCover)(CGSize dimensions, void(^_Nonnull completion)(UIImage * _Nonnull));
 
-
+- (UIView<TGPhotoSendStarsButtonView> *_Nonnull)sendStarsButtonAction:(void(^_Nonnull)(void))action;
 - (UIView<TGPhotoSolidRoundedButtonView> *_Nonnull)solidRoundedButton:(NSString *_Nonnull)title action:(void(^_Nonnull)(void))action;
 - (id<TGPhotoDrawingAdapter> _Nonnull)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isVideo:(bool)isVideo isAvatar:(bool)isAvatar entitiesView:(UIView<TGPhotoDrawingEntitiesView> * _Nullable)entitiesView;
 

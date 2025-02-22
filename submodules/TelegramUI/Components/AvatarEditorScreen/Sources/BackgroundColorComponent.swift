@@ -10,6 +10,7 @@ import AvatarBackground
 
 final class BackgroundColorComponent: Component {
     let theme: PresentationTheme
+    let isPremium: Bool
     let values: [AvatarBackground]
     let selectedValue: AvatarBackground
     let customValue: AvatarBackground?
@@ -18,6 +19,7 @@ final class BackgroundColorComponent: Component {
     
     init(
         theme: PresentationTheme,
+        isPremium: Bool,
         values: [AvatarBackground],
         selectedValue: AvatarBackground,
         customValue: AvatarBackground?,
@@ -25,6 +27,7 @@ final class BackgroundColorComponent: Component {
         openColorPicker: @escaping () -> Void
     ) {
         self.theme = theme
+        self.isPremium = isPremium
         self.values = values
         self.selectedValue = selectedValue
         self.customValue = customValue
@@ -34,6 +37,9 @@ final class BackgroundColorComponent: Component {
     
     static func ==(lhs: BackgroundColorComponent, rhs: BackgroundColorComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.isPremium != rhs.isPremium {
             return false
         }
         if lhs.values != rhs.values {
@@ -48,25 +54,45 @@ final class BackgroundColorComponent: Component {
         return true
     }
     
-    class View: UIView {
-        private var views: [Int: ComponentView<Empty>] = [:]
+    class View: UIView, UIScrollViewDelegate {
+        private var views: [AnyHashable: ComponentView<Empty>] = [:]
+        private var scrollView: UIScrollView
         
         private var component: BackgroundColorComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
-            super.init(frame: frame)
+            self.scrollView = UIScrollView()
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+            self.scrollView.showsHorizontalScrollIndicator = false
+            self.scrollView.showsVerticalScrollIndicator = false
             
+            super.init(frame: frame)
+                        
             self.clipsToBounds = true
+            
+            self.scrollView.delegate = self
+            self.addSubview(self.scrollView)
+            
+            self.scrollView.disablesInteractiveTransitionGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(component: BackgroundColorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
-            self.component = component
-            self.state = state
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            self.updateScrolling(transition: .immediate)
+        }
+        
+        func updateScrolling(transition: ComponentTransition) {
+            guard let component = self.component else {
+                return
+            }
+            
+            let itemSize = CGSize(width: 30.0, height: 30.0)
+            let sideInset: CGFloat = 12.0
+            let spacing: CGFloat = 13.0
             
             var values: [(AvatarBackground?, Bool)] = component.values.map { ($0, false) }
             if let customValue = component.customValue {
@@ -75,50 +101,97 @@ final class BackgroundColorComponent: Component {
                 values.append((nil, true))
             }
             
-            let itemSize = CGSize(width: 30.0, height: 30.0)
-            let sideInset: CGFloat = 12.0
-            let height: CGFloat = 50.0
-            let delta = floorToScreenPixels((availableSize.width - sideInset * 2.0 - CGFloat(values.count) * itemSize.width) / CGFloat(values.count - 1))
+            let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -10.0)
             
+            var validIds: [AnyHashable] = []
             for i in 0 ..< values.count {
-                let view: ComponentView<Empty>
-                if let current = self.views[i] {
-                    view = current
-                } else {
-                    view = ComponentView<Empty>()
-                    self.views[i] = view
+                let position: CGFloat = sideInset + (spacing + itemSize.width) * CGFloat(i)
+                let itemFrame = CGRect(origin: CGPoint(x: position, y: 10.0), size: itemSize)
+                var isVisible = false
+                if visibleBounds.intersects(itemFrame) {
+                    isVisible = true
                 }
-                
-                let itemSize = view.update(
-                    transition: transition,
-                    component: AnyComponent(
-                        BackgroundSwatchComponent(
-                            theme: component.theme,
-                            background: values[i].0,
-                            isCustom: values[i].1,
-                            isSelected: component.selectedValue == values[i].0,
-                            action: {
-                                if let value = values[i].0, component.selectedValue != value {
-                                    component.updateValue(value)
-                                } else if values[i].1 {
-                                    component.openColorPicker()
-                                }
-                            }
-                        )
-                    ),
-                    environment: {},
-                    containerSize: itemSize
-                )
-                if let itemView = view.view {
-                    if itemView.superview == nil {
-                        self.addSubview(itemView)
+                if isVisible {
+                    let itemId = AnyHashable(i)
+                    validIds.append(itemId)
+                    
+                    let view: ComponentView<Empty>
+                    if let current = self.views[itemId] {
+                        view = current
+                    } else {
+                        view = ComponentView<Empty>()
+                        self.views[itemId] = view
                     }
                     
-                    let position: CGFloat = sideInset + (delta + itemSize.width) * CGFloat(i)
-                    transition.setFrame(view: itemView, frame: CGRect(origin: CGPoint(x: position, y: 10.0), size: itemSize))
+                    let _ = view.update(
+                        transition: transition,
+                        component: AnyComponent(
+                            BackgroundSwatchComponent(
+                                theme: component.theme,
+                                background: values[i].0,
+                                isCustom: values[i].1,
+                                isSelected: component.selectedValue == values[i].0,
+                                isLocked: i >= 7 && !values[i].1,
+                                action: {
+                                    if let value = values[i].0, component.selectedValue != value {
+                                        component.updateValue(value)
+                                    } else if values[i].1 {
+                                        component.openColorPicker()
+                                    }
+                                }
+                            )
+                        ),
+                        environment: {},
+                        containerSize: itemSize
+                    )
+                    if let itemView = view.view {
+                        if itemView.superview == nil {
+                            self.scrollView.addSubview(itemView)
+                        }
+                        transition.setFrame(view: itemView, frame: itemFrame)
+                    }
                 }
             }
-            return CGSize(width: availableSize.width, height: height)
+        
+            var removeIds: [AnyHashable] = []
+            for (id, item) in self.views {
+                if !validIds.contains(id) {
+                    removeIds.append(id)
+                    if let itemView = item.view {
+                        itemView.removeFromSuperview()
+                    }
+                }
+            }
+            for id in removeIds {
+                self.views.removeValue(forKey: id)
+            }
+        }
+        
+        func update(component: BackgroundColorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            let height: CGFloat = 50.0
+            let size = CGSize(width: availableSize.width, height: height)
+            let scrollFrame = CGRect(origin: .zero, size: size)
+            
+            let itemSize = CGSize(width: 30.0, height: 30.0)
+            let sideInset: CGFloat = 12.0
+            let spacing: CGFloat = 13.0
+            
+            let count = component.values.count + 1
+            let contentSize = CGSize(width: sideInset * 2.0 + CGFloat(count) * itemSize.width + CGFloat(count - 1) * spacing, height: height)
+            
+            if self.scrollView.frame != scrollFrame {
+                self.scrollView.frame = scrollFrame
+            }
+            if self.scrollView.contentSize != contentSize {
+                self.scrollView.contentSize = contentSize
+            }
+
+            self.updateScrolling(transition: .immediate)
+                        
+            return size
         }
     }
     
@@ -164,11 +237,22 @@ private func generateMoreIcon() -> UIImage? {
     })
 }
 
+private var lockIcon: UIImage? = {
+    let icon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: .white)
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        if let icon, let cgImage = icon.cgImage {
+            context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - icon.size.width) / 2.0), y: floorToScreenPixels((size.height - icon.size.height) / 2.0)), size: icon.size), byTiling: false)
+        }
+    })
+}()
+
 final class BackgroundSwatchComponent: Component {
     let theme: PresentationTheme
     let background: AvatarBackground?
     let isCustom: Bool
     let isSelected: Bool
+    let isLocked: Bool
     let action: () -> Void
     
     init(
@@ -176,17 +260,19 @@ final class BackgroundSwatchComponent: Component {
         background: AvatarBackground?,
         isCustom: Bool,
         isSelected: Bool,
+        isLocked: Bool,
         action: @escaping () -> Void
     ) {
         self.theme = theme
         self.background = background
         self.isCustom = isCustom
         self.isSelected = isSelected
+        self.isLocked = isLocked
         self.action = action
     }
     
     static func == (lhs: BackgroundSwatchComponent, rhs: BackgroundSwatchComponent) -> Bool {
-        return lhs.theme === rhs.theme && lhs.background == rhs.background && lhs.isCustom == rhs.isCustom && lhs.isSelected == rhs.isSelected
+        return lhs.theme === rhs.theme && lhs.background == rhs.background && lhs.isCustom == rhs.isCustom && lhs.isSelected == rhs.isSelected && lhs.isLocked == rhs.isLocked
     }
     
     final class View: UIButton {
@@ -283,6 +369,8 @@ final class BackgroundSwatchComponent: Component {
                         self.iconLayer.contents = generateAddIcon(color: component.theme.list.itemAccentColor)?.cgImage
                     }
                 }
+            } else if component.isLocked {
+                self.iconLayer.contents = lockIcon?.cgImage
             } else {
                 self.iconLayer.contents = nil
             }

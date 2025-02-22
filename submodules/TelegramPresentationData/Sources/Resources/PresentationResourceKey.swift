@@ -313,11 +313,15 @@ public enum PresentationResourceKey: Int32 {
     case chatBubbleCloseIcon
     
     case chatEmptyStateStarIcon
+    case chatPlaceholderStarIcon
     
     case avatarPremiumLockBadgeBackground
     case avatarPremiumLockBadge
     case shareAvatarPremiumLockBadgeBackground
     case shareAvatarPremiumLockBadge
+    
+    case shareAvatarStarsLockBadgeBackground
+    case shareAvatarStarsLockBadgeInnerBackground
     
     case sharedLinkIcon
     

@@ -13839,8 +13839,14 @@ Sorry for the inconvenience.";
 "Notification.PaidMessage.Stars_1" = "%@ Star";
 "Notification.PaidMessage.Stars_any" = "%@ Stars";
 
+"Notification.PaidMessage.Messages_1" = "%@ message";
+"Notification.PaidMessage.Messages_any" = "%@ messages";
+
 "Notification.PaidMessage" = "%1$@ paid %2$@ to send a message";
 "Notification.PaidMessageYou" = "You paid %1$@ to send a message";
+
+"Notification.PaidMessageMany" = "%1$@ paid %2$@ to send %3$@";
+"Notification.PaidMessageYouMany" = "You paid %1$@ to send %2$@";
 
 "Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
 "Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
@@ -13850,10 +13856,21 @@ Sorry for the inconvenience.";
 "Settings.Privacy.Messages.ValuePaid" = "Paid";
 
 "Stars.Transaction.PaidMessage_1" = "Fee for %@ Message";
-"Stars.Transaction.PaidMessage_anu" = "Fee for %@ Messages";
+"Stars.Transaction.PaidMessage_any" = "Fee for %@ Messages";
 "Stars.Transaction.PaidMessage.Text" = "You receive **%@%** of the price that you charge for each incoming message. [Change Fee >]()";
+"Stars.Transaction.Paid" = "Paid";
+
 "Stars.Intro.Transaction.PaidMessage_1" = "Fee for %@ Message";
 "Stars.Intro.Transaction.PaidMessage_any" = "Fee for %@ Messages";
 
 "Stars.Purchase.SendMessageInfo" = "Buy Stars to send a message to **%@**.";
 "Stars.Purchase.SendGroupMessageInfo" = "Buy Stars to send a message in **%@**.";
+
+"Gift.Options.Gift.Transfer" = "Transfer";
+"Gift.Options.Gift.Filter.MyGifts" = "My Gifts";
+"Gift.Options.Premium.OrStars" = "or %@";
+
+"Gift.Send.PayWithStars" = "Pay with %@";
+"Gift.Send.PayWithStars.Info" = "Your balance is **%@**. [Get More Stars >]()";
+
+"Chat.PanelCustomStatusShortInfo" = "%@ is a mark for [Premium subscribers >]()";

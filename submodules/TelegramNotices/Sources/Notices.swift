@@ -238,6 +238,7 @@ private struct ApplicationSpecificNoticeKeys {
     private static let groupEmojiPackNamespace: Int32 = 9
     private static let dismissedBirthdayPremiumGiftTipNamespace: Int32 = 10
     private static let displayedPeerVerificationNamespace: Int32 = 11
+    private static let dismissedPaidMessageWarningNamespace: Int32 = 11
     
     static func inlineBotLocationRequestNotice(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: inlineBotLocationRequestNamespace), key: noticeKey(peerId: peerId, key: 0))
@@ -521,6 +522,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func displayedPeerVerification(peerId: PeerId) -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: displayedPeerVerificationNamespace), key: noticeKey(peerId: peerId, key: 0))
+    }
+    
+    static func dismissedPaidMessageWarning(peerId: PeerId) -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: dismissedPaidMessageWarningNamespace), key: noticeKey(peerId: peerId, key: 0))
     }
     
     static func monetizationIntroDismissed() -> NoticeEntryKey {
@@ -2171,6 +2176,28 @@ public struct ApplicationSpecificNotice {
         return accountManager.transaction { transaction -> Void in
             if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.displayedPeerVerification(peerId: peerId), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedPaidMessageWarningNamespace(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId) -> Signal<Int64?, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedPaidMessageWarning(peerId: peerId))
+        |> map { view -> Int64? in
+            if let counter = view.value?.get(ApplicationSpecificCounterNotice.self) {
+                return Int64(counter.value)
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    public static func setDismissedPaidMessageWarningNamespace(accountManager: AccountManager<TelegramAccountManagerTypes>, peerId: PeerId, amount: Int64?) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let amount, let entry = CodableEntry(ApplicationSpecificCounterNotice(value: Int32(amount))) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPaidMessageWarning(peerId: peerId), entry)
+            } else {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPaidMessageWarning(peerId: peerId), nil)
             }
         }
         |> ignoreValues

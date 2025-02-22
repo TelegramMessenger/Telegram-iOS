@@ -185,7 +185,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                             showPremiumGift = true
                         }
                     }
-                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && !peer.isPremium && !chatPresentationInterfaceState.premiumGiftOptions.isEmpty && chatPresentationInterfaceState.suggestPremiumGift {
+                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && chatPresentationInterfaceState.suggestPremiumGift {
                         accessoryItems.append(.gift)
                     }
                 }

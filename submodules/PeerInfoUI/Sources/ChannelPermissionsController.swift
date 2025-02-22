@@ -93,7 +93,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case chargeForMessagesInfo(PresentationTheme, String)
     
     case messagePriceHeader(PresentationTheme, String)
-    case messagePrice(PresentationTheme, StarsAmount, String)
+    case messagePrice(PresentationTheme, Int64, String)
     case messagePriceInfo(PresentationTheme, String)
     
     case unrestrictBoostersSwitch(PresentationTheme, String, Bool)
@@ -425,7 +425,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
             case let .messagePriceHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .messagePrice(_, value, price):
-                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 10, maxValue: 9000, value: value.value, price: price, sectionId: self.section, updated: { value in
+                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 1, maxValue: 10000, value: value, price: price, sectionId: self.section, updated: { value in
                     arguments.updateStarsAmount(StarsAmount(value: value, nanos: 0))
                 })
             case let .messagePriceInfo(_, value):
@@ -720,23 +720,24 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
-        let chargeEnabled = state.modifiedStarsAmount != nil
-        
-        entries.append(.chargeForMessages(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessages, chargeEnabled))
-        entries.append(.chargeForMessagesInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessagesInfo))
-        
-        if chargeEnabled {
-            var price: String = ""
-            if let amount = state.modifiedStarsAmount {
+        if channel.hasPermission(.banMembers) {
+            let sendPaidMessageStars = state.modifiedStarsAmount?.value ?? (cachedData.sendPaidMessageStars?.value ?? 0)
+            let chargeEnabled = sendPaidMessageStars > 0
+            entries.append(.chargeForMessages(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessages, chargeEnabled))
+            entries.append(.chargeForMessagesInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessagesInfo))
+            
+            if chargeEnabled {
+                var price: String = ""
                 var usdRate = 0.012
                 if let usdWithdrawRate = configuration.usdWithdrawRate {
                     usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                 }
-                price = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
+                price = "≈\(formatTonUsdValue(sendPaidMessageStars, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
+                
+                entries.append(.messagePriceHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePrice))
+                entries.append(.messagePrice(presentationData.theme, sendPaidMessageStars, price))
+                entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo(price).string))
             }
-            entries.append(.messagePriceHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePrice))
-            entries.append(.messagePrice(presentationData.theme, state.modifiedStarsAmount ?? StarsAmount(value: 4000, nanos: 0), price))
-            entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo(price).string))
         }
         
         let canSendText = !effectiveRightsFlags.contains(.banSendText)
@@ -875,6 +876,9 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
     
     let updateUnrestrictBoostersDisposable = MetaDisposable()
     actionsDisposable.add(updateUnrestrictBoostersDisposable)
+    
+    let updateSendPaidMessageStarsDisposable = MetaDisposable()
+    actionsDisposable.add(updateSendPaidMessageStarsDisposable)
     
     let peerView = Promise<PeerView>()
     peerView.set(sourcePeerId.get()
@@ -1252,6 +1256,17 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             state.modifiedStarsAmount = value
             return state
         }
+        
+        let _ = (peerView.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { view in
+            var effectiveValue = value
+            if value?.value == 0 {
+                effectiveValue = nil
+            }
+            updateSendPaidMessageStarsDisposable.set((context.engine.peers.updateChannelPaidMessagesStars(peerId: view.peerId, stars: effectiveValue)
+            |> deliverOnMainQueue).start())
+        })
     }, toggleIsOptionExpanded: { flags in
         updateState { state in
             var state = state

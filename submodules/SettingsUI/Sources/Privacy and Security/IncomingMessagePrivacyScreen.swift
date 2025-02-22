@@ -129,7 +129,11 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
                 isChecked = true
             }
             return ItemListCheckboxItem(presentationData: presentationData, icon: isEnabled ? nil : generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: presentationData.theme.list.itemSecondaryTextColor), iconPlacement: .check, title: presentationData.strings.Privacy_Messages_ChargeForMessages, style: .left, checked: isChecked, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                arguments.updateValue(.paidMessages(StarsAmount(value: 400, nanos: 0)))
+                if isEnabled {
+                    arguments.updateValue(.paidMessages(StarsAmount(value: 400, nanos: 0)))
+                } else {
+                    arguments.disabledValuePressed()
+                }
             })
         case let .footer(value):
             let text: String
@@ -146,7 +150,7 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
         case .priceHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.Privacy_Messages_MessagePrice, sectionId: self.section)
         case let .price(value, price):
-            return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 10, maxValue: 9000, value: value, price: price, sectionId: self.section, updated: { value in
+            return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 1, maxValue: 10000, value: value, price: price, sectionId: self.section, updated: { value in
                 arguments.updateValue(.paidMessages(StarsAmount(value: value, nanos: 0)))
             })
         case let .priceInfo(value):
@@ -168,12 +172,12 @@ private struct IncomingMessagePrivacyScreenState: Equatable {
     var disableFor: [EnginePeer.Id: SelectivePrivacyPeer]
 }
 
-private func incomingMessagePrivacyScreenEntries(presentationData: PresentationData, state: IncomingMessagePrivacyScreenState, isPremium: Bool, configuration: StarsSubscriptionConfiguration) -> [GlobalAutoremoveEntry] {
+private func incomingMessagePrivacyScreenEntries(presentationData: PresentationData, state: IncomingMessagePrivacyScreenState, enableSetting: Bool, isPremium: Bool, configuration: StarsSubscriptionConfiguration) -> [GlobalAutoremoveEntry] {
     var entries: [GlobalAutoremoveEntry] = []
     
     entries.append(.header)
     entries.append(.optionEverybody(value: state.updatedValue))
-    entries.append(.optionPremium(value: state.updatedValue, isEnabled: isPremium))
+    entries.append(.optionPremium(value: state.updatedValue, isEnabled: enableSetting))
     entries.append(.optionChargeForMessages(value: state.updatedValue, isEnabled: isPremium))
     
     if case let .paidMessages(amount) = state.updatedValue {
@@ -375,7 +379,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
         
         let title: ItemListControllerTitle = .text(presentationData.strings.Privacy_Messages_Title)
         
-        let entries: [GlobalAutoremoveEntry] = incomingMessagePrivacyScreenEntries(presentationData: presentationData, state: state, isPremium: enableSetting, configuration: configuration)
+        let entries: [GlobalAutoremoveEntry] = incomingMessagePrivacyScreenEntries(presentationData: presentationData, state: state, enableSetting: enableSetting, isPremium: context.isPremium, configuration: configuration)
         
         let animateChanges = false
         

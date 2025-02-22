@@ -349,6 +349,10 @@ public extension TelegramEngine {
             let _ = _internal_forceSendPendingSendStarsReaction(account: self.account, messageId: id).startStandalone()
         }
         
+        public func forceSendPostponedPaidMessage(peerId: EnginePeer.Id) {
+            let _ = _internal_forceSendPostponedPaidMessage(account: self.account, peerId: peerId).startStandalone()
+        }
+        
         public func updateStarsReactionPrivacy(id: EngineMessage.Id, privacy: TelegramPaidReactionPrivacy) -> Signal<Never, NoError> {
             return _internal_updateStarsReactionPrivacy(account: self.account, messageId: id, privacy: privacy)
         }

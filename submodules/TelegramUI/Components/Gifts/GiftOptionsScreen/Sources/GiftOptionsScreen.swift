@@ -402,6 +402,7 @@ final class GiftOptionsScreenComponent: Component {
                                         GiftItemComponent(
                                             context: component.context,
                                             theme: environment.theme,
+                                            strings: environment.strings,
                                             peer: nil,
                                             subject: subject,
                                             ribbon: ribbon,
@@ -713,14 +714,16 @@ final class GiftOptionsScreenComponent: Component {
                 environment: {},
                 containerSize: availableSize
             )
+            
+            let formattedBalance = formatStarsAmountText(self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
+            let smallLabelFont = Font.regular(11.0)
+            let labelFont = Font.semibold(14.0)
+            let balanceText = tonAmountAttributedString(formattedBalance, integralFont: labelFont, fractionalFont: smallLabelFont, color: environment.theme.actionSheet.primaryTextColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
+            
             let balanceValueSize = self.balanceValue.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(self.starsState?.balance ?? StarsAmount.zero, environment.dateTimeFormat.groupingSeparator),
-                        font: Font.semibold(14.0),
-                        textColor: environment.theme.actionSheet.primaryTextColor
-                    )),
+                    text: .plain(balanceText),
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
@@ -855,12 +858,15 @@ final class GiftOptionsScreenComponent: Component {
                 contentHeight += 6.0
             } else {
                 if let premiumProducts = state.premiumProducts {
-                    //TODO:unmock
-                    let premiumOptionSize = CGSize(width: optionWidth, height: 178.0 + 23.0)
+                    var premiumOptionSize = CGSize(width: optionWidth, height: 178.0)
                     
                     var validIds: [AnyHashable] = []
                     var itemFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: premiumOptionSize)
                     for product in premiumProducts {
+                        if let _ = product.starsPrice {
+                            premiumOptionSize.height = 178.0 + 23.0
+                        }
+                        
                         let itemId = AnyHashable(product.id)
                         validIds.append(itemId)
                         
@@ -885,8 +891,7 @@ final class GiftOptionsScreenComponent: Component {
                         default:
                             title = strings.Gift_Options_Premium_Months(3)
                         }
-                        
-                        //TODO:unmock
+                                                                      
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -895,11 +900,12 @@ final class GiftOptionsScreenComponent: Component {
                                         GiftItemComponent(
                                             context: component.context,
                                             theme: theme,
+                                            strings: environment.strings,
                                             peer: nil,
                                             subject: .premium(months: product.months, price: product.price),
                                             title: title,
                                             subtitle: strings.Gift_Options_Premium_Premium,
-                                            label: "or **#1500**",
+                                            label: product.starsPrice.flatMap { strings.Gift_Options_Premium_OrStars("**#\(presentationStringsFormattedNumber(Int32($0), environment.dateTimeFormat.groupingSeparator))**").string },
                                             ribbon: product.discount.flatMap {
                                                 GiftItemComponent.Ribbon(
                                                     text:  "-\($0)%",
@@ -1047,10 +1053,9 @@ final class GiftOptionsScreenComponent: Component {
             ))
             
             if let transferStarGifts = self.state?.transferStarGifts, !transferStarGifts.isEmpty {
-                //TODO:localize
                 tabSelectorItems.append(TabSelectorComponent.Item(
                     id: AnyHashable(StarsFilter.transfer.rawValue),
-                    title: "My Gifts"
+                    title: strings.Gift_Options_Gift_Filter_MyGifts
                 ))
             }
             
@@ -1224,6 +1229,7 @@ final class GiftOptionsScreenComponent: Component {
                                         botUrl: "",
                                         storeProductId: option.storeProductId
                                     ),
+                                    starsGiftOption: nil,
                                     storeProduct: nil,
                                     discount: nil
                                 )
@@ -1243,7 +1249,14 @@ final class GiftOptionsScreenComponent: Component {
                             if let product = availableProducts.first(where: { $0.id == option.storeProductId }), !product.isSubscription {
                                 let fraction = Float(product.priceCurrencyAndAmount.amount) / Float(option.months) / Float(shortestOptionPrice.0)
                                 let discountValue = Int(round((1.0 - fraction) * 20.0) * 5.0)
-                                premiumProducts.append(PremiumGiftProduct(giftOption: option, storeProduct: product, discount: discountValue > 0 ? discountValue : nil))
+                                let starsGiftOption = premiumOptions.first(where: { $0.currency == "XTR" && $0.months == option.months })
+                                
+                                premiumProducts.append(PremiumGiftProduct(
+                                    giftOption: option,
+                                    starsGiftOption: starsGiftOption,
+                                    storeProduct: product,
+                                    discount: discountValue > 0 ? discountValue : nil
+                                ))
                             }
                         }
                         self.premiumProducts = premiumProducts.sorted(by: { $0.months < $1.months })

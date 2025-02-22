@@ -331,6 +331,16 @@ public final class AccountStateManager {
             return self.forceSendPendingStarsReactionPipe.signal()
         }
         
+        fileprivate let forceSendPendingPaidMessagePipe = ValuePipe<PeerId>()
+        public var forceSendPendingPaidMessage: Signal<PeerId, NoError> {
+            return self.forceSendPendingPaidMessagePipe.signal()
+        }
+        
+        fileprivate let commitSendPendingPaidMessagePipe = ValuePipe<MessageId>()
+        public var commitSendPendingPaidMessage: Signal<MessageId, NoError> {
+            return self.commitSendPendingPaidMessagePipe.signal()
+        }
+        
         fileprivate let sentScheduledMessageIdsPipe = ValuePipe<Set<MessageId>>()
         public var sentScheduledMessageIds: Signal<Set<MessageId>, NoError> {
             return self.sentScheduledMessageIdsPipe.signal()
@@ -1951,6 +1961,18 @@ public final class AccountStateManager {
         }
     }
     
+    var forceSendPendingPaidMessage: Signal<PeerId, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.forceSendPendingPaidMessage.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
+    var commitSendPendingPaidMessage: Signal<MessageId, NoError> {
+        return self.impl.signalWith { impl, subscriber in
+            return impl.commitSendPendingPaidMessage.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
+        }
+    }
+    
     public var sentScheduledMessageIds: Signal<Set<MessageId>, NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.sentScheduledMessageIds.start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion)
@@ -1960,6 +1982,19 @@ public final class AccountStateManager {
     func forceSendPendingStarsReaction(messageId: MessageId) {
         self.impl.with { impl in
             impl.forceSendPendingStarsReactionPipe.putNext(messageId)
+        }
+    }
+    
+    
+    func forceSendPendingPaidMessage(peerId: PeerId) {
+        self.impl.with { impl in
+            impl.forceSendPendingPaidMessagePipe.putNext(peerId)
+        }
+    }
+    
+    func commitSendPendingPaidMessage(messageId: MessageId) {
+        self.impl.with { impl in
+            impl.commitSendPendingPaidMessagePipe.putNext(messageId)
         }
     }
     

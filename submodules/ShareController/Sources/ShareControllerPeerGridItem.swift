@@ -96,11 +96,11 @@ final class ShareControllerGridSectionNode: ASDisplayNode {
 
 final class ShareControllerPeerGridItem: GridItem {
     enum ShareItem: Equatable {
-        case peer(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, topicId: Int64?, threadData: MessageHistoryThreadData?, requiresPremiumForMessaging: Bool)
+        case peer(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, topicId: Int64?, threadData: MessageHistoryThreadData?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)
         case story(isMessage: Bool)
         
         var peerId: EnginePeer.Id? {
-            if case let .peer(peer, _, _, _, _) = self {
+            if case let .peer(peer, _, _, _, _, _) = self {
                 return peer.peerId
             } else {
                 return nil
@@ -162,7 +162,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     private var absoluteLocation: (CGRect, CGSize)?
     
     var peerId: EnginePeer.Id? {
-        if let item = self.currentState?.item, case let .peer(peer, _, _, _, _) = item {
+        if let item = self.currentState?.item, case let .peer(peer, _, _, _, _, _) = item {
             return peer.peerId
         } else {
             return nil
@@ -177,7 +177,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
         self.peerNode.toggleSelection = { [weak self] isDisabled in
             if let strongSelf = self {
                 if let (_, _, _, _, maybeItem, search) = strongSelf.currentState, let item = maybeItem {
-                    if case let .peer(peer, _, _, _, _) = item, let _ = peer.peers[peer.peerId] {
+                    if case let .peer(peer, _, _, _, _, _) = item, let _ = peer.peers[peer.peerId] {
                         if isDisabled {
                             strongSelf.controllerInteraction?.disabledPeerSelected(peer)
                         } else {
@@ -213,7 +213,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
             var effectivePresence: EnginePeer.Presence?
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
             self.peerNode.theme = itemTheme
-            if let item, case let .peer(renderedPeer, presence, _, threadData, requiresPremiumForMessaging) = item, let peer = renderedPeer.peer {
+            if let item, case let .peer(renderedPeer, presence, _, threadData, requiresPremiumForMessaging, requiresStars) = item, let peer = renderedPeer.peer {
                 effectivePresence = presence
                 var isOnline = false
                 var isSupport = false
@@ -243,6 +243,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
                     strings: strings,
                     peer: renderedPeer,
                     requiresPremiumForMessaging: requiresPremiumForMessaging,
+                    requiresStars: requiresStars,
                     customTitle: threadData?.info.title,
                     iconId: threadData?.info.icon,
                     iconColor: threadData?.info.iconColor ?? 0,
@@ -302,7 +303,7 @@ final class ShareControllerPeerGridItemNode: GridItemNode {
     func updateSelection(animated: Bool) {
         var selected = false
         if let controllerInteraction = self.controllerInteraction, let (_, _, _, _, maybeItem, _) = self.currentState, let item = maybeItem {
-            if case let .peer(peer, _, _, _, _) = item {
+            if case let .peer(peer, _, _, _, _, _) = item {
                 selected = controllerInteraction.selectedPeerIds.contains(peer.peerId)
             }
         }

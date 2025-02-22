@@ -526,14 +526,15 @@ final class StarsTransactionsScreenComponent: Component {
                 containerSize: CGSize(width: 120.0, height: 100.0)
             )
             
+            let formattedBalance = formatStarsAmountText(self.starsState?.balance ?? StarsAmount.zero, dateTimeFormat: environment.dateTimeFormat)
+            let smallLabelFont = Font.regular(11.0)
+            let labelFont = Font.semibold(14.0)
+            let balanceText = tonAmountAttributedString(formattedBalance, integralFont: labelFont, fractionalFont: smallLabelFont, color: environment.theme.actionSheet.primaryTextColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
+            
             let topBalanceValueSize = self.topBalanceValueView.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: presentationStringsFormattedNumber(self.starsState?.balance ?? StarsAmount.zero, environment.dateTimeFormat.groupingSeparator),
-                        font: Font.semibold(14.0),
-                        textColor: environment.theme.actionSheet.primaryTextColor
-                    )),
+                    text: .plain(balanceText),
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
