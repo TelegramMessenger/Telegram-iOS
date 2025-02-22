@@ -17,6 +17,7 @@ import TelegramNotices
 extension ChatControllerImpl {
     func presentPaidMessageAlertIfNeeded(count: Int32 = 1, forceDark: Bool = false, completion: @escaping (Bool) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
+            completion(false)
             return
         }
         if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
@@ -71,6 +72,8 @@ extension ChatControllerImpl {
                     self.present(controller, in: .window(.root))
                 }
             })
+        } else {
+            completion(false)
         }
     }
     
