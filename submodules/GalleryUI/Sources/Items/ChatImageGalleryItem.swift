@@ -690,7 +690,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let message = self.message {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
                     if let self, let peer, let navigationController = self.baseNavigationController() {
-                        self.beginCustomDismiss(true)
+                        self.beginCustomDismiss(.simpleAnimation)
                         
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: false)))
                         
@@ -722,7 +722,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             if let peer, let message = self.message, canSendMessagesToPeer(peer._asPeer()) {
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuReply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
                     if let self, let navigationController = self.baseNavigationController() {
-                        self.beginCustomDismiss(true)
+                        self.beginCustomDismiss(.simpleAnimation)
                         
                         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil, setupReply: true)))
                         

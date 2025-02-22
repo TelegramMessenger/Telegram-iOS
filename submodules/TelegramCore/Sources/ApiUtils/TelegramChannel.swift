@@ -1,7 +1,6 @@
 import Foundation
 import Postbox
 
-
 public enum TelegramChannelPermission {
     case sendText
     case sendPhoto

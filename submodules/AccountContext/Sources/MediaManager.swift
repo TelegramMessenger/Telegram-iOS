@@ -142,6 +142,8 @@ public protocol MediaManager: AnyObject {
     var universalVideoManager: UniversalVideoManager { get }
     var overlayMediaManager: OverlayMediaManager { get }
     
+    var currentPictureInPictureNode: AnyObject? { get set }
+    
     var globalMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> { get }
     var musicMediaPlayerState: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError> { get }
     var activeGlobalMediaPlayerAccountId: Signal<(AccountRecordId, Bool)?, NoError> { get }

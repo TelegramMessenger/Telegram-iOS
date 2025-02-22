@@ -18,7 +18,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
         self.index = index
         
         var byteBuffer = ByteBuffer(data: serializedFile)
-        let accessor = getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile
+        let accessor = FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile
         self.file = TelegramMediaFile.Accessor(accessor, serializedFile)
         
         self.indexKeys = indexKeys
@@ -29,7 +29,7 @@ public final class StickerPackItem: ItemCollectionItem, Equatable {
         
         if let serializedFileData = decoder.decodeDataForKey("fd") {
             var byteBuffer = ByteBuffer(data: serializedFileData)
-            self.file = TelegramMediaFile.Accessor(getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
+            self.file = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, serializedFileData)
         } else {
             let file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
             self.file = TelegramMediaFile.Accessor(file)

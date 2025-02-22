@@ -79,7 +79,7 @@ public extension PartialMediaReference {
         switch flatBuffersObject.valueType {
         case .partialmediareferenceMessage:
             guard let value = flatBuffersObject.value(type: TelegramCore_PartialMediaReference_Message.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             if let message = value.message {
                 self = .message(message: try MessageReference(flatBuffersObject: message))
@@ -88,7 +88,7 @@ public extension PartialMediaReference {
             }
         case .partialmediareferenceWebpage:
             guard let value = flatBuffersObject.value(type: TelegramCore_PartialMediaReference_WebPage.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             if let webPage = value.webPage {
                 self = .webPage(webPage: try WebpageReference(flatBuffersObject: webPage))
@@ -97,7 +97,7 @@ public extension PartialMediaReference {
             }
         case .partialmediareferenceStickerpack:
             guard let value = flatBuffersObject.value(type: TelegramCore_PartialMediaReference_StickerPack.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .stickerPack(stickerPack: try StickerPackReference(flatBuffersObject: value.stickerPack))
         case .partialmediareferenceSavedgif:
@@ -107,7 +107,7 @@ public extension PartialMediaReference {
         case .partialmediareferenceRecentsticker:
             self = .recentSticker
         case .none_:
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
     }
     

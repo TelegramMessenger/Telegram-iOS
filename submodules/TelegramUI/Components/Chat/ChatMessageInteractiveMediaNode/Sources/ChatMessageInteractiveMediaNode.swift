@@ -530,6 +530,11 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
     private var appliedHlsInlinePlaybackRange: Range<Int64>?
     private var hlsInlinePlaybackRangeDisposable: Disposable?
     
+    #if DEBUG && false
+    private var testDeferHLSMedia: Bool = true
+    private var deferHLSMediaTimer: Foundation.Timer?
+    #endif
+    
     override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()
 
@@ -864,8 +869,35 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
         let hlsInlinePlaybackRange = self.hlsInlinePlaybackRange
         let appliedHlsInlinePlaybackRange = self.appliedHlsInlinePlaybackRange
         
+        #if DEBUG && false
+        let testDeferHLSMedia = self.testDeferHLSMedia
+        #endif
+        
         return { [weak self] context, presentationData, dateTimeFormat, message, associatedData, attributes, media, mediaIndex, dateAndStatus, automaticDownload, peerType, peerId, sizeCalculation, layoutConstants, contentMode, presentationContext in
             let _ = peerType
+            
+            #if DEBUG && false
+            var media = media
+            var maybeRestoreHLSMedia = false
+            if testDeferHLSMedia {
+                if let file = media as? TelegramMediaFile, !file.alternativeRepresentations.isEmpty {
+                    maybeRestoreHLSMedia = true
+                    media = TelegramMediaFile(
+                        fileId: file.fileId,
+                        partialReference: file.partialReference,
+                        resource: file.resource,
+                        previewRepresentations: file.previewRepresentations,
+                        videoThumbnails: file.videoThumbnails,
+                        videoCover: file.videoCover,
+                        immediateThumbnailData: file.immediateThumbnailData,
+                        mimeType: file.mimeType,
+                        size: file.size,
+                        attributes: file.attributes,
+                        alternativeRepresentations: []
+                    )
+                }
+            }
+            #endif
             
             var useInlineHLS = true
             var displayInlineScrubber = true
@@ -881,13 +913,6 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                     startFromSavedPosition = value != 0.0
                 }
             }
-            
-            /*#if DEBUG
-            if "".isEmpty {
-                displayInlineScrubber = false
-                startFromSavedPosition = false
-            }
-            #endif*/
             
             var nativeSize: CGSize
             
@@ -1822,6 +1847,18 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                             strongSelf.automaticDownload = automaticDownload
                             strongSelf.preferredStoryHighQuality = associatedData.preferredStoryHighQuality
                             strongSelf.showSensitiveContent = associatedData.showSensitiveContent
+                            
+                            #if DEBUG && false
+                            if strongSelf.testDeferHLSMedia && maybeRestoreHLSMedia && strongSelf.deferHLSMediaTimer == nil {
+                                strongSelf.deferHLSMediaTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false, block: { [weak strongSelf] _ in
+                                    guard let strongSelf else {
+                                        return
+                                    }
+                                    strongSelf.testDeferHLSMedia = false
+                                    strongSelf.requestInlineUpdate?()
+                                })
+                            }
+                            #endif
                                                         
                             if let previousArguments = strongSelf.currentImageArguments {
                                 if previousArguments.imageSize == arguments.imageSize {

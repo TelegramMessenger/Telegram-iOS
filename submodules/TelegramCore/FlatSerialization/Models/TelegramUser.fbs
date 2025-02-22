@@ -1,0 +1,40 @@
+include "PeerId.fbs";
+include "TelegramPeerAccessHash.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "PeerAccessRestrictionInfo.fbs";
+include "PeerEmojiStatus.fbs";
+include "TelegramPeerUsername.fbs";
+include "PeerNameColor.fbs";
+include "Optional.fbs";
+include "StarsAmount.fbs";
+
+namespace TelegramCore;
+
+table BotUserInfo {
+    flags:int32 (id: 0);
+    inlinePlaceholder:string (id: 1);
+}
+
+table TelegramUser {
+    id:PeerId (id: 0, required);
+    accessHash:TelegramPeerAccessHash (id: 1);
+    firstName:string (id: 2);
+    lastName:string (id: 3);
+    username:string (id: 4);
+    phone:string (id: 5);
+    photo:[TelegramMediaImageRepresentation] (id: 6, required);
+    botInfo:BotUserInfo (id: 7);
+    restrictionInfo:PeerAccessRestrictionInfo (id: 8);
+    flags:int32 (id: 9);
+    emojiStatus:PeerEmojiStatus (id: 10);
+    usernames:[TelegramPeerUsername] (id: 11);
+    storiesHidden:OptionalBool (id: 12);
+    nameColor:PeerNameColor (id: 13);
+    backgroundEmojiId:int64 (id: 14);
+    profileColor:PeerNameColor (id: 15);
+    profileBackgroundEmojiId:int64 (id: 16);
+    subscriberCount:int32 (id: 17);
+    verificationIconFileId:int64 (id: 18);
+}
+
+root_type TelegramUser;
