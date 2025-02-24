@@ -347,6 +347,8 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                             iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((contentSize.height - iconSize.height) / 2.0)), size: iconSize)
                         }
                         strongSelf.imageNode.frame = iconFrame
+                    } else {
+                        strongSelf.imageNode.image = nil
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))

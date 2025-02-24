@@ -2486,6 +2486,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .messageEffects
         case .animatedEmoji:
             mappedSource = .animatedEmoji
+        case .paidMessages:
+            mappedSource = .paidMessages
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -2542,6 +2544,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .folderTags
         case .messageEffects:
             mappedSubject = .messageEffects
+        case .paidMessages:
+            mappedSubject = .paidMessages
         case .business:
             mappedSubject = .business
             buttonText = presentationData.strings.Chat_EmptyStateIntroFooterPremiumActionButton

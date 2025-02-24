@@ -93,7 +93,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
     case chargeForMessagesInfo(PresentationTheme, String)
     
     case messagePriceHeader(PresentationTheme, String)
-    case messagePrice(PresentationTheme, Int64, String)
+    case messagePrice(PresentationTheme, Int64, Int64, String)
     case messagePriceInfo(PresentationTheme, String)
     
     case unrestrictBoostersSwitch(PresentationTheme, String, Bool)
@@ -241,8 +241,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .messagePrice(lhsTheme, lhsValue, lhsPrice):
-            if case let .messagePrice(rhsTheme, rhsValue, rhsPrice) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsPrice == rhsPrice {
+            case let .messagePrice(lhsTheme, lhsValue, lhsMaxValue, lhsPrice):
+                if case let .messagePrice(rhsTheme, rhsValue, rhsMaxValue, rhsPrice) = rhs, lhsTheme === rhsTheme, lhsValue == rhsValue, lhsMaxValue == rhsMaxValue, lhsPrice == rhsPrice {
                     return true
                 } else {
                     return false
@@ -424,8 +424,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
             case let .messagePriceHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
-            case let .messagePrice(_, value, price):
-                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 1, maxValue: 10000, value: value, price: price, sectionId: self.section, updated: { value in
+            case let .messagePrice(_, value, maxValue, price):
+                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: true, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value in
                     arguments.updateStarsAmount(StarsAmount(value: value, nanos: 0))
                 })
             case let .messagePriceInfo(_, value):
@@ -733,7 +733,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
                 price = "≈\(formatTonUsdValue(sendPaidMessageStars, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
                 
                 entries.append(.messagePriceHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePrice))
-                entries.append(.messagePrice(presentationData.theme, sendPaidMessageStars, price))
+                entries.append(.messagePrice(presentationData.theme, sendPaidMessageStars, configuration.paidMessageMaxAmount, price))
                 entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo("\(configuration.paidMessageCommissionPermille / 10)", price).string))
             }
         }

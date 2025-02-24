@@ -42,6 +42,7 @@ public enum PremiumIntroSource {
     case folderTags
     case animatedEmoji
     case messageEffects
+    case paidMessages
 }
 
 public enum PremiumGiftSource: Equatable {
@@ -79,6 +80,7 @@ public enum PremiumDemoSubject {
     case folderTags
     case business
     case messageEffects
+    case paidMessages
     
     case businessLocation
     case businessHours

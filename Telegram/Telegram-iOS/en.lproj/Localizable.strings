@@ -13876,3 +13876,11 @@ Sorry for the inconvenience.";
 "Chat.PanelCustomStatusShortInfo" = "%@ is a mark for [Premium subscribers >]()";
 
 "Chat.InputTextPaidMessagePlaceholder" = "Message for %@";
+
+"Privacy.Messages.Stars_1" = "%@ Star";
+"Privacy.Messages.Stars_any" = "%@ Stars";
+"Privacy.Messages.Unlock" = "Unlock with Telegram Premium";
+
+"Premium.PaidMessages" = "Paid Messages";
+"Premium.PaidMessagesInfo" = "Charge a fee for messages from non-contacts or new senders.";
+"Premium.PaidMessages.Proceed" = "About Telegram Premium";

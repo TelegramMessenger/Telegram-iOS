@@ -8,6 +8,10 @@ import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
 import PresentationDataUtils
+import ComponentFlow
+import ButtonComponent
+import BundleIconComponent
+import MultilineTextComponent
 
 private let textFont = Font.with(size: 17.0, traits: .monospacedNumbers)
 private let smallTextFont = Font.with(size: 13.0, traits: .monospacedNumbers)
@@ -15,22 +19,26 @@ private let smallTextFont = Font.with(size: 13.0, traits: .monospacedNumbers)
 public final class MessagePriceItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let isEnabled: Bool
     let minValue: Int64
     let maxValue: Int64
     let value: Int64
     let price: String
     public let sectionId: ItemListSectionId
     let updated: (Int64) -> Void
+    let openPremiumInfo: (() -> Void)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, isEnabled: Bool, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, openPremiumInfo: (() -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
+        self.isEnabled = isEnabled
         self.minValue = minValue
         self.maxValue = maxValue
         self.value = value
         self.price = price
         self.sectionId = sectionId
         self.updated = updated
+        self.openPremiumInfo = openPremiumInfo
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -155,6 +163,9 @@ private class MessagePriceItemNode: ListViewItemNode {
     private let rightTextNode: ImmediateTextNode
     private let centerLeftTextNode: ImmediateTextNode
     private let centerRightTextNode: ImmediateTextNode
+    private let lockIconNode: ASImageNode
+    
+    private let button: ComponentView<Empty>
     
     private var amount: Amount = Amount(realValue: 1, maxRealValue: 1000, maxSliderValue: 1000, isLogarithmic: true)
     
@@ -178,12 +189,18 @@ private class MessagePriceItemNode: ListViewItemNode {
         self.centerLeftTextNode = ImmediateTextNode()
         self.centerRightTextNode = ImmediateTextNode()
         
+        self.lockIconNode = ASImageNode()
+        self.lockIconNode.displaysAsynchronously = false
+        
+        self.button = ComponentView<Empty>()
+        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.leftTextNode)
         self.addSubnode(self.rightTextNode)
         self.addSubnode(self.centerLeftTextNode)
         self.addSubnode(self.centerRightTextNode)
+        self.addSubnode(self.lockIconNode)
     }
     
     override func didLoad() {
@@ -224,11 +241,15 @@ private class MessagePriceItemNode: ListViewItemNode {
                 themeUpdated = true
             }
             
-            let contentSize: CGSize
+            var contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 88.0)
+            if !item.isEnabled {
+                contentSize.height = 166.0
+            }
+            
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -290,8 +311,7 @@ private class MessagePriceItemNode: ListViewItemNode {
                     strongSelf.leftTextNode.attributedText = NSAttributedString(string: "\(item.minValue)", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
                     strongSelf.rightTextNode.attributedText = NSAttributedString(string: "\(item.maxValue)", font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor)
                     
-                    //TODO:localize
-                    let centralLeftText = "\(item.value) Stars"
+                    let centralLeftText = item.strings.Privacy_Messages_Stars(Int32(item.value))
                     strongSelf.centerLeftTextNode.attributedText = NSAttributedString(string: centralLeftText, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
                     strongSelf.centerRightTextNode.attributedText = NSAttributedString(string: item.price, font: smallTextFont, textColor: item.theme.list.itemSecondaryTextColor)
                     
@@ -322,6 +342,66 @@ private class MessagePriceItemNode: ListViewItemNode {
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 18.0, y: 36.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 18.0 * 2.0, height: 44.0))
+                    }
+                    
+                    strongSelf.lockIconNode.isHidden = item.isEnabled
+                    if !item.isEnabled {
+                        if themeUpdated {
+                            strongSelf.lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: item.theme.list.itemSecondaryTextColor.withMultipliedAlpha(0.5))
+                        }
+                        if let image = strongSelf.lockIconNode.image {
+                            strongSelf.lockIconNode.frame = CGRect(origin: CGPoint(x: centerLeftFrame.minX - image.size.width - 1.0, y: 12.0 + UIScreenPixel), size: image.size)
+                        }
+                        
+                        let sideInset: CGFloat = 16.0
+                        let buttonSize = CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: 50.0)
+                        let _ = strongSelf.button.update(
+                            transition: .immediate,
+                            component: AnyComponent(
+                                ButtonComponent(
+                                    background: ButtonComponent.Background(
+                                        color: item.theme.list.itemCheckColors.fillColor,
+                                        foreground: item.theme.list.itemCheckColors.foregroundColor,
+                                        pressedColor: item.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                                    ),
+                                    content: AnyComponentWithIdentity(
+                                        id: AnyHashable("unlock"),
+                                        component: AnyComponent(
+                                            HStack([
+                                                AnyComponentWithIdentity(
+                                                    id: AnyHashable("icon"),
+                                                    component: AnyComponent(BundleIconComponent(name: "Chat/Stickers/Lock", tintColor: item.theme.list.itemCheckColors.foregroundColor))
+                                                ),
+                                                AnyComponentWithIdentity(
+                                                    id: AnyHashable("label"),
+                                                    component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: item.strings.Privacy_Messages_Unlock, font: Font.semibold(17.0), textColor: item.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                                                )
+                                            ], spacing: 3.0)
+                                        )
+                                    ),
+                                    isEnabled: true,
+                                    tintWhenDisabled: false,
+                                    allowActionWhenDisabled: false,
+                                    displaysProgress: false,
+                                    action: { [weak self] in
+                                        guard let self, let item = self.item else {
+                                            return
+                                        }
+                                        item.openPremiumInfo?()
+                                    }
+                                )
+                            ),
+                            environment: {},
+                            containerSize: buttonSize
+                        )
+                        if let buttonView = strongSelf.button.view {
+                            if buttonView.superview == nil {
+                                strongSelf.view.addSubview(buttonView)
+                            }
+                            buttonView.frame = CGRect(origin: CGPoint(x: params.leftInset + sideInset, y: contentSize.height - buttonSize.height - sideInset), size: buttonSize)
+                        }
+                    } else if let buttonView = strongSelf.button.view, buttonView.superview != nil {
+                        buttonView.removeFromSuperview()
                     }
                 }
             })
