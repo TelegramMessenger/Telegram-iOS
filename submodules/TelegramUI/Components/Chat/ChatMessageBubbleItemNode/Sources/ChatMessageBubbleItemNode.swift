@@ -2877,7 +2877,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             bottomBubbleAttributes = contentPropertiesAndLayouts[i + 1].3
                         }
 
-                        if i == 0 {
+                        if i == 0 || (i == 1 && contentPropertiesAndLayouts[0].1.isDetached) {
                             topPosition = firstNodeTopPosition
                         } else {
                             topPosition = .Neighbour(topBubbleAttributes.isAttachment, topBubbleAttributes.neighborType, topBubbleAttributes.neighborSpacing)
@@ -3002,11 +3002,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 let (size, apply) = finalize(maxContentWidth)
-                var containerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentNodeOriginY), size: size)
-                if size.height == 33.0 && detachedContentNodesHeight > 0.0 {
-                    //TODO:unmock
-                    containerFrame = containerFrame.offsetBy(dx: 0.0, dy: 2.0)
-                }
+                let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: contentNodeOriginY), size: size)
                 contentNodeFramesPropertiesAndApply.append((containerFrame, properties, contentGroupId == nil, apply))
                 
                 if contentProperties.neighborType == .media && unlockButtonPosition == nil {

@@ -720,7 +720,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             entries.append(.conversionInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_BroadcastConvertInfo(presentationStringsFormattedNumber(participantsLimit, presentationData.dateTimeFormat.groupingSeparator)).string))
         }
         
-        if channel.hasPermission(.banMembers) {
+        if cachedData.flags.contains(.paidMessagesAvailable) && channel.hasPermission(.banMembers) {
             let sendPaidMessageStars = state.modifiedStarsAmount?.value ?? (cachedData.sendPaidMessageStars?.value ?? 0)
             let chargeEnabled = sendPaidMessageStars > 0
             entries.append(.chargeForMessages(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessages, chargeEnabled))
@@ -728,15 +728,13 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             
             if chargeEnabled {
                 var price: String = ""
-                var usdRate = 0.012
-                if let usdWithdrawRate = configuration.usdWithdrawRate {
-                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
-                }
+                let usdRate = Double(configuration.usdWithdrawRate) / 1000.0 / 100.0
+                
                 price = "≈\(formatTonUsdValue(sendPaidMessageStars, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
                 
                 entries.append(.messagePriceHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePrice))
                 entries.append(.messagePrice(presentationData.theme, sendPaidMessageStars, price))
-                entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo(price).string))
+                entries.append(.messagePriceInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_MessagePriceInfo("\(configuration.paidMessageCommissionPermille / 10)", price).string))
             }
         }
         

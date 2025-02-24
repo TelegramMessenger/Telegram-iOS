@@ -502,9 +502,7 @@ final class GiftOptionsScreenComponent: Component {
                 return
             }
             
-            //TODO:unmock
             let context = component.context
-            
             let alertController = giftTransferAlertController(
                 context: context,
                 gift: transferGift,
@@ -517,36 +515,53 @@ final class GiftOptionsScreenComponent: Component {
                     guard let controller, let navigationController = controller.navigationController as? NavigationController else {
                         return
                     }
-                    var controllers = navigationController.viewControllers
-                    controllers = controllers.filter { !($0 is ContactSelectionController) && !($0 is GiftOptionsScreen) }
+                     
                     if peer.id.namespace == Namespaces.Peer.CloudChannel {
-                        if let controller = context.sharedContext.makePeerInfoController(
-                            context: context,
-                            updatedPresentationData: nil,
-                            peer: peer._asPeer(),
-                            mode: .gifts,
-                            avatarInitiallyExpanded: false,
-                            fromChat: false,
-                            requestsContext: nil
-                        ) {
-                            controllers.append(controller)
-                        }
-                    } else {
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
                         var foundController = false
                         for controller in controllers.reversed() {
-                            if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                            if let controller = controller as? PeerInfoScreen, controller.peerId == component.peerId {
+                                foundController = true
+                                break
+                            }
+                        }
+                        if !foundController {
+                            if let controller = context.sharedContext.makePeerInfoController(
+                                context: context,
+                                updatedPresentationData: nil,
+                                peer: peer._asPeer(),
+                                mode: .gifts,
+                                avatarInitiallyExpanded: false,
+                                fromChat: false,
+                                requestsContext: nil
+                            ) {
+                                controllers.append(controller)
+                            }
+                        }
+                        navigationController.setViewControllers(controllers, animated: true)
+                    } else {
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                        var foundController = false
+                        for controller in controllers.reversed() {
+                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
                                 chatController.hintPlayNextOutgoingGift()
                                 foundController = true
                                 break
                             }
                         }
                         if !foundController {
-                            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                             chatController.hintPlayNextOutgoingGift()
                             controllers.append(chatController)
                         }
+                        navigationController.setViewControllers(controllers, animated: true)
                     }
-                    navigationController.setViewControllers(controllers, animated: true)
+                
+                    if let completion = component.completion {
+                        completion()
+                    }
                 }
             )
             controller.present(alertController, in: .window(.root))

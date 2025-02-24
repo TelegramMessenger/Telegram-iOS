@@ -2604,8 +2604,12 @@ extension ChatControllerImpl {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(node.view, rect)
                 return false
             }
-            
-            strongSelf.enqueueChatContextResult(results, result)
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.enqueueChatContextResult(results, result, postpone: postpone)
+            })
             return true
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {

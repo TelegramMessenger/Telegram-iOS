@@ -328,21 +328,32 @@ private class ChatMessagePaymentAlertController: AlertController {
         self.context = context
         self.presentationData = presentationData
         self.parentNavigationController = navigationController
-        
+    
         super.init(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
+        
+        self.willDismiss = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.animateOut()
+        }
     }
         
     required public init(coder aDecoder: NSCoder) {
         preconditionFailure()
     }
     
-    override func dismissAnimated() {
-        super.dismissAnimated()
-        
+    private func animateOut() {
         if let view = self.balance.view {
             view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
             view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         }
+    }
+    
+    override func dismissAnimated() {
+        super.dismissAnimated()
+        
+        self.animateOut()
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

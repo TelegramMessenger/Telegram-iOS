@@ -13819,12 +13819,12 @@ Sorry for the inconvenience.";
 "GroupInfo.Permissions.ChargeForMessages" = "Charge for Messages";
 "GroupInfo.Permissions.ChargeForMessagesInfo" = "If you turn this on, regular members of the group will have to pay Stars to send messages.";
 "GroupInfo.Permissions.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
-"GroupInfo.Permissions.MessagePriceInfo" = "Your group will receive 85% of the selected fee (%1$@) for each incoming message.";
+"GroupInfo.Permissions.MessagePriceInfo" = "Your group will receive %1$@% of the selected fee (%2$@) for each incoming message.";
 
 "Privacy.Messages.ChargeForMessages" = "Charge for Messages";
 "Privacy.Messages.ChargeForMessagesInfo" = "Charge a fee for messages from people outide your contacts or those you haven't messaged first.";
 "Privacy.Messages.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
-"Privacy.Messages.MessagePriceInfo" = "Your will receive 85% of the selected fee (%1$@) for each incoming message.";
+"Privacy.Messages.MessagePriceInfo" = "Your will receive %1$@% of the selected fee (%2$@) for each incoming message.";
 
 "Privacy.Messages.RemoveFeeHeader" = "EXCEPTIONS";
 "Privacy.Messages.RemoveFee" = "Remove Fee";
@@ -13874,3 +13874,5 @@ Sorry for the inconvenience.";
 "Gift.Send.PayWithStars.Info" = "Your balance is **%@**. [Get More Stars >]()";
 
 "Chat.PanelCustomStatusShortInfo" = "%@ is a mark for [Premium subscribers >]()";
+
+"Chat.InputTextPaidMessagePlaceholder" = "Message for %@";

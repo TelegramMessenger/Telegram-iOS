@@ -375,22 +375,18 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .cachedPeerData(peerId: self.id)
+                return .peer(peerId: self.id, components: [.cachedData])
             }
 
             func extract(view: PostboxView) -> Result {
-                guard let view = view as? CachedPeerDataView else {
+                guard let view = view as? PeerView else {
                     preconditionFailure()
                 }
-                guard let cachedPeerData = view.cachedPeerData else {
-                    return nil
-                }
-                switch cachedPeerData {
-                case let user as CachedUserData:
-                    return user.sendPaidMessageStars
-                case let channel as CachedChannelData:
+                if let cachedPeerData = view.cachedData as? CachedUserData {
+                    return cachedPeerData.sendPaidMessageStars
+                } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
                     return channel.sendPaidMessageStars
-                default:
+                } else {
                     return nil
                 }
             }

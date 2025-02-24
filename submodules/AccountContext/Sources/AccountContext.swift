@@ -1353,20 +1353,43 @@ public struct StickersSearchConfiguration {
 
 public struct StarsSubscriptionConfiguration {
     static var defaultValue: StarsSubscriptionConfiguration {
-        return StarsSubscriptionConfiguration(maxFee: 2500, usdWithdrawRate: 1200)
+        return StarsSubscriptionConfiguration(
+            maxFee: 2500,
+            usdWithdrawRate: 1200,
+            paidMessageMaxAmount: 10000,
+            paidMessageCommissionPermille: 850
+        )
     }
     
-    public let maxFee: Int64?
-    public let usdWithdrawRate: Int64?
+    public let maxFee: Int64
+    public let usdWithdrawRate: Int64
+    public let paidMessageMaxAmount: Int64
+    public let paidMessageCommissionPermille: Int32
     
-    fileprivate init(maxFee: Int64?, usdWithdrawRate: Int64?) {
+    fileprivate init(
+        maxFee: Int64,
+        usdWithdrawRate: Int64,
+        paidMessageMaxAmount: Int64,
+        paidMessageCommissionPermille: Int32
+    ) {
         self.maxFee = maxFee
         self.usdWithdrawRate = usdWithdrawRate
+        self.paidMessageMaxAmount = paidMessageMaxAmount
+        self.paidMessageCommissionPermille = paidMessageCommissionPermille
     }
     
     public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
-        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_withdraw_rate_x1000"] as? Double {
-            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdWithdrawRate: Int64(usdRate))
+        if let data = appConfiguration.data {
+            let maxFee = (data["stars_subscription_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.maxFee
+            let usdWithdrawRate = (data["stars_usd_withdraw_rate_x1000"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.usdWithdrawRate
+            let paidMessageMaxAmount = (data["stars_paid_message_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageMaxAmount
+            let paidMessageCommissionPermille = (data["stars_paid_message_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageCommissionPermille
+            return StarsSubscriptionConfiguration(
+                maxFee: maxFee,
+                usdWithdrawRate: usdWithdrawRate,
+                paidMessageMaxAmount: paidMessageMaxAmount,
+                paidMessageCommissionPermille: paidMessageCommissionPermille
+            )
         } else {
             return .defaultValue
         }

@@ -124,9 +124,9 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = configuration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 
-                var usdRate = 0.012
+                
                 if let usdWithdrawRate = configuration.usdWithdrawRate, let amount = state.amount, amount > StarsAmount.zero {
-                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                    let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                     amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
                 } else {
                     amountLabel = nil

@@ -99,8 +99,8 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                                 }
                             })
                         }
-                        
-                        return TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
+                                                
+                        let result = TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
                             switch invitee {
                             case let .missingInvitee(flags, userId):
                                 guard let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) else {
@@ -113,6 +113,10 @@ func _internal_addGroupMember(account: Account, peerId: PeerId, memberId: PeerId
                                 )
                             }
                         })
+                        
+                        let _ = _internal_updateIsPremiumRequiredToContact(account: account, peerIds: result.forbiddenPeers.map { $0.peer.id }).startStandalone()
+                        
+                        return result
                     }
                     |> mapError { _ -> AddGroupMemberError in }
                     |> mapToSignal { result -> Signal<Void, AddGroupMemberError> in
@@ -186,6 +190,8 @@ func _internal_addChannelMember(account: Account, peerId: PeerId, memberId: Peer
                         switch result {
                         case let .invitedUsers(updates, missingInvitees):
                             if case let .missingInvitee(flags, _) = missingInvitees.first {
+                                let _ = _internal_updateIsPremiumRequiredToContact(account: account, peerIds: [memberPeer.id]).startStandalone()
+                                
                                 return .fail(.restricted(TelegramForbiddenInvitePeer(
                                     peer: EnginePeer(memberPeer),
                                     canInviteWithPremium: (flags & (1 << 0)) != 0,
@@ -302,7 +308,7 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
                 account.viewTracker.forceUpdateCachedPeerData(peerId: peerId)
                 
                 return account.postbox.transaction { transaction -> TelegramInvitePeersResult in
-                    return TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
+                    let result = TelegramInvitePeersResult(forbiddenPeers: missingInviteesValue.compactMap { invitee -> TelegramForbiddenInvitePeer? in
                         switch invitee {
                         case let .missingInvitee(flags, userId):
                             guard let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) else {
@@ -315,6 +321,8 @@ func _internal_addChannelMembers(account: Account, peerId: PeerId, memberIds: [P
                             )
                         }
                     })
+                    let _ = _internal_updateIsPremiumRequiredToContact(account: account, peerIds: result.forbiddenPeers.map { $0.peer.id }).startStandalone()
+                    return result
                 }
                 |> castError(AddChannelMemberError.self)
             }

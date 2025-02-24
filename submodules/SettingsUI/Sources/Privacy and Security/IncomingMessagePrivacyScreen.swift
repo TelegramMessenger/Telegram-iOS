@@ -50,7 +50,7 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
     case footer(value: GlobalPrivacySettings.NonContactChatsPrivacy)
     case priceHeader
     case price(value: Int64, price: String)
-    case priceInfo(value: String)
+    case priceInfo(commission: Int32, value: String)
     case exceptionsHeader
     case exceptions(count: Int)
     case exceptionsInfo
@@ -153,8 +153,8 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
             return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, minValue: 1, maxValue: 10000, value: value, price: price, sectionId: self.section, updated: { value in
                 arguments.updateValue(.paidMessages(StarsAmount(value: value, nanos: 0)))
             })
-        case let .priceInfo(value):
-            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.Privacy_Messages_MessagePriceInfo(value).string), sectionId: self.section)
+        case let .priceInfo(commission, value):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(presentationData.strings.Privacy_Messages_MessagePriceInfo("\(commission)", value).string), sectionId: self.section)
         case .exceptionsHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.Privacy_Messages_RemoveFeeHeader, sectionId: self.section)
         case let .exceptions(count):
@@ -184,14 +184,12 @@ private func incomingMessagePrivacyScreenEntries(presentationData: PresentationD
         entries.append(.footer(value: state.updatedValue))
         entries.append(.priceHeader)
         
-        var usdRate = 0.012
-        if let usdWithdrawRate = configuration.usdWithdrawRate {
-            usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
-        }
+        let usdRate = Double(configuration.usdWithdrawRate) / 1000.0 / 100.0
+        
         let price = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))"
         
         entries.append(.price(value: amount.value, price: price))
-        entries.append(.priceInfo(value: price))
+        entries.append(.priceInfo(commission: configuration.paidMessageCommissionPermille / 10, value: price))
         entries.append(.exceptionsHeader)
         entries.append(.exceptions(count: state.disableFor.count))
         entries.append(.exceptionsInfo)

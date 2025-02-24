@@ -9515,7 +9515,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
 
-    func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
+    func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true, postpone: Bool = false) {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return
         }
@@ -9534,7 +9534,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
-            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageSubject?.subjectModel, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime) {
+            
+            let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars
+            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageSubject?.subjectModel, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, sendPaidMessageStars: sendPaidMessageStars, postpone: postpone) {
                 self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()

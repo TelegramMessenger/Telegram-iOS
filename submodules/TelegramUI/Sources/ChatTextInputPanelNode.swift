@@ -1927,8 +1927,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                 }
                             } else {
                                 if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
-                                    //TODO:localize
-                                    placeholder = "Message for  # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), interfaceState.dateTimeFormat.groupingSeparator))"
+                                    placeholder = interfaceState.strings.Chat_InputTextPaidMessagePlaceholder(" # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), interfaceState.dateTimeFormat.groupingSeparator))").string
                                     placeholderHasStar = true
                                 } else {
                                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholder

@@ -251,6 +251,9 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
             
             let infoConstrainedSize = CGSize(width: constrainedWidth * 0.7, height: CGFloat.greatestFiniteMagnitude)
             
+            var maxTitleWidth: CGFloat = 0.0
+            var maxValueWidth: CGFloat = 0.0
+            
             var registrationDateText: String?
             let registrationDateTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             let registrationDateValueLayoutAndApply: (TextNodeLayout, () -> TextNode)?
@@ -272,7 +275,8 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                 backgroundSize.height += verticalSpacing
                 backgroundSize.height += registrationDateValueLayoutAndApply?.0.size.height ?? 0
                 
-                backgroundSize.width = max(backgroundSize.width, horizontalContentInset * 2.0 + (registrationDateTitleLayoutAndApply?.0.size.width ?? 0) + attributeSpacing + (registrationDateValueLayoutAndApply?.0.size.width ?? 0))
+                maxTitleWidth = max(maxTitleWidth, (registrationDateTitleLayoutAndApply?.0.size.width ?? 0))
+                maxValueWidth = max(maxValueWidth, (registrationDateValueLayoutAndApply?.0.size.width ?? 0))
             } else {
                 registrationDateTitleLayoutAndApply = nil
                 registrationDateValueLayoutAndApply = nil
@@ -297,7 +301,8 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                 backgroundSize.height += verticalSpacing
                 backgroundSize.height += phoneCountryValueLayoutAndApply?.0.size.height ?? 0
                 
-                backgroundSize.width = max(backgroundSize.width, horizontalContentInset * 2.0 + (phoneCountryTitleLayoutAndApply?.0.size.width ?? 0) + attributeSpacing + (phoneCountryValueLayoutAndApply?.0.size.width ?? 0))
+                maxTitleWidth = max(maxTitleWidth, (phoneCountryTitleLayoutAndApply?.0.size.width ?? 0))
+                maxValueWidth = max(maxValueWidth, (phoneCountryValueLayoutAndApply?.0.size.width ?? 0))
             } else {
                 phoneCountryTitleLayoutAndApply = nil
                 phoneCountryValueLayoutAndApply = nil
@@ -322,11 +327,14 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                 backgroundSize.height += verticalSpacing
                 backgroundSize.height += locationCountryValueLayoutAndApply?.0.size.height ?? 0
                 
-                backgroundSize.width = max(backgroundSize.width, horizontalContentInset * 2.0 + (locationCountryTitleLayoutAndApply?.0.size.width ?? 0) + attributeSpacing + (locationCountryValueLayoutAndApply?.0.size.width ?? 0))
+                maxTitleWidth = max(maxTitleWidth, (locationCountryTitleLayoutAndApply?.0.size.width ?? 0))
+                maxValueWidth = max(maxValueWidth, (locationCountryValueLayoutAndApply?.0.size.width ?? 0))
             } else {
                 locationCountryTitleLayoutAndApply = nil
                 locationCountryValueLayoutAndApply = nil
             }
+            
+            backgroundSize.width = horizontalContentInset * 3.0 + maxTitleWidth + attributeSpacing + maxValueWidth
             
             let (groupsLayout, groupsApply) = makeGroupsLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "No groups in common", font: Font.regular(13.0), textColor: subtitleColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             backgroundSize.height += verticalSpacing * 2.0 + paragraphSpacing

@@ -23,10 +23,10 @@ extension ChatControllerImpl {
         if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
             let _ = (ApplicationSpecificNotice.dismissedPaidMessageWarningNamespace(accountManager: self.context.sharedContext.accountManager, peerId: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] dismissedAmount in
-                guard let self else {
+                guard let self, let starsContext = self.context.starsContext else {
                     return
                 }
-                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value {
+                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance > sendPaidMessageStars {
                     completion(true)
                     self.displayPaidMessageUndo(count: count, amount: sendPaidMessageStars)
                 } else {
@@ -37,14 +37,14 @@ extension ChatControllerImpl {
                     let controller = chatMessagePaymentAlertController(
                         context: self.context,
                         presentationData: presentationData,
-                        updatedPresentationData: nil,//self.updatedPresentationData,
+                        updatedPresentationData: nil,
                         peers: [peer],
                         count: count,
                         amount: sendPaidMessageStars,
                         totalAmount: nil,
                         navigationController: self.navigationController as? NavigationController,
                         completion: { [weak self] dontAskAgain in
-                            guard let self, let starsContext = self.context.starsContext else {
+                            guard let self else {
                                 return
                             }
                             

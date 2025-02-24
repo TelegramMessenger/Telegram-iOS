@@ -250,10 +250,8 @@ extension ChatControllerImpl {
         }
         
         var sendImmediately = false
-        if let _ = self.presentationInterfaceState.sendPaidMessageStars {
-            if case .send = action {
-                updatedAction = .preview
-            }
+        if let _ = self.presentationInterfaceState.sendPaidMessageStars, case .send = action {
+            updatedAction = .preview
             sendImmediately = true
         }
         
