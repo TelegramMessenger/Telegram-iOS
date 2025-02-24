@@ -4506,7 +4506,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     @objc func sendButtonPressed() {
-        if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState, let editMessage = presentationInterfaceState.interfaceState.editMessage, let inputTextMaxLength = editMessage.inputTextMaxLength {
+        if let textInputNode = self.textInputNode, let textRange = textInputNode.textView.markedTextRange {
+            textInputNode.textView.replace(textRange, withText: "")
+        }
+
+        if let textInputNode = self.textInputNode,
+           let presentationInterfaceState = self.presentationInterfaceState,
+           let editMessage = presentationInterfaceState.interfaceState.editMessage,
+           let inputTextMaxLength = editMessage.inputTextMaxLength {
+
             let textCount = Int32(textInputNode.textView.text.count)
             let remainingCount = inputTextMaxLength - textCount
 
