@@ -861,6 +861,38 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
+        public struct PeerSettings: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public typealias Result = Optional<PeerStatusSettings>
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                if let cachedData = view.cachedPeerData as? CachedUserData {
+                    return cachedData.peerStatusSettings
+                } else if let cachedData = view.cachedPeerData as? CachedChannelData {
+                    return cachedData.peerStatusSettings
+                } else if let cachedData = view.cachedPeerData as? CachedGroupData {
+                    return cachedData.peerStatusSettings
+                } else {
+                    return nil
+                }
+            }
+        }
+        
         public struct AreVideoCallsAvailable: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Bool
 
