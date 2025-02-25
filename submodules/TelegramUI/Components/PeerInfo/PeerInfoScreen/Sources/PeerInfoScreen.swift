@@ -1233,6 +1233,7 @@ private enum InfoSection: Int, CaseIterable {
     case balances
     case permissions
     case peerInfoTrailing
+    case peerSettings
     case peerMembers
     case botAffiliateProgram
 }
@@ -1854,53 +1855,68 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                     interaction.openParticipantsSection(.memberRequests)
                                 }))
                             }
+                        }
+                    }
+                }
+                     
+                if channel.adminRights != nil || channel.flags.contains(.isCreator) {
+                    let section: InfoSection
+                    if case .group = channel.info {
+                        section = .peerSettings
+                    } else {
+                        section = .peerMembers
+                    }
+                    if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
+                        let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
+                        let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
+                        
+                        let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
+                        let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
+                        
+                        if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
+                            let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                            let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                            let labelColor = presentationData.theme.list.itemSecondaryTextColor
                             
-                            if cachedData.flags.contains(.canViewRevenue) || cachedData.flags.contains(.canViewStarsRevenue) {
-                                let revenueBalance = data.revenueStatsState?.balances.currentBalance ?? 0
-                                let starsBalance = data.starsRevenueStatsState?.balances.currentBalance ?? StarsAmount.zero
-                                
-                                let overallRevenueBalance = data.revenueStatsState?.balances.overallRevenue ?? 0
-                                let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
-                                
-                                if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
-                                    let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
-                                    let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
-                                    let labelColor = presentationData.theme.list.itemSecondaryTextColor
-                                    
-                                    let attributedString = NSMutableAttributedString()
-                                    if overallRevenueBalance > 0 {
-                                        attributedString.append(NSAttributedString(string: "#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))", font: labelFont, textColor: labelColor))
-                                    }
-                                    if overallStarsBalance > StarsAmount.zero {
-                                        if !attributedString.string.isEmpty {
-                                            attributedString.append(NSAttributedString(string: " ", font: labelFont, textColor: labelColor))
-                                        }
-                                        attributedString.append(NSAttributedString(string: "*", font: labelFont, textColor: labelColor))
-                                        
-                                        let formattedLabel = formatStarsAmountText(starsBalance, dateTimeFormat: presentationData.dateTimeFormat)
-                                        let starsAttributedString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
-                                        attributedString.append(starsAttributedString)
-                                    }
-                                    if let range = attributedString.string.range(of: "#") {
-                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
-                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
-                                    }
-                                    if let range = attributedString.string.range(of: "*") {
-                                        attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 1, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
-                                        attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
-                                    }
-                                    
-                                    items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemBalance, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
-                                        interaction.openStats(.monetization)
-                                    }))
+                            let attributedString = NSMutableAttributedString()
+                            if overallRevenueBalance > 0 {
+                                attributedString.append(NSAttributedString(string: "#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))", font: labelFont, textColor: labelColor))
+                            }
+                            if overallStarsBalance > StarsAmount.zero {
+                                if !attributedString.string.isEmpty {
+                                    attributedString.append(NSAttributedString(string: " ", font: labelFont, textColor: labelColor))
                                 }
+                                attributedString.append(NSAttributedString(string: "*", font: labelFont, textColor: labelColor))
+                                
+                                let formattedLabel = formatStarsAmountText(starsBalance, dateTimeFormat: presentationData.dateTimeFormat)
+                                let starsAttributedString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                                attributedString.append(starsAttributedString)
+                            }
+                            if let range = attributedString.string.range(of: "#") {
+                                attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
+                                attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
+                            }
+                            if let range = attributedString.string.range(of: "*") {
+                                attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 1, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
+                                attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
                             }
                             
-                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: presentationData.strings.Channel_Info_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
-                                interaction.openEditing()
+                            items[section]!.append(PeerInfoScreenDisclosureItem(id: ItemBalance, label: .attributedText(attributedString), text: presentationData.strings.PeerInfo_Bot_Balance, icon: PresentationResourcesSettings.balance, action: {
+                                interaction.openStats(.monetization)
                             }))
                         }
                     }
+                    
+                    let settingsTitle: String
+                    switch channel.info {
+                    case .broadcast:
+                        settingsTitle = presentationData.strings.Channel_Info_Settings
+                    case .group:
+                        settingsTitle = presentationData.strings.Group_Info_Settings
+                    }
+                    items[section]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: settingsTitle, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
+                        interaction.openEditing()
+                    }))
                 }
             }
         }
@@ -8282,7 +8298,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let statsController: ViewController
         if let channel = peer as? TelegramChannel, case .group = channel.info {
-            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
+            if case .monetization = section {
+                statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: section, existingStarsRevenueContext: data.starsRevenueStatsContext, boostStatus: boostStatus)
+            } else {
+                statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
+            }
         } else {
             statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: section, boostStatus: boostStatus)
         }
@@ -10951,6 +10971,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let currentPaneKey = self.paneContainerNode.currentPaneKey, case .gifts = currentPaneKey else {
             return
         }
+        guard let pane = self.paneContainerNode.currentPane?.node as? PeerInfoGiftsPaneNode else {
+            return
+        }
         guard let controller = self.controller else {
             return
         }
@@ -10968,14 +10991,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         let strings = self.presentationData.strings
         let items: Signal<ContextController.Items, NoError> = giftsContext.state
         |> map { state in
-            return (state.filter, state.sorting)
+            var hasPinnedGifts = false
+            for gift in state.gifts {
+                if gift.pinnedToTop {
+                    hasPinnedGifts = true
+                    break
+                }
+            }
+            return (state.filter, state.sorting, hasPinnedGifts)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs -> Bool in
             let filterEquals = lhs.0 == rhs.0
             let sortingEquals = lhs.1 == rhs.1
-            return filterEquals && sortingEquals
+            let hasPinnedGiftsEquals = lhs.2 == rhs.2
+            return filterEquals && sortingEquals && hasPinnedGiftsEquals
         })
-        |> map { [weak giftsContext] filter, sorting -> ContextController.Items in
+        |> map { [weak giftsContext] filter, sorting, hasPinnedGifts -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
             items.append(.action(ContextMenuActionItem(text: sorting == .date ? strings.PeerInfo_Gifts_SortByValue : strings.PeerInfo_Gifts_SortByDate, icon: { theme in
@@ -10985,6 +11016,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 
                 giftsContext?.updateSorting(sorting == .date ? .value : .date)
             })))
+            
+            if hasPinnedGifts {
+                items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Reorder, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                    
+                    pane.beginReordering()
+                })))
+            }
             
             items.append(.separator)
             
@@ -12499,6 +12540,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     fileprivate let starsContext: StarsContext?
     private let switchToRecommendedChannels: Bool
     private let switchToGifts: Bool
+    private let switchToGroupsInCommon: Bool
     let chatLocation: ChatLocation
     private let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
     
@@ -12555,7 +12597,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, isMyProfile: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil, switchToRecommendedChannels: Bool = false, switchToGifts: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, isMyProfile: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil, switchToRecommendedChannels: Bool = false, switchToGifts: Bool = false, switchToGroupsInCommon: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
@@ -12570,6 +12612,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         self.requestsContext = requestsContext
         self.switchToRecommendedChannels = switchToRecommendedChannels
         self.switchToGifts = switchToGifts
+        self.switchToGroupsInCommon = switchToGroupsInCommon
         
         if let forumTopicThread = forumTopicThread {
             self.chatLocation = .replyThread(message: forumTopicThread)
@@ -12915,6 +12958,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             initialPaneKey = .similarChannels
         } else if self.switchToGifts {
             initialPaneKey = .gifts
+        } else if self.switchToGroupsInCommon {
+            initialPaneKey = .groupsInCommon
         }
         self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, reactionSourceMessageId: self.reactionSourceMessageId, callMessages: self.callMessages, isSettings: self.isSettings, isMyProfile: self.isMyProfile, hintGroupInCommon: self.hintGroupInCommon, requestsContext: self.requestsContext, starsContext: self.starsContext, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder, initialPaneKey: initialPaneKey)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })

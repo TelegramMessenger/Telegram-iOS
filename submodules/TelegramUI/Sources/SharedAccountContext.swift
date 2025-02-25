@@ -3350,6 +3350,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return StarsWithdrawScreen(context: context, mode: .withdraw(stats), completion: completion)
     }
     
+    public func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController {
+        return StarsWithdrawScreen(context: context, mode: .accountWithdraw, completion: completion)
+    }
+    
     public func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController {
         return StarsTransactionScreen(context: context, subject: .gift(message))
     }
@@ -3510,6 +3514,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var forumTopicThread: ChatReplyThreadMessage?
         var switchToRecommendedChannels = false
         var switchToGifts = false
+        var switchToGroupsInCommon = false
         switch mode {
         case let .forumTopic(thread):
             forumTopicThread = thread
@@ -3517,10 +3522,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             switchToRecommendedChannels = true
         case .gifts:
             switchToGifts = true
+        case .groupsInCommon:
+            switchToGroupsInCommon = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread, switchToRecommendedChannels: switchToRecommendedChannels, switchToGifts: switchToGifts)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread, switchToRecommendedChannels: switchToRecommendedChannels, switchToGifts: switchToGifts, switchToGroupsInCommon: switchToGroupsInCommon)
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var reactionSourceMessageId: MessageId?
@@ -3529,6 +3536,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         var forumTopicThread: ChatReplyThreadMessage?
         var isMyProfile = false
         var switchToGifts = false
+        var switchToGroupsInCommon = false
         
         switch mode {
         case let .nearbyPeer(distance):
@@ -3550,10 +3558,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         case .myProfileGifts:
             isMyProfile = true
             switchToGifts = true
+        case .groupsInCommon:
+            switchToGroupsInCommon = true
         default:
             break
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, switchToGifts: switchToGifts)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, isMyProfile: isMyProfile, hintGroupInCommon: hintGroupInCommon, forumTopicThread: forumTopicThread, switchToGifts: switchToGifts, switchToGroupsInCommon: switchToGroupsInCommon)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }

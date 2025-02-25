@@ -13,6 +13,8 @@ public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
         return "🛰️"
     } else if countryCode == "XV" {
         return "🌍"
+    } else if countryCode == "TS" {
+        return "🏳️"
     }
     
     if ["YL"].contains(countryCode) {

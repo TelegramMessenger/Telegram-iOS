@@ -13875,6 +13875,22 @@ Sorry for the inconvenience.";
 
 "Chat.PanelCustomStatusShortInfo" = "%@ is a mark for [Premium subscribers >]()";
 
+"Chat.NonContactUser.Subtitle" = "Not a contact";
+"Chat.NonContactUser.PhoneNumber" = "Phone Number";
+"Chat.NonContactUser.Registration" = "Registration";
+"Chat.NonContactUser.Groups" = "Shared Groups";
+"Chat.NonContactUser.GroupsCount_1" = "%@ group";
+"Chat.NonContactUser.GroupsCount_any" = "%@ groups";
+"Chat.NonContactUser.GroupsNone" = "None";
+"Chat.NonContactUser.Disclaimer" = "Not an official account";
+"Chat.NonContactUser.AnonymousNumber" = "Anonymous";
+
+"Chat.NonContactUser.UpdatedName" = "User updated name %2$@";
+"Chat.NonContactUser.UpdatedPhoto" = "User updated photo %2$@";
+"Chat.NonContactUser.UpdatedToday" = "today";
+"Chat.NonContactUser.UpdatedDays_1" = "%@ day ago";
+"Chat.NonContactUser.UpdatedDays_any" = "%@ days ago";
+
 "Chat.InputTextPaidMessagePlaceholder" = "Message for %@";
 
 "Privacy.Messages.Stars_1" = "%@ Star";
@@ -13884,3 +13900,36 @@ Sorry for the inconvenience.";
 "Premium.PaidMessages" = "Paid Messages";
 "Premium.PaidMessagesInfo" = "Charge a fee for messages from non-contacts or new senders.";
 "Premium.PaidMessages.Proceed" = "About Telegram Premium";
+
+"PeerInfo.Gifts.Reorder" = "Reorder";
+"PeerInfo.Gifts.Context.Pin" = "Pin";
+"PeerInfo.Gifts.Context.Unpin" = "Unpin";
+"PeerInfo.Gifts.Context.Reorder" = "Reorder";
+"PeerInfo.Gifts.Context.Wear" = "Wear";
+"PeerInfo.Gifts.Context.CopyLink" = "Copy Link";
+"PeerInfo.Gifts.Context.Share" = "Share";
+"PeerInfo.Gifts.Context.Hide" = "Hide";
+"PeerInfo.Gifts.Context.Show" = "Show";
+"PeerInfo.Gifts.Context.Transfer" = "Transfer";
+
+"Gift.Send.Premium.Confirmation.Title" = "Send a Gift";
+"Gift.Send.Premium.Confirmation.Text" = "Are you sure you want to gift **Telegram Premium** to **%1$@** for **%2$@**?";
+"Gift.Send.Premium.Confirmation.Text.Stars_1" = "%@ Star";
+"Gift.Send.Premium.Confirmation.Text.Stars_any" = "%@ Stars";
+"Gift.Send.Premium.Confirmation.Confirm" = "Confirm";
+
+"StarsBalance.YourBalance" = "Your balance is %@";
+"StarsBalance.GetMoreStars" = "Get More Stars >";
+
+"Stars.Intro.BuyShort" = "Top Up";
+"Stars.Intro.Withdraw" = "Withdraw";
+
+"Group.Info.Settings" = "Group Settings";
+
+"Monetization.Balance.StarsInfoGroup" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
+
+"PeerInfo.Gifts.ToastPinLimit.Text_1" = "You can't pin more than %@ gift.";
+"PeerInfo.Gifts.ToastPinLimit.Text_any" = "You can't pin more than %@ gifts.";
+"PeerInfo.Gifts.ToastUnpinned.Text" = "Gift Unpinned.";
+"PeerInfo.Gifts.ToastPinned.Title" = "Gift Pinned";
+"PeerInfo.Gifts.ToastPinned.Text" = "Now it will always be shown on the top.";

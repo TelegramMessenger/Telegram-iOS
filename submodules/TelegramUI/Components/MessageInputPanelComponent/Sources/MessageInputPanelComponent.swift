@@ -1441,7 +1441,11 @@ public final class MessageInputPanelComponent: Component {
                     inputActionButtonMode = .send
                 } else {
                     if self.textFieldExternalState.hasText {
-                        inputActionButtonMode = .send
+                        if let sendPaidMessageStars = component.sendPaidMessageStars {
+                            inputActionButtonMode = .stars(sendPaidMessageStars.value)
+                        } else {
+                            inputActionButtonMode = .send
+                        }
                     } else if !isEditing && component.forwardAction != nil {
                         inputActionButtonMode = .forward
                     } else {
@@ -1466,7 +1470,7 @@ public final class MessageInputPanelComponent: Component {
                         switch mode {
                         case .none:
                             break
-                        case .send:
+                        case .send, .stars:
                             if case .up = action {
                                 if component.recordedAudioPreview != nil {
                                     component.sendMessageAction()

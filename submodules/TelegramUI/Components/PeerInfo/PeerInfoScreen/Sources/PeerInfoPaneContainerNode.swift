@@ -471,7 +471,7 @@ private final class PeerInfoPendingPane {
                     }
                 }
             }
-            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, profileGifts: data.profileGiftsContext!, canManage: canManage)
+            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, profileGifts: data.profileGiftsContext!, canManage: canManage)
         case .stories, .storyArchive, .botPreview:
             var canManage = false
             if let peer = data.peer {
@@ -884,11 +884,15 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, ASGestureRecognizerDelegat
         for (_, pane) in self.currentPanes {
             if let paneNode = pane.node as? PeerInfoStoryPaneNode {
                 paneNode.updateIsReordering(isReordering: isReordering, animated: animated)
+            } else if let paneNode = pane.node as? PeerInfoGiftsPaneNode {
+                paneNode.updateIsReordering(isReordering: isReordering, animated: animated)
             }
         }
         for (_, pane) in self.pendingPanes {
             if let paneNode = pane.pane.node as? PeerInfoStoryPaneNode {
                 paneNode.updateIsReordering(isReordering: isReordering, animated: false)
+            } else if let paneNode = pane.pane.node as? PeerInfoGiftsPaneNode {
+                paneNode.updateIsReordering(isReordering: isReordering, animated: animated)
             }
         }
     }

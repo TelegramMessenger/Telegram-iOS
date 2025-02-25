@@ -62,11 +62,11 @@ public final class StarsBalanceOverlayComponent: Component {
         func update(component: StarsBalanceOverlayComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.component = component
             
-            let balance = component.context.starsContext?.currentState?.balance.value ?? 0
+            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+            let balance = presentationStringsFormattedNumber(Int32(component.context.starsContext?.currentState?.balance.value ?? 0), presentationData.dateTimeFormat.groupingSeparator)
             
-            //TODO:localize
             let attributedText = parseMarkdownIntoAttributedString(
-                "Your balance is **⭐️\(balance)**",
+                presentationData.strings.StarsBalance_YourBalance("**⭐️\(balance)**").string,
                 attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: component.theme.rootController.navigationBar.primaryTextColor),
                     bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: component.theme.rootController.navigationBar.primaryTextColor),
@@ -100,7 +100,7 @@ public final class StarsBalanceOverlayComponent: Component {
             if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== component.theme {
                 self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: component.theme.rootController.navigationBar.accentTextColor)!, component.theme)
             }
-            let actionText = NSMutableAttributedString(string: "Get More Stars >", font: Font.regular(13.0), textColor: component.theme.rootController.navigationBar.accentTextColor)
+            let actionText = NSMutableAttributedString(string: presentationData.strings.StarsBalance_GetMoreStars, font: Font.regular(13.0), textColor: component.theme.rootController.navigationBar.accentTextColor)
             if let range = actionText.string.range(of: ">"), let chevronImage = self.cachedChevronImage?.0 {
                 actionText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: actionText.string))
                 actionText.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: actionText.string))
@@ -130,7 +130,7 @@ public final class StarsBalanceOverlayComponent: Component {
                 if actionView.superview == nil {
                     self.addSubview(actionView)
                 }
-                actionView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - actionSize.width) / 2.0), y: 28.0), size: actionSize)
+                actionView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - actionSize.width) / 2.0), y: 29.0), size: actionSize)
             }
 
             self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)

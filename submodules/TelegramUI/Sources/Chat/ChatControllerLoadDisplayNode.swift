@@ -2591,7 +2591,7 @@ extension ChatControllerImpl {
                 }
             })
         }, openPeerInfo: { [weak self] in
-            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, recommendedChannels: false))
+            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, section: nil))
         }, togglePeerNotifications: { [weak self] in
             if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId {
                 let _ = strongSelf.context.engine.peers.togglePeerMuted(peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
