@@ -1365,6 +1365,7 @@ final class MediaEditorScreenComponent: Component {
                         strings: environment.strings,
                         style: .editor,
                         placeholder: .plain(environment.strings.Story_Editor_InputPlaceholderAddCaption),
+                        sendPaidMessageStars: nil,
                         maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                         queryTypes: [.mention, .hashtag],
                         alwaysDarkWhenHasText: false,

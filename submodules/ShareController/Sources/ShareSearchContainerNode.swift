@@ -36,13 +36,13 @@ private enum ShareSearchRecentEntryStableId: Hashable {
 
 private enum ShareSearchRecentEntry: Comparable, Identifiable {
     case topPeers(PresentationTheme, PresentationStrings)
-    case peer(index: Int, theme: PresentationTheme, peer: EnginePeer, associatedPeer: EnginePeer?, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, strings: PresentationStrings)
+    case peer(index: Int, theme: PresentationTheme, peer: EnginePeer, associatedPeer: EnginePeer?, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?, strings: PresentationStrings)
     
     var stableId: ShareSearchRecentEntryStableId {
         switch self {
             case .topPeers:
                 return .topPeers
-            case let .peer(_, _, peer, _, _, _, _):
+            case let .peer(_, _, peer, _, _, _, _, _):
                 return .peerId(peer.id)
         }
     }
@@ -61,8 +61,8 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsRequiresPremiumForMessaging, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsRequiresPremiumForMessaging, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsAssociatedPeer == rhsAssociatedPeer && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging {
+            case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsRequiresPremiumForMessaging, lhsRequiresStars, lhsStrings):
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsRequiresPremiumForMessaging, rhsRequiresStars, rhsStrings) = rhs, lhsPeer == rhsPeer && lhsAssociatedPeer == rhsAssociatedPeer && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && lhsPresence == rhsPresence && lhsRequiresPremiumForMessaging == rhsRequiresPremiumForMessaging && lhsRequiresStars == rhsRequiresStars {
                     return true
                 } else {
                     return false
@@ -74,11 +74,11 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch lhs {
             case .topPeers:
                 return true
-            case let .peer(lhsIndex, _, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _):
                 switch rhs {
                     case .topPeers:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _):
                         return lhsIndex <= rhsIndex
                 }
         }
@@ -88,13 +88,13 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
         switch self {
         case let .topPeers(theme, strings):
             return ShareControllerRecentPeersGridItem(environment: environment, context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
-        case let .peer(_, theme, peer, associatedPeer, presence, requiresPremiumForMessaging, strings):
+        case let .peer(_, theme, peer, associatedPeer, presence, requiresPremiumForMessaging, requiresStars, strings):
             var peers: [EnginePeer.Id: EnginePeer] = [peer.id: peer]
             if let associatedPeer = associatedPeer {
                 peers[associatedPeer.id] = associatedPeer
             }
             let peer = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
-            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, item: .peer(peer: peer, presence: presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: requiresPremiumForMessaging), controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, item: .peer(peer: peer, presence: presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: requiresPremiumForMessaging, requiresStars: requiresStars), controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -104,6 +104,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     let peer: EngineRenderedPeer?
     let presence: EnginePeer.Presence?
     let requiresPremiumForMessaging: Bool
+    let requiresStars: Int64?
     let theme: PresentationTheme
     let strings: PresentationStrings
     let isGlobal: Bool
@@ -129,6 +130,9 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         if lhs.requiresPremiumForMessaging != rhs.requiresPremiumForMessaging {
             return false
         }
+        if lhs.requiresStars != rhs.requiresStars {
+            return false
+        }
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -149,7 +153,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
         } else {
             sectionTitle = nil
         }
-        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: self.requiresPremiumForMessaging) }), controllerInteraction: interfaceInteraction, sectionTitle: sectionTitle, search: true)
+        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil, requiresPremiumForMessaging: self.requiresPremiumForMessaging, requiresStars: self.requiresStars) }), controllerInteraction: interfaceInteraction, sectionTitle: sectionTitle, search: true)
     }
 }
 
@@ -361,7 +365,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if strings.DialogList_SavedMessages.lowercased().hasPrefix(lowercasedQuery) || "saved messages".hasPrefix(lowercasedQuery) {
                         if !existingPeerIds.contains(accountPeer.id) {
                             existingPeerIds.insert(accountPeer.id)
-                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings, isGlobal: false))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(accountPeer)), presence: nil, requiresPremiumForMessaging: false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
                             index += 1
                         }
                     }
@@ -370,7 +374,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                         if let peer = renderedPeer.peers[renderedPeer.peerId], peer.id != accountPeer.id {
                             if !existingPeerIds.contains(renderedPeer.peerId) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(renderedPeer.peerId)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: false))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(renderedPeer), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
                                 index += 1
                             }
                         }
@@ -380,7 +384,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if foundRemotePeers.2 {
                         isPlaceholder = true
                         for _ in 0 ..< 4 {
-                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, requiresPremiumForMessaging: false, theme: theme, strings: strings, isGlobal: false))
+                            entries.append(ShareSearchPeerEntry(index: index, peer: nil, presence: nil, requiresPremiumForMessaging: false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
                             index += 1
                         }
                     } else {
@@ -388,7 +392,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: false))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(foundPeer.peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, requiresStars: nil, theme: theme, strings: strings, isGlobal: false))
                                 index += 1
                             }
                         }
@@ -397,7 +401,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                             let peer = foundPeer.peer
                             if !existingPeerIds.contains(peer.id) && canSendMessagesToPeer(peer) {
                                 existingPeerIds.insert(peer.id)
-                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, theme: theme, strings: strings, isGlobal: true))
+                                entries.append(ShareSearchPeerEntry(index: index, peer: EngineRenderedPeer(peer: EnginePeer(peer)), presence: nil, requiresPremiumForMessaging: peerRequiresPremiumForMessaging[peer.id] ?? false, requiresStars: nil, theme: theme, strings: strings, isGlobal: true))
                                 index += 1
                             }
                         }
@@ -462,7 +466,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
             var index = 0
             for (peer, requiresPremiumForMessaging) in recentPeerList {
                 if let mainPeer = peer.peers[peer.peerId], canSendMessagesToPeer(mainPeer._asPeer()) {
-                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer._asPeer().associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, requiresPremiumForMessaging: requiresPremiumForMessaging, strings: strings))
+                    recentItemList.append(.peer(index: index, theme: theme, peer: mainPeer, associatedPeer: mainPeer._asPeer().associatedPeerId.flatMap { peer.peers[$0] }, presence: nil, requiresPremiumForMessaging: requiresPremiumForMessaging, requiresStars: nil, strings: strings))
                     index += 1
                 }
             }
@@ -570,7 +574,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 switch $0 {
                     case .topPeers:
                         return false
-                    case let .peer(_, _, peer, _, _, _, _):
+                    case let .peer(_, _, peer, _, _, _, _, _):
                         return peer.id == ensurePeerVisibleOnLayout
                 }
             }) {

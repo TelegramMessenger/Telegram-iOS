@@ -123,6 +123,7 @@ final class GiftListItemComponent: Component {
                                     GiftItemComponent(
                                         context: component.context,
                                         theme: component.theme,
+                                        strings: component.context.sharedContext.currentPresentationData.with { $0 }.strings,
                                         peer: nil,
                                         subject: .uniqueGift(gift: gift),
                                         ribbon: nil,

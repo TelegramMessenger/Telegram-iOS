@@ -19,7 +19,7 @@ swift_library(
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
         "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
-        "//submodules/Components/SolidRoundedButtonComponent",
+        "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AppBundle:AppBundle",
@@ -40,6 +40,8 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/TelegramUI/Components/AvatarBackground",
+        "//submodules/TelegramUI/Components/LottieComponent",
+        "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -1893,7 +1893,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                 node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
             }
         }
-        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired, .cloud].contains(contentType)
+        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired, .starsRequired, .cloud].contains(contentType)
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         

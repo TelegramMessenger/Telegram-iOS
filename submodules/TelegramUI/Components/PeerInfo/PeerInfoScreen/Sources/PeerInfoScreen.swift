@@ -1000,14 +1000,18 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }))
     }
     if let starsState = data.starsState {
-        let balanceText: String
-        if starsState.balance > StarsAmount.zero {
-            balanceText = presentationStringsFormattedNumber(starsState.balance, presentationData.dateTimeFormat.groupingSeparator)
-        } else {
-            balanceText = ""
-        }
         if !isPremiumDisabled || starsState.balance > StarsAmount.zero {
-            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .text(balanceText), text: presentationData.strings.Settings_Stars, icon: PresentationResourcesSettings.stars, action: {
+            let balanceText: NSAttributedString
+            if starsState.balance > StarsAmount.zero {
+                let formattedLabel = formatStarsAmountText(starsState.balance, dateTimeFormat: presentationData.dateTimeFormat)
+                let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                balanceText = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+            } else {
+                balanceText = NSAttributedString()
+            }
+            items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 102, label: .attributedText(balanceText), text: presentationData.strings.Settings_Stars, icon: PresentationResourcesSettings.stars, action: {
                 interaction.openSettings(.stars)
             }))
         }
@@ -1574,8 +1578,13 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
 
                     if overallStarsBalance > StarsAmount.zero {
-                        let string = "*\(presentationStringsFormattedNumber(starsBalance, presentationData.dateTimeFormat.groupingSeparator))"
-                        let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                        let formattedLabel = formatStarsAmountText(starsBalance, dateTimeFormat: presentationData.dateTimeFormat)
+                        let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                        let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                        let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                        let attributedString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                        attributedString.insert(NSAttributedString(string: "*", font: labelFont, textColor: labelColor), at: 0)
+                        
                         if let range = attributedString.string.range(of: "*") {
                             attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: attributedString.string))
                             attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
@@ -1854,17 +1863,24 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                 let overallStarsBalance = data.starsRevenueStatsState?.balances.overallRevenue ?? StarsAmount.zero
                                 
                                 if overallRevenueBalance > 0 || overallStarsBalance > StarsAmount.zero {
-                                    var string = ""
+                                    let smallLabelFont = Font.regular(floor(presentationData.listsFontSize.itemListBaseFontSize / 17.0 * 13.0))
+                                    let labelFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
+                                    let labelColor = presentationData.theme.list.itemSecondaryTextColor
+                                    
+                                    let attributedString = NSMutableAttributedString()
                                     if overallRevenueBalance > 0 {
-                                        string.append("#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))")
+                                        attributedString.append(NSAttributedString(string: "#\(formatTonAmountText(revenueBalance, dateTimeFormat: presentationData.dateTimeFormat))", font: labelFont, textColor: labelColor))
                                     }
                                     if overallStarsBalance > StarsAmount.zero {
-                                        if !string.isEmpty {
-                                            string.append(" ")
+                                        if !attributedString.string.isEmpty {
+                                            attributedString.append(NSAttributedString(string: " ", font: labelFont, textColor: labelColor))
                                         }
-                                        string.append("*\(presentationStringsFormattedNumber(starsBalance, presentationData.dateTimeFormat.groupingSeparator))")
+                                        attributedString.append(NSAttributedString(string: "*", font: labelFont, textColor: labelColor))
+                                        
+                                        let formattedLabel = formatStarsAmountText(starsBalance, dateTimeFormat: presentationData.dateTimeFormat)
+                                        let starsAttributedString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator).mutableCopy() as! NSMutableAttributedString
+                                        attributedString.append(starsAttributedString)
                                     }
-                                    let attributedString = NSMutableAttributedString(string: string, font: Font.regular(presentationData.listsFontSize.itemListBaseFontSize), textColor: presentationData.theme.list.itemSecondaryTextColor)
                                     if let range = attributedString.string.range(of: "#") {
                                         attributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .ton), range: NSRange(range, in: attributedString.string))
                                         attributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: attributedString.string))
@@ -2048,9 +2064,14 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }))
             } else if !user.flags.contains(.isSupport) {
                 let compactName = EnginePeer(user).compactDisplayTitle
-                items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemSuggest, text: presentationData.strings.UserInfo_SuggestPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Peer Info/SuggestAvatar"), action: {
-                    interaction.suggestPhoto()
-                }))
+                
+                if let cachedData = data.cachedData as? CachedUserData, let _ = cachedData.sendPaidMessageStars {
+                    
+                } else {   
+                    items[.peerDataSettings]!.append(PeerInfoScreenActionItem(id: ItemSuggest, text: presentationData.strings.UserInfo_SuggestPhoto(compactName).string, color: .accent, icon: UIImage(bundleImageName: "Peer Info/SuggestAvatar"), action: {
+                        interaction.suggestPhoto()
+                    }))
+                }
                 
                 let setText: String
                 if user.photo.first?.isPersonal == true || state.updatingAvatar != nil {
@@ -9824,7 +9845,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func openPremiumGift() {
         let premiumGiftOptions = self.data?.premiumGiftOptions ?? []
         let premiumOptions = premiumGiftOptions.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
-        
+    
         var hasBirthday = false
         if let cachedUserData = self.data?.cachedData as? CachedUserData {
             hasBirthday = hasBirthdayToday(cachedData: cachedUserData)

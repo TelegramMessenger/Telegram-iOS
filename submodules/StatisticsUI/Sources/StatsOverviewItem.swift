@@ -201,7 +201,7 @@ private final class ValueItemNode: ASDisplayNode {
             
             let valueString: NSAttributedString
             if case .ton = mode {
-                valueString = tonAmountAttributedString(value, integralFont: valueFont, fractionalFont: smallValueFont, color: valueColor)
+                valueString = tonAmountAttributedString(value, integralFont: valueFont, fractionalFont: smallValueFont, color: valueColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             } else {
                 valueString = NSAttributedString(string: value, font: valueFont, textColor: valueColor)
             }

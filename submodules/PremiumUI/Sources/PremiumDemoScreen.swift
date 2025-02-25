@@ -1099,6 +1099,25 @@ private final class DemoSheetContent: CombinedComponent {
                     )
                 )
                 
+                availableItems[.paidMessages] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.paidMessages,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["paid_messages"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_PaidMessages,
+                                text: strings.Premium_PaidMessagesInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                
                 let index: Int = 0
                 var items: [DemoPagerComponent.Item] = []
                 if let item = availableItems.first(where: { $0.value.content.id == component.subject as AnyHashable }) {
@@ -1195,6 +1214,8 @@ private final class DemoSheetContent: CombinedComponent {
                 text = strings.Premium_FolderTagsStandaloneInfo
             case .messageEffects:
                 text = strings.Premium_MessageEffectsInfo
+            case .paidMessages:
+                text = strings.Premium_PaidMessagesInfo
             default:
                 text = ""
             }
@@ -1278,6 +1299,9 @@ private final class DemoSheetContent: CombinedComponent {
                             buttonText = strings.Premium_FolderTags_Proceed
                         case .emojiStatus:
                             buttonText = strings.Premium_EmojiStatus_Proceed
+                            buttonAnimationName = "premium_unlock"
+                        case .paidMessages:
+                            buttonText = strings.Premium_PaidMessages_Proceed
                             buttonAnimationName = "premium_unlock"
                         default:
                             buttonText = strings.Common_OK
@@ -1468,6 +1492,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case business
         case folderTags
         case messageEffects
+        case paidMessages
         
         case businessLocation
         case businessHours
@@ -1526,6 +1551,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
                 return .folderTags
             case .messageEffects:
                 return .messageEffects
+            case .paidMessages:
+                return .paidMessages
             case .businessLocation:
                 return .businessLocation
             case .businessHours:

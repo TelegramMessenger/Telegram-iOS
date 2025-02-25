@@ -8,6 +8,7 @@ import ContextUI
 import ChatPresentationInterfaceState
 import ComponentFlow
 import AccountContext
+import AnimatedCountLabelNode
 
 final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageActionSheetControllerSourceSendButtonNode {
     private let strings: PresentationStrings
@@ -17,7 +18,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
     let sendButton: HighlightTrackingButtonNode
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
-    let textNode: ImmediateTextNode
+    let textNode: ImmediateAnimatedCountLabelNode
     
     private var theme: PresentationTheme
 
@@ -46,8 +47,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
         self.backgroundNode.clipsToBounds = true
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: nil)
                 
-        self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: self.strings.MediaPicker_Send, font: Font.semibold(17.0), textColor: theme.chat.inputPanel.actionControlForegroundColor)
+        self.textNode = ImmediateAnimatedCountLabelNode()
         self.textNode.isUserInteractionEnabled = false
         
         super.init()
@@ -104,8 +104,6 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
     
     func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
-        
-        self.textNode.attributedText = NSAttributedString(string: self.strings.MediaPicker_Send, font: Font.semibold(17.0), textColor: theme.chat.inputPanel.actionControlForegroundColor)
     }
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -113,20 +111,44 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode, ChatSendMessage
         self.absoluteRect = (rect, containerSize)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, minimized: Bool, interfaceState: ChatPresentationInterfaceState) -> CGSize {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, minimized: Bool, text: String, interfaceState: ChatPresentationInterfaceState) -> CGSize {
         self.validLayout = size
         
         let width: CGFloat
-        let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: 100.0))
+        
+        var titleOffset: CGFloat = 0.0
+        var segments: [AnimatedCountLabelNode.Segment] = []
+        var buttonInset: CGFloat = 18.0
+        if text.hasPrefix("⭐️") {
+            let font = Font.with(size: 17.0, design: .round, weight: .semibold, traits: .monospacedNumbers)
+            let badgeString = NSMutableAttributedString(string: "⭐️ ", font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+            if let range = badgeString.string.range(of: "⭐️") {
+                badgeString.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(interfaceState.theme)!, range: NSRange(range, in: badgeString.string))
+                badgeString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: badgeString.string))
+            }
+            segments.append(.text(0, badgeString))
+            for char in text {
+                if let intValue = Int(String(char)) {
+                    segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)))
+                }
+            }
+            titleOffset -= 2.0
+            buttonInset = 14.0
+        } else {
+            segments.append(.text(0, NSAttributedString(string: text, font: Font.semibold(17.0), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)))
+        }
+        self.textNode.segments = segments
+        
+        let textSize = self.textNode.updateLayout(size: CGSize(width: 100.0, height: 100.0), animated: transition.isAnimated)
         if minimized {
             width = 44.0
         } else {
-            width = textSize.width + 36.0
+            width = textSize.width + buttonInset * 2.0
         }
         
         let buttonSize = CGSize(width: width, height: size.height)
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: floorToScreenPixels((buttonSize.height - textSize.height) / 2.0)), size: textSize))
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0) + titleOffset, y: floorToScreenPixels((buttonSize.height - textSize.height) / 2.0)), size: textSize))
         transition.updateAlpha(node: self.textNode, alpha: minimized ? 0.0 : 1.0)
         transition.updateAlpha(node: self.sendButton.imageNode, alpha: minimized ? 1.0 : 0.0)
         

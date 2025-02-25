@@ -9718,6 +9718,26 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func toggleStarGiftsPinnedToTop(peer: Api.InputPeer, stargift: [Api.InputSavedStarGift]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(353626032)
+                    peer.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(stargift.count))
+                    for item in stargift {
+                        item.serialize(buffer, true)
+                    }
+                    return (FunctionDescription(name: "payments.toggleStarGiftsPinnedToTop", parameters: [("peer", String(describing: peer)), ("stargift", String(describing: stargift))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func transferStarGift(stargift: Api.InputSavedStarGift, toId: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(2132285290)

@@ -1745,7 +1745,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     if let upgradeStars, upgradeStars > 0 {
                         finalStars += upgradeStars
                     }
-                    let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(finalStars)), dateTimeFormat.groupingSeparator))"
+                    let valueString = "\(presentationStringsFormattedNumber(abs(Int32(finalStars)), dateTimeFormat.groupingSeparator))⭐️"
                     let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
                     let range = (valueAttributedString.string as NSString).range(of: "⭐️")
                     if range.location != NSNotFound {

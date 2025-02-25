@@ -620,6 +620,10 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             if (flags2 & Int32(1 << 19)) != 0 {
                                                 channelFlags.insert(.starGiftsAvailable)
                                             }
+                                            if (flags2 & Int32(1 << 20)) != 0 {
+                                                channelFlags.insert(.paidMessagesAvailable)
+                                            }
+                                        
                                             let sendAsPeerId = defaultSendAs?.peerId
                                             
                                             let linkedDiscussionPeerId: PeerId?

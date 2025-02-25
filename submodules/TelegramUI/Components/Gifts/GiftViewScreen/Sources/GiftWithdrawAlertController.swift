@@ -146,6 +146,7 @@ private final class GiftWithdrawAlertContentNode: AlertContentNode {
                 GiftItemComponent(
                     context: self.context,
                     theme: self.presentationTheme,
+                    strings: self.strings,
                     peer: nil,
                     subject: .uniqueGift(gift: self.gift),
                     mode: .thumbnail

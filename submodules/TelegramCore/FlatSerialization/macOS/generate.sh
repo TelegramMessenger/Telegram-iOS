@@ -3,10 +3,15 @@
 # Default directories
 OUTPUT_DIR=""
 INPUT_DIR=""
+BINARY_PATH=""
 
 # Parse command line arguments
 while [ "$#" -gt 0 ]; do
     case "$1" in
+        --binary)
+            BINARY_PATH="$2"
+            shift 2
+            ;;
         --output)
             OUTPUT_DIR="$2"
             shift 2
@@ -25,6 +30,12 @@ done
 # Validate output directory
 if [ -z "$OUTPUT_DIR" ]; then
     echo "Error: --output argument is required"
+    exit 1
+fi
+
+# Validate output directory
+if [ -z "$BINARY_PATH" ]; then
+    echo "Error: --binary argument is required"
     exit 1
 fi
 
@@ -58,4 +69,4 @@ for model in $models; do
     flatc_input="$flatc_input $model"
 done
 
-flatc --require-explicit-ids --swift -o "$OUTPUT_DIR" ${flatc_input}
+$BINARY_PATH --require-explicit-ids --swift -o "$OUTPUT_DIR" ${flatc_input}

@@ -211,7 +211,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
     public var openAvatarEditor: () -> Void = {}
     
     private var completed = false
-    public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _, _ in }
+    public var legacyCompletion: (_ fromGallery: Bool, _ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, ChatSendMessageActionSheetController.SendParameters?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _, _, _ in }
     
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
@@ -1294,7 +1294,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
         }
         
-        fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, parameters: ChatSendMessageActionSheetController.SendParameters?, completion: @escaping () -> Void) {
+        fileprivate func send(fromGallery: Bool = false, asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, parameters: ChatSendMessageActionSheetController.SendParameters?, completion: @escaping () -> Void) {
             guard let controller = self.controller, !controller.completed else {
                 return
             }
@@ -1334,7 +1334,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     return
                 }
                 controller.completed = true
-                controller.legacyCompletion(signals, silently, scheduleTime, parameters, { [weak self] identifier in
+                controller.legacyCompletion(fromGallery, signals, silently, scheduleTime, parameters, { [weak self] identifier in
                     return !asFile ? self?.getItemSnapshot(identifier) : nil
                 }, { [weak self] in
                     completion()
@@ -1834,6 +1834,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         paidMediaAllowed: Bool = false,
         subject: Subject,
         forCollage: Bool = false,
+        sendPaidMessageStars: Int64? = nil,
         editingContext: TGMediaEditingContext? = nil,
         selectionContext: TGMediaSelectionContext? = nil,
         saveEditedPhotos: Bool = false,
@@ -2114,7 +2115,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 if let currentItem = currentItem {
                     selectionState.setItem(currentItem, selected: true)
                 }
-                strongSelf.controllerNode.send(silently: silently, scheduleTime: scheduleTime, animated: animated, parameters: parameters, completion: completion)
+                strongSelf.controllerNode.send(fromGallery: currentItem != nil, silently: silently, scheduleTime: scheduleTime, animated: animated, parameters: parameters, completion: completion)
             }
         }, schedule: { [weak self] parameters in
             if let strongSelf = self {
@@ -2128,6 +2129,8 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
             }
         }, selectionState: selectionContext, editingState: editingContext ?? TGMediaEditingContext())
         self.interaction?.selectionState?.grouping = true
+        
+        self.interaction?.editingState.sendPaidMessageStars = sendPaidMessageStars ?? 0
         
         if case let .media(media) = self.subject {
             for item in media {

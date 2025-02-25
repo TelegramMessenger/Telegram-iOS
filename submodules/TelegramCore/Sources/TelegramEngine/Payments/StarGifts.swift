@@ -1064,7 +1064,8 @@ private final class ProfileGiftsContextImpl {
                     }
                     return postbox.transaction { transaction -> ([ProfileGiftsContext.State.StarGift], Int32, String?, Bool?) in
                         switch result {
-                        case let .savedStarGifts(_, count, apiNotificationsEnabled, apiGifts, nextOffset, chats, users):
+                        case let .savedStarGifts(_, count, apiNotificationsEnabled, pinnedToTop, apiGifts, nextOffset, chats, users):
+                            let _ = pinnedToTop
                             let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             

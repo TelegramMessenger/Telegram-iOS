@@ -93,6 +93,7 @@ public final class GiftItemComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let peer: GiftItemComponent.Peer?
     let subject: GiftItemComponent.Subject
     let title: String?
@@ -108,6 +109,7 @@ public final class GiftItemComponent: Component {
     public init(
         context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         peer: GiftItemComponent.Peer? = nil,
         subject: GiftItemComponent.Subject,
         title: String? = nil,
@@ -122,6 +124,7 @@ public final class GiftItemComponent: Component {
     ) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.peer = peer
         self.subject = subject
         self.title = title
@@ -140,6 +143,9 @@ public final class GiftItemComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.peer != rhs.peer {
@@ -471,8 +477,7 @@ public final class GiftItemComponent: Component {
                     price = priceValue
                 case .uniqueGift:
                     buttonColor = UIColor.white
-                    //TODO:localize
-                    price = "Transfer"
+                    price = component.strings.Gift_Options_Gift_Transfer
                 }
                 
                 let buttonSize = self.button.update(
@@ -501,10 +506,11 @@ public final class GiftItemComponent: Component {
                 }
                 
                 if let label = component.label {
+                    let labelColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
                     let attributes = MarkdownAttributes(
-                        body: MarkdownAttributeSet(font: Font.regular(11.0), textColor: UIColor(rgb: 0xd3720a)),
-                        bold: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: UIColor(rgb: 0xd3720a)),
-                        link: MarkdownAttributeSet(font: Font.regular(11.0), textColor: UIColor(rgb: 0xd3720a)),
+                        body: MarkdownAttributeSet(font: Font.regular(11.0), textColor: labelColor),
+                        bold: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: labelColor),
+                        link: MarkdownAttributeSet(font: Font.regular(11.0), textColor: labelColor),
                         linkAttribute: { contents in
                             return (TelegramTextAttributes.URL, contents)
                         }

@@ -2823,7 +2823,12 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 inputPlaceholder = .counter(items)
             } else {
-                inputPlaceholder = .plain(isGroup ? component.strings.Story_InputPlaceholderReplyInGroup : component.strings.Story_InputPlaceholderReplyPrivately)
+                if let sendPaidMessageStars = component.slice.additionalPeerData.sendPaidMessageStars {
+                    let dateTimeFormat = component.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat
+                    inputPlaceholder = .plain(component.strings.Chat_InputTextPaidMessagePlaceholder(" # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), dateTimeFormat.groupingSeparator))").string)
+                } else {
+                    inputPlaceholder = .plain(isGroup ? component.strings.Story_InputPlaceholderReplyInGroup : component.strings.Story_InputPlaceholderReplyPrivately)
+                }
             }
             
             let startTime22 = CFAbsoluteTimeGetCurrent()
@@ -2867,6 +2872,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         style: .story,
                         placeholder: inputPlaceholder,
+                        sendPaidMessageStars: component.slice.additionalPeerData.sendPaidMessageStars,
                         maxLength: 4096,
                         queryTypes: [.mention, .hashtag, .emoji],
                         alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
@@ -4647,6 +4653,10 @@ public final class StoryItemSetContainerComponent: Component {
                                     case .stars:
                                         break
                                     }
+                                    
+                                    if let sendPaidMessageStars = component.slice.additionalPeerData.sendPaidMessageStars {
+                                        messageAttributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: false))
+                                    }
 
                                     let message: EnqueueMessage = .message(
                                         text: text,
@@ -4693,7 +4703,6 @@ public final class StoryItemSetContainerComponent: Component {
                                 })
                             }
                         }
-                        
                         if self.displayLikeReactions {
                             if component.slice.item.storyItem.myReaction == updateReaction.reaction {
                                 action()
@@ -4704,7 +4713,9 @@ public final class StoryItemSetContainerComponent: Component {
                             }
                         } else {
                             self.sendMessageContext.performWithPossibleStealthModeConfirmation(view: self, action: {
-                                action()
+                                self.sendMessageContext.presentPaidMessageAlertIfNeeded(view: self, completion: {
+                                    action()
+                                })
                             })
                         }
                     }

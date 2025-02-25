@@ -17,6 +17,7 @@ import UndoUI
 import AnimatedAvatarSetNode
 import AvatarNode
 import TelegramStringFormatting
+import ChatMessagePaymentAlertController
 
 private final class SendInviteLinkScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -26,19 +27,22 @@ private final class SendInviteLinkScreenComponent: Component {
     let link: String?
     let peers: [TelegramForbiddenInvitePeer]
     let peerPresences: [EnginePeer.Id: EnginePeer.Presence]
+    let sendPaidMessageStars: [EnginePeer.Id: StarsAmount]
     
     init(
         context: AccountContext,
         peer: EnginePeer,
         link: String?,
         peers: [TelegramForbiddenInvitePeer],
-        peerPresences: [EnginePeer.Id: EnginePeer.Presence]
+        peerPresences: [EnginePeer.Id: EnginePeer.Presence],
+        sendPaidMessageStars: [EnginePeer.Id: StarsAmount]
     ) {
         self.context = context
         self.peer = peer
         self.link = link
         self.peers = peers
         self.peerPresences = peerPresences
+        self.sendPaidMessageStars = sendPaidMessageStars
     }
     
     static func ==(lhs: SendInviteLinkScreenComponent, rhs: SendInviteLinkScreenComponent) -> Bool {
@@ -52,6 +56,9 @@ private final class SendInviteLinkScreenComponent: Component {
             return false
         }
         if lhs.peerPresences != rhs.peerPresences {
+            return false
+        }
+        if lhs.sendPaidMessageStars != rhs.sendPaidMessageStars {
             return false
         }
         return true
@@ -263,6 +270,38 @@ private final class SendInviteLinkScreenComponent: Component {
             self.navigationBarContainer.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             if let actionButtonView = self.actionButton?.view {
                 actionButtonView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
+            }
+        }
+        
+        private func presentPaidMessageAlertIfNeeded(peers: [EnginePeer], requiresStars: [EnginePeer.Id: StarsAmount], completion: @escaping () -> Void) {
+            guard let component = self.component else {
+                completion()
+                return
+            }
+            var totalAmount: StarsAmount = .zero
+            for peer in peers {
+                if let amount = requiresStars[peer.id] {
+                    totalAmount = totalAmount + amount
+                }
+            }
+            if totalAmount.value > 0 {
+                let controller = chatMessagePaymentAlertController(
+                    context: component.context,
+                    presentationData: component.context.sharedContext.currentPresentationData.with { $0 },
+                    updatedPresentationData: nil,
+                    peers: peers,
+                    count: 1,
+                    amount: totalAmount,
+                    totalAmount: totalAmount,
+                    hasCheck: false,
+                    navigationController: self.environment?.controller()?.navigationController as? NavigationController,
+                    completion: { _ in
+                        completion()
+                    }
+                )
+                self.environment?.controller()?.present(controller, in: .window(.root))
+            } else {
+                completion()
             }
         }
         
@@ -851,20 +890,37 @@ private final class SendInviteLinkScreenComponent: Component {
                             } else if let link = component.link {
                                 let selectedPeers = component.peers.filter { self.selectedItems.contains($0.peer.id) }
                                 
-                                let _ = enqueueMessagesToMultiplePeers(account: component.context.account, peerIds: Array(self.selectedItems), threadIds: [:], messages: [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
-                                let text: String
-                                if selectedPeers.count == 1 {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                                } else if selectedPeers.count == 2 {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
-                                } else {
-                                    text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
-                                }
-                                
-                                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
-                                
-                                controller.dismiss()
+                                self.presentPaidMessageAlertIfNeeded(
+                                    peers: selectedPeers.map { $0.peer },
+                                    requiresStars: component.sendPaidMessageStars,
+                                    completion: { [weak self] in
+                                        guard let self, let component = self.component, let controller = self.environment?.controller() else {
+                                            return
+                                        }
+                                        
+                                        for peerId in Array(self.selectedItems) {
+                                            var messageAttributes: [EngineMessage.Attribute] = []
+                                            if let sendPaidMessageStars = component.sendPaidMessageStars[peerId] {
+                                                messageAttributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: false))
+                                            }
+                                            let _ = enqueueMessages(account: component.context.account, peerId: peerId, messages: [.message(text: link, attributes: messageAttributes, inlineStickers: [:], mediaReference: nil, threadId: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).startStandalone()
+                                        }
+                                        
+                                        let text: String
+                                        if selectedPeers.count == 1 {
+                                            text = environment.strings.Conversation_ShareLinkTooltip_Chat_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                        } else if selectedPeers.count == 2 {
+                                            text = environment.strings.Conversation_ShareLinkTooltip_TwoChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), selectedPeers[1].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: "")).string
+                                        } else {
+                                            text = environment.strings.Conversation_ShareLinkTooltip_ManyChats_One(selectedPeers[0].peer.displayTitle(strings: environment.strings, displayOrder: .firstLast).replacingOccurrences(of: "*", with: ""), "\(selectedPeers.count - 1)").string
+                                        }
+                                        
+                                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                        controller.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: false, text: text), elevatedLayout: false, action: { _ in return false }), in: .window(.root))
+                                        
+                                        controller.dismiss()
+                                    }
+                                )
                             } else {
                                 controller.dismiss()
                             }
@@ -1083,16 +1139,21 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
         self.link = link
         self.peers = peers
         
-        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: [:]), navigationBarAppearance: .none)
+        super.init(context: context, component: SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: [:], sendPaidMessageStars: [:]), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore
         self.navigationPresentation = .flatModal
         self.blocksBackgroundWhenInOverlay = true
         
-        self.presenceDisposable = (context.engine.data.subscribe(EngineDataMap(
-            peers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init(id:))
-        ))
-        |> deliverOnMainQueue).start(next: { [weak self] presences in
+        self.presenceDisposable = (context.engine.data.subscribe(
+            EngineDataMap(
+                peers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.Presence.init(id:))
+            ),
+            EngineDataMap(
+                peers.map(\.peer.id).map(TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.init(id:))
+            )
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] presences, sendPaidMessageStars in
             guard let self else {
                 return
             }
@@ -1102,7 +1163,13 @@ public class SendInviteLinkScreen: ViewControllerComponentContainer {
                     parsedPresences[id] = presence
                 }
             }
-            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: parsedPresences)), transition: .immediate)
+            var parsedSendPaidMessageStars: [EnginePeer.Id: StarsAmount] = [:]
+            for (id, sendPaidMessageStars) in sendPaidMessageStars {
+                if let sendPaidMessageStars {
+                    parsedSendPaidMessageStars[id] = sendPaidMessageStars
+                }
+            }
+            self.updateComponent(component: AnyComponent(SendInviteLinkScreenComponent(context: context, peer: peer, link: link, peers: peers, peerPresences: parsedPresences, sendPaidMessageStars: parsedSendPaidMessageStars)), transition: .immediate)
         })
     }
     

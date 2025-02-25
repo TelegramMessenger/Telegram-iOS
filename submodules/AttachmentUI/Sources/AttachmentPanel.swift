@@ -824,6 +824,7 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private var presentationData: PresentationData
     private var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
+    private var peerDisposable: Disposable?
     
     private var iconDisposables: [MediaId: Disposable] = [:]
     
@@ -852,6 +853,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
     private(set) var isSelecting: Bool = false
+    private var selectionCount: Int = 0
+    
     private var _isButtonVisible: Bool = false
     var isButtonVisible: Bool {
         return self.mainButtonState.isVisible || self.secondaryButtonState.isVisible
@@ -1167,7 +1170,8 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                             forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
                             canMakePaidContent: canMakePaidContent,
                             currentPrice: currentPrice,
-                            hasTimers: hasTimers
+                            hasTimers: hasTimers,
+                            sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars
                         )),
                         hasEntityKeyboard: hasEntityKeyboard,
                         gesture: gesture,
@@ -1258,14 +1262,35 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, selectionCount: strongSelf.selectionCount, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
                 }
             }
         }).strict()
+        
+        if let peerId = chatLocation?.peerId {
+            self.peerDisposable = ((self.context.account.viewTracker.peerView(peerId)
+            |> map { view -> StarsAmount? in
+                if let data = view.cachedData as? CachedUserData {
+                    return data.sendPaidMessageStars
+                } else if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    return channel.sendPaidMessageStars
+                } else {
+                    return nil
+                }
+            }
+            |> distinctUntilChanged
+            |> deliverOnMainQueue).start(next: { [weak self] amount in
+                guard let self else {
+                    return
+                }
+                self.updateChatPresentationInterfaceState({ $0.updatedSendPaidMessageStars(amount) })
+            }))
+        }
     }
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.peerDisposable?.dispose()
         for (_, disposable) in self.iconDisposables {
             disposable.dispose()
         }
@@ -1308,16 +1333,19 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, f, completion: completion)
     }
     
-    private func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
+    private func updateChatPresentationInterfaceState(update: Bool = true, transition: ContainedViewLayoutTransition, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
         let presentationInterfaceState = f(self.presentationInterfaceState)
+        
         let updateInputTextState = self.presentationInterfaceState.interfaceState.effectiveInputState != presentationInterfaceState.interfaceState.effectiveInputState
         
         self.presentationInterfaceState = presentationInterfaceState
         
-        if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
-            textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
-
-            self.textUpdated(presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+        if update {
+            if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
+                textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
+                
+                self.textUpdated(presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+            }
         }
     }
     
@@ -1672,10 +1700,23 @@ final class AttachmentPanel: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, selectionCount: Int, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
         self.elevateProgress = elevateProgress
+        
+        if selectionCount != self.selectionCount {
+            self.selectionCount = selectionCount
+            self.updateChatPresentationInterfaceState(update: false, transition: .immediate, { state in
+                var selectedMessages: [EngineMessage.Id] = []
+                for i in 0 ..< selectionCount {
+                    selectedMessages.append(EngineMessage.Id(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: Int32(i)))
+                }
+                return state.updatedInterfaceState { state in
+                    return state.withUpdatedForwardMessageIds(selectedMessages)
+                }
+            })
+        }
                 
         let isButtonVisibleUpdated = self._isButtonVisible != self.mainButtonState.isVisible
         self._isButtonVisible = self.mainButtonState.isVisible

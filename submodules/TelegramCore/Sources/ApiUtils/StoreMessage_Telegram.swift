@@ -904,7 +904,7 @@ extension StoreMessage {
                 }
             
                 if let paidMessageStars {
-                    attributes.append(PaidStarsMessageAttribute(stars: StarsAmount(value: paidMessageStars, nanos: 0)))
+                    attributes.append(PaidStarsMessageAttribute(stars: StarsAmount(value: paidMessageStars, nanos: 0), postponeSending: false))
                 }
             
                 var entitiesAttribute: TextEntitiesMessageAttribute?

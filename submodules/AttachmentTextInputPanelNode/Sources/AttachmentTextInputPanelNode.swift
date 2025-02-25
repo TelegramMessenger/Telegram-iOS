@@ -750,7 +750,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 }
                 
                 self.theme = interfaceState.theme
-
+                
                 self.actionButtons.updateTheme(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
                 
                 let textFieldMinHeight = calclulateTextFieldMinHeight(interfaceState, metrics: metrics)
@@ -957,7 +957,17 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         var textBackgroundInset: CGFloat = 0.0
         let actionButtonsSize: CGSize
         if let presentationInterfaceState = self.presentationInterfaceState {
-            actionButtonsSize = self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, minimized: !self.isAttachment || inputHasText, interfaceState: presentationInterfaceState)
+            let isMinimized: Bool
+            let text: String
+            if let sendPaidMessageStars = presentationInterfaceState.sendPaidMessageStars {
+                isMinimized = false
+                let count = max(1, presentationInterfaceState.interfaceState.forwardMessageIds?.count ?? 1)
+                text = "⭐️\(sendPaidMessageStars.value * Int64(count))"
+            } else {
+                isMinimized = !self.isAttachment || inputHasText
+                text = presentationInterfaceState.strings.MediaPicker_Send
+            }
+            actionButtonsSize = self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, minimized: isMinimized, text: text, interfaceState: presentationInterfaceState)
             textBackgroundInset = 44.0 - actionButtonsSize.width
         } else {
             actionButtonsSize = CGSize(width: 44.0, height: minimalHeight)

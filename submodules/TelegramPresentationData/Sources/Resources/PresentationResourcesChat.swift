@@ -1351,4 +1351,19 @@ public struct PresentationResourcesChat {
             return nil
         })
     }
+    
+    public static func chatPlaceholderStarIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatPlaceholderStarIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Premium/Stars/ButtonStar") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    let bounds = CGRect(origin: .zero, size: size)
+                    context.clear(bounds)
+                    if let cgImage = image.cgImage {
+                        context.draw(cgImage, in: bounds.offsetBy(dx: UIScreenPixel, dy: -UIScreenPixel), byTiling: false)
+                    }
+                })
+            }
+            return nil
+        })
+    }
 }
