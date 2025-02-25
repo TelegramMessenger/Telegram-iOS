@@ -50,6 +50,7 @@ swift_library(
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramCore/FlatBuffers",
         "//submodules/TelegramCore/FlatSerialization",
+        "//submodules/TelegramUI/Components/BatchVideoRendering",
     ],
     visibility = [
         "//visibility:public",

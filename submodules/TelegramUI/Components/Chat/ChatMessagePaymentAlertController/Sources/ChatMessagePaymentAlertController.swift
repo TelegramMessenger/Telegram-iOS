@@ -55,7 +55,7 @@ private final class ChatMessagePaymentAlertContentNode: AlertContentNode, ASGest
     
     var openTerms: () -> Void = {}
     
-    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, optionText: String?, actions: [TextAlertAction], alignment: TextAlertContentActionLayout) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, optionText: String?, actions: [TextAlertAction], alignment: TextAlertContentActionLayout) {
         self.strings = strings
         self.title = title
         self.text = text
@@ -318,94 +318,143 @@ private final class ChatMessagePaymentAlertContentNode: AlertContentNode, ASGest
 }
 
 private class ChatMessagePaymentAlertController: AlertController {
-    private let context: AccountContext
+    private let context: AccountContext?
     private let presentationData: PresentationData
+    private weak var parentNavigationController: NavigationController?
     
     private let balance = ComponentView<Empty>()
     
-    init(context: AccountContext, presentationData: PresentationData, contentNode: AlertContentNode) {
+    init(context: AccountContext?, presentationData: PresentationData, contentNode: AlertContentNode, navigationController: NavigationController?) {
         self.context = context
         self.presentationData = presentationData
-        
+        self.parentNavigationController = navigationController
+    
         super.init(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
+        
+        self.willDismiss = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.animateOut()
+        }
     }
         
     required public init(coder aDecoder: NSCoder) {
         preconditionFailure()
     }
     
-    override func dismissAnimated() {
-        super.dismissAnimated()
-        
+    private func animateOut() {
         if let view = self.balance.view {
             view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
             view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         }
     }
     
+    override func dismissAnimated() {
+        super.dismissAnimated()
+        
+        self.animateOut()
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        let insets = layout.insets(options: .statusBar)
-        let balanceSize = self.balance.update(
-            transition: .immediate,
-            component: AnyComponent(
-                StarsBalanceOverlayComponent(
-                    context: self.context,
-                    theme: self.presentationData.theme,
-                    action: {
-                        
-                    }
-                )
-            ),
-            environment: {},
-            containerSize: layout.size
-        )
-        if let view = self.balance.view {
-            if view.superview == nil {
-                self.view.addSubview(view)
-                
-                view.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                view.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
-                view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        if let context = self.context, let _ = self.parentNavigationController {
+            let insets = layout.insets(options: .statusBar)
+            let balanceSize = self.balance.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    StarsBalanceOverlayComponent(
+                        context: context,
+                        theme: self.presentationData.theme,
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.parentNavigationController else {
+                                return
+                            }
+                            self.dismissAnimated()
+                            
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: layout.size
+            )
+            if let view = self.balance.view {
+                if view.superview == nil {
+                    self.view.addSubview(view)
+                    
+                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    view.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - balanceSize.width) / 2.0), y: insets.top + 5.0), size: balanceSize)
             }
-            view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - balanceSize.width) / 2.0), y: insets.top + 5.0), size: balanceSize)
         }
     }
 }
 
 public func chatMessagePaymentAlertController(
-    context: AccountContext,
+    context: AccountContext?,
+    presentationData: PresentationData,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-    peer: EnginePeer,
+    peers: [EnginePeer],
+    count: Int32,
     amount: StarsAmount,
+    totalAmount: StarsAmount?,
+    hasCheck: Bool = true,
+    navigationController: NavigationController?,
     completion: @escaping (Bool) -> Void
 ) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
-    let presentationData: PresentationData
-    if let updatedPresentationData {
-        presentationData = updatedPresentationData.initial
-    } else {
-        presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    }
+    let presentationData = updatedPresentationData?.initial ?? presentationData
     let strings = presentationData.strings
     
     var completionImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     
     //TODO:localize
-    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: "Pay for 1 Message", action: {
+    let title = "Confirm Payment"
+    let actionTitle: String
+    let messagesString: String
+    if count > 1 {
+        messagesString = "**\(count)** messages"
+        actionTitle = "Pay for \(count) Messages"
+    } else {
+        messagesString = "**\(count)** message"
+        actionTitle = "Pay for 1 Message"
+    }
+    
+    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: actionTitle, action: {
         completionImpl?()
         dismissImpl?()
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
     })]
     
-    let title = "Confirm Payment"
-    let text = "**\(peer.compactDisplayTitle)** charges **\(amount.value) Stars** per incoming message. Would you like to pay **\(amount.value) Stars** to send one message?"
-    let optionText = "Don't ask again"
+
+    let text: String
+    if peers.count == 1, let peer = peers.first {
+        text = "**\(peer.compactDisplayTitle)** charges **\(amount.value) Stars** per incoming message. Would you like to pay **\(amount.value * Int64(count)) Stars** to send \(messagesString)?"
+    } else {
+        let amount = totalAmount ?? amount
+        text = "You selected **\(peers.count)** users who charge Stars for messages. Would you like to pay **\(amount.value)** Stars to send \(messagesString)?"
+    }
     
-    let contentNode = ChatMessagePaymentAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .vertical)
+    let optionText = hasCheck ? "Don't ask again" : nil
+    
+    let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .vertical)
     
     completionImpl = { [weak contentNode] in
         guard let contentNode else {
@@ -414,7 +463,7 @@ public func chatMessagePaymentAlertController(
         completion(contentNode.dontAskAgain)
     }
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController)
     dismissImpl = { [weak controller]  in
         controller?.dismissAnimated()
     }
@@ -424,19 +473,16 @@ public func chatMessagePaymentAlertController(
 
 
 public func chatMessageRemovePaymentAlertController(
-    context: AccountContext,
+    context: AccountContext? = nil,
+    presentationData: PresentationData,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     peer: EnginePeer,
     amount: StarsAmount?,
+    navigationController: NavigationController?,
     completion: @escaping (Bool) -> Void
 ) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
-    let presentationData: PresentationData
-    if let updatedPresentationData {
-        presentationData = updatedPresentationData.initial
-    } else {
-        presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    }
+    let presentationData = updatedPresentationData?.initial ?? presentationData
     let strings = presentationData.strings
     
     var completionImpl: (() -> Void)?
@@ -457,7 +503,7 @@ public func chatMessageRemovePaymentAlertController(
     let text = "Are you sure you want to allow **\(peer.compactDisplayTitle)** to message you for free?"
     let optionText = amount.flatMap { "Refund already paid **\($0.value) Stars**" }
     
-    let contentNode = ChatMessagePaymentAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .horizontal)
+    let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .horizontal)
     
     completionImpl = { [weak contentNode] in
         guard let contentNode else {
@@ -466,7 +512,7 @@ public func chatMessageRemovePaymentAlertController(
         completion(contentNode.dontAskAgain)
     }
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController)
     dismissImpl = { [weak controller]  in
         controller?.dismissAnimated()
     }

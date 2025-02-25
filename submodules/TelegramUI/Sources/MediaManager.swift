@@ -58,6 +58,8 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         }
     }
     
+    public weak var currentPictureInPictureNode: AnyObject?
+    
     private let queue = Queue.mainQueue()
     
     private let accountManager: AccountManager<TelegramAccountManagerTypes>

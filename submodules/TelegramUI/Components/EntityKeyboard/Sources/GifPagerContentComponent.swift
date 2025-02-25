@@ -19,18 +19,20 @@ import SoftwareVideo
 import AVFoundation
 import PhotoResources
 import ShimmerEffect
+import BatchVideoRendering
 
-private class GifVideoLayer: AVSampleBufferDisplayLayer {
+private class GifVideoLayer: AVSampleBufferDisplayLayer, BatchVideoRenderingContext.Target {
     private let context: AccountContext
+    private let batchVideoContext: BatchVideoRenderingContext
     private let userLocation: MediaResourceUserLocation
     private let file: TelegramMediaFile?
     
-    private var frameManager: SoftwareVideoLayerFrameManager?
+    private var batchVideoTargetHandle: BatchVideoRenderingContext.TargetHandle?
+    var batchVideoRenderingTargetState: BatchVideoRenderingContext.TargetState?
     
     private var thumbnailDisposable: Disposable?
     
-    private var playbackTimestamp: Double = 0.0
-    private var playbackTimer: SwiftSignalKit.Timer?
+    private var isReadyToRender: Bool = false
     
     var started: (() -> Void)?
     
@@ -39,28 +41,13 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
             if self.shouldBeAnimating == oldValue {
                 return
             }
-            
-            if self.shouldBeAnimating {
-                self.playbackTimer?.invalidate()
-                let startTimestamp = self.playbackTimestamp + CFAbsoluteTimeGetCurrent()
-                self.playbackTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let timestamp = CFAbsoluteTimeGetCurrent() - startTimestamp
-                    strongSelf.frameManager?.tick(timestamp: timestamp)
-                    strongSelf.playbackTimestamp = timestamp
-                }, queue: .mainQueue())
-                self.playbackTimer?.start()
-            } else {
-                self.playbackTimer?.invalidate()
-                self.playbackTimer = nil
-            }
+            self.updateShouldBeRendering()
         }
     }
     
-    init(context: AccountContext, userLocation: MediaResourceUserLocation, file: TelegramMediaFile?, synchronousLoad: Bool) {
+    init(context: AccountContext, batchVideoContext: BatchVideoRenderingContext, userLocation: MediaResourceUserLocation, file: TelegramMediaFile?, synchronousLoad: Bool) {
         self.context = context
+        self.batchVideoContext = batchVideoContext
         self.userLocation = userLocation
         self.file = file
         
@@ -102,6 +89,7 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
         }
         
         self.context = layer.context
+        self.batchVideoContext = layer.batchVideoContext
         self.userLocation = layer.userLocation
         self.file = layer.file
         
@@ -117,18 +105,28 @@ private class GifVideoLayer: AVSampleBufferDisplayLayer {
     }
     
     private func setupVideo() {
-        guard let file = self.file else {
-            return
-        }
-        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: self.userLocation, userContentType: .other, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
-        self.frameManager = frameManager
-        frameManager.started = { [weak self] in
-            guard let strongSelf = self else {
-                return
+        self.isReadyToRender = true
+        self.updateShouldBeRendering()
+    }
+    
+    private func updateShouldBeRendering() {
+        let shouldBeRendering = self.shouldBeAnimating && self.isReadyToRender
+        
+        if shouldBeRendering, let file = self.file {
+            if self.batchVideoTargetHandle == nil {
+                self.batchVideoTargetHandle = self.batchVideoContext.add(target: self, file: file, userLocation: self.userLocation)
             }
-            let _ = strongSelf
+        } else {
+            self.batchVideoTargetHandle = nil
         }
-        frameManager.start()
+    }
+    
+    func setSampleBuffer(sampleBuffer: CMSampleBuffer) {
+        if #available(iOS 17.0, *) {
+            self.sampleBufferRenderer.enqueue(sampleBuffer)
+        } else {
+            self.enqueue(sampleBuffer)
+        }
     }
 }
 
@@ -382,6 +380,7 @@ public final class GifPagerContentComponent: Component {
             init(
                 item: Item?,
                 context: AccountContext,
+                batchVideoContext: BatchVideoRenderingContext,
                 groupId: String,
                 attemptSynchronousLoad: Bool,
                 onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
@@ -389,7 +388,7 @@ public final class GifPagerContentComponent: Component {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, userLocation: .other, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, batchVideoContext: batchVideoContext, userLocation: .other, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
                 
                 if item == nil {
                     self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
@@ -594,6 +593,7 @@ public final class GifPagerContentComponent: Component {
         private var pagerEnvironment: PagerComponentChildEnvironment?
         private var theme: PresentationTheme?
         private var itemLayout: ItemLayout?
+        private var batchVideoContext: BatchVideoRenderingContext?
         
         private var currentLoadMoreToken: String?
         
@@ -833,6 +833,14 @@ public final class GifPagerContentComponent: Component {
                 searchInset += itemLayout.searchHeight
             }
             
+            let batchVideoContext: BatchVideoRenderingContext
+            if let current = self.batchVideoContext {
+                batchVideoContext = current
+            } else {
+                batchVideoContext = BatchVideoRenderingContext(context: component.context)
+                self.batchVideoContext = batchVideoContext
+            }
+            
             if let itemRange = itemLayout.visibleItems(for: self.scrollView.bounds) {
                 for index in itemRange.lowerBound ..< itemRange.upperBound {
                     var item: Item?
@@ -869,6 +877,7 @@ public final class GifPagerContentComponent: Component {
                         itemLayer = ItemLayer(
                             item: item,
                             context: component.context,
+                            batchVideoContext: batchVideoContext,
                             groupId: "savedGif",
                             attemptSynchronousLoad: attemptSynchronousLoads,
                             onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in

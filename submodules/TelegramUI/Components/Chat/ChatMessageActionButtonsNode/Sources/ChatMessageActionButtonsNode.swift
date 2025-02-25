@@ -62,7 +62,6 @@ private extension UIBezierPath {
 }
 
 private final class ChatMessageActionButtonNode: ASDisplayNode {
-    //private let backgroundBlurNode: NavigationBackgroundNode
     private var backgroundBlurView: PortalView?
     
     private var titleNode: TextNode?
@@ -84,15 +83,11 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     private let accessibilityArea: AccessibilityAreaNode
     
     override init() {
-        //self.backgroundBlurNode = NavigationBackgroundNode(color: .clear)
-        //self.backgroundBlurNode.isUserInteractionEnabled = false
-
         self.accessibilityArea = AccessibilityAreaNode()
         self.accessibilityArea.accessibilityTraits = .button
         
         super.init()
         
-        //self.addSubnode(self.backgroundBlurNode)
         self.addSubnode(self.accessibilityArea)
         
         self.accessibilityArea.activate = { [weak self] in

@@ -15,11 +15,6 @@ private let typeHintIsValidated: Int32 = 8
 private let typeNoPremium: Int32 = 9
 private let typeCustomEmoji: Int32 = 10
 
-enum FlatBuffersError: Error {
-    case missingRequiredField
-    case invalidUnionType
-}
-
 public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case id(id: Int64, accessHash: Int64)
     case name(String)
@@ -131,19 +126,19 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
         switch flatBuffersObject.valueType {
         case .stickerpackreferenceId:
             guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Id.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .id(id: value.id, accessHash: value.accessHash)
         case .stickerpackreferenceName:
             guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Name.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .name(value.name)
         case .stickerpackreferenceAnimatedemoji:
             self = .animatedEmoji
         case .stickerpackreferenceDice:
             guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Dice.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .dice(value.emoji)
         case .stickerpackreferenceAnimatedemojianimations:
@@ -159,7 +154,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
         case .stickerpackreferenceIconchannelstatusemoji:
             self = .iconChannelStatusEmoji
         case .none_:
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
     }
     
@@ -475,7 +470,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
     
     init(flatBuffersData data: Data) throws {
         var byteBuffer = ByteBuffer(data: data)
-        let flatBuffersObject: TelegramCore_TelegramMediaFileAttribute = getRoot(byteBuffer: &byteBuffer)
+        let flatBuffersObject: TelegramCore_TelegramMediaFileAttribute = FlatBuffers_getRoot(byteBuffer: &byteBuffer)
         try self.init(flatBuffersObject: flatBuffersObject)
     }
     
@@ -483,29 +478,29 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
         switch flatBuffersObject.valueType {
         case .telegrammediafileattributeFilename:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_FileName.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .FileName(fileName: value.fileName)
         case .telegrammediafileattributeSticker:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Sticker.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .Sticker(displayText: value.displayText, packReference: try value.packReference.flatMap({ try StickerPackReference(flatBuffersObject: $0) }), maskData: value.maskData.flatMap({ StickerMaskCoords(flatBuffersObject: $0) }))
         case .telegrammediafileattributeImagesize:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_ImageSize.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .ImageSize(size: PixelDimensions(width: value.width, height: value.height))
         case .telegrammediafileattributeAnimated:
             self = .Animated
         case .telegrammediafileattributeVideo:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Video.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .Video(duration: Double(value.duration), size: PixelDimensions(width: value.width, height: value.height), flags: TelegramMediaVideoFlags(rawValue: value.flags), preloadSize: value.preloadSize == 0 ? nil : value.preloadSize, coverTime: value.coverTime == 0.0 ? nil : Double(value.coverTime), videoCodec: value.videoCodec)
         case .telegrammediafileattributeAudio:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Audio.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .Audio(isVoice: value.isVoice, duration: Int(value.duration), title: value.title, performer: value.performer, waveform: value.waveform.isEmpty ? nil : Data(value.waveform))
         case .telegrammediafileattributeHaslinkedstickers:
@@ -517,10 +512,10 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
         case .telegrammediafileattributeNopremium:
             self = .NoPremium
         case .none_:
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         case .telegrammediafileattributeCustomemoji:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) else {
-                throw FlatBuffersError.missingRequiredField
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
             }
             self = .CustomEmoji(isPremium: value.isPremium, isSingleColor: value.isSingleColor, alt: value.alt, packReference: try value.packReference.flatMap({ try StickerPackReference(flatBuffersObject: $0) }))
         }

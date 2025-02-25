@@ -374,6 +374,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
     private var linkHighlightingNode: LinkHighlightingNode?
     
     public var linkHighlightColor: UIColor?
+    public var linkHighlightInset: UIEdgeInsets = .zero
     
     public var trailingLineWidth: CGFloat?
 
@@ -634,7 +635,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                             }
                         }
                         
-                        if let rects = rects {
+                        if var rects, !rects.isEmpty {
                             let linkHighlightingNode: LinkHighlightingNode
                             if let current = strongSelf.linkHighlightingNode {
                                 linkHighlightingNode = current
@@ -644,6 +645,7 @@ public class ImmediateTextNodeWithEntities: TextNode {
                                 strongSelf.addSubnode(linkHighlightingNode)
                             }
                             linkHighlightingNode.frame = strongSelf.bounds
+                            rects[rects.count - 1] = rects[rects.count - 1].inset(by: strongSelf.linkHighlightInset)
                             linkHighlightingNode.updateRects(rects.map { $0.offsetBy(dx: 0.0, dy: 0.0) })
                         } else if let linkHighlightingNode = strongSelf.linkHighlightingNode {
                             strongSelf.linkHighlightingNode = nil

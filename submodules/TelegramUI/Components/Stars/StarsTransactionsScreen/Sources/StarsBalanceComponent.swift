@@ -140,12 +140,20 @@ final class StarsBalanceComponent: Component {
             let sideInset: CGFloat = 16.0
             var contentHeight: CGFloat = sideInset
             
-            let balanceString = presentationStringsFormattedNumber(component.count, component.dateTimeFormat.groupingSeparator)
+            let formattedLabel = formatStarsAmountText(component.count, dateTimeFormat: component.dateTimeFormat)
+            let labelFont: UIFont
+            if formattedLabel.contains(component.dateTimeFormat.decimalSeparator) {
+                labelFont = Font.with(size: 48.0, design: .round, weight: .semibold)
+            } else {
+                labelFont = Font.with(size: 48.0, design: .round, weight: .semibold)
+            }
+            let smallLabelFont = Font.with(size: 32.0, design: .round, weight: .regular)
+            let balanceString = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: component.theme.list.itemPrimaryTextColor, decimalSeparator: component.dateTimeFormat.decimalSeparator)
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: balanceString, font: Font.with(size: 48.0, design: .round, weight: .semibold), textColor: component.theme.list.itemPrimaryTextColor))
+                        text: .plain(balanceString)
                     )
                 ),
                 environment: {},

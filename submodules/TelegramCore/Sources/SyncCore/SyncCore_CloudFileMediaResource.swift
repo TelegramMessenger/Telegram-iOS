@@ -961,7 +961,7 @@ public final class WallpaperDataResource: TelegramMediaResource {
 
 public func TelegramMediaResource_parse(flatBuffersData data: Data) throws -> TelegramMediaResource {
     var byteBuffer = ByteBuffer(data: data)
-    let flatBuffersObject: TelegramCore_TelegramMediaResource = getRoot(byteBuffer: &byteBuffer)
+    let flatBuffersObject: TelegramCore_TelegramMediaResource = FlatBuffers_getRoot(byteBuffer: &byteBuffer)
     
     return try TelegramMediaResource_parse(flatBuffersObject: flatBuffersObject)
 }
@@ -970,7 +970,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
     switch flatBuffersObject.valueType {
     case .telegrammediaresourceCloudfilemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudFileMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return CloudFileMediaResource(
             datacenterId: Int(value.datacenterId),
@@ -982,7 +982,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceClouddocumentsizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return CloudDocumentSizeMediaResource(
             datacenterId: value.datacenterId,
@@ -993,7 +993,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudphotosizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return CloudPhotoSizeMediaResource(
             datacenterId: value.datacenterId,
@@ -1005,7 +1005,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudpeerphotosizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         let sizeSpec: CloudPeerPhotoSizeSpec
         switch value.sizeSpec {
@@ -1023,7 +1023,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudstickerpackthumbnailmediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return CloudStickerPackThumbnailMediaResource(
             datacenterId: value.datacenterId,
@@ -1033,7 +1033,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceClouddocumentmediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return CloudDocumentMediaResource(
             datacenterId: Int(value.datacenterId),
@@ -1045,7 +1045,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceLocalfilemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_LocalFileMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
         }
         return LocalFileMediaResource(
             fileId: value.fileId,
@@ -1053,7 +1053,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
             isSecretRelated: value.isSecretRelated
         )
     case .none_:
-        throw FlatBuffersError.missingRequiredField
+        throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
     }
 }
 
@@ -1094,8 +1094,9 @@ public func TelegramMediaResource_serialize(resource: TelegramMediaResource, fla
         return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceClouddocumentsizemediaresource, valueOffset: offset)
     case let resource as CloudPhotoSizeMediaResource:
         let sizeSpecOffset = builder.create(string: resource.sizeSpec)
-        let start = TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.startTelegramMediaResource_CloudPhotoSizeMediaResource(&builder)
         let fileReferenceOffset = resource.fileReference.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.startTelegramMediaResource_CloudPhotoSizeMediaResource(&builder)
         
         TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
         TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(photoId: resource.photoId, &builder)

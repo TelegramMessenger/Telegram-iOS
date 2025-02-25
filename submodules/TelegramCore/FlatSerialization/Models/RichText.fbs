@@ -1,0 +1,95 @@
+include "MediaId.fbs";
+include "PixelDimensions.fbs";
+
+namespace TelegramCore;
+
+union RichText_Value {
+    RichText_Empty,
+    RichText_Plain,
+    RichText_Bold,
+    RichText_Italic,
+    RichText_Underline,
+    RichText_Strikethrough,
+    RichText_Fixed,
+    RichText_Url,
+    RichText_Email,
+    RichText_Concat,
+    RichText_Subscript,
+    RichText_Superscript,
+    RichText_Marked,
+    RichText_Phone,
+    RichText_Image,
+    RichText_Anchor
+}
+
+table RichText {
+    value:RichText_Value (id: 1, required);
+}
+
+table RichText_Empty {}
+
+table RichText_Plain {
+    text:string (id: 0, required);
+}
+
+table RichText_Bold {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Italic {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Underline {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Strikethrough {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Fixed {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Url {
+    text:RichText (id: 0, required);
+    url:string (id: 1, required);
+    webpageId:MediaId (id: 2);
+}
+
+table RichText_Email {
+    text:RichText (id: 0, required);
+    email:string (id: 1, required);
+}
+
+table RichText_Concat {
+    texts:[RichText] (id: 0, required);
+}
+
+table RichText_Subscript {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Superscript {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Marked {
+    text:RichText (id: 0, required);
+}
+
+table RichText_Phone {
+    text:RichText (id: 0, required);
+    phone:string (id: 1, required);
+}
+
+table RichText_Image {
+    id:MediaId (id: 0, required);
+    dimensions:PixelDimensions (id: 1, required);
+}
+
+table RichText_Anchor {
+    text:RichText (id: 0, required);
+    name:string (id: 1, required);
+}

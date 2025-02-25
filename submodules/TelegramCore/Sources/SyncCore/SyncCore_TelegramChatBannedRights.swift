@@ -1,4 +1,6 @@
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 public struct TelegramChatBannedRightsFlags: OptionSet, Hashable {
     public var rawValue: Int32
@@ -53,5 +55,17 @@ public struct TelegramChatBannedRights: PostboxCoding, Equatable {
     
     public static func ==(lhs: TelegramChatBannedRights, rhs: TelegramChatBannedRights) -> Bool {
         return lhs.flags == rhs.flags && lhs.untilDate == rhs.untilDate
+    }
+    
+    public init(flatBuffersObject: TelegramCore_TelegramChatBannedRights) throws {
+        self.flags = TelegramChatBannedRightsFlags(rawValue: flatBuffersObject.flags)
+        self.untilDate = flatBuffersObject.untilDate
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let start = TelegramCore_TelegramChatBannedRights.startTelegramChatBannedRights(&builder)
+        TelegramCore_TelegramChatBannedRights.add(flags: self.flags.rawValue, &builder)
+        TelegramCore_TelegramChatBannedRights.add(untilDate: self.untilDate, &builder)
+        return TelegramCore_TelegramChatBannedRights.endTelegramChatBannedRights(&builder, start: start)
     }
 }

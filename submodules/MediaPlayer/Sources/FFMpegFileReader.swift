@@ -429,10 +429,6 @@ public final class FFMpegFileReader {
                 if let stream = self.stream, Int(packet.streamIndex) == stream.info.index {
                     let packetPts = packet.pts
                     
-                    /*if let focusedPart = self.focusedPart, packetPts >= focusedPart.endPts.value {
-                        self.hasReadToEnd = true
-                    }*/
-                    
                     let pts = CMTimeMake(value: packetPts, timescale: stream.info.timeScale)
                     let dts = CMTimeMake(value: packet.dts, timescale: stream.info.timeScale)
                     
@@ -442,7 +438,7 @@ public final class FFMpegFileReader {
                     if frameDuration != 0 {
                         duration = CMTimeMake(value: frameDuration * stream.info.timeBase, timescale: stream.info.timeScale)
                     } else {
-                        duration = stream.info.fps
+                        duration = CMTimeConvertScale(CMTimeMakeWithSeconds(1.0 / stream.info.fps.seconds, preferredTimescale: stream.info.timeScale), timescale: stream.info.timeScale, method: .quickTime)
                     }
                     
                     let frame = MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)

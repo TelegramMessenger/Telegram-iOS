@@ -1,4 +1,6 @@
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
     public var rawValue: Int32
@@ -123,5 +125,15 @@ public struct TelegramChatAdminRights: PostboxCoding, Codable, Equatable {
     
     public static func ==(lhs: TelegramChatAdminRights, rhs: TelegramChatAdminRights) -> Bool {
         return lhs.rights == rhs.rights
+    }
+    
+    public init(flatBuffersObject: TelegramCore_TelegramChatAdminRights) throws {
+        self.rights = TelegramChatAdminRightsFlags(rawValue: flatBuffersObject.rights)
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let start = TelegramCore_TelegramChatAdminRights.startTelegramChatAdminRights(&builder)
+        TelegramCore_TelegramChatAdminRights.add(rights: self.rights.rawValue, &builder)
+        return TelegramCore_TelegramChatAdminRights.endTelegramChatAdminRights(&builder, start: start)
     }
 }

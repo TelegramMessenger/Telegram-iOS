@@ -1793,6 +1793,25 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.setRevealOptionsOpened(item.editing.revealed, animated: animated)
                             }
                             
+                            if item.isAd {
+                                let adButton: HighlightableButtonNode
+                                if let current = strongSelf.adButton {
+                                    adButton = current
+                                } else {
+                                    adButton = HighlightableButtonNode()
+                                    adButton.setImage(UIImage(bundleImageName: "Components/AdMock"), for: .normal)
+                                    strongSelf.addSubnode(adButton)
+                                    strongSelf.adButton = adButton
+                                    
+                                    adButton.addTarget(strongSelf, action: #selector(strongSelf.adButtonPressed), forControlEvents: .touchUpInside)
+                                }
+                                
+                                adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - 31.0 - 13.0, y: 11.0), size: CGSize(width: 31.0, height: 15.0))
+                            } else if let adButton = strongSelf.adButton {
+                                strongSelf.adButton = nil
+                                adButton.removeFromSupernode()
+                            }
+                            
                             strongSelf.updateEnableGestures()
                         }
                     })

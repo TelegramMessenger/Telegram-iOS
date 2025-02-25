@@ -437,9 +437,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     label = presentationData.strings.Settings_Privacy_Messages_ValueEveryone
                 case .requirePremium:
                     label = presentationData.strings.Settings_Privacy_Messages_ValueContactsAndPremium
-                case let .paidMessages(amount):
-                    //TODO:localize
-                    label = "\(amount.value) Stars"
+                case .paidMessages:
+                    label = presentationData.strings.Settings_Privacy_Messages_ValuePaid
                 }
                 return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.Settings_Privacy_Messages, titleIcon: hasPremium ? PresentationResourcesItemList.premiumIcon(theme) : nil, label: label, sectionId: self.section, style: .blocks, action: {
                     arguments.openMessagePrivacy()
@@ -862,7 +861,11 @@ public func privacyAndSecurityController(
     updateHasTwoStepAuth()
     
     var setupEmailImpl: ((String?) -> Void)?
-    
+
+    var reviewCallPrivacySuggestion = false
+    var reviewInvitePrivacySuggestion = false
+    var showPrivacySuggestionImpl: (() -> Void)?
+
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
         pushControllerImpl?(blockedPeersController(context: context, blockedPeersContext: blockedPeersContext), true)
     }, openLastSeenPrivacy: {
@@ -907,6 +910,10 @@ public func privacyAndSecurityController(
                             return .complete()
                         }
                         currentInfoDisposable.set(applySetting.start())
+                        
+                        Queue.mainQueue().after(0.3) {
+                            showPrivacySuggestionImpl?()
+                        }
                     }
                 }), true)
             }
@@ -944,6 +951,10 @@ public func privacyAndSecurityController(
                             return .complete()
                         }
                         currentInfoDisposable.set(applySetting.start())
+                        
+                        Queue.mainQueue().after(0.3) {
+                            showPrivacySuggestionImpl?()
+                        }
                     }
                 }), true)
             }
@@ -1319,6 +1330,22 @@ public func privacyAndSecurityController(
                         return state
                     }
                 }))
+                
+                if case .everybody = privacySettings.globalSettings.nonContactChatsPrivacy {
+                    if case .everybody = settingValue {
+                        
+                    } else {
+                        if case .enableEveryone = privacySettings.voiceCalls {
+                            reviewCallPrivacySuggestion = true
+                        }
+                        if case .enableEveryone = privacySettings.groupInvitations {
+                            reviewInvitePrivacySuggestion = true
+                        }
+                        Queue.mainQueue().after(0.3) {
+                            showPrivacySuggestionImpl?()
+                        }
+                    }
+                }
             }), true)
         })
     }, openGiftsPrivacy: {
@@ -1442,6 +1469,50 @@ public func privacyAndSecurityController(
         }
     }
     
+    showPrivacySuggestionImpl = {
+        //TODO:localize
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if reviewCallPrivacySuggestion {
+            reviewCallPrivacySuggestion = false
+            let alertController = textAlertController(
+                context: context,
+                title: "Call Settings",
+                text: "You've restricted who can message you, but anyone can still call you. Would you like to review these settings?",
+                actions: [
+                    TextAlertAction(type: .defaultAction, title: "Review", action: {
+                        arguments.openVoiceCallPrivacy()
+                    }),
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                        Queue.mainQueue().after(0.3) {
+                            showPrivacySuggestionImpl?()
+                        }
+                    })
+                ],
+                actionLayout: .vertical
+            )
+            presentControllerImpl?(alertController)
+        } else if reviewInvitePrivacySuggestion {
+            reviewInvitePrivacySuggestion = false
+            let alertController = textAlertController(
+                context: context,
+                title: "Invitation Settings",
+                text: "You've restricted who can message you, but anyone can still invite you to groups and channels. Would you like to review these settings?",
+                actions: [
+                    TextAlertAction(type: .defaultAction, title: "Review", action: {
+                        arguments.openGroupsPrivacy()
+                    }),
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                        Queue.mainQueue().after(0.3) {
+                            showPrivacySuggestionImpl?()
+                        }
+                    })
+                ],
+                actionLayout: .vertical
+            )
+            presentControllerImpl?(alertController)
+        }
+    }
+        
     setupEmailImpl = { emailPattern in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var dismissEmailControllerImpl: (() -> Void)?

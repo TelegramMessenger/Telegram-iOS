@@ -76,5 +76,5 @@ public enum ShareControllerSubject {
     case image([ImageRepresentationWithReference])
     case media(AnyMediaReference, MediaParameters?)
     case mapMedia(TelegramMediaMap)
-    case fromExternal(([PeerId], [PeerId: Int64], String, ShareControllerAccountContext, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
+    case fromExternal(Int, ([PeerId], [PeerId: Int64], [PeerId: StarsAmount], String, ShareControllerAccountContext, Bool) -> Signal<ShareControllerExternalStatus, ShareControllerError>)
 }

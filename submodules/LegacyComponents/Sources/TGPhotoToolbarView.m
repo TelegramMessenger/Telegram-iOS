@@ -10,6 +10,8 @@
 
 #import "TGMediaAssetsController.h"
 
+#import "TGPhotoPaintStickersContext.h"
+
 @interface TGPhotoToolbarView ()
 {
     id<LegacyComponentsContext> _context;
@@ -19,6 +21,7 @@
     UIView *_buttonsWrapperView;
     TGModernButton *_cancelButton;
     TGModernButton *_doneButton;
+    UIView<TGPhotoSendStarsButtonView> *_starsDoneButton;
     
     UILabel *_infoLabel;
     
@@ -32,7 +35,7 @@
 
 @implementation TGPhotoToolbarView
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -56,12 +59,24 @@
         [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_cancelButton];
         
-        _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
-        _doneButton.exclusiveTouch = true;
-        _doneButton.adjustsImageWhenHighlighted = false;
-        [self setDoneButtonType:doneButton];
-        [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        [_backgroundView addSubview:_doneButton];
+        if (stickersContext != nil) {
+            __weak TGPhotoToolbarView *weakSelf = self;
+            _starsDoneButton = [stickersContext sendStarsButtonAction:^{
+                __strong TGPhotoToolbarView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                [strongSelf doneButtonPressed];
+            }];
+            _starsDoneButton.exclusiveTouch = true;
+            [_backgroundView addSubview:_starsDoneButton];
+        } else {
+            _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
+            _doneButton.exclusiveTouch = true;
+            _doneButton.adjustsImageWhenHighlighted = false;
+            [self setDoneButtonType:doneButton];
+            [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [_backgroundView addSubview:_doneButton];
+        }
         
         _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(doneButtonLongPressed:)];
         _longPressGestureRecognizer.minimumPressDuration = 0.4;
@@ -703,6 +718,11 @@
         CGFloat offset = 49.0f;
         if (_doneButton.frame.size.width > 49.0f)
             offset = 60.0f;
+        
+        if (_starsDoneButton != nil) {
+            CGSize buttonSize = [_starsDoneButton updateCount:_sendPaidMessageStars];
+            [_starsDoneButton updateFrame:CGRectMake(self.frame.size.width - buttonSize.width - 2.0, 49.0f - offset + 2.0f, buttonSize.width, buttonSize.height)];
+        }
         
         _doneButton.frame = CGRectMake(self.frame.size.width - offset, 49.0f - offset, _doneButton.frame.size.width, _doneButton.frame.size.height);
         

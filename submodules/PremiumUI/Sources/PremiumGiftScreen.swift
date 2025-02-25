@@ -433,6 +433,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0xdb374b),
                 UIColor(rgb: 0xcb3e6d),
                 UIColor(rgb: 0xbc4395),
+                UIColor(rgb: 0xbc4395),
                 UIColor(rgb: 0xab4ac4),
                 UIColor(rgb: 0xab4ac4),
                 UIColor(rgb: 0xa34cd7),
@@ -538,6 +539,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .messagePrivacy
                         case .messageEffects:
                             demoSubject = .messageEffects
+                        case .paidMessages:
+                            demoSubject = .paidMessages
                         case .business:
                             demoSubject = .business
                         default:

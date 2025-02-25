@@ -63,6 +63,8 @@ private final class PendingMessageContext {
     var error: PendingMessageFailureReason?
     var statusSubscribers = Bag<(PendingMessageStatus?, PendingMessageFailureReason?) -> Void>()
     var forcedReuploadOnce: Bool = false
+    let postponeDisposable = MetaDisposable()
+    var postponeSending = false
 }
 
 public enum PendingMessageFailureReason {
@@ -486,7 +488,10 @@ public final class PendingMessageManager {
 
                 
                 for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
-                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
+                    if let paidStarsAttribute = message.paidStarsAttribute, paidStarsAttribute.postponeSending {
+                        strongSelf.beginWaitingForPostponedMessageCommit(messageContext: messageContext, id: message.id)
+                    }
+                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type), !messageContext.postponeSending {
                         strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, threadId: message.threadId, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
@@ -663,6 +668,33 @@ public final class PendingMessageManager {
         messageContext.state = .collectingInfo(message: message)
     }
     
+    private func beginWaitingForPostponedMessageCommit(messageContext: PendingMessageContext, id: MessageId) {
+        messageContext.postponeSending = true
+        
+        let signal: Signal<Void, NoError> = self.postbox.transaction { transaction -> Void in
+            transaction.setPendingMessageAction(type: .sendPostponedPaidMessage, id: id, action: PostponeSendPaidMessageAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
+        }
+        |> mapToSignal { _ in
+            return self.stateManager.commitSendPendingPaidMessage
+            |> filter {
+                $0 == id
+            }
+            |> take(1)
+            |> map { _ in
+                Void()
+            }
+        }
+        |> deliverOn(self.queue)
+        
+        messageContext.postponeDisposable.set(signal.start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            messageContext.postponeSending = false
+            self.updateWaitingUploads(peerId: id.peerId)
+        }))
+    }
+    
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, threadId: Int64?, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
@@ -740,7 +772,7 @@ public final class PendingMessageManager {
         loop: for contextId in messageIdsForPeer {
             let context = self.messageContexts[contextId]!
             if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
-                if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media) {
+                if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media), !context.postponeSending {
                     context.state = .uploading(groupId: groupId)
                     let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
                     context.status = status

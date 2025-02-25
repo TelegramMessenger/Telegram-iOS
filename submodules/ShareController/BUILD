@@ -46,6 +46,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/MessageInputPanelComponent",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessagePaymentAlertController",
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/CheckNode",
     ],

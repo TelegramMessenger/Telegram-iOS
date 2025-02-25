@@ -160,6 +160,7 @@ public final class MessageInputPanelComponent: Component {
     public let strings: PresentationStrings
     public let style: Style
     public let placeholder: Placeholder
+    public let sendPaidMessageStars: StarsAmount?
     public let maxLength: Int?
     public let queryTypes: ContextQueryTypes
     public let alwaysDarkWhenHasText: Bool
@@ -218,6 +219,7 @@ public final class MessageInputPanelComponent: Component {
         strings: PresentationStrings,
         style: Style,
         placeholder: Placeholder,
+        sendPaidMessageStars: StarsAmount?,
         maxLength: Int?,
         queryTypes: ContextQueryTypes,
         alwaysDarkWhenHasText: Bool,
@@ -276,6 +278,7 @@ public final class MessageInputPanelComponent: Component {
         self.style = style
         self.nextInputMode = nextInputMode
         self.placeholder = placeholder
+        self.sendPaidMessageStars = sendPaidMessageStars
         self.maxLength = maxLength
         self.queryTypes = queryTypes
         self.alwaysDarkWhenHasText = alwaysDarkWhenHasText
@@ -344,6 +347,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.placeholder != rhs.placeholder {
+            return false
+        }
+        if lhs.sendPaidMessageStars != rhs.sendPaidMessageStars {
             return false
         }
         if lhs.maxLength != rhs.maxLength {
@@ -849,43 +855,75 @@ public final class MessageInputPanelComponent: Component {
             )
             let isEditing = self.textFieldExternalState.isEditing || component.forceIsEditing
             
-            var placeholderItems: [AnimatedTextComponent.Item] = []
-            switch component.placeholder {
-            case let .plain(string):
-                placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .text(string)))
-            case let .counter(items):
-                for item in items {
-                    switch item.content {
-                    case let .text(string):
-                        placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .text(string)))
-                    case let .number(value, minDigits):
-                        placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .number(value, minDigits: minDigits)))
+            let placeholderTransition: ComponentTransition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
+            let placeholderSize: CGSize
+            if case let .plain(string) = component.placeholder, string.contains("#") {
+                let attributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3))
+                if let range = attributedPlaceholder.string.range(of: "#") {
+                    attributedPlaceholder.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(component.theme)!, range: NSRange(range, in: attributedPlaceholder.string))
+                    attributedPlaceholder.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff, alpha: 0.3), range: NSRange(range, in: attributedPlaceholder.string))
+                    attributedPlaceholder.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedPlaceholder.string))
+                }
+                
+                placeholderSize = self.placeholder.update(
+                    transition: placeholderTransition,
+                    component: AnyComponent(MultilineTextComponent(text: .plain(attributedPlaceholder))),
+                    environment: {},
+                    containerSize: availableTextFieldSize
+                )
+                
+                let vibrancyAttributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor.black)
+                if let range = vibrancyAttributedPlaceholder.string.range(of: "#") {
+                    vibrancyAttributedPlaceholder.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(component.theme)!, range: NSRange(range, in: vibrancyAttributedPlaceholder.string))
+                    vibrancyAttributedPlaceholder.addAttribute(.foregroundColor, value: UIColor.black, range: NSRange(range, in: vibrancyAttributedPlaceholder.string))
+                    vibrancyAttributedPlaceholder.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: vibrancyAttributedPlaceholder.string))
+                }
+                
+                let _ = self.vibrancyPlaceholder.update(
+                    transition: placeholderTransition,
+                    component: AnyComponent(MultilineTextComponent(text: .plain(attributedPlaceholder))),
+                    environment: {},
+                    containerSize: availableTextFieldSize
+                )
+            } else {
+                var placeholderItems: [AnimatedTextComponent.Item] = []
+                switch component.placeholder {
+                case let .plain(string):
+                    placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .text(string)))
+                case let .counter(items):
+                    for item in items {
+                        switch item.content {
+                        case let .text(string):
+                            placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .text(string)))
+                        case let .number(value, minDigits):
+                            placeholderItems.append(AnimatedTextComponent.Item(id: AnyHashable(item.id), content: .number(value, minDigits: minDigits)))
+                        }
                     }
                 }
+                
+                placeholderSize = self.placeholder.update(
+                    transition: placeholderTransition,
+                    component: AnyComponent(AnimatedTextComponent(
+                        font: Font.regular(17.0),
+                        color: UIColor(rgb: 0xffffff, alpha: 0.3),
+                        items: placeholderItems
+                    )),
+                    environment: {},
+                    containerSize: availableTextFieldSize
+                )
+                
+                let _ = self.vibrancyPlaceholder.update(
+                    transition: placeholderTransition,
+                    component: AnyComponent(AnimatedTextComponent(
+                        font: Font.regular(17.0),
+                        color: .black,
+                        items: placeholderItems
+                    )),
+                    environment: {},
+                    containerSize: availableTextFieldSize
+                )
             }
             
-            let placeholderTransition: ComponentTransition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
-            let placeholderSize = self.placeholder.update(
-                transition: placeholderTransition,
-                component: AnyComponent(AnimatedTextComponent(
-                    font: Font.regular(17.0),
-                    color: UIColor(rgb: 0xffffff, alpha: 0.3),
-                    items: placeholderItems
-                )),
-                environment: {},
-                containerSize: availableTextFieldSize
-            )
-            
-            let _ = self.vibrancyPlaceholder.update(
-                transition: placeholderTransition,
-                component: AnyComponent(AnimatedTextComponent(
-                    font: Font.regular(17.0),
-                    color: .black,
-                    items: placeholderItems
-                )),
-                environment: {},
-                containerSize: availableTextFieldSize
-            )
             if !isEditing && component.setMediaRecordingActive == nil {
                 insets.right = defaultInsets.left
             }

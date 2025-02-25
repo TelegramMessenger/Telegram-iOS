@@ -231,6 +231,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                     GiftItemComponent(
                                         context: self.context,
                                         theme: params.presentationData.theme,
+                                        strings: params.presentationData.strings,
                                         peer: peer,
                                         subject: subject,
                                         ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: ribbonColor) },

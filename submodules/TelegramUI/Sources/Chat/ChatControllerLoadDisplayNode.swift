@@ -1237,7 +1237,7 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned, postpone in
             guard let strongSelf = self else {
                 return
             }
@@ -1285,7 +1285,7 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime)
+                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime, postpone: postpone)
                 
                 var forwardedMessages: [[EnqueueMessage]] = []
                 var forwardSourcePeerIds = Set<PeerId>()
@@ -1412,8 +1412,7 @@ extension ChatControllerImpl {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
-            //TODO:unmock
-            strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false).updatedAcknowledgedPaidMessage(false) })
+            strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
         }
         
         if case let .customChatContents(customChatContents) = self.subject {
@@ -2605,8 +2604,12 @@ extension ChatControllerImpl {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(node.view, rect)
                 return false
             }
-            
-            strongSelf.enqueueChatContextResult(results, result)
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.enqueueChatContextResult(results, result, postpone: postpone)
+            })
             return true
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
@@ -2856,7 +2859,9 @@ extension ChatControllerImpl {
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] silentPosting, viewOnce in
-            self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce)
+            self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)
+            })
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
@@ -4397,30 +4402,8 @@ extension ChatControllerImpl {
                 })
                 self.push(controller)
             })
-        }, openMessagePayment: { [weak self] in
-            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
-                return
-            }
-            var amount: StarsAmount?
-            if let cachedUserData = self.peerView?.cachedData as? CachedUserData {
-                amount = cachedUserData.sendPaidMessageStars
-            }
-            if let amount {
-                let controller = chatMessagePaymentAlertController(
-                    context: self.context,
-                    updatedPresentationData: self.updatedPresentationData,
-                    peer: peer,
-                    amount: amount,
-                    completion: { [weak self] dontAskAgain in
-                        guard let self else {
-                            return
-                        }
-                        self.updateChatPresentationInterfaceState(interactive: true) { state in
-                            return state.updatedAcknowledgedPaidMessage(true)
-                        }
-                    })
-                self.present(controller, in: .window(.root))
-            }
+        }, openMessagePayment: {
+            
         }, openBoostToUnrestrict: { [weak self] in
             guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return

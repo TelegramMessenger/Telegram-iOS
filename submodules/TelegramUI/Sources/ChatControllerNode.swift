@@ -273,7 +273,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool) -> Void = { _, _, _, _ in }
+    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool, Bool) -> Void = { _, _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -881,11 +881,24 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
-            if let strongSelf = self {
-                if case .scheduledMessages = strongSelf.chatPresentationInterfaceState.subject, strongSelf.chatPresentationInterfaceState.editMessageState == nil {
-                    strongSelf.controllerInteraction.scheduleCurrentMessage(nil)
+            if let self, let controller = self.controller {
+                if case .scheduledMessages = self.chatPresentationInterfaceState.subject, self.chatPresentationInterfaceState.editMessageState == nil {
+                    self.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
-                    strongSelf.sendCurrentMessage()
+                    if let _ = self.chatPresentationInterfaceState.sendPaidMessageStars {
+                        var count: Int32 = 1
+                        if let forwardedCount = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
+                            count = Int32(forwardedCount)
+                            if self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
+                                count += 1
+                            }
+                        }
+                        controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
+                            self?.sendCurrentMessage(postpone: postpone)
+                        })
+                    } else {
+                        self.sendCurrentMessage()
+                    }
                 }
             }
         }
@@ -4057,7 +4070,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, postpone: Bool = false, messageEffect: ChatSendMessageEffect? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             self.historyNode.justSentTextMessage = true
             
@@ -4323,7 +4336,7 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     }, usedCorrelationId)
                     completion()
                     
-                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
+                    self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1, postpone)
                 }
             }
         }

@@ -1,0 +1,7 @@
+namespace TelegramCore;
+
+table TelegramChatAdminRights {
+    rights:int32 (id: 0);
+}
+
+root_type TelegramChatAdminRights;

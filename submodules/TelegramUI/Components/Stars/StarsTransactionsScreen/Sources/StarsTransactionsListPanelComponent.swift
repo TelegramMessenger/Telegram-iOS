@@ -17,6 +17,7 @@ import BundleIconComponent
 import PhotoResources
 import StarsAvatarComponent
 import GiftAnimationComponent
+import TelegramStringFormatting
 
 private extension StarsContext.State.Transaction {
     var extendedId: String {
@@ -303,7 +304,10 @@ final class StarsTransactionsListPanelComponent: Component {
                     var uniqueGift: StarGift.UniqueGift?
                     switch item.peer {
                     case let .peer(peer):
-                        if let starGift = item.starGift {
+                        if item.flags.contains(.isPaidMessage) {
+                            itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_PaidMessage(item.paidMessageCount ?? 1)
+                        } else if let starGift = item.starGift {
                             if item.flags.contains(.isStarGiftUpgrade), case let .unique(gift) = starGift {
                                 itemTitle = "\(gift.title) #\(gift.number)"
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftUpgrade
@@ -380,16 +384,12 @@ final class StarsTransactionsListPanelComponent: Component {
                     }
                     
                     let itemLabel: NSAttributedString
-                    let labelString: String
+                    let formattedLabel = formatStarsAmountText(item.count, dateTimeFormat: environment.dateTimeFormat, showPlus: true)
                     
-                    let absCount = StarsAmount(value: abs(item.count.value), nanos: abs(item.count.nanos))
-                    let formattedLabel = presentationStringsFormattedNumber(absCount, environment.dateTimeFormat.groupingSeparator)
-                    if item.count < StarsAmount.zero {
-                        labelString = "- \(formattedLabel)"
-                    } else {
-                        labelString = "+ \(formattedLabel)"
-                    }
-                    itemLabel = NSAttributedString(string: labelString, font: Font.medium(fontBaseDisplaySize), textColor: labelString.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor)
+                    let smallLabelFont = Font.with(size: floor(fontBaseDisplaySize / 17.0 * 13.0))
+                    let labelFont = Font.medium(fontBaseDisplaySize)
+                    let labelColor = formattedLabel.hasPrefix("-") ? environment.theme.list.itemDestructiveColor : environment.theme.list.itemDisclosureActions.constructive.fillColor
+                    itemLabel = tonAmountAttributedString(formattedLabel, integralFont: labelFont, fractionalFont: smallLabelFont, color: labelColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
                     
                     var itemDateColor = environment.theme.list.itemSecondaryTextColor
                     itemDate = stringForMediumCompactDate(timestamp: item.date, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)
