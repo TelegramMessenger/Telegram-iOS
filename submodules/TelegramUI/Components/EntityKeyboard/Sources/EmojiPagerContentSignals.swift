@@ -198,11 +198,6 @@ public extension EmojiPagerContentComponent {
             searchCategories = .single(nil)
         }
         
-        #if DEBUG || true
-        var isFirstTime = true
-        let measure_startTime = CFAbsoluteTimeGetCurrent()
-        #endif
-        
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: premiumIfSavedMessages),
@@ -214,54 +209,6 @@ public extension EmojiPagerContentComponent {
             ApplicationSpecificNotice.dismissedTrendingEmojiPacks(accountManager: context.sharedContext.accountManager)
         )
         |> map { view, hasPremium, featuredEmojiPacks, availableReactions, searchCategories, iconStatusEmoji, peerSpecificPack, dismissedTrendingEmojiPacks -> EmojiPagerContentComponent in
-            #if DEBUG
-            if isFirstTime {
-                isFirstTime = false
-                
-                /*var files: [TelegramMediaFile] = []
-                files.removeAll()
-                
-                if "".isEmpty {
-                    for entry in view.entries {
-                        guard let item = entry.item as? StickerPackItem else {
-                            continue
-                        }
-                        files.append(item.file._parse())
-                    }
-                    for featuredEmojiPack in featuredEmojiPacks {
-                        for item in featuredEmojiPack.topItems {
-                            files.append(item.file._parse())
-                        }
-                    }
-                    if let availableReactions {
-                        for reactionItem in availableReactions.reactions {
-                            files.append(reactionItem.staticIcon._parse())
-                            files.append(reactionItem.appearAnimation._parse())
-                            files.append(reactionItem.selectAnimation._parse())
-                            files.append(reactionItem.activateAnimation._parse())
-                            files.append(reactionItem.effectAnimation._parse())
-                            if let aroundAnimation = reactionItem.aroundAnimation {
-                                files.append(aroundAnimation._parse())
-                            }
-                            if let centerAnimation = reactionItem.centerAnimation {
-                                files.append(centerAnimation._parse())
-                            }
-                        }
-                    }
-                    Thread.current.threadDictionary["afwefw"] = files
-                }
-                
-                for file in files {
-                    if file.fileId.id == 123 {
-                        print("Interesting")
-                    }
-                }*/
-                
-                let measuredTime = CFAbsoluteTimeGetCurrent() - measure_startTime
-                print("emojiInputData init isMainThread: \(Thread.isMainThread): \(measuredTime * 1000.0) ms")
-            }
-            #endif
-            
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable

@@ -1019,6 +1019,11 @@ public final class ChatPresentationInterfaceState: Equatable {
     public func updatedInputQueryResult(queryKind: ChatPresentationInputQueryKind, _ f: (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?) -> ChatPresentationInterfaceState {
         var inputQueryResults = self.inputQueryResults
         let updated = f(inputQueryResults[queryKind])
+        if case .contextRequest = queryKind {
+            #if DEBUG
+            print("updatedInputQueryResult: \(String(describing: updated))")
+            #endif
+        }
         if let updated = updated {
             inputQueryResults[queryKind] = updated
         } else {

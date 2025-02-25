@@ -204,8 +204,8 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
             return result
         }
         if let instantPage = content.instantPage {
-            for pageMedia in instantPage.media.values {
-                if let result = findMediaResource(media: pageMedia, previousMedia: previousMedia, resource: resource) {
+            for (_, pageMedia) in instantPage.media {
+                if let result = findMediaResource(media: pageMedia._parse(), previousMedia: previousMedia, resource: resource) {
                     return result
                 }
             }
@@ -279,8 +279,8 @@ func findMediaResourceById(media: Media, resourceId: MediaResourceId) -> Telegra
             return result
         }
         if let instantPage = content.instantPage {
-            for pageMedia in instantPage.media.values {
-                if let result = findMediaResourceById(media: pageMedia, resourceId: resourceId) {
+            for (_, pageMedia) in instantPage.media {
+                if let result = findMediaResourceById(media: pageMedia._parse(), resourceId: resourceId) {
                     return result
                 }
             }

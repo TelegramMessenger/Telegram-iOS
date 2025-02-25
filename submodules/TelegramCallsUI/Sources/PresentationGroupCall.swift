@@ -1128,7 +1128,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         var sharedAudioContext = sharedAudioContext
         if sharedAudioContext == nil {
-            var useSharedAudio = true
+            var useSharedAudio = !isStream
             if let data = self.accountContext.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_group_shared_audio"] != nil {
                 useSharedAudio = false
             }

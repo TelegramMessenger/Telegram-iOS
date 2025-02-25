@@ -756,9 +756,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                     self.pause()
                     f()
                 case let .loopDisablingSound(f):
-                    self.stoppedAtEnd = false
-                    self.isSoundEnabled = false
-                    self.seek(timestamp: 0.0, play: true, notify: true)
+                    if duration - 0.1 <= 0.0 {
+                        self.stoppedAtEnd = true
+                        self.pause()
+                    } else {
+                        self.stoppedAtEnd = false
+                        self.isSoundEnabled = false
+                        self.seek(timestamp: 0.0, play: true, notify: true)
+                    }
                     f()
                 }
             }

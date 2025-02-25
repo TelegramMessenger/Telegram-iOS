@@ -1171,3 +1171,54 @@ public func TelegramMediaResource_serialize(resource: TelegramMediaResource, fla
         return nil
     }
 }
+
+public extension TelegramCore_TelegramMediaResource {
+    var id: MediaResourceId {
+        switch self.valueType {
+        case .telegrammediaresourceCloudfilemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudFileMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudFileMediaResourceId(datacenterId: Int(value.datacenterId), volumeId: value.volumeId, localId: value.localId, secret: value.secret).uniqueId)
+        case .telegrammediaresourceClouddocumentsizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudDocumentSizeMediaResourceId(datacenterId: Int32(value.datacenterId), documentId: value.documentId, sizeSpec: value.sizeSpec).uniqueId)
+        case .telegrammediaresourceCloudphotosizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudPhotoSizeMediaResourceId(datacenterId: Int32(value.datacenterId), photoId: value.photoId, sizeSpec: value.sizeSpec).uniqueId)
+        case .telegrammediaresourceCloudpeerphotosizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            let sizeSpec: CloudPeerPhotoSizeSpec
+            switch value.sizeSpec {
+            case .small:
+                sizeSpec = .small
+            case .fullSize:
+                sizeSpec = .fullSize
+            }
+            return MediaResourceId(CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(value.datacenterId), photoId: value.photoId, sizeSpec: sizeSpec, volumeId: value.volumeId, localId: value.localId).uniqueId)
+        case .telegrammediaresourceCloudstickerpackthumbnailmediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(value.datacenterId), thumbVersion: value.thumbVersion, volumeId: value.volumeId, localId: value.localId).uniqueId)
+        case .telegrammediaresourceClouddocumentmediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudDocumentMediaResourceId(datacenterId: Int(value.datacenterId), fileId: value.fileId).uniqueId)
+        case .telegrammediaresourceLocalfilemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_LocalFileMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(LocalFileMediaResourceId(fileId: value.fileId).uniqueId)
+        case .none_:
+            return MediaResourceId("")
+        }
+    }
+}

@@ -189,6 +189,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return self.hasGroupCallOnScreenPromise.get()
     }
     
+    private var streamController: MediaStreamComponentController?
+    
     private var immediateHasOngoingCallValue = Atomic<Bool>(value: false)
     public var immediateHasOngoingCall: Bool {
         return self.immediateHasOngoingCallValue.with { $0 }
@@ -947,64 +949,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 } else if let current = self.currentCall, case .group = current {
                     self.updateCurrentCall(call: nil)
                 }
-                
-                /*if call.flatMap(VideoChatCall.group) != self.groupCallController?.call {
-                    self.groupCallController?.dismiss(closing: true, manual: false)
-                    self.groupCallController = nil
-                    self.hasOngoingCall.set(false)
-                    
-                    if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
-                        mainWindow.hostView.containerView.endEditing(true)
-                        
-                        if call.isStream {
-                            self.hasGroupCallOnScreenPromise.set(true)
-                            let groupCallController = MediaStreamComponentController(call: call)
-                            groupCallController.onViewDidAppear = { [weak self] in
-                                if let self {
-                                    self.hasGroupCallOnScreenPromise.set(true)
-                                }
-                            }
-                            groupCallController.onViewDidDisappear = { [weak self] in
-                                if let self {
-                                    self.hasGroupCallOnScreenPromise.set(false)
-                                }
-                            }
-                            groupCallController.navigationPresentation = .flatModal
-                            groupCallController.parentNavigationController = navigationController
-                            self.groupCallController = groupCallController
-                            navigationController.pushViewController(groupCallController)
-                        } else {
-                            self.hasGroupCallOnScreenPromise.set(true)
-                            
-                            let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: call.accountContext, call: .group(call))
-                            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] initialData in
-                                guard let self, let navigationController else {
-                                    return
-                                }
-                                
-                                let groupCallController = makeVoiceChatController(sharedContext: self, accountContext: call.accountContext, call: .group(call), initialData: initialData, sourceCallController: nil)
-                                groupCallController.onViewDidAppear = { [weak self] in
-                                    if let self {
-                                        self.hasGroupCallOnScreenPromise.set(true)
-                                    }
-                                }
-                                groupCallController.onViewDidDisappear = { [weak self] in
-                                    if let self {
-                                        self.hasGroupCallOnScreenPromise.set(false)
-                                    }
-                                }
-                                groupCallController.navigationPresentation = .flatModal
-                                groupCallController.parentNavigationController = navigationController
-                                strongSelf.groupCallController = groupCallController
-                                navigationController.pushViewController(groupCallController)
-                            })
-                        }
-                        
-                        self.hasOngoingCall.set(true)
-                    } else {
-                        self.hasOngoingCall.set(false)
-                    }
-                }*/
             })
             
             mainWindow.inCallNavigate = { [weak self] in
@@ -1219,6 +1163,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             self.groupCallController = nil
             groupCallController.dismiss()
         }
+        if let streamController = self.streamController {
+            self.streamController = nil
+            streamController.dismiss()
+        }
         
         if shouldResetGroupCallOnScreen {
             self.hasGroupCallOnScreenPromise.set(.single(false))
@@ -1346,7 +1294,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             })
         }
         
-        if case let .group(groupCall) = call {
+        var groupCallIsStream = false
+        if case let .group(groupCall) = call, case let .group(value) = groupCall {
+            groupCallIsStream = value.isStream
+        }
+        
+        if case let .group(groupCall) = call, !groupCallIsStream {
             let _ = (makeVoiceChatControllerInitialData(sharedContext: self, accountContext: groupCall.accountContext, call: groupCall)
             |> deliverOnMainQueue).start(next: { [weak self, weak transitioningToConferenceCallController] initialData in
                 guard let self else {
@@ -1397,6 +1350,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     navigationController.pushViewController(groupCallController)
                 }
             })
+        }
+        
+        if case let .group(groupCall) = call, case let .group(group) = groupCall, groupCallIsStream {
+            if let navigationController = self.mainWindow?.viewController as? NavigationController {
+                let streamController = MediaStreamComponentController(call: group)
+                streamController.navigationPresentation = .flatModal
+                streamController.parentNavigationController = navigationController
+                self.streamController = streamController
+                
+                navigationController.pushViewController(streamController)
+            }
         }
         
         if self.currentCall != nil {

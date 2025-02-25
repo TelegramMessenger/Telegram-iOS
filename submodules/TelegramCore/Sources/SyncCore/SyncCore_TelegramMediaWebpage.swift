@@ -1,4 +1,6 @@
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 private enum TelegramMediaWebpageAttributeTypes: Int32 {
     case unsupported
@@ -177,7 +179,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let file: TelegramMediaFile?
     public let story: TelegramMediaStory?
     public let attributes: [TelegramMediaWebpageAttribute]
-    public let instantPage: InstantPage?
+    public let instantPage: InstantPage.Accessor?
     
     public init(
         url: String,
@@ -218,7 +220,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.file = file
         self.story = story
         self.attributes = attributes
-        self.instantPage = instantPage
+        self.instantPage = instantPage.flatMap(InstantPage.Accessor.init)
     }
     
     public init(decoder: PostboxDecoder) {
@@ -272,8 +274,11 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         }
         self.attributes = effectiveAttributes
         
-        if let instantPage = decoder.decodeObjectForKey("ip", decoder: { InstantPage(decoder: $0) }) as? InstantPage {
-            self.instantPage = instantPage
+        if let serializedInstantPageData = decoder.decodeDataForKey("ipd") {
+            var byteBuffer = ByteBuffer(data: serializedInstantPageData)
+            self.instantPage = InstantPage.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_InstantPage, serializedInstantPageData)
+        } else if let instantPage = decoder.decodeObjectForKey("ip", decoder: { InstantPage(decoder: $0) }) as? InstantPage {
+            self.instantPage = InstantPage.Accessor(instantPage)
         } else {
             self.instantPage = nil
         }
@@ -355,9 +360,19 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         encoder.encodeObjectArray(self.attributes, forKey: "attr")
         
         if let instantPage = self.instantPage {
-            encoder.encodeObject(instantPage, forKey: "ip")
+            if let instantPageData = instantPage._wrappedData {
+                encoder.encodeData(instantPageData, forKey: "ipd")
+            } else if let instantPage = instantPage._wrappedInstantPage {
+                var builder = FlatBufferBuilder(initialSize: 1024)
+                let value = instantPage.encodeToFlatBuffers(builder: &builder)
+                builder.finish(offset: value)
+                let serializedInstantPage = builder.data
+                encoder.encodeData(serializedInstantPage, forKey: "ipd")
+            } else {
+                preconditionFailure()
+            }
         } else {
-            encoder.encodeNil(forKey: "ip")
+            encoder.encodeNil(forKey: "ipd")
         }
     }
 }

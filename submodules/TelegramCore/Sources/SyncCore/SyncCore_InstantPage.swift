@@ -1473,25 +1473,11 @@ public final class InstantPage: PostboxCoding, Equatable {
             return try InstantPageBlock(flatBuffersObject: flatBuffersObject.blocks(at: i)!)
         }
         
-        //TODO:release support other media types
         var media: [MediaId: Media] = [:]
         for i in 0 ..< flatBuffersObject.mediaCount {
-            let mediaItem = flatBuffersObject.media(at: i)!
-            switch mediaItem.valueType {
-            case .mediaTelegrammediafile:
-                guard let value = mediaItem.value(type: TelegramCore_Media_TelegramMediaFile.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
-                }
-                let parsedMedia = try TelegramMediaFile(flatBuffersObject: value.file)
-                media[parsedMedia.fileId] = parsedMedia
-            case .mediaTelegrammediaimage:
-                guard let value = mediaItem.value(type: TelegramCore_Media_TelegramMediaImage.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
-                }
-                let parsedMedia = try TelegramMediaImage(flatBuffersObject: value.image)
-                media[parsedMedia.imageId] = parsedMedia
-            case .none_:
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            let parsedMedia = try TelegramMedia_parse(flatBuffersObject: flatBuffersObject.media(at: i)!)
+            if let id = parsedMedia.id {
+                media[id] = parsedMedia
             }
         }
         self.media = media
@@ -1510,21 +1496,8 @@ public final class InstantPage: PostboxCoding, Equatable {
         
         var mediaOffsets: [Offset] = []
         for (_, media) in self.media.sorted(by: { $0.key < $1.key }) {
-            switch media {
-            case let file as TelegramMediaFile:
-                let fileOffset = file.encodeToFlatBuffers(builder: &builder)
-                let start = TelegramCore_Media_TelegramMediaFile.startMedia_TelegramMediaFile(&builder)
-                TelegramCore_Media_TelegramMediaFile.add(file: fileOffset, &builder)
-                let offset = TelegramCore_Media_TelegramMediaFile.endMedia_TelegramMediaFile(&builder, start: start)
-                mediaOffsets.append(TelegramCore_Media.createMedia(&builder, valueType: .mediaTelegrammediafile, valueOffset: offset))
-            case let image as TelegramMediaImage:
-                let imageOffset = image.encodeToFlatBuffers(builder: &builder)
-                let start = TelegramCore_Media_TelegramMediaImage.startMedia_TelegramMediaImage(&builder)
-                TelegramCore_Media_TelegramMediaImage.add(image: imageOffset, &builder)
-                let offset = TelegramCore_Media_TelegramMediaImage.endMedia_TelegramMediaImage(&builder, start: start)
-                mediaOffsets.append(TelegramCore_Media.createMedia(&builder, valueType: .mediaTelegrammediaimage, valueOffset: offset))
-            default:
-                assertionFailure()
+            if let offset = TelegramMedia_serialize(media: media, flatBuffersBuilder: &builder) {
+                mediaOffsets.append(offset)
             }
         }
         
@@ -1573,13 +1546,88 @@ public extension InstantPage {
         
         public static func ==(lhs: InstantPage.Accessor, rhs: InstantPage.Accessor) -> Bool {
             if let lhsWrappedInstantPage = lhs._wrappedInstantPage, let rhsWrappedInstantPage = rhs._wrappedInstantPage {
-                return lhsWrappedInstantPage === rhsWrappedInstantPage
+                return lhsWrappedInstantPage == rhsWrappedInstantPage
             } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
                 return lhsWrappedData == rhsWrappedData
             } else {
-                assertionFailure()
                 return lhs._parse() == rhs._parse()
             }
         }
+    }
+}
+
+public extension InstantPage.Accessor {
+    struct MediaIterator: Sequence, IteratorProtocol {
+        private let accessor: InstantPage.Accessor
+        private var wrappedInstantPageIterator: Dictionary<MediaId, Media>.Iterator?
+        private var wrappedCurrentIndex: Int32 = 0
+        
+        init(_ accessor: InstantPage.Accessor) {
+            self.accessor = accessor
+            
+            if let wrappedInstantPage = accessor._wrappedInstantPage {
+                self.wrappedInstantPageIterator = wrappedInstantPage.media.makeIterator()
+            } else {
+                self.wrappedInstantPageIterator = nil
+            }
+        }
+
+        mutating public func next() -> (MediaId, TelegramMedia.Accessor)? {
+            if self.wrappedInstantPageIterator != nil {
+                guard let (id, value) = self.wrappedInstantPageIterator!.next() else {
+                    return nil
+                }
+                return (id, TelegramMedia.Accessor(value))
+            }
+            
+            if self.wrappedCurrentIndex >= self.accessor._wrapped!.mediaCount {
+                return nil
+            }
+            let index = self.wrappedCurrentIndex
+            self.wrappedCurrentIndex += 1
+            let media = self.accessor._wrapped!.media(at: index)!
+            let parsedMedia = TelegramMedia.Accessor(media)
+            if let id = parsedMedia.id {
+                return (id, parsedMedia)
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    var isComplete: Bool {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.isComplete
+        }
+        
+        return self._wrapped!.isComplete
+    }
+    
+    var media: MediaIterator {
+        return MediaIterator(self)
+    }
+    
+    var views: Int32? {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.views
+        }
+        
+        return self._wrapped!.views == Int32.min ? nil : self._wrapped!.views
+    }
+    
+    var url: String {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.url
+        }
+        
+        return self._wrapped!.url
+    }
+    
+    var rtl: Bool {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.rtl
+        }
+        
+        return self._wrapped!.rtl
     }
 }

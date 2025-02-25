@@ -499,6 +499,7 @@ public final class MessageInputPanelComponent: Component {
         
         private var viewForOverlayContent: ViewForOverlayContent?
         private var currentEmojiSuggestionView: ComponentHostView<Empty>?
+        private var currentEmojiSearchView: ComponentHostView<Empty>?
         
         private var viewsIconView: UIImageView?
         private var viewStatsCountText: AnimatedCountLabelView?
@@ -564,6 +565,7 @@ public final class MessageInputPanelComponent: Component {
                         return
                     }
                     self.textFieldExternalState.dismissedEmojiSuggestionPosition = self.textFieldExternalState.currentEmojiSuggestion?.position
+                    self.textFieldExternalState.dismissedEmojiSearchPosition = self.textFieldExternalState.currentEmojiSearch?.position
                     self.state?.updated()
                 }
             )
@@ -727,6 +729,15 @@ public final class MessageInputPanelComponent: Component {
                     textFieldView.updateEmojiSuggestion(transition: .immediate)
                 }
                 self.state?.updated()
+            } else if let _ = self.textField.view, let currentEmojiSearch = self.textFieldExternalState.currentEmojiSearch, let currentEmojiSearchView = self.currentEmojiSearchView {
+                if let result = currentEmojiSearchView.hitTest(self.convert(point, to: currentEmojiSearchView), with: event) {
+                    return result
+                }
+                self.textFieldExternalState.dismissedEmojiSearchPosition = currentEmojiSearch.position
+                if let textFieldView = self.textField.view as? TextFieldComponent.View {
+                    textFieldView.updateEmojiSuggestion(transition: .immediate)
+                }
+                self.state?.updated()
             }
             
             if result == nil, let stickersResultPanel = self.stickersResultPanel?.view, let panelResult = stickersResultPanel.hitTest(self.convert(point, to: stickersResultPanel), with: event), panelResult !== stickersResultPanel {
@@ -869,7 +880,7 @@ public final class MessageInputPanelComponent: Component {
                 transition: placeholderTransition,
                 component: AnyComponent(AnimatedTextComponent(
                     font: Font.regular(17.0),
-                    color: UIColor(rgb: 0xffffff, alpha: 0.3),
+                    color: UIColor(rgb: 0xffffff, alpha: 0.4),
                     items: placeholderItems
                 )),
                 environment: {},
@@ -2137,6 +2148,18 @@ public final class MessageInputPanelComponent: Component {
                 })
             }
             
+            if let emojiSearch = self.textFieldExternalState.currentEmojiSearch, emojiSearch.disposable == nil {
+                emojiSearch.disposable = (EmojiSuggestionsComponent.searchData(context: component.context, isSavedMessages: false, query: emojiSearch.position.value)
+                |> deliverOnMainQueue).start(next: { [weak self, weak emojiSearch] result in
+                    guard let self, let emojiSearch, self.textFieldExternalState.currentEmojiSearch === emojiSearch else {
+                        return
+                    }
+                    
+                    emojiSearch.value = result
+                    self.state?.updated()
+                })
+            }
+            
             var hasTrackingView = self.textFieldExternalState.hasTrackingView
             if let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile], value.isEmpty {
                 hasTrackingView = false
@@ -2159,6 +2182,20 @@ public final class MessageInputPanelComponent: Component {
                         currentEmojiSuggestionView?.removeFromSuperview()
                     })
                 }
+                
+                if let currentEmojiSearch = self.textFieldExternalState.currentEmojiSearch {
+                    self.textFieldExternalState.currentEmojiSearch = nil
+                    currentEmojiSearch.disposable?.dispose()
+                }
+                
+                if let currentEmojiSearchView = self.currentEmojiSearchView {
+                    self.currentEmojiSearchView = nil
+                    
+                    currentEmojiSearchView.alpha = 0.0
+                    currentEmojiSearchView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSearchView] _ in
+                        currentEmojiSearchView?.removeFromSuperview()
+                    })
+                }
             }
             
             if let currentEmojiSuggestion = self.textFieldExternalState.currentEmojiSuggestion, let value = currentEmojiSuggestion.value as? [TelegramMediaFile] {
@@ -2171,8 +2208,6 @@ public final class MessageInputPanelComponent: Component {
                     self.addSubview(currentEmojiSuggestionView)
                     
                     currentEmojiSuggestionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                    
-                    //self.installEmojiSuggestionPreviewGesture(hostView: currentEmojiSuggestionView)
                 }
             
                 let globalPosition: CGPoint
@@ -2190,7 +2225,7 @@ public final class MessageInputPanelComponent: Component {
                         context: component.context,
                         userLocation: .other,
                         theme: EmojiSuggestionsComponent.Theme(
-                            backgroundColor: UIColor(white: 0.0, alpha: 0.5),
+                            backgroundColor: UIColor(white: 0.1, alpha: 1.0),
                             textColor: .white,
                             placeholderColor: UIColor(rgb: 0xffffff).mixedWith(UIColor(rgb: 0x1c1c1d), alpha: 0.9)
                         ),
@@ -2209,7 +2244,7 @@ public final class MessageInputPanelComponent: Component {
                             
                             var text: String?
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
-                    loop:   for attribute in file.attributes {
+                            loop: for attribute in file.attributes {
                                 switch attribute {
                                 case let .CustomEmoji(_, _, displayText, _):
                                     text = displayText
@@ -2257,6 +2292,113 @@ public final class MessageInputPanelComponent: Component {
                 let viewFrame = CGRect(origin: CGPoint(x: min(self.bounds.width - sideInset - viewSize.width, max(panelLeftInset, floor(globalPosition.x - viewSize.width / 2.0))), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
                 currentEmojiSuggestionView.frame = viewFrame
                 if let componentView = currentEmojiSuggestionView.componentView as? EmojiSuggestionsComponent.View {
+                    componentView.adjustBackground(relativePositionX: floor(globalPosition.x - viewFrame.minX))
+                }
+            }
+            
+            if let currentEmojiSearch = self.textFieldExternalState.currentEmojiSearch, let value = currentEmojiSearch.value as? [TelegramMediaFile], !value.isEmpty {
+                let currentEmojiSearchView: ComponentHostView<Empty>
+                if let current = self.currentEmojiSearchView {
+                    currentEmojiSearchView = current
+                } else {
+                    currentEmojiSearchView = ComponentHostView<Empty>()
+                    self.currentEmojiSearchView = currentEmojiSearchView
+                    self.addSubview(currentEmojiSearchView)
+                    
+                    currentEmojiSearchView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                }
+            
+                var globalPosition: CGPoint
+                if let textView = self.textField.view {
+                    globalPosition = textView.convert(currentEmojiSearch.localPosition, to: self)
+                    globalPosition.x += 16.0
+                } else {
+                    globalPosition = .zero
+                }
+                
+                let sideInset: CGFloat = 7.0
+                
+                let viewSize = currentEmojiSearchView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiSuggestionsComponent(
+                        context: component.context,
+                        userLocation: .other,
+                        theme: EmojiSuggestionsComponent.Theme(
+                            backgroundColor: UIColor(white: 0.1, alpha: 1.0),
+                            textColor: .white,
+                            placeholderColor: UIColor(rgb: 0xffffff).mixedWith(UIColor(rgb: 0x1c1c1d), alpha: 0.9)
+                        ),
+                        animationCache: component.context.animationCache,
+                        animationRenderer: component.context.animationRenderer,
+                        files: value,
+                        action: { [weak self] file in
+                            guard let self, let textView = self.textField.view as? TextFieldComponent.View, let currentEmojiSearch = self.textFieldExternalState.currentEmojiSearch else {
+                                return
+                            }
+                            
+                            AudioServicesPlaySystemSound(0x450)
+                            
+                            let inputState = textView.getInputState()
+                            let inputText = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            var text: String?
+                            var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
+                            loop: for attribute in file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, _, displayText, _):
+                                    text = displayText
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
+                                    break loop
+                                default:
+                                    break
+                                }
+                            }
+                            
+                            if let emojiAttribute = emojiAttribute, let text = text {
+                                let replacementText = NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: emojiAttribute])
+                                
+                                var range = currentEmojiSearch.position.range
+                                let previousText = inputText.attributedSubstring(from: range)
+                                if range.location != 0 && inputText.attributedSubstring(from: NSRange(location: range.location - 1, length: range.length + 1)).string.hasPrefix(":") {
+                                    range = NSRange(location: range.location - 1, length: range.length + 1)
+                                }
+                                inputText.replaceCharacters(in: range, with: replacementText)
+                                
+                                var replacedUpperBound = range.lowerBound
+                                while true {
+                                    if inputText.attributedSubstring(from: NSRange(location: 0, length: replacedUpperBound)).string.hasSuffix(previousText.string) {
+                                        let replaceRange = NSRange(location: replacedUpperBound - previousText.length, length: previousText.length)
+                                        if replaceRange.location < 0 {
+                                            break
+                                        }
+                                        let adjacentString = inputText.attributedSubstring(from: replaceRange)
+                                        if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
+                                            break
+                                        }
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        replacedUpperBound = replaceRange.lowerBound
+                                    } else {
+                                        break
+                                    }
+                                }
+                                
+                                let selectionPosition = range.lowerBound + (replacementText.string as NSString).length
+                                textView.updateText(inputText, selectionRange: selectionPosition ..< selectionPosition)
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: self.bounds.width - sideInset * 2.0, height: 100.0)
+                )
+                
+                var viewFrame = CGRect(origin: CGPoint(x: globalPosition.x - floor((viewSize.width) * 0.5), y: globalPosition.y - 4.0 - viewSize.height), size: viewSize)
+                if viewFrame.origin.x + viewFrame.width > self.bounds.width - sideInset {
+                    viewFrame.origin.x = self.bounds.width - sideInset - viewFrame.width
+                }
+                viewFrame.origin.x = max(viewFrame.origin.x, sideInset)
+                
+                currentEmojiSearchView.frame = viewFrame
+                if let componentView = currentEmojiSearchView.componentView as? EmojiSuggestionsComponent.View {
                     componentView.adjustBackground(relativePositionX: floor(globalPosition.x - viewFrame.minX))
                 }
             }
