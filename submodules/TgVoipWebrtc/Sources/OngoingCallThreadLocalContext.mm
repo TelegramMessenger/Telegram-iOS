@@ -42,6 +42,38 @@
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
 #include "rtc_base/logging.h"
 
+@implementation OngoingCallConnectionDescription
+
+- (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId ip:(NSString * _Nonnull)ip ipv6:(NSString * _Nonnull)ipv6 port:(int32_t)port peerTag:(NSData * _Nonnull)peerTag {
+    self = [super init];
+    if (self != nil) {
+        _connectionId = connectionId;
+        _ip = ip;
+        _ipv6 = ipv6;
+        _port = port;
+        _peerTag = peerTag;
+    }
+    return self;
+}
+
+@end
+
+@implementation VoipProxyServer
+
+- (instancetype _Nonnull)initWithHost:(NSString * _Nonnull)host port:(int32_t)port username:(NSString * _Nullable)username password:(NSString * _Nullable)password {
+    self = [super init];
+    if (self != nil) {
+        _host = host;
+        _port = port;
+        _username = username;
+        _password = password;
+    }
+    return self;
+}
+
+@end
+
+
 @implementation CallAudioTone
 
 - (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount {
@@ -1488,9 +1520,6 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 }
 
 + (void)applyServerConfig:(NSString *)string {
-    if (string.length != 0) {
-        //TgVoip::setGlobalServerConfig(std::string(string.UTF8String));
-    }
 }
 
 + (void)setupAudioSession {

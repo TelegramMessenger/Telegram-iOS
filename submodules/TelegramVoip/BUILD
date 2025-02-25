@@ -15,7 +15,6 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/TgVoip:TgVoip",
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",
         "//submodules/FFMpegBinding",
         "//submodules/ManagedFile",
