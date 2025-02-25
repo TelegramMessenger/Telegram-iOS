@@ -869,10 +869,10 @@ public final class MessageInputPanelComponent: Component {
             let placeholderTransition: ComponentTransition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
             let placeholderSize: CGSize
             if case let .plain(string) = component.placeholder, string.contains("#") {
-                let attributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.3))
+                let attributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.4))
                 if let range = attributedPlaceholder.string.range(of: "#") {
                     attributedPlaceholder.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(component.theme)!, range: NSRange(range, in: attributedPlaceholder.string))
-                    attributedPlaceholder.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff, alpha: 0.3), range: NSRange(range, in: attributedPlaceholder.string))
+                    attributedPlaceholder.addAttribute(.foregroundColor, value: UIColor(rgb: 0xffffff, alpha: 0.4), range: NSRange(range, in: attributedPlaceholder.string))
                     attributedPlaceholder.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedPlaceholder.string))
                 }
                 
@@ -916,7 +916,7 @@ public final class MessageInputPanelComponent: Component {
                     transition: placeholderTransition,
                     component: AnyComponent(AnimatedTextComponent(
                         font: Font.regular(17.0),
-                        color: UIColor(rgb: 0xffffff, alpha: 0.3),
+                        color: UIColor(rgb: 0xffffff, alpha: 0.4),
                         items: placeholderItems
                     )),
                     environment: {},
