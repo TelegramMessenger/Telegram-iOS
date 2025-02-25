@@ -71,6 +71,10 @@ private final class FetchImpl {
             self.partRange = partRange
             self.fetchRange = fetchRange
         }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
     }
     
     private final class PendingReadyPart {
@@ -399,7 +403,7 @@ private final class FetchImpl {
             self.update()
             
             self.requiredRangesDisposable = (intervals
-            |> deliverOn(self.queue)).start(next: { [weak self] intervals in
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] intervals in
                 guard let `self` = self else {
                     return
                 }
@@ -412,6 +416,7 @@ private final class FetchImpl {
         }
         
         deinit {
+            self.requiredRangesDisposable?.dispose()
         }
         
         private func update() {
@@ -676,7 +681,7 @@ private final class FetchImpl {
                     let cdnData = state.cdnData
                     
                     state.disposable = (reuploadSignal
-                    |> deliverOn(self.queue)).start(next: { [weak self] result in
+                    |> deliverOn(self.queue)).startStrict(next: { [weak self] result in
                         guard let `self` = self else {
                             return
                         }
@@ -713,7 +718,7 @@ private final class FetchImpl {
                             info: info,
                             resource: self.resource
                         )
-                        |> deliverOn(self.queue)).start(next: { [weak self] validationResult in
+                        |> deliverOn(self.queue)).startStrict(next: { [weak self] validationResult in
                             guard let `self` = self else {
                                 return
                             }
@@ -875,7 +880,7 @@ private final class FetchImpl {
                 
             if let filePartRequest {
                 part.disposable = (filePartRequest
-                |> deliverOn(self.queue)).start(next: { [weak self, weak state, weak part] result in
+                |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak part] result in
                     guard let self, let state, case let .fetching(fetchingState) = self.state, fetchingState === state else {
                         return
                     }
@@ -969,7 +974,7 @@ private final class FetchImpl {
             
             let queue = self.queue
             hashRange.disposable = (fetchRequest
-            |> deliverOn(self.queue)).start(next: { [weak self, weak state, weak hashRange] result in
+            |> deliverOn(self.queue)).startStrict(next: { [weak self, weak state, weak hashRange] result in
                 queue.async {
                     guard let self, let state, case let .fetching(fetchingState) = self.state, fetchingState === state else {
                         return

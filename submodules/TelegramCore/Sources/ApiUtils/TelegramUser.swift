@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
 func parsedTelegramProfilePhoto(_ photo: Api.UserProfilePhoto) -> [TelegramMediaImageRepresentation] {
     var representations: [TelegramMediaImageRepresentation] = []
     switch photo {

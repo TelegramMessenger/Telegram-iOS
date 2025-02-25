@@ -398,7 +398,7 @@
         _captionMixin.stickersContext = stickersContext;
         [_captionMixin createInputPanelIfNeeded];
         
-        _headerWrapperView = [[UIView alloc] init];
+        _headerWrapperView = [[TGMediaPickerGalleryWrapperView alloc] init];
         [_wrapperView addSubview:_headerWrapperView];
         
         _photoCounterButton = [[TGMediaPickerPhotoCounterButton alloc] initWithFrame:CGRectMake(0, 0, 64, 38)];
@@ -1629,9 +1629,27 @@
 
 #pragma mark -
 
+- (UIView *)hitTestWithSpecialHandling:(UIView *)view point:(CGPoint)point withEvent:(UIEvent *)event {
+    for (UIView *subview in [view.subviews reverseObjectEnumerator]) {
+        if ([subview isKindOfClass:[TGMediaPickerGalleryWrapperView class]]) {
+            UIView *result = [self hitTestWithSpecialHandling:subview point:[view convertPoint:point toView:subview] withEvent:event];
+            if (result) {
+                return result;
+            }
+        } else {
+            UIView *result = [subview hitTest:[view convertPoint:point toView:subview] withEvent:event];
+            if (result) {
+                return result;
+            }
+        }
+    }
+    
+    return nil;
+}
+
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {
-    UIView *view = [super hitTest:point withEvent:event];
+    UIView *view = [self hitTestWithSpecialHandling:self point:point withEvent:event];
     
     bool editingCover = false;
     if (_coverTitleLabel != nil && !_coverTitleLabel.isHidden) {

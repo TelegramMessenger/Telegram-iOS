@@ -842,13 +842,13 @@ public func layoutInstantPageBlock(webpage: TelegramMediaWebpage, userLocation: 
     }
 }
 
-public func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, userLocation: MediaResourceUserLocation, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:]) -> InstantPageLayout {
+public func instantPageLayoutForWebPage(_ webPage: TelegramMediaWebpage, instantPage: InstantPage?, userLocation: MediaResourceUserLocation, boundingWidth: CGFloat, safeInset: CGFloat, strings: PresentationStrings, theme: InstantPageTheme, dateTimeFormat: PresentationDateTimeFormat, webEmbedHeights: [Int : CGFloat] = [:]) -> InstantPageLayout {
     var maybeLoadedContent: TelegramMediaWebpageLoadedContent?
     if case let .Loaded(content) = webPage.content {
         maybeLoadedContent = content
     }
     
-    guard let loadedContent = maybeLoadedContent, let instantPage = loadedContent.instantPage else {
+    guard let loadedContent = maybeLoadedContent, let instantPage else {
         return InstantPageLayout(origin: CGPoint(), contentSize: CGSize(), items: [])
     }
     

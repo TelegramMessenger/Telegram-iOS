@@ -14,7 +14,7 @@ func faqSearchableItems(context: AccountContext, resolvedUrl: Signal<ResolvedUrl
         var results: [SettingsSearchableItem] = []
         var nextIndex: Int32 = 2
         if let resolvedUrl = resolvedUrl, case let .instantView(webPage, _) = resolvedUrl {
-            if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
+            if case let .Loaded(content) = webPage.content, let instantPage = content.instantPage?._parse() {
                 var processingQuestions = false
                 var currentSection: String?
                 outer: for block in instantPage.blocks {
