@@ -169,6 +169,12 @@ public final class CachedPremiumGiftCodeOptions: Codable {
 }
 
 func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?, onlyCached: Bool = false) -> Signal<[PremiumGiftCodeOption], NoError> {
+    if let peerId {
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return .single([])
+        }
+    }
+    
     let cached = account.postbox.transaction { transaction -> Signal<[PremiumGiftCodeOption], NoError> in
         if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPremiumGiftCodeOptions, key: ValueBoxKey(length: 0)))?.get(CachedPremiumGiftCodeOptions.self) {
             return .single(entry.options)
@@ -222,6 +228,12 @@ func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?, 
 
 
 func _internal_premiumGiftCodeOptions(account: Account, peerId: EnginePeer.Id?) -> Signal<[PremiumGiftCodeOption], NoError> {
+    if let peerId {
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return .single([])
+        }
+    }
+    
     var flags: Int32 = 0
     if let _ = peerId {
         flags |= 1 << 0
