@@ -5785,10 +5785,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
                                 
-                                if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, peer.flags.contains(.isCreator) || peer.adminRights != nil {
-                                    
-                                } else {
-                                    sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                        
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
                                 }
                             }
                             

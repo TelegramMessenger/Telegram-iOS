@@ -528,7 +528,7 @@ func chatHistoryEntriesForView(
                         }
 
                         if let peer = chatPeer.flatMap(EnginePeer.init) {
-                            entries.insert(.ChatInfoEntry(.userInfo(peer: peer, registrationDate: peerStatusSettings.registrationDate, phoneCountry: peerStatusSettings.phoneCountry, groupsInCommonCount: cachedPeerData.commonGroupCount), presentationData), at: 0)
+                            entries.insert(.ChatInfoEntry(.userInfo(peer: peer, verification: cachedPeerData.verification, registrationDate: peerStatusSettings.registrationDate, phoneCountry: peerStatusSettings.phoneCountry, groupsInCommonCount: cachedPeerData.commonGroupCount), presentationData), at: 0)
                         }
                     }
                 }

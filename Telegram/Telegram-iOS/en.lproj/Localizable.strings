@@ -13885,8 +13885,8 @@ Sorry for the inconvenience.";
 "Chat.NonContactUser.Disclaimer" = "Not an official account";
 "Chat.NonContactUser.AnonymousNumber" = "Anonymous";
 
-"Chat.NonContactUser.UpdatedName" = "User updated name %2$@";
-"Chat.NonContactUser.UpdatedPhoto" = "User updated photo %2$@";
+"Chat.NonContactUser.UpdatedName" = "User updated name %1$@";
+"Chat.NonContactUser.UpdatedPhoto" = "User updated photo %1$@";
 "Chat.NonContactUser.UpdatedToday" = "today";
 "Chat.NonContactUser.UpdatedDays_1" = "%@ day ago";
 "Chat.NonContactUser.UpdatedDays_any" = "%@ days ago";

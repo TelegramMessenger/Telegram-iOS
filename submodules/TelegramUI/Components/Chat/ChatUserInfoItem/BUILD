@@ -28,6 +28,7 @@ swift_library(
         "//submodules/CountrySelectionUI",
         "//submodules/TelegramStringFormatting",
         "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",

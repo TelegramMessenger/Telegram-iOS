@@ -17,9 +17,11 @@ import CountrySelectionUI
 import TelegramStringFormatting
 import MergedAvatarsNode
 import ChatControllerInteraction
+import TextNodeWithEntities
 
 public final class ChatUserInfoItem: ListViewItem {
     fileprivate let peer: EnginePeer
+    fileprivate let verification: PeerVerification?
     fileprivate let registrationDate: String?
     fileprivate let phoneCountry: String?
     fileprivate let groupsInCommonCount: Int32
@@ -29,6 +31,7 @@ public final class ChatUserInfoItem: ListViewItem {
     
     public init(
         peer: EnginePeer,
+        verification: PeerVerification?,
         registrationDate: String?,
         phoneCountry: String?,
         groupsInCommonCount: Int32,
@@ -37,6 +40,7 @@ public final class ChatUserInfoItem: ListViewItem {
         context: AccountContext
     ) {
         self.peer = peer
+        self.verification = verification
         self.registrationDate = registrationDate
         self.phoneCountry = phoneCountry
         self.groupsInCommonCount = groupsInCommonCount
@@ -107,13 +111,13 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
     private let groupsValueTextNode: TextNode
     private let groupsButtonNode: HighlightTrackingButtonNode
     private let groupsAvatarsNode: MergedAvatarsNode
-    private var chevronImage: UIImage?
+    private let groupsArrowNode: ASImageNode
     
     private var groupsInCommonContext: GroupsInCommonContext?
     private var groupsInCommonDisposable: Disposable?
     private var groupsInCommon: [Peer] = []
     
-    private let disclaimerTextNode: TextNode
+    private let disclaimerTextNode: TextNodeWithEntities
     
     private var theme: ChatPresentationThemeData?
     
@@ -158,11 +162,14 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
         
         self.groupsAvatarsNode = MergedAvatarsNode()
         
+        self.groupsArrowNode = ASImageNode()
+        self.groupsArrowNode.displaysAsynchronously = false
+        
         self.groupsButtonNode = HighlightTrackingButtonNode()
         
-        self.disclaimerTextNode = TextNode()
-        self.disclaimerTextNode.isUserInteractionEnabled = false
-        self.disclaimerTextNode.displaysAsynchronously = false
+        self.disclaimerTextNode = TextNodeWithEntities()
+        self.disclaimerTextNode.textNode.isUserInteractionEnabled = false
+        self.disclaimerTextNode.textNode.displaysAsynchronously = false
         
         super.init(layerBacked: false, dynamicBounce: true, rotated: true)
         
@@ -171,8 +178,9 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
         self.addSubnode(self.offsetContainer)
         self.offsetContainer.addSubnode(self.titleNode)
         self.offsetContainer.addSubnode(self.subtitleNode)
-        self.offsetContainer.addSubnode(self.disclaimerTextNode)
+        self.offsetContainer.addSubnode(self.disclaimerTextNode.textNode)
         self.offsetContainer.addSubnode(self.groupsAvatarsNode)
+        self.offsetContainer.addSubnode(self.groupsArrowNode)
         self.offsetContainer.addSubnode(self.groupsButtonNode)
         self.wantsTrailingItemSpaceUpdates = true
         
@@ -184,12 +192,18 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                     
                     self.groupsAvatarsNode.layer.removeAnimation(forKey: "opacity")
                     self.groupsAvatarsNode.alpha = 0.4
+                    
+                    self.groupsArrowNode.layer.removeAnimation(forKey: "opacity")
+                    self.groupsArrowNode.alpha = 0.4
                 } else {
                     self.groupsValueTextNode.alpha = 1.0
                     self.groupsValueTextNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     
                     self.groupsAvatarsNode.alpha = 1.0
                     self.groupsAvatarsNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    
+                    self.groupsArrowNode.alpha = 1.0
+                    self.groupsArrowNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -224,15 +238,15 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
         let makePhoneCountryValueLayout = TextNode.asyncLayout(self.phoneCountryValueTextNode)
         let makeGroupsTitleLayout = TextNode.asyncLayout(self.groupsTitleTextNode)
         let makeGroupsValueLayout = TextNode.asyncLayout(self.groupsValueTextNode)
-        let makeDisclaimerLayout = TextNode.asyncLayout(self.disclaimerTextNode)
-        
+        let makeDisclaimerLayout = TextNodeWithEntities.asyncLayout(self.disclaimerTextNode)
+
+        let currentItem = self.item
         let currentRegistrationDateText = self.registrationDateText
         let currentPhoneCountryText = self.phoneCountryText
-        let currentChevronImage = self.chevronImage
         
         return { [weak self] item, params in
-            self?.item = item
-                  
+            let themeUpdated = item.presentationData.theme !== currentItem?.presentationData.theme
+                            
             var backgroundSize = CGSize(width: 240.0, height: 0.0)
             
             let verticalItemInset: CGFloat = 10.0
@@ -324,20 +338,11 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
             let avatarSpacing: CGFloat = 9.0
             let avatarBorder: CGFloat = 1.0
                         
-            var chevronImage: UIImage?
             let groupsValueText: NSMutableAttributedString
             let groupsInCommonCount = item.groupsInCommonCount
             var estimatedValueOffset: CGFloat = 0.0
             if groupsInCommonCount > 0 {
-                groupsValueText = NSMutableAttributedString(string: "\(item.presentationData.strings.Chat_NonContactUser_GroupsCount(groupsInCommonCount)) >", font: Font.semibold(13.0), textColor: primaryTextColor)
-                if let currentChevronImage {
-                    chevronImage = currentChevronImage
-                } else {
-                    chevronImage = UIImage(bundleImageName: "Contact List/SubtitleArrow")
-                }
-                if let range = groupsValueText.string.range(of: ">"), let chevronImage {
-                    groupsValueText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: groupsValueText.string))
-                }
+                groupsValueText = NSMutableAttributedString(string: item.presentationData.strings.Chat_NonContactUser_GroupsCount(groupsInCommonCount), font: Font.semibold(13.0), textColor: primaryTextColor)
                 estimatedValueOffset = avatarImageSize + CGFloat(min(2, max(0, item.groupsInCommonCount - 1))) * avatarSpacing + 4.0
             } else {
                 groupsValueText = NSMutableAttributedString(string: "", font: Font.semibold(13.0), textColor: primaryTextColor)
@@ -360,11 +365,21 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
 
             backgroundSize.width = horizontalContentInset * 2.0 + maxTitleWidth + attributeSpacing + maxValueWidth
             
-            let disclaimerText = NSMutableAttributedString(string: " #   \(item.presentationData.strings.Chat_NonContactUser_Disclaimer)", font: Font.regular(13.0), textColor: subtitleColor)
-            if let range = disclaimerText.string.range(of: "#") {
-                disclaimerText.addAttribute(.attachment, value: PresentationResourcesChat.chatUserInfoWarningIcon(item.presentationData.theme.theme)!, range: NSRange(range, in: disclaimerText.string))
-                disclaimerText.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(range, in: disclaimerText.string))
-                disclaimerText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: disclaimerText.string))
+            let disclaimerText: NSMutableAttributedString
+            if let verification = item.verification {
+                disclaimerText = NSMutableAttributedString(string: " #   \(verification.description)", font: Font.regular(13.0), textColor: subtitleColor)
+                if let range = disclaimerText.string.range(of: "#") {
+                    disclaimerText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSRange(range, in: disclaimerText.string))
+                    disclaimerText.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(range, in: disclaimerText.string))
+                    disclaimerText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: disclaimerText.string))
+                }
+            } else {
+                disclaimerText = NSMutableAttributedString(string: " #   \(item.presentationData.strings.Chat_NonContactUser_Disclaimer)", font: Font.regular(13.0), textColor: subtitleColor)
+                if let range = disclaimerText.string.range(of: "#") {
+                    disclaimerText.addAttribute(.attachment, value: PresentationResourcesChat.chatUserInfoWarningIcon(item.presentationData.theme.theme)!, range: NSRange(range, in: disclaimerText.string))
+                    disclaimerText.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(range, in: disclaimerText.string))
+                    disclaimerText.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: disclaimerText.string))
+                }
             }
             
             let (disclaimerLayout, disclaimerApply) = makeDisclaimerLayout(TextNodeLayoutArguments(attributedString: disclaimerText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: backgroundSize.width - horizontalContentInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -380,7 +395,10 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.theme = item.presentationData.theme
-                    strongSelf.chevronImage = chevronImage
+                    
+                    if themeUpdated {
+                        strongSelf.groupsArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: primaryTextColor)
+                    }
                                         
                     if item.groupsInCommonCount > 0 {
                         if strongSelf.groupsInCommonContext == nil {
@@ -402,13 +420,13 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                         strongSelf.phoneCountryTitleTextNode.layer.compositingFilter = nil
                         strongSelf.groupsTitleTextNode.layer.compositingFilter = nil
                         strongSelf.subtitleNode.layer.compositingFilter = nil
-                        strongSelf.disclaimerTextNode.layer.compositingFilter = nil
+                        strongSelf.disclaimerTextNode.textNode.layer.compositingFilter = nil
                     } else {
                         strongSelf.registrationDateTitleTextNode.layer.compositingFilter = "overlayBlendMode"
                         strongSelf.phoneCountryTitleTextNode.layer.compositingFilter = "overlayBlendMode"
                         strongSelf.groupsTitleTextNode.layer.compositingFilter = "overlayBlendMode"
                         strongSelf.subtitleNode.layer.compositingFilter = "overlayBlendMode"
-                        strongSelf.disclaimerTextNode.layer.compositingFilter = "overlayBlendMode"
+                        strongSelf.disclaimerTextNode.textNode.layer.compositingFilter = "overlayBlendMode"
                     }
                     
                     strongSelf.registrationDateText = registrationDateText
@@ -445,8 +463,6 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                     
                     let middleX = floorToScreenPixels(attributeMidpoints.min() ?? backgroundSize.width / 2.0)
                                                       
-                    //: attributeMidpoints.reduce(0, +) / CGFloat(attributeMidpoints.count))
-                    
                     let titleMaxX: CGFloat = backgroundFrame.minX + middleX - attributeSpacing / 2.0
                     let valueMinX: CGFloat = backgroundFrame.minX + middleX + attributeSpacing / 2.0
                   
@@ -495,32 +511,40 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
                               
                     var valueOffset: CGFloat = 0.0
                     if let groupsValueLayoutAndApply {
-                        let avatarsFrame = CGRect(origin: CGPoint(x: valueMinX, y: contentOriginY + floor((groupsValueLayoutAndApply.0.size.height - avatarImageSize) / 2.0)), size: CGSize(width: avatarImageSize + avatarSpacing * 2.0, height: avatarImageSize))
+                        let avatarsFrame = CGRect(origin: CGPoint(x: valueMinX + groupsValueLayoutAndApply.0.size.width + 4.0, y: contentOriginY + floor((groupsValueLayoutAndApply.0.size.height - avatarImageSize) / 2.0)), size: CGSize(width: avatarImageSize + avatarSpacing * 2.0, height: avatarImageSize))
                         strongSelf.groupsAvatarsNode.frame = avatarsFrame
                         strongSelf.groupsAvatarsNode.updateLayout(size: avatarsFrame.size)
                         strongSelf.groupsAvatarsNode.update(context: item.context, peers: strongSelf.groupsInCommon, synchronousLoad: true, imageSize: avatarImageSize, imageSpacing: avatarSpacing, borderWidth: avatarBorder)
                         
                         if groupsInCommonCount > 0 {
                             valueOffset = avatarImageSize + CGFloat(min(2, max(0, groupsInCommonCount - 1))) * avatarSpacing + 4.0
-                            strongSelf.groupsButtonNode.isHidden = false
                             strongSelf.groupsButtonNode.frame = CGRect(origin: CGPoint(x: valueMinX, y: contentOriginY), size: CGSize(width: groupsValueLayoutAndApply.0.size.width + 20.0, height: 18.0))
+                            
+                            strongSelf.groupsButtonNode.isHidden = false
+                            strongSelf.groupsAvatarsNode.isHidden = false
+                            strongSelf.groupsArrowNode.isHidden = false
+                            
+                            if let icon = strongSelf.groupsArrowNode.image {
+                                strongSelf.groupsArrowNode.frame = CGRect(origin: CGPoint(x: avatarsFrame.minX + valueOffset, y: contentOriginY + 4.0 - UIScreenPixel), size: icon.size)
+                            }
                         } else {
+                            strongSelf.groupsAvatarsNode.isHidden = true
                             strongSelf.groupsButtonNode.isHidden = true
+                            strongSelf.groupsArrowNode.isHidden = true
                         }
                     }
                     
                     positionAttributeNodes(
                         titleTextNode: strongSelf.groupsTitleTextNode,
                         valueTextNode: strongSelf.groupsValueTextNode,
-                        valueOffset: valueOffset,
                         titleLayoutAndApply: groupsTitleLayoutAndApply,
                         valueLayoutAndApply: groupsValueLayoutAndApply
                     )
                     
                     contentOriginY += verticalSpacing + paragraphSpacing
-                    let _ = disclaimerApply()
+                    let _ = disclaimerApply(TextNodeWithEntities.Arguments(context: item.context, cache: item.context.animationCache, renderer: item.context.animationRenderer, placeholderColor: primaryTextColor.withMultipliedAlpha(0.4), attemptSynchronous: true))
                     let disclaimerFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + floor((backgroundSize.width - disclaimerLayout.size.width) / 2.0), y: contentOriginY), size: disclaimerLayout.size)
-                    strongSelf.disclaimerTextNode.frame = disclaimerFrame
+                    strongSelf.disclaimerTextNode.textNode.frame = disclaimerFrame
                     
                     if strongSelf.backgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
                         backgroundContent.clipsToBounds = true
