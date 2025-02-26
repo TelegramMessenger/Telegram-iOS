@@ -426,7 +426,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         }
         
         if let view = self.scrubber.view {
-            view.frame = CGRect(origin: CGPoint(x: max(leftInset + 45.0, floorToScreenPixels((width - view.bounds.width) / 2.0)), y: 7.0 - UIScreenPixel), size: view.bounds.size)
+            view.frame = CGRect(origin: CGPoint(x: min(width - innerSize.width - view.bounds.width, max(leftInset + 45.0, floorToScreenPixels((width - view.bounds.width) / 2.0))), y: 7.0 - UIScreenPixel), size: view.bounds.size)
         }
                 
         let panelHeight = defaultHeight(metrics: metrics)

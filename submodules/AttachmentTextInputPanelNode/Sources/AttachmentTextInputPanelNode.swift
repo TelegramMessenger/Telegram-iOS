@@ -908,7 +908,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
         self.textPlaceholderNode.isHidden = inputHasText
           
-        let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
+        let additionalRightInset = self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: transition)
+        
+        let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right - additionalRightInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
         
         if let textInputNode = self.textInputNode {
@@ -923,16 +925,14 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             }
         }
         
-        self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: transition)
-        
         self.actionButtons.updateAccessibility()
         
         return panelHeight
     }
     
-    private func updateFieldAndButtonsLayout(inputHasText: Bool, panelHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    private func updateFieldAndButtonsLayout(inputHasText: Bool, panelHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let (width, leftInset, rightInset, additionalSideInsets, _, metrics, _) = self.validLayout else {
-            return
+            return 0.0
         }
         var textFieldMinHeight: CGFloat = 33.0
         if let presentationInterfaceState = self.presentationInterfaceState {
@@ -954,6 +954,11 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let baseWidth = width - leftInset - rightInset
         let textInputFrame = self.textInputContainer.frame
         
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if additionalSideInsets.right > 0.0 {
+            textFieldInsets.right += additionalSideInsets.right / 3.0
+        }
+        
         var textBackgroundInset: CGFloat = 0.0
         let actionButtonsSize: CGSize
         if let presentationInterfaceState = self.presentationInterfaceState {
@@ -971,11 +976,6 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             textBackgroundInset = 44.0 - actionButtonsSize.width
         } else {
             actionButtonsSize = CGSize(width: 44.0, height: minimalHeight)
-        }
-        
-        var textFieldInsets = self.textFieldInsets(metrics: metrics)
-        if additionalSideInsets.right > 0.0 {
-            textFieldInsets.right += additionalSideInsets.right / 3.0
         }
         
         let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - actionButtonsSize.width + 1.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: actionButtonsSize)
@@ -1027,6 +1027,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             placeholderFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
         }
         transition.updateFrame(node: self.textPlaceholderNode, frame: placeholderFrame)
+        
+        return textBackgroundInset
     }
         
     private var skipUpdate = false
@@ -1387,7 +1389,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         
         let panelHeight = self.updateTextHeight(animated: animated)
         if self.isAttachment, let panelHeight = panelHeight {
-            self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: .animated(duration: 0.2, curve: .easeInOut))
+            let _ = self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     
