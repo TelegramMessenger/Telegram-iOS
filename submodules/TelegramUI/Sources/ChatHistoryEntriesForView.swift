@@ -11,6 +11,7 @@ import ChatMessageItemCommon
 import TextFormat
 import Markdown
 import Display
+import TelegramStringFormatting
 
 struct ChatHistoryEntriesForViewState {
     private var messageStableIdToLocalId: [UInt32: Int64] = [:]
@@ -442,11 +443,8 @@ func chatHistoryEntriesForView(
                     if peerStatusSettings.flags.contains(.canAddContact) || peerStatusSettings.flags.contains(.canReport) || peerStatusSettings.flags.contains(.canBlock) {
                         
                         if let chatPeer, let photoChangeDate = peerStatusSettings.photoChangeDate, photoChangeDate > 0 {
-                            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                            let days = Int32(floor(Float(currentTime - photoChangeDate) / 86400.0))
-                            let text = presentationData.strings.Chat_NonContactUser_UpdatedPhoto(
-                                days == 0 ? presentationData.strings.Chat_NonContactUser_UpdatedToday : presentationData.strings.Chat_NonContactUser_UpdatedDays(days)
-                            )
+                            let timeText = stringForIntervalSinceUpdateAction(strings: presentationData.strings, value: photoChangeDate)
+                            let text = presentationData.strings.Chat_NonContactUser_UpdatedPhoto(timeText)
                             var entities: [MessageTextEntity] = []
                             for range in text.ranges {
                                 entities.append(MessageTextEntity(range: range.range.lowerBound ..< range.range.upperBound, type: .Bold))
@@ -485,11 +483,8 @@ func chatHistoryEntriesForView(
                         }
                         
                         if let chatPeer, let nameChangeDate = peerStatusSettings.nameChangeDate, nameChangeDate > 0 {
-                            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                            let days = Int32(floor(Float(currentTime - nameChangeDate) / 86400.0))
-                            let text = presentationData.strings.Chat_NonContactUser_UpdatedName(
-                                days == 0 ? presentationData.strings.Chat_NonContactUser_UpdatedToday : presentationData.strings.Chat_NonContactUser_UpdatedDays(days)
-                            )
+                            let timeText = stringForIntervalSinceUpdateAction(strings: presentationData.strings, value: nameChangeDate)
+                            let text = presentationData.strings.Chat_NonContactUser_UpdatedName(timeText)
                             var entities: [MessageTextEntity] = []
                             for range in text.ranges {
                                 entities.append(MessageTextEntity(range: range.range.lowerBound ..< range.range.upperBound, type: .Bold))

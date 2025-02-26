@@ -973,7 +973,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 text = presentationInterfaceState.strings.MediaPicker_Send
             }
             actionButtonsSize = self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, minimized: isMinimized, text: text, interfaceState: presentationInterfaceState)
-            textBackgroundInset = 44.0 - actionButtonsSize.width
+            textBackgroundInset = actionButtonsSize.width - 44.0
         } else {
             actionButtonsSize = CGSize(width: 44.0, height: minimalHeight)
         }
@@ -981,11 +981,11 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - actionButtonsSize.width + 1.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: actionButtonsSize)
         transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
         
-        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset + textBackgroundInset, height: textInputFrame.size.height))
+        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset, height: textInputFrame.size.height))
         transition.updateFrame(node: self.textInputContainerBackgroundNode, frame: textInputBackgroundFrame)
         
-        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset + textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
-        transition.updateFrame(layer: self.textInputBackgroundImageNode.layer, frame: CGRect(x: 0.0, y: 0.0, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset + textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
+        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
+        transition.updateFrame(layer: self.textInputBackgroundImageNode.layer, frame: CGRect(x: 0.0, y: 0.0, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
         
         var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {

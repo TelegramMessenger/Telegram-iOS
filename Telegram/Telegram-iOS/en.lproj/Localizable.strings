@@ -13887,7 +13887,11 @@ Sorry for the inconvenience.";
 
 "Chat.NonContactUser.UpdatedName" = "User updated name %1$@";
 "Chat.NonContactUser.UpdatedPhoto" = "User updated photo %1$@";
-"Chat.NonContactUser.UpdatedToday" = "today";
+
+"Chat.NonContactUser.UpdatedMinutes_1" = "%@ minute ago";
+"Chat.NonContactUser.UpdatedMinutes_any" = "%@ minutes ago";
+"Chat.NonContactUser.UpdatedHours_1" = "%@ hour ago";
+"Chat.NonContactUser.UpdatedHours_any" = "%@ hours ago";
 "Chat.NonContactUser.UpdatedDays_1" = "%@ day ago";
 "Chat.NonContactUser.UpdatedDays_any" = "%@ days ago";
 
@@ -13933,3 +13937,39 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.ToastUnpinned.Text" = "Gift Unpinned.";
 "PeerInfo.Gifts.ToastPinned.Title" = "Gift Pinned";
 "PeerInfo.Gifts.ToastPinned.Text" = "Now it will always be shown on the top.";
+
+"Chat.PaidMessage.Confirm.Title" = "Confirm Payment";
+"Chat.PaidMessage.Confirm.DontAskAgain" = "Don't ask again";
+"Chat.PaidMessage.Confirm.PayForMessage_1" = "Pay for %@ Message";
+"Chat.PaidMessage.Confirm.PayForMessage_any" = "Pay for %@ Messages";
+"Chat.PaidMessage.Confirm.Single.Text" = "**%1$@** charges **%2$@** per incoming message. Would you like to pay **%3$@** to send %4$@?";
+"Chat.PaidMessage.Confirm.Multiple.Text" = "You selected %1$@ who charge Stars for messages. Would you like to pay **%2$@** Stars to send %3$@?";
+"Chat.PaidMessage.Confirm.Text.Users_1" = "**%@** user";
+"Chat.PaidMessage.Confirm.Text.Users_any" = "**%@** users";
+"Chat.PaidMessage.Confirm.Text.Messages_1" = "**%@** message";
+"Chat.PaidMessage.Confirm.Text.Messages_any" = "**%@** messages";
+"Chat.PaidMessage.Confirm.Text.Stars_1" = "%@ Star";
+"Chat.PaidMessage.Confirm.Text.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessage.RemoveFee.Title" = "Remove Fee";
+"Chat.PaidMessage.RemoveFee.Text" = "Are you sure you want to allow **%@** to message you for free?";
+"Chat.PaidMessage.RemoveFee.Yes" = "Yes";
+"Chat.PaidMessage.RemoveFee.Refund" = "Refund already paid **%@**";
+"Chat.PaidMessage.RemoveFee.Refund.Stars_1" = "%@ Star";
+"Chat.PaidMessage.RemoveFee.Refund.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessage.Sent.Title_1" = "Message Sent";
+"Chat.PaidMessage.Sent.Title_any" = "%@ Messages Sent";
+"Chat.PaidMessage.Sent.Text" = "You paid %@";
+"Chat.PaidMessage.Sent.Text.Stars_1" = "%@ Star";
+"Chat.PaidMessage.Sent.Text.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessageFee.Text" = "%1$@ must pay %2$@ for each message to you.";
+"Chat.PaidMessageFee.RemoveFee" = "Remove Fee";
+
+"Privacy.Review.Review" = "Review";
+"Privacy.Review.Calls.Title" = "Call Settings";
+"Privacy.Review.Calls.Text" = "You've restricted who can message you, but anyone can still call you. Would you like to review these settings?";
+
+"Privacy.Review.Invite.Title" = "Invitation Settings";
+"Privacy.Review.Invite.Text" = "You've restricted who can message you, but anyone can still invite you to groups and channels. Would you like to review these settings?";

@@ -1470,16 +1470,15 @@ public func privacyAndSecurityController(
     }
     
     showPrivacySuggestionImpl = {
-        //TODO:localize
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         if reviewCallPrivacySuggestion {
             reviewCallPrivacySuggestion = false
             let alertController = textAlertController(
                 context: context,
-                title: "Call Settings",
-                text: "You've restricted who can message you, but anyone can still call you. Would you like to review these settings?",
+                title: presentationData.strings.Privacy_Review_Calls_Title,
+                text: presentationData.strings.Privacy_Review_Calls_Text,
                 actions: [
-                    TextAlertAction(type: .defaultAction, title: "Review", action: {
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Privacy_Review_Review, action: {
                         arguments.openVoiceCallPrivacy()
                     }),
                     TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
@@ -1495,10 +1494,10 @@ public func privacyAndSecurityController(
             reviewInvitePrivacySuggestion = false
             let alertController = textAlertController(
                 context: context,
-                title: "Invitation Settings",
-                text: "You've restricted who can message you, but anyone can still invite you to groups and channels. Would you like to review these settings?",
+                title: presentationData.strings.Privacy_Review_Invite_Title,
+                text: presentationData.strings.Privacy_Review_Invite_Text,
                 actions: [
-                    TextAlertAction(type: .defaultAction, title: "Review", action: {
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Privacy_Review_Review, action: {
                         arguments.openGroupsPrivacy()
                     }),
                     TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {

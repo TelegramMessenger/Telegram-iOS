@@ -659,3 +659,15 @@ public func stringForRemainingMuteInterval(strings: PresentationStrings, muteInt
         return strings.MuteExpires_Days(Int32(round(Float(value) / (24 * 60 * 60))))
     }
 }
+
+public func stringForIntervalSinceUpdateAction(strings: PresentationStrings, value: Int32) -> String {
+    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+    let value = max(1 * 60, timestamp - value)
+    if value <= 1 * 60 * 60 {
+        return strings.Chat_NonContactUser_UpdatedMinutes(Int32(round(Float(value) / 60)))
+    } else if value <= 24 * 60 * 60 {
+        return strings.Chat_NonContactUser_UpdatedHours(Int32(round(Float(value) / (60 * 60))))
+    } else {
+        return strings.Chat_NonContactUser_UpdatedDays(Int32(round(Float(value) / (24 * 60 * 60))))
+    }
+}
