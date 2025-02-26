@@ -664,7 +664,7 @@ public final class GiftItemComponent: Component {
             
             var iconBackgroundSize: CGSize?
             if component.isEditing {
-                if !component.isPinned {
+                if !component.isPinned && backgroundColor != nil {
                     iconBackgroundSize = CGSize(width: 48.0, height: 48.0)
                 }
             } else {
@@ -710,7 +710,7 @@ public final class GiftItemComponent: Component {
                 iconBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
             }
             
-            if component.isPinned || component.isEditing {
+            if component.isPinned || (component.isEditing && backgroundColor != nil) {
                 let pinnedIcon: UIImageView
                 if let currentIcon = self.pinnedIcon {
                     pinnedIcon = currentIcon

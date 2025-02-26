@@ -76,7 +76,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
             
     private var starsProducts: [ProfileGiftsContext.State.StarGift]?
-    private var starsItems: [AnyHashable: (ProfileGiftsContext.State.StarGift, ComponentView<Empty>)] = [:]
+    private var starsItems: [AnyHashable: (StarGiftReference?, ComponentView<Empty>)] = [:]
     private var resultsAreFiltered = false
     private var resultsAreEmpty = false
     
@@ -89,6 +89,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
     }
     private var reorderedReferencesPromise = ValuePromise<[StarGiftReference]?>(nil)
+    
+    private var reorderedPinnedReferences: Set<StarGiftReference>? {
+        didSet {
+            self.reorderedPinnedReferencesPromise.set(self.reorderedPinnedReferences)
+        }
+    }
+    private var reorderedPinnedReferencesPromise = ValuePromise<Set<StarGiftReference>?>(nil)
     
     private var reorderRecognizer: ReorderGestureRecognizer?
     
@@ -136,17 +143,24 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     for reference in reorderedReferences {
                         if let index = stateItems.firstIndex(where: { $0.reference == reference }) {
                             seenIds.insert(reference)
-                            fixedStateItems.append(stateItems[index])
+                            var item = stateItems[index]
+                            if self.reorderedPinnedReferences?.contains(reference) == true, !item.pinnedToTop {
+                                item = item.withPinnedToTop(true)
+                            }
+                            fixedStateItems.append(item)
                         }
                     }
                     
                     for item in stateItems {
                         if let reference = item.reference, !seenIds.contains(reference) {
+                            var item = item
+                            if self.reorderedPinnedReferences?.contains(reference) == true, !item.pinnedToTop {
+                                item = item.withPinnedToTop(true)
+                            }
                             fixedStateItems.append(item)
                         }
                     }
                     stateItems = fixedStateItems
-                    //self.reorderedReferences = fixedStateItems.compactMap(\.reference)
                 }
                 self.starsProducts = stateItems
                 self.pinnedReferences = Array(stateItems.filter { $0.pinnedToTop }.compactMap { $0.reference })
@@ -218,7 +232,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private func item(at point: CGPoint) -> (AnyHashable, ComponentView<Empty>)? {
         let localPoint = self.scrollNode.view.convert(point, from: self.view)
         for (id, visibleItem) in self.starsItems {
-            if let view = visibleItem.1.view, view.frame.contains(localPoint) {
+            if let view = visibleItem.1.view, view.frame.contains(localPoint), let reference = visibleItem.0, self.pinnedReferences.contains(reference) {
                 return (id, visibleItem.1)
             }
         }
@@ -258,6 +272,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 
                 Queue.mainQueue().after(1.0) {
                     self.reorderedReferences = nil
+                    self.reorderedPinnedReferences = nil
                 }
             }
             
@@ -281,7 +296,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             } else {
                 self.reorderingItem = nil
             }
-            self.updateScrolling(transition: .spring(duration: 0.3))
+            self.updateScrolling(transition: item == nil ? .spring(duration: 0.3) : .immediate)
         }
     }
     
@@ -296,9 +311,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if visibleItem.1 === visibleReorderingItem.1 {
                         continue
                     }
-                    if let view = visibleItem.1.view, view.frame.contains(targetPosition), let reorderItem = self.starsItems[id]?.0 {
-                        if let targetIndex = starsProducts.firstIndex(where: { $0.reference == visibleItem.0.reference }) {
-                            self.reorderIfPossible(item: reorderItem, toIndex: targetIndex)
+                    if let view = visibleItem.1.view, view.frame.contains(targetPosition), let reorderItemReference = self.starsItems[id]?.0 {
+                        if let targetIndex = starsProducts.firstIndex(where: { $0.reference == visibleItem.0 }) {
+                            self.reorderIfPossible(reference: reorderItemReference, toIndex: targetIndex)
                         }
                         break
                     }
@@ -307,7 +322,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         }
     }
     
-    private func reorderIfPossible(item: ProfileGiftsContext.State.StarGift, toIndex: Int) {
+    private func reorderIfPossible(reference: StarGiftReference, toIndex: Int) {
         if let items = self.starsProducts {
             var toIndex = toIndex
             
@@ -322,7 +337,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 return item.reference
             }
             
-            if let reference = item.reference, let fromIndex = ids.firstIndex(of: reference) {
+            if let fromIndex = ids.firstIndex(of: reference) {
                 if fromIndex < toIndex {
                     ids.insert(reference, at: toIndex + 1)
                     ids.remove(at: fromIndex)
@@ -401,7 +416,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         visibleItem = current
                     } else {
                         visibleItem = ComponentView()
-                        self.starsItems[itemId] = (product, visibleItem)
+                        self.starsItems[itemId] = (product.reference, visibleItem)
                         itemTransition = .immediate
                     }
                     
@@ -450,11 +465,38 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 isEditing: self.isReordering,
                                 mode: .profile,
                                 action: { [weak self] in
-                                    guard let self else {
+                                    guard let self, let presentationData = self.currentParams?.presentationData else {
                                         return
                                     }
                                     if self.isReordering {
-                                        
+                                        if !product.pinnedToTop, let reference = product.reference, let items = self.starsProducts {
+                                            if self.pinnedReferences.count >= self.maxPinnedCount {
+                                                self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                                return
+                                            }
+                                            
+                                            var reorderedPinnedReferences = Set<StarGiftReference>()
+                                            if let current = self.reorderedPinnedReferences {
+                                                reorderedPinnedReferences = current
+                                            }
+                                            reorderedPinnedReferences.insert(reference)
+                                            self.reorderedPinnedReferences = reorderedPinnedReferences
+                                                                                        
+                                            if let maxPinnedIndex = items.lastIndex(where: { $0.pinnedToTop }) {
+                                                var reorderedReferences: [StarGiftReference]
+                                                if let current = self.reorderedReferences {
+                                                    reorderedReferences = current
+                                                } else {
+                                                    let ids = items.compactMap { item -> StarGiftReference? in
+                                                        return item.reference
+                                                    }
+                                                    reorderedReferences = ids
+                                                }
+                                                reorderedReferences.removeAll(where: { $0 == reference })
+                                                reorderedReferences.insert(reference, at: maxPinnedIndex + 1)
+                                                self.reorderedReferences = reorderedReferences
+                                            }
+                                        }
                                     } else {
                                         let controller = GiftViewScreen(
                                             context: self.context,
@@ -517,10 +559,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             }
                         }
                         var itemFrame = itemFrame
+                        var isReordering = false
                         if let reorderingItem = self.reorderingItem, itemId == reorderingItem.id {
                             itemFrame = itemFrame.size.centered(around: reorderingItem.position)
+                            isReordering = true
                         }
-                        itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        if itemView.layer.animation(forKey: "position") != nil && !isReordering {
+                        } else {
+                            itemTransition.setFrame(view: itemView, frame: itemFrame)
+                        }
                         
                         if self.isReordering && product.pinnedToTop {
                             if itemView.layer.animation(forKey: "shaking_position") == nil {
@@ -933,34 +980,36 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         
         var items: [ContextMenuItem] = []
         if canManage {
-            items.append(.action(ContextMenuActionItem(text: gift.pinnedToTop ? strings.PeerInfo_Gifts_Context_Unpin  : strings.PeerInfo_Gifts_Context_Pin , icon: { theme in generateTintedImage(image: UIImage(bundleImageName: gift.pinnedToTop ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
-                c?.dismiss(completion: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    let pinnedToTop = !gift.pinnedToTop
-                    
-                    if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
-                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                        return
-                    }
-                    
-                    if let reference = gift.reference {
-                        self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
-                    }
-                    
-                    let toastTitle: String?
-                    let toastText: String
-                    if !pinnedToTop {
-                        toastTitle = nil
-                        toastText = presentationData.strings.PeerInfo_Gifts_ToastUnpinned_Text
-                    } else {
-                        toastTitle = presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
-                        toastText = presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
-                    }
-                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: !pinnedToTop ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                })
-            })))
+            if case .unique = gift.gift {
+                items.append(.action(ContextMenuActionItem(text: gift.pinnedToTop ? strings.PeerInfo_Gifts_Context_Unpin  : strings.PeerInfo_Gifts_Context_Pin , icon: { theme in generateTintedImage(image: UIImage(bundleImageName: gift.pinnedToTop ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                    c?.dismiss(completion: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        let pinnedToTop = !gift.pinnedToTop
+                        
+                        if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            return
+                        }
+                        
+                        if let reference = gift.reference {
+                            self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
+                        }
+                        
+                        let toastTitle: String?
+                        let toastText: String
+                        if !pinnedToTop {
+                            toastTitle = nil
+                            toastText = presentationData.strings.PeerInfo_Gifts_ToastUnpinned_Text
+                        } else {
+                            toastTitle = presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
+                            toastText = presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
+                        }
+                        self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: !pinnedToTop ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    })
+                })))
+            }
             
             if canReorder {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Context_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in

@@ -1150,9 +1150,33 @@ private final class ProfileGiftsContextImpl {
         self.actionDisposable.set(
             _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: added).startStrict()
         )
+        
         if let index = self.gifts.firstIndex(where: { $0.reference == reference }) {
-            self.gifts[index] = self.gifts[index].withSavedToProfile(added)
+            if !added && self.gifts[index].pinnedToTop {
+                let pinnedGifts = self.gifts.filter { $0.pinnedToTop && $0.reference != reference }
+                let existingGifts = Set(pinnedGifts.compactMap { $0.reference })
+                
+                var updatedGifts: [ProfileGiftsContext.State.StarGift] = []
+                for gift in self.gifts {
+                    if let reference = gift.reference, existingGifts.contains(reference) {
+                        continue
+                    }
+                    var gift = gift
+                    if gift.reference == reference {
+                        gift = gift.withPinnedToTop(false).withSavedToProfile(false)
+                    }
+                    updatedGifts.append(gift)
+                }
+                updatedGifts.sort { lhs, rhs in
+                    lhs.date > rhs.date
+                }
+                updatedGifts.insert(contentsOf: pinnedGifts, at: 0)
+                self.gifts = updatedGifts
+            } else {
+                self.gifts[index] = self.gifts[index].withSavedToProfile(added)
+            }
         }
+        
         if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
             self.filteredGifts[index] = self.filteredGifts[index].withSavedToProfile(added)
             if !self.filter.contains(.hidden) && !added {
@@ -1164,9 +1188,14 @@ private final class ProfileGiftsContextImpl {
     
     func updateStarGiftPinnedToTop(reference: StarGiftReference, pinnedToTop: Bool) {
         var pinnedGifts = self.gifts.filter { $0.pinnedToTop }
+        var saveToProfile = false
         if var gift = self.gifts.first(where: { $0.reference == reference }) {
             gift = gift.withPinnedToTop(pinnedToTop)
             if pinnedToTop {
+                if !gift.savedToProfile {
+                    gift = gift.withSavedToProfile(true)
+                    saveToProfile = true
+                }
                 pinnedGifts.append(gift)
             } else {
                 pinnedGifts.removeAll(where: { $0.reference == reference })
@@ -1192,8 +1221,15 @@ private final class ProfileGiftsContextImpl {
         }
         self.pushState()
         
+        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference })
+        
+        if saveToProfile {
+            signal = _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true)
+            |> then(signal)
+        }
+        
         self.actionDisposable.set(
-            _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference }).startStrict(completed: { [weak self] in
+            (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
             })
         )
@@ -1201,13 +1237,19 @@ private final class ProfileGiftsContextImpl {
     
     public func updatePinnedToTopStarGifts(references: [StarGiftReference]) {
         let existingGifts = Set(references)
+        var saveSignals: [Signal<Never, NoError>] = []
         let currentPinnedGifts = self.gifts.filter { gift in
             if let reference = gift.reference {
                 return existingGifts.contains(reference)
             } else {
                 return false
             }
-        }.map { $0.withPinnedToTop(true) }
+        }.map { gift in
+            if !gift.savedToProfile, let reference = gift.reference {
+                saveSignals.append(_internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true))
+            }
+            return gift.withPinnedToTop(true).withSavedToProfile(true)
+        }
         
         var updatedGifts: [ProfileGiftsContext.State.StarGift] = []
         for gift in self.gifts {
@@ -1231,8 +1273,15 @@ private final class ProfileGiftsContextImpl {
         
         self.pushState()
         
+        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference })
+        if !saveSignals.isEmpty {
+            signal = combineLatest(saveSignals)
+            |> ignoreValues
+            |> then(signal)
+        }
+        
         self.actionDisposable.set(
-            _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference }).startStrict(completed: { [weak self] in
+            (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
             })
         )
