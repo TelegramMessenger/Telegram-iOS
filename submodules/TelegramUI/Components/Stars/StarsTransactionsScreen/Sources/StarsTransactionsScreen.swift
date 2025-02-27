@@ -32,6 +32,7 @@ final class StarsTransactionsScreenComponent: Component {
     
     let context: AccountContext
     let starsContext: StarsContext
+    let starsRevenueStatsContext: StarsRevenueStatsContext
     let subscriptionsContext: StarsSubscriptionsContext
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let openSubscription: (StarsContext.State.Subscription) -> Void
@@ -42,6 +43,7 @@ final class StarsTransactionsScreenComponent: Component {
     init(
         context: AccountContext,
         starsContext: StarsContext,
+        starsRevenueStatsContext: StarsRevenueStatsContext,
         subscriptionsContext: StarsSubscriptionsContext,
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
@@ -51,6 +53,7 @@ final class StarsTransactionsScreenComponent: Component {
     ) {
         self.context = context
         self.starsContext = starsContext
+        self.starsRevenueStatsContext = starsRevenueStatsContext
         self.subscriptionsContext = subscriptionsContext
         self.openTransaction = openTransaction
         self.openSubscription = openSubscription
@@ -134,6 +137,9 @@ final class StarsTransactionsScreenComponent: Component {
         private var stateDisposable: Disposable?
         private var starsState: StarsContext.State?
         
+        private var revenueStateDisposable: Disposable?
+        private var revenueState: StarsRevenueStatsContextState?
+        
         private var previousBalance: StarsAmount?
         
         private var subscriptionsStateDisposable: Disposable?
@@ -190,6 +196,8 @@ final class StarsTransactionsScreenComponent: Component {
         
         deinit {
             self.stateDisposable?.dispose()
+            self.revenueStateDisposable?.dispose()
+            self.subscriptionsStateDisposable?.dispose()
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -370,6 +378,18 @@ final class StarsTransactionsScreenComponent: Component {
                         return
                     }
                     self.starsState = state
+                    
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+                
+                self.revenueStateDisposable = (component.starsRevenueStatsContext.state
+                |> deliverOnMainQueue).start(next: { [weak self] state in
+                    guard let self else {
+                        return
+                    }
+                    self.revenueState = state
                     
                     if !self.isUpdating {
                         self.state?.updated()
@@ -607,14 +627,8 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
-            let withdrawAvailable: Bool
-            #if DEBUG
-            withdrawAvailable = "".isEmpty
-            #else
-            withdrawAvailable = "".isEmpty
-            #endif
-                        
-            
+            let withdrawAvailable = self.revenueState?.stats?.balances.withdrawEnabled ?? false
+                   
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
@@ -1064,6 +1078,7 @@ final class StarsTransactionsScreenComponent: Component {
 public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private let starsContext: StarsContext
+    private let starsRevenueStatsContext: StarsRevenueStatsContext
     private let subscriptionsContext: StarsSubscriptionsContext
     
     private let options = Promise<[StarsTopUpOption]>()
@@ -1074,6 +1089,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.context = context
         self.starsContext = starsContext
         
+        self.starsRevenueStatsContext = context.engine.payments.peerStarsRevenueContext(peerId: context.account.peerId)
         self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
         
         var buyImpl: (() -> Void)?
@@ -1082,8 +1098,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         var openSubscriptionImpl: ((StarsContext.State.Subscription) -> Void)?
         super.init(context: context, component: StarsTransactionsScreenComponent(
-            context: context,
-            starsContext: starsContext,
+            context: self.context,
+            starsContext: self.starsContext,
+            starsRevenueStatsContext: self.starsRevenueStatsContext,
             subscriptionsContext: self.subscriptionsContext,
             openTransaction: { transaction in
                 openTransactionImpl?(transaction)
@@ -1205,23 +1222,30 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                 case .serverProvided:
                     return
                 case .requestPassword:
-                    let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, completion: { [weak self] amount in
+                    let _ = (self.starsRevenueStatsContext.state
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] state in
                         guard let self else {
                             return
                         }
-                        let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
-                            self?.present(c, in: .window(.root))
-                        }, completion: { url in
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                            
-                            Queue.mainQueue().after(2.0) {
-                                context.starsContext?.load(force: true)
+                        let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, completion: { [weak self] amount in
+                            guard let self else {
+                                return
                             }
+                            let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
+                                self?.present(c, in: .window(.root))
+                            }, completion: { url in
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                                
+                                Queue.mainQueue().after(2.0) {
+                                    context.starsContext?.load(force: true)
+                                }
+                            })
+                            self.present(controller, in: .window(.root))
                         })
-                        self.present(controller, in: .window(.root))
+                        self.push(controller)
                     })
-                    self.push(controller)
                 default:
                     let controller = starsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: 0, initialError: error, present: { [weak self] c, a in
                         self?.present(c, in: .window(.root))

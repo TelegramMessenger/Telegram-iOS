@@ -162,6 +162,21 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                         }
                         index -= 1
                     }
+                    
+                    if let currentScrollToItem = scrollToItem {
+                        index = 0
+                        for entry in toView.filteredEntries.reversed() {
+                            if index > currentScrollToItem.index {
+                                if entry.index.timestamp > 10 {
+                                    break
+                                } else if case .ChatInfoEntry = entry {
+                                    scrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: false, curve: curve,  directionHint: .Down)
+                                    break
+                                }
+                            }
+                            index += 1
+                        }
+                    }
                 }
                 
                 if scrollToItem == nil {
