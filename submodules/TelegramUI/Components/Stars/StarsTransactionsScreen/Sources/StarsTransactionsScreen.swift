@@ -38,6 +38,7 @@ final class StarsTransactionsScreenComponent: Component {
     let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
     let withdraw: () -> Void
+    let showTimeoutTooltip: (Int32) -> Void
     let gift: () -> Void
     
     init(
@@ -49,6 +50,7 @@ final class StarsTransactionsScreenComponent: Component {
         openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
         withdraw: @escaping () -> Void,
+        showTimeoutTooltip: @escaping (Int32) -> Void,
         gift: @escaping () -> Void
     ) {
         self.context = context
@@ -59,6 +61,7 @@ final class StarsTransactionsScreenComponent: Component {
         self.openSubscription = openSubscription
         self.buy = buy
         self.withdraw = withdraw
+        self.showTimeoutTooltip = showTimeoutTooltip
         self.gift = gift
     }
     
@@ -138,7 +141,7 @@ final class StarsTransactionsScreenComponent: Component {
         private var starsState: StarsContext.State?
         
         private var revenueStateDisposable: Disposable?
-        private var revenueState: StarsRevenueStatsContextState?
+        private var revenueState: StarsRevenueStats?
         
         private var previousBalance: StarsAmount?
         
@@ -389,7 +392,7 @@ final class StarsTransactionsScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    self.revenueState = state
+                    self.revenueState = state.stats
                     
                     if !self.isUpdating {
                         self.state?.updated()
@@ -627,7 +630,7 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
-            let withdrawAvailable = self.revenueState?.stats?.balances.withdrawEnabled ?? false
+            let withdrawAvailable = self.revenueState?.balances.withdrawEnabled ?? false
                    
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
@@ -655,11 +658,24 @@ final class StarsTransactionsScreenComponent: Component {
                             },
                             secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Withdraw : nil,
                             secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListRoundWithdrawIcon(environment.theme) : nil,
+                            secondaryActionCooldownUntilTimestamp: self.revenueState?.balances.nextWithdrawalTimestamp,
                             secondaryAction: withdrawAvailable ? { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                component.withdraw()
+                                var remainingCooldownSeconds: Int32 = 0
+                                if let cooldownUntilTimestamp = self.revenueState?.balances.nextWithdrawalTimestamp {
+                                    remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                                    remainingCooldownSeconds = max(0, remainingCooldownSeconds)
+                                    
+                                    if remainingCooldownSeconds > 0 {
+                                        component.showTimeoutTooltip(cooldownUntilTimestamp)
+                                    } else {
+                                        component.withdraw()
+                                    }
+                                } else {
+                                    component.withdraw()
+                                }
                             } : nil,
                             additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled) ? AnyComponent(
                                 Button(
@@ -1085,6 +1101,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
     
     private let navigateDisposable = MetaDisposable()
     
+    private weak var tooltipScreen: UndoOverlayController?
+    private var timer: Foundation.Timer?
+    
     public init(context: AccountContext, starsContext: StarsContext, forceDark: Bool = false) {
         self.context = context
         self.starsContext = starsContext
@@ -1094,6 +1113,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         
         var buyImpl: (() -> Void)?
         var withdrawImpl: (() -> Void)?
+        var showTimeoutTooltipImpl: ((Int32) -> Void)?
         var giftImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         var openSubscriptionImpl: ((StarsContext.State.Subscription) -> Void)?
@@ -1113,6 +1133,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             },
             withdraw: {
                 withdrawImpl?()
+            },
+            showTimeoutTooltip: { timestamp in
+                showTimeoutTooltipImpl?(timestamp)
             },
             gift: {
                 giftImpl?()
@@ -1234,12 +1257,12 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                             }
                             let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root))
-                            }, completion: { url in
+                            }, completion: { [weak self] url in
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
                                 
                                 Queue.mainQueue().after(2.0) {
-                                    context.starsContext?.load(force: true)
+                                    self?.starsRevenueStatsContext.reload()
                                 }
                             })
                             self.present(controller, in: .window(.root))
@@ -1255,6 +1278,59 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     self.present(controller, in: .window(.root))
                 }
             })
+        }
+        
+        showTimeoutTooltipImpl = { [weak self] cooldownUntilTimestamp in
+            guard let self, self.tooltipScreen == nil else {
+                return
+            }
+            
+            let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+        
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let content: UndoOverlayContent = .universal(
+                animation: "anim_clock",
+                scale: 0.058,
+                colors: [:],
+                title: nil,
+                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                customUndoText: nil,
+                timeout: nil
+            )
+            let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in
+                return true
+            })
+            self.tooltipScreen = controller
+            self.present(controller, in: .window(.root))
+            
+            if remainingCooldownSeconds < 3600 {
+                if self.timer == nil {
+                    self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if let tooltipScreen = self.tooltipScreen {
+                            let remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                            let content: UndoOverlayContent = .universal(
+                                animation: "anim_clock",
+                                scale: 0.058,
+                                colors: [:],
+                                title: nil,
+                                text: presentationData.strings.Stars_Withdraw_Withdraw_ErrorTimeout(stringForRemainingTime(remainingCooldownSeconds)).string,
+                                customUndoText: nil,
+                                timeout: nil
+                            )
+                            tooltipScreen.content = content
+                        } else {
+                            if let timer = self.timer {
+                                self.timer = nil
+                                timer.invalidate()
+                            }
+                        }
+                    })
+                }
+            }
         }
         
         giftImpl = { [weak self] in

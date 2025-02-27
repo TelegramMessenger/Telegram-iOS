@@ -26,6 +26,7 @@ final class StarsBalanceComponent: Component {
     let action: () -> Void
     let secondaryActionTitle: String?
     let secondaryActionIcon: UIImage?
+    let secondaryActionCooldownUntilTimestamp: Int32?
     let secondaryAction: (() -> Void)?
     let additionalAction: AnyComponent<Empty>?
     
@@ -43,6 +44,7 @@ final class StarsBalanceComponent: Component {
         action: @escaping () -> Void,
         secondaryActionTitle: String? = nil,
         secondaryActionIcon: UIImage? = nil,
+        secondaryActionCooldownUntilTimestamp: Int32? = nil,
         secondaryAction: (() -> Void)? = nil,
         additionalAction: AnyComponent<Empty>? = nil
     ) {
@@ -58,6 +60,7 @@ final class StarsBalanceComponent: Component {
         self.actionIcon = actionIcon
         self.action = action
         self.secondaryActionTitle = secondaryActionTitle
+        self.secondaryActionCooldownUntilTimestamp = secondaryActionCooldownUntilTimestamp
         self.secondaryActionIcon = secondaryActionIcon
         self.secondaryAction = secondaryAction
         self.additionalAction = additionalAction
@@ -86,6 +89,9 @@ final class StarsBalanceComponent: Component {
             return false
         }
         if lhs.secondaryActionTitle != rhs.secondaryActionTitle {
+            return false
+        }
+        if lhs.secondaryActionCooldownUntilTimestamp != rhs.secondaryActionCooldownUntilTimestamp {
             return false
         }
         if lhs.count != rhs.count {
@@ -133,7 +139,13 @@ final class StarsBalanceComponent: Component {
                 remainingCooldownSeconds = max(0, remainingCooldownSeconds)
             }
             
-            if remainingCooldownSeconds > 0 {
+            var remainingSecondaryCooldownSeconds: Int32 = 0
+            if let cooldownUntilTimestamp = component.secondaryActionCooldownUntilTimestamp {
+                remainingSecondaryCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
+                remainingSecondaryCooldownSeconds = max(0, remainingSecondaryCooldownSeconds)
+            }
+            
+            if remainingCooldownSeconds > 0 || remainingSecondaryCooldownSeconds > 0  {
                 if self.timer == nil {
                     self.timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { [weak self] _ in
                         guard let self else {
@@ -278,11 +290,30 @@ final class StarsBalanceComponent: Component {
                 }
                 
                 if let secondaryActionTitle = component.secondaryActionTitle {
+                    let content: AnyComponentWithIdentity<Empty>
                     var items: [AnyComponentWithIdentity<Empty>] = []
                     if let icon = component.secondaryActionIcon {
                         items.append(AnyComponentWithIdentity(id: "icon", component: AnyComponent(Image(image: icon, tintColor: component.theme.list.itemCheckColors.foregroundColor, size: icon.size))))
                     }
-                    items.append(AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: secondaryActionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))))
+                    if remainingSecondaryCooldownSeconds > 0 {
+                        items.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
+                            VStack([
+                                AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(Text(text: secondaryActionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))),
+                                AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(HStack([
+                                    AnyComponentWithIdentity(id: 1, component: AnyComponent(BundleIconComponent(name: "Chat List/StatusLockIcon", tintColor: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7)))),
+                                    AnyComponentWithIdentity(id: 0, component: AnyComponent(Text(text: stringForRemainingTime(remainingSecondaryCooldownSeconds), font: Font.with(size: 11.0, weight: .medium, traits: [.monospacedNumbers]), color: component.theme.list.itemCheckColors.fillColor.mixedWith(component.theme.list.itemCheckColors.foregroundColor, alpha: 0.7))))
+                                ], spacing: 3.0)))
+                            ], spacing: 1.0)
+                        )))
+                    } else {
+                        items.append(AnyComponentWithIdentity(id: "label", component: AnyComponent(Text(text: secondaryActionTitle, font: Font.semibold(17.0), color: component.theme.list.itemCheckColors.foregroundColor))))
+                    }
+                    content = AnyComponentWithIdentity(
+                        id: AnyHashable(0 as Int),
+                        component: AnyComponent(
+                            HStack(items, spacing: 7.0)
+                        )
+                    )
                     
                     let buttonSize = self.secondaryButton.update(
                         transition: transition,
@@ -292,12 +323,7 @@ final class StarsBalanceComponent: Component {
                                 foreground: component.theme.list.itemCheckColors.foregroundColor,
                                 pressedColor: component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                             ),
-                            content: AnyComponentWithIdentity(
-                                id: AnyHashable(0 as Int),
-                                component: AnyComponent(
-                                    HStack(items, spacing: 7.0)
-                                )
-                            ),
+                            content: content,
                             isEnabled: component.actionIsEnabled,
                             allowActionWhenDisabled: false,
                             displaysProgress: false,
