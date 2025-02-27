@@ -1787,7 +1787,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: peerId, requiredStars: 1), completion: { result in
                                         let _ = result
-                                        //TODO:release
                                     })
                                     strongSelf.push(purchaseScreen)
                                 })

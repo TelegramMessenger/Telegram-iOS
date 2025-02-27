@@ -20,115 +20,7 @@ import AVFoundation
 import PhotoResources
 import ShimmerEffect
 import BatchVideoRendering
-
-private class GifVideoLayer: AVSampleBufferDisplayLayer, BatchVideoRenderingContext.Target {
-    private let context: AccountContext
-    private let batchVideoContext: BatchVideoRenderingContext
-    private let userLocation: MediaResourceUserLocation
-    private let file: TelegramMediaFile?
-    
-    private var batchVideoTargetHandle: BatchVideoRenderingContext.TargetHandle?
-    var batchVideoRenderingTargetState: BatchVideoRenderingContext.TargetState?
-    
-    private var thumbnailDisposable: Disposable?
-    
-    private var isReadyToRender: Bool = false
-    
-    var started: (() -> Void)?
-    
-    var shouldBeAnimating: Bool = false {
-        didSet {
-            if self.shouldBeAnimating == oldValue {
-                return
-            }
-            self.updateShouldBeRendering()
-        }
-    }
-    
-    init(context: AccountContext, batchVideoContext: BatchVideoRenderingContext, userLocation: MediaResourceUserLocation, file: TelegramMediaFile?, synchronousLoad: Bool) {
-        self.context = context
-        self.batchVideoContext = batchVideoContext
-        self.userLocation = userLocation
-        self.file = file
-        
-        super.init()
-        
-        self.videoGravity = .resizeAspectFill
-        
-        if let file = self.file {
-            if let dimensions = file.dimensions {
-                self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, userLocation: userLocation, videoReference: .savedGif(media: file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
-                |> deliverOnMainQueue).start(next: { [weak self] transform in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let boundingSize = CGSize(width: 93.0, height: 93.0)
-                    let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
-                    
-                    if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.contents = image.cgImage
-                                strongSelf.setupVideo()
-                                strongSelf.started?()
-                            }
-                        }
-                    } else {
-                        strongSelf.setupVideo()
-                    }
-                })
-            } else {
-                self.setupVideo()
-            }
-        }
-    }
-    
-    override init(layer: Any) {
-        guard let layer = layer as? GifVideoLayer else {
-            preconditionFailure()
-        }
-        
-        self.context = layer.context
-        self.batchVideoContext = layer.batchVideoContext
-        self.userLocation = layer.userLocation
-        self.file = layer.file
-        
-        super.init(layer: layer)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.thumbnailDisposable?.dispose()
-    }
-    
-    private func setupVideo() {
-        self.isReadyToRender = true
-        self.updateShouldBeRendering()
-    }
-    
-    private func updateShouldBeRendering() {
-        let shouldBeRendering = self.shouldBeAnimating && self.isReadyToRender
-        
-        if shouldBeRendering, let file = self.file {
-            if self.batchVideoTargetHandle == nil {
-                self.batchVideoTargetHandle = self.batchVideoContext.add(target: self, file: file, userLocation: self.userLocation)
-            }
-        } else {
-            self.batchVideoTargetHandle = nil
-        }
-    }
-    
-    func setSampleBuffer(sampleBuffer: CMSampleBuffer) {
-        if #available(iOS 17.0, *) {
-            self.sampleBufferRenderer.enqueue(sampleBuffer)
-        } else {
-            self.enqueue(sampleBuffer)
-        }
-    }
-}
+import GifVideoLayer
 
 public final class GifPagerContentComponent: Component {
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
@@ -388,7 +280,7 @@ public final class GifPagerContentComponent: Component {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, batchVideoContext: batchVideoContext, userLocation: .other, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, batchVideoContext: batchVideoContext, userLocation: .other, file: item?.file, synchronousLoad: attemptSynchronousLoad)
                 
                 if item == nil {
                     self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)

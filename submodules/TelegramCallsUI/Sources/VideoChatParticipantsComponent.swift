@@ -637,7 +637,6 @@ final class VideoChatParticipantsComponent: Component {
         
         private var ignoreScrolling: Bool = false
         
-        //TODO:release
         private var gridParticipants: [VideoParticipant] = []
         private var listParticipants: [GroupCallParticipantsContext.Participant] = []
         
