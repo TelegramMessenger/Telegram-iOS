@@ -1268,7 +1268,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
         
-        let maxWidth = min(200.0, size.width)
+        let maxWidth = min(270.0, size.width)
         
         let sideInset: CGFloat = 22.0
         let topInset: CGFloat = 16.0

@@ -36,6 +36,10 @@ extension ChatControllerImpl {
                     if forceDark {
                         presentationData = presentationData.withUpdated(theme: defaultDarkColorPresentationTheme)
                     }
+                    var peer = peer
+                    if let peerDiscussionId = self.presentationInterfaceState.peerDiscussionId, let channel = self.peerView?.peers[peerDiscussionId] {
+                        peer = EnginePeer(channel)
+                    }
                     let controller = chatMessagePaymentAlertController(
                         context: self.context,
                         presentationData: presentationData,
