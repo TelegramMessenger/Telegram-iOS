@@ -1283,8 +1283,7 @@ final class AvatarEditorScreenComponent: Component {
             case .suggest:
                 buttonText = strings.AvatarEditor_SuggestProfilePhoto
             case .user:
-                //TODO:localize
-                buttonText = "Set My Photo" //strings.AvatarEditor_SetProfilePhoto
+                buttonText = strings.AvatarEditor_SetProfilePhoto
             case .group, .forum:
                 buttonText = strings.AvatarEditor_SetGroupPhoto
             case .channel:

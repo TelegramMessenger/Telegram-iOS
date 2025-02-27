@@ -604,7 +604,7 @@ final class StarsStatisticsScreenComponent: Component {
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balances.availableBalance ?? StarsAmount.zero,
                             rate: self.starsState?.usdRate ?? 0,
-                            actionTitle: strings.Stars_BotRevenue_Withdraw_Withdraw,
+                            actionTitle: strings.Stars_BotRevenue_Withdraw_WithdrawShort,
                             actionAvailable: true,
                             actionIsEnabled: self.starsState?.balances.withdrawEnabled ?? true,
                             actionCooldownUntilTimestamp: self.starsState?.balances.nextWithdrawalTimestamp,
@@ -626,7 +626,8 @@ final class StarsStatisticsScreenComponent: Component {
                                     component.withdraw()
                                 }
                             },
-                            buyAds: { [weak self] in
+                            secondaryActionTitle: strings.Stars_BotRevenue_Withdraw_BuyAds,
+                            secondaryAction: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }

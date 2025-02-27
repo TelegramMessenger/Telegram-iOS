@@ -223,21 +223,23 @@ final class GiftSetupScreenComponent: Component {
             guard let component = self.component, let environment = self.environment else {
                 return
             }
+            
             switch component.subject {
             case let .premium(product):
                 if self.payWithStars, let starsPrice = product.starsPrice, let peer = self.peerMap[component.peerId] {
-                    //TODO:localize
                     if let balance = component.context.starsContext?.currentState?.balance, balance.value < starsPrice {
                         self.proceedWithStarGift()
                     } else {
-                        let priceString = presentationStringsFormattedNumber(Int32(starsPrice), environment.dateTimeFormat.groupingSeparator)
                         let controller = textAlertController(
                             context: component.context,
-                            title: "Send a Gift",
-                            text: "Are you sure you want to gift **Telegram Premium** to \(peer.compactDisplayTitle) for **\(priceString) Stars**?",
+                            title: environment.strings.Gift_Send_Premium_Confirmation_Title,
+                            text: environment.strings.Gift_Send_Premium_Confirmation_Text(
+                                peer.compactDisplayTitle,
+                                environment.strings.Gift_Send_Premium_Confirmation_Text_Stars(Int32(starsPrice))
+                            ).string,
                             actions: [
-                                TextAlertAction(type: .genericAction, title: "Cancel", action: {}),
-                                TextAlertAction(type: .defaultAction, title: "Confirm", action: { [weak self] in
+                                TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: environment.strings.Gift_Send_Premium_Confirmation_Confirm, action: { [weak self] in
                                     if let self {
                                         self.proceedWithStarGift()
                                     }

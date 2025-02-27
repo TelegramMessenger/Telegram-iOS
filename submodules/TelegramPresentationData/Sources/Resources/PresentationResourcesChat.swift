@@ -1352,6 +1352,25 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatUserInfoWarningIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatUserInfoWarningIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 14.0, height: 14.0), rotatedContext: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                context.clear(bounds)
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillEllipse(in: CGRect(origin: .zero, size: size))
+                
+                context.setBlendMode(.clear)
+                
+                let width: CGFloat = 2.0 - UIScreenPixel
+                let height: CGFloat = 7.0 - UIScreenPixel
+                context.addPath(CGPath(roundedRect: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - width) / 2.0), y: 2.0 + UIScreenPixel), size: CGSize(width: width, height: height)), cornerWidth: 1.0, cornerHeight: 1.0, transform: nil))
+                context.addPath(CGPath(ellipseIn: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - width) / 2.0), y: 2.0 + UIScreenPixel + height + 1.0 - UIScreenPixel), size: CGSize(width: width, height: width)), transform: nil))
+                context.fillPath()
+            })
+        })
+    }
+    
     public static func chatPlaceholderStarIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatPlaceholderStarIcon.rawValue, { theme in
             if let image = UIImage(bundleImageName: "Premium/Stars/ButtonStar") {

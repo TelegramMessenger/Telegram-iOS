@@ -23,6 +23,7 @@ import StarsAvatarComponent
 import TelegramStringFormatting
 import ListItemComponentAdaptor
 import ItemListUI
+import StarsWithdrawalScreen
 
 private let initialSubscriptionsDisplayedLimit: Int32 = 3
 
@@ -35,6 +36,7 @@ final class StarsTransactionsScreenComponent: Component {
     let openTransaction: (StarsContext.State.Transaction) -> Void
     let openSubscription: (StarsContext.State.Subscription) -> Void
     let buy: () -> Void
+    let withdraw: () -> Void
     let gift: () -> Void
     
     init(
@@ -44,6 +46,7 @@ final class StarsTransactionsScreenComponent: Component {
         openTransaction: @escaping (StarsContext.State.Transaction) -> Void,
         openSubscription: @escaping (StarsContext.State.Subscription) -> Void,
         buy: @escaping () -> Void,
+        withdraw: @escaping () -> Void,
         gift: @escaping () -> Void
     ) {
         self.context = context
@@ -52,6 +55,7 @@ final class StarsTransactionsScreenComponent: Component {
         self.openTransaction = openTransaction
         self.openSubscription = openSubscription
         self.buy = buy
+        self.withdraw = withdraw
         self.gift = gift
     }
     
@@ -602,7 +606,15 @@ final class StarsTransactionsScreenComponent: Component {
     
             contentHeight += descriptionSize.height
             contentHeight += 29.0
+            
+            let withdrawAvailable: Bool
+            #if DEBUG
+            withdrawAvailable = "".isEmpty
+            #else
+            withdrawAvailable = "".isEmpty
+            #endif
                         
+            
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
                 transition: .immediate,
@@ -617,16 +629,24 @@ final class StarsTransactionsScreenComponent: Component {
                             dateTimeFormat: environment.dateTimeFormat,
                             count: self.starsState?.balance ?? StarsAmount.zero,
                             rate: nil,
-                            actionTitle: environment.strings.Stars_Intro_Buy,
+                            actionTitle: withdrawAvailable ? environment.strings.Stars_Intro_BuyShort : environment.strings.Stars_Intro_Buy,
                             actionAvailable: !premiumConfiguration.areStarsDisabled && !premiumConfiguration.isPremiumDisabled,
                             actionIsEnabled: true,
+                            actionIcon: PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
                                 component.buy()
                             },
-                            buyAds: nil,
+                            secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Withdraw : nil,
+                            secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListRoundWithdrawIcon(environment.theme) : nil,
+                            secondaryAction: withdrawAvailable ? { [weak self] in
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.withdraw()
+                            } : nil,
                             additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled) ? AnyComponent(
                                 Button(
                                     content: AnyComponent(
@@ -1057,6 +1077,7 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
         self.subscriptionsContext = context.engine.payments.peerStarsSubscriptionsContext(starsContext: starsContext)
         
         var buyImpl: (() -> Void)?
+        var withdrawImpl: (() -> Void)?
         var giftImpl: (() -> Void)?
         var openTransactionImpl: ((StarsContext.State.Transaction) -> Void)?
         var openSubscriptionImpl: ((StarsContext.State.Subscription) -> Void)?
@@ -1072,6 +1093,9 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             },
             buy: {
                 buyImpl?()
+            },
+            withdraw: {
+                withdrawImpl?()
             },
             gift: {
                 giftImpl?()
@@ -1165,6 +1189,47 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
                     self.present(resultController, in: .window(.root))
                 })
                 self.push(controller)
+            })
+        }
+        
+        withdrawImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            let _ = (context.engine.peers.checkStarsRevenueWithdrawalAvailability()
+            |> deliverOnMainQueue).start(error: { [weak self] error in
+                guard let self else {
+                    return
+                }
+                switch error {
+                case .serverProvided:
+                    return
+                case .requestPassword:
+                    let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, completion: { [weak self] amount in
+                        guard let self else {
+                            return
+                        }
+                        let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
+                            self?.present(c, in: .window(.root))
+                        }, completion: { url in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+                            
+                            Queue.mainQueue().after(2.0) {
+                                context.starsContext?.load(force: true)
+                            }
+                        })
+                        self.present(controller, in: .window(.root))
+                    })
+                    self.push(controller)
+                default:
+                    let controller = starsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: 0, initialError: error, present: { [weak self] c, a in
+                        self?.present(c, in: .window(.root))
+                    }, completion: { _ in
+                        
+                    })
+                    self.present(controller, in: .window(.root))
+                }
             })
         }
         

@@ -43,7 +43,7 @@ public struct ChatMessageEntryAttributes: Equatable {
 
 public enum ChatInfoData: Equatable {
     case botInfo(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?)
-    case userInfo(title: String, registrationDate: String?, phoneCountry: String?, locationCountry: String?, groupsInCommon: [EnginePeer])
+    case userInfo(peer: EnginePeer, verification: PeerVerification?, registrationDate: String?, phoneCountry: String?, groupsInCommonCount: Int32)
 }
 
 public enum ChatHistoryEntry: Identifiable, Comparable {

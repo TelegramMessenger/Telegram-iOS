@@ -42,7 +42,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     public var paidMessageStars: StarsAmount?
     public var registrationDate: String?
     public var phoneCountry: String?
-    public var locationCountry: String?
+    public var nameChangeDate: Int32?
+    public var photoChangeDate: Int32?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
@@ -53,7 +54,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.paidMessageStars = nil
         self.registrationDate = nil
         self.phoneCountry = nil
-        self.locationCountry = nil
+        self.nameChangeDate = nil
+        self.photoChangeDate = nil
     }
     
     public init(
@@ -66,7 +68,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         paidMessageStars: StarsAmount? = nil,
         registrationDate: String? = nil,
         phoneCountry: String? = nil,
-        locationCountry: String? = nil
+        nameChangeDate: Int32? = nil,
+        photoChangeDate: Int32? = nil
     ) {
         self.flags = flags
         self.geoDistance = geoDistance
@@ -77,7 +80,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.paidMessageStars = paidMessageStars
         self.registrationDate = registrationDate
         self.phoneCountry = phoneCountry
-        self.locationCountry = locationCountry
+        self.nameChangeDate = nameChangeDate
+        self.photoChangeDate = photoChangeDate
     }
     
     public init(decoder: PostboxDecoder) {
@@ -90,7 +94,8 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.paidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "paidMessageStars")
         self.registrationDate = decoder.decodeOptionalStringForKey("registrationDate")
         self.phoneCountry = decoder.decodeOptionalStringForKey("phoneCountry")
-        self.locationCountry = decoder.decodeOptionalStringForKey("locationCountry")
+        self.nameChangeDate = decoder.decodeOptionalInt32ForKey("nameChangeDate")
+        self.photoChangeDate = decoder.decodeOptionalInt32ForKey("photoChangeDate")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -135,10 +140,15 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "phoneCountry")
         }
-        if let locationCountry = self.locationCountry {
-            encoder.encodeString(locationCountry, forKey: "locationCountry")
+        if let nameChangeDate = self.nameChangeDate {
+            encoder.encodeInt32(nameChangeDate, forKey: "nameChangeDate")
         } else {
-            encoder.encodeNil(forKey: "locationCountry")
+            encoder.encodeNil(forKey: "nameChangeDate")
+        }
+        if let photoChangeDate = self.photoChangeDate {
+            encoder.encodeInt32(photoChangeDate, forKey: "photoChangeDate")
+        } else {
+            encoder.encodeNil(forKey: "photoChangeDate")
         }
     }
     

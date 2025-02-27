@@ -424,17 +424,9 @@ public func chatMessagePaymentAlertController(
     var completionImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     
-    //TODO:localize
-    let title = "Confirm Payment"
-    let actionTitle: String
-    let messagesString: String
-    if count > 1 {
-        messagesString = "**\(count)** messages"
-        actionTitle = "Pay for \(count) Messages"
-    } else {
-        messagesString = "**\(count)** message"
-        actionTitle = "Pay for 1 Message"
-    }
+    let title = presentationData.strings.Chat_PaidMessage_Confirm_Title
+    let actionTitle = presentationData.strings.Chat_PaidMessage_Confirm_PayForMessage(count)
+    let messagesString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Messages(count)
     
     let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: actionTitle, action: {
         completionImpl?()
@@ -442,17 +434,20 @@ public func chatMessagePaymentAlertController(
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?()
     })]
-    
 
     let text: String
     if peers.count == 1, let peer = peers.first {
-        text = "**\(peer.compactDisplayTitle)** charges **\(amount.value) Stars** per incoming message. Would you like to pay **\(amount.value * Int64(count)) Stars** to send \(messagesString)?"
+        let amountString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value))
+        let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value * Int64(count)))
+        text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
     } else {
         let amount = totalAmount ?? amount
-        text = "You selected **\(peers.count)** users who charge Stars for messages. Would you like to pay **\(amount.value)** Stars to send \(messagesString)?"
+        let usersString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Users(Int32(peers.count))
+        let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value * Int64(count)))
+        text = presentationData.strings.Chat_PaidMessage_Confirm_Multiple_Text(usersString, totalString, messagesString).string
     }
     
-    let optionText = hasCheck ? "Don't ask again" : nil
+    let optionText = hasCheck ? presentationData.strings.Chat_PaidMessage_Confirm_DontAskAgain : nil
     
     let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .vertical)
     
@@ -470,8 +465,6 @@ public func chatMessagePaymentAlertController(
     return controller
 }
 
-
-
 public func chatMessageRemovePaymentAlertController(
     context: AccountContext? = nil,
     presentationData: PresentationData,
@@ -488,20 +481,19 @@ public func chatMessageRemovePaymentAlertController(
     var completionImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     
-    //TODO:localize
     let actions: [TextAlertAction] = [
-        TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
             dismissImpl?()
         }),
-        TextAlertAction(type: .defaultAction, title: "Yes", action: {
+        TextAlertAction(type: .defaultAction, title: strings.Chat_PaidMessage_RemoveFee_Yes, action: {
             completionImpl?()
             dismissImpl?()
         })
     ]
     
-    let title = "Remove Fee"
-    let text = "Are you sure you want to allow **\(peer.compactDisplayTitle)** to message you for free?"
-    let optionText = amount.flatMap { "Refund already paid **\($0.value) Stars**" }
+    let title = strings.Chat_PaidMessage_RemoveFee_Title
+    let text = strings.Chat_PaidMessage_RemoveFee_Text(peer.compactDisplayTitle).string
+    let optionText = amount.flatMap { strings.Chat_PaidMessage_RemoveFee_Refund(strings.Chat_PaidMessage_RemoveFee_Refund_Stars(Int32($0.value))).string }
     
     let contentNode = ChatMessagePaymentAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, optionText: optionText, actions: actions, alignment: .horizontal)
     

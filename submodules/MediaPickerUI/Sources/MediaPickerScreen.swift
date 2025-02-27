@@ -2376,7 +2376,6 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
         transition.updateTransformScale(node: self.moreButtonNode.iconNode, scale: moreIsVisible ? 1.0 : 0.1)
         
         //if self. {
-            //TODO:localize
             //self.mainButtonStatePromise.set(.single(AttachmentMainButtonState(text: "Add", badge: "\(count)", font: .bold, background: .color(self.presentationData.theme.actionSheet.controlAccentColor), textColor: self.presentationData.theme.list.itemCheckColors.foregroundColor, isVisible: count > 0, progress: .none, isEnabled: true, hasShimmer: false)))
         //}
     }

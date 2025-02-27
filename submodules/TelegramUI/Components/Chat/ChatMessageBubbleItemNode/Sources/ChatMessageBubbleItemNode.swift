@@ -4597,6 +4597,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
         }
+        if item.message.timestamp < 10 {
+            hasMenuGesture = false
+        }
         strongSelf.mainContainerNode.isGestureEnabled = hasMenuGesture
         for contentContainer in strongSelf.contentContainers {
             contentContainer.containerNode.isGestureEnabled = hasMenuGesture

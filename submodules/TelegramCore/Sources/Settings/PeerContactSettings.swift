@@ -6,7 +6,7 @@ import SwiftSignalKit
 extension PeerStatusSettings {
     init(apiSettings: Api.PeerSettings) {
         switch apiSettings {
-            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate, businessBotId, businessBotManageUrl, chargePaidMessageStars, registrationMonth, phoneCountry, locationCountry):
+            case let .peerSettings(flags, geoDistance, requestChatTitle, requestChatDate, businessBotId, businessBotManageUrl, chargePaidMessageStars, registrationMonth, phoneCountry, nameChangeDate, photoChangeDate):
                 var result = PeerStatusSettings.Flags()
                 if (flags & (1 << 1)) != 0 {
                     result.insert(.canAddContact)
@@ -54,7 +54,8 @@ extension PeerStatusSettings {
                     paidMessageStars: chargePaidMessageStars.flatMap { StarsAmount(value: $0, nanos: 0) },
                     registrationDate: registrationMonth,
                     phoneCountry: phoneCountry,
-                    locationCountry: locationCountry
+                    nameChangeDate: nameChangeDate,
+                    photoChangeDate: photoChangeDate
                 )
         }
     }

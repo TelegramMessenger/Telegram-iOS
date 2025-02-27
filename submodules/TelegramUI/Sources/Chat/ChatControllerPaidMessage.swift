@@ -21,12 +21,14 @@ extension ChatControllerImpl {
             return
         }
         if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
+            let totalAmount = sendPaidMessageStars.value * Int64(count)
+            
             let _ = (ApplicationSpecificNotice.dismissedPaidMessageWarningNamespace(accountManager: self.context.sharedContext.accountManager, peerId: peer.id)
             |> deliverOnMainQueue).start(next: { [weak self] dismissedAmount in
                 guard let self, let starsContext = self.context.starsContext else {
                     return
                 }
-                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance > sendPaidMessageStars {
+                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance.value > totalAmount, count < 3 && totalAmount < 100 {
                     completion(true)
                     self.displayPaidMessageUndo(count: count, amount: sendPaidMessageStars)
                 } else {
@@ -52,14 +54,14 @@ extension ChatControllerImpl {
                                 let _ = ApplicationSpecificNotice.setDismissedPaidMessageWarningNamespace(accountManager: self.context.sharedContext.accountManager, peerId: peer.id, amount: sendPaidMessageStars.value).start()
                             }
                             
-                            if let currentState = starsContext.currentState, currentState.balance < sendPaidMessageStars {
+                            if let currentState = starsContext.currentState, currentState.balance.value < totalAmount {
                                 let _ = (self.context.engine.payments.starsTopUpOptions()
                                 |> take(1)
                                 |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
                                     guard let self else {
                                         return
                                     }
-                                    let controller = self.context.sharedContext.makeStarsPurchaseScreen(context: self.context, starsContext: starsContext, options: options, purpose: .sendMessage(peerId: peer.id, requiredStars: sendPaidMessageStars.value), completion: { _ in
+                                    let controller = self.context.sharedContext.makeStarsPurchaseScreen(context: self.context, starsContext: starsContext, options: options, purpose: .sendMessage(peerId: peer.id, requiredStars: totalAmount), completion: { _ in
                                         completion(false)
                                     })
                                     self.push(controller)
@@ -89,18 +91,11 @@ extension ChatControllerImpl {
             self.context.engine.messages.forceSendPostponedPaidMessage(peerId: peerId)
         }
         
-        //TODO:localize
-        let title: String
-        if count > 1 {
-            title = "\(count) Messages Sent"
-        } else {
-            title = "Message Sent"
-        }
-       
+        let title = self.presentationData.strings.Chat_PaidMessage_Sent_Title(count)
+        let text = self.presentationData.strings.Chat_PaidMessage_Sent_Text(self.presentationData.strings.Chat_PaidMessage_Sent_Text_Stars(Int32(amount.value * Int64(count)))).string
         let textItems: [AnimatedTextComponent.Item] = [
-            AnimatedTextComponent.Item(id: 0, content: .text("You paid \(amount.value * Int64(count)) Stars"))
+            AnimatedTextComponent.Item(id: 0, content: .text(text))
         ]
-        
         let controller = UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, title: title, text: textItems), elevatedLayout: false, position: .top, action: { [weak self] action in
             guard let self else {
                 return false

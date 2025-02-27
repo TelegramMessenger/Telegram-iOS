@@ -1,21 +1,16 @@
 public extension Api.payments {
     enum SavedStarGifts: TypeConstructorDescription {
-        case savedStarGifts(flags: Int32, count: Int32, chatNotificationsEnabled: Api.Bool?, pinnedToTop: [Int64]?, gifts: [Api.SavedStarGift], nextOffset: String?, chats: [Api.Chat], users: [Api.User])
+        case savedStarGifts(flags: Int32, count: Int32, chatNotificationsEnabled: Api.Bool?, gifts: [Api.SavedStarGift], nextOffset: String?, chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .savedStarGifts(let flags, let count, let chatNotificationsEnabled, let pinnedToTop, let gifts, let nextOffset, let chats, let users):
+                case .savedStarGifts(let flags, let count, let chatNotificationsEnabled, let gifts, let nextOffset, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-418915641)
+                        buffer.appendInt32(-1779201615)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {chatNotificationsEnabled!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(pinnedToTop!.count))
-                    for item in pinnedToTop! {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(gifts.count))
                     for item in gifts {
@@ -38,8 +33,8 @@ public extension Api.payments {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .savedStarGifts(let flags, let count, let chatNotificationsEnabled, let pinnedToTop, let gifts, let nextOffset, let chats, let users):
-                return ("savedStarGifts", [("flags", flags as Any), ("count", count as Any), ("chatNotificationsEnabled", chatNotificationsEnabled as Any), ("pinnedToTop", pinnedToTop as Any), ("gifts", gifts as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .savedStarGifts(let flags, let count, let chatNotificationsEnabled, let gifts, let nextOffset, let chats, let users):
+                return ("savedStarGifts", [("flags", flags as Any), ("count", count as Any), ("chatNotificationsEnabled", chatNotificationsEnabled as Any), ("gifts", gifts as Any), ("nextOffset", nextOffset as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
@@ -52,34 +47,29 @@ public extension Api.payments {
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Bool
             } }
-            var _4: [Int64]?
-            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            } }
-            var _5: [Api.SavedStarGift]?
+            var _4: [Api.SavedStarGift]?
             if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedStarGift.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedStarGift.self)
             }
-            var _6: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
-            var _7: [Api.Chat]?
+            var _5: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _6: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _8: [Api.User]?
+            var _7: [Api.User]?
             if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = _6 != nil
             let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, chatNotificationsEnabled: _3, pinnedToTop: _4, gifts: _5!, nextOffset: _6, chats: _7!, users: _8!)
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.payments.SavedStarGifts.savedStarGifts(flags: _1!, count: _2!, chatNotificationsEnabled: _3, gifts: _4!, nextOffset: _5, chats: _6!, users: _7!)
             }
             else {
                 return nil

@@ -227,7 +227,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders || message.timestamp < 10)
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -260,8 +260,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 switch data {
                 case let .botInfo(title, text, photo, video):
                     item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
-                case let .userInfo(title, registrationDate, phoneCountry, locationCountry, groupsInCommon):
-                    item = ChatUserInfoItem(title: title, registrationDate: registrationDate, phoneCountry: phoneCountry, locationCountry: locationCountry, groupsInCommon: groupsInCommon, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
+                case let .userInfo(peer, verification, registrationDate, phoneCountry, groupsInCommonCount):
+                    item = ChatUserInfoItem(peer: peer, verification: verification, registrationDate: registrationDate, phoneCountry: phoneCountry, groupsInCommonCount: groupsInCommonCount, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
@@ -284,7 +284,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders)
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location), disableDate: disableFloatingDateHeaders || message.timestamp < 10)
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -317,8 +317,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 switch data {
                 case let .botInfo(title, text, photo, video):
                     item = ChatBotInfoItem(title: title, text: text, photo: photo, video: video, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
-                case let .userInfo(title, registrationDate, phoneCountry, locationCountry, groupsInCommon):
-                    item = ChatUserInfoItem(title: title, registrationDate: registrationDate, phoneCountry: phoneCountry, locationCountry: locationCountry, groupsInCommon: groupsInCommon, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
+                case let .userInfo(peer, verification, registrationDate, phoneCountry, groupsInCommonCount):
+                    item = ChatUserInfoItem(peer: peer, verification: verification, registrationDate: registrationDate, phoneCountry: phoneCountry, groupsInCommonCount: groupsInCommonCount, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context)
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):

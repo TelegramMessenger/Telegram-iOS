@@ -1504,6 +1504,7 @@ func _internal_sendStarsPaymentForm(account: Account, formId: Int64, source: Bot
                                             entities: nil,
                                             nameHidden: false,
                                             savedToProfile: savedToProfile,
+                                            pinnedToTop: false,
                                             convertStars: nil,
                                             canUpgrade: false,
                                             canExportDate: canExportDate,

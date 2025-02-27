@@ -27,6 +27,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/CountrySelectionUI",
         "//submodules/TelegramStringFormatting",
+        "//submodules/TelegramUI/Components/Chat/MergedAvatarsNode",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
     ],
     visibility = [
         "//visibility:public",
