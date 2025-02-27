@@ -243,7 +243,11 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .openUrl(url: "yandexmaps://maps.yandex.ru/?pt=\(lon),\(lat)&z=16")
                 }
             }))
-            
+
+            options.append(OpenInOption(identifier: "organicMaps", application: .other(title: "Organic Maps", identifier: 1567437057, scheme: "om", store: nil), action: {
+              return .openUrl(url: "om://map?v=1&ll=\(lat),\(lon)")
+            }))
+
             options.append(OpenInOption(identifier: "uber", application: .other(title: "Uber", identifier: 368677368, scheme: "uber", store: nil), action: {
                 let dropoffName: String
                 let dropoffAddress: String
