@@ -148,6 +148,8 @@ public:
     }
     
     void UpdateAudioCallback(webrtc::AudioTransport *previousAudioCallback, webrtc::AudioTransport *audioCallback) {
+        _mutex.Lock();
+        
         if (audioCallback) {
             _audioTransports.push_back(audioCallback);
         } else if (previousAudioCallback) {
@@ -158,6 +160,8 @@ public:
                 }
             }
         }
+        
+        _mutex.Unlock();
     }
 
     virtual int32_t RegisterAudioCallback(webrtc::AudioTransport *audioCallback) override {
@@ -467,9 +471,10 @@ public:
         bool keyPressed,
         uint32_t& newMicLevel
     ) override {
+        _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                auto result = _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -481,15 +486,10 @@ public:
                     keyPressed,
                     newMicLevel
                 );
-                if (i == _audioTransports.size() - 1) {
-                    return result;
-                }
             }
-            
-            return 0;
-        } else {
-            return 0;
         }
+        _mutex.Unlock();
+        return 0;
     }
     
     virtual int32_t RecordedDataIsAvailable(
@@ -505,9 +505,10 @@ public:
         uint32_t& newMicLevel,
         absl::optional<int64_t> estimatedCaptureTimeNS
     ) override {
+        _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = _audioTransports.size() - 1; i < _audioTransports.size(); i++) {
-                auto result = _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -520,14 +521,10 @@ public:
                     newMicLevel,
                     estimatedCaptureTimeNS
                 );
-                if (i == _audioTransports.size() - 1) {
-                    return result;
-                }
             }
-            return 0;
-        } else {
-            return 0;
         }
+        _mutex.Unlock();
+        return 0;
     }
 
     // Implementation has to setup safe values for all specified out parameters.
@@ -541,8 +538,11 @@ public:
         int64_t* elapsed_time_ms,
         int64_t* ntp_time_ms
     ) override {
+        _mutex.Lock();
+        
+        int32_t result = 0;
         if (!_audioTransports.empty()) {
-            return _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
+            result = _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
                 nSamples,
                 nBytesPerSample,
                 nChannels,
@@ -554,8 +554,11 @@ public:
             );
         } else {
             nSamplesOut = 0;
-            return 0;
         }
+        
+        _mutex.Unlock();
+        
+        return result;
     }
 
     virtual void PullRenderData(
@@ -567,6 +570,8 @@ public:
         int64_t* elapsed_time_ms,
         int64_t* ntp_time_ms
     ) override {
+        _mutex.Lock();
+        
         if (!_audioTransports.empty()) {
             _audioTransports[_audioTransports.size() - 1]->PullRenderData(
                 bits_per_sample,
@@ -578,6 +583,8 @@ public:
                 ntp_time_ms
             );
         }
+        
+        _mutex.Unlock();
     }
     
 public:
@@ -612,6 +619,7 @@ public:
 private:
     bool _isStarted = false;
     std::vector<webrtc::AudioTransport *> _audioTransports;
+    webrtc::Mutex _mutex;
 };
 
 class WrappedChildAudioDeviceModule : public tgcalls::DefaultWrappedAudioDeviceModule {

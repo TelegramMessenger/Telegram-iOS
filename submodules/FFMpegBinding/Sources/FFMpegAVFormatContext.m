@@ -77,6 +77,7 @@ int FFMpegCodecIdAV1 = AV_CODEC_ID_AV1;
 }
 
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet {
+    [packet reuse];
     int result = av_read_frame(_impl, (AVPacket *)[packet impl]);
     return result >= 0;
 }

@@ -287,7 +287,7 @@ typedef enum
             
             NSTimeInterval duration = trimEndPosition - trimStartPosition;
             
-            if (trimEndPosition - trimStartPosition < self.minimumLength)
+            if (trimEndPosition - trimStartPosition < strongSelf.minimumLength)
                 return;
             
             if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)

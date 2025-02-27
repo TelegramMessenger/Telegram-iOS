@@ -16,6 +16,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void *)impl;
 - (int32_t)sendToDecoder:(FFMpegAVCodecContext *)codecContext;
+- (void)reuse;
 
 @end
 

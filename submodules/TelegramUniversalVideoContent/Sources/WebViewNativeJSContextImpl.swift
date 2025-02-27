@@ -86,9 +86,14 @@ private var ObjCKey_ContextReference: Int?
     }
     
     deinit {
+        self.cleanup()
+    }
+    
+    func cleanup() {
         for (_, timer) in self.timers {
             timer.invalidate()
         }
+        self.timers.removeAll()
     }
     
     func register(jsContext: JSContext) {
@@ -175,12 +180,15 @@ final class WebViewNativeJSContextImpl: HLSJSContext {
     fileprivate final class Impl {
         let queue: Queue
         let context: JSContext
+        let timeoutPolyfill: TimeoutPolyfill
         let handleScriptMessage: ([String: Any]) -> Void
         
         init(queue: Queue, handleScriptMessage: @escaping ([String: Any]) -> Void) {
             self.queue = queue
             self.context = JSContext()
             self.handleScriptMessage = handleScriptMessage
+            
+            self.timeoutPolyfill = TimeoutPolyfill(queue: self.queue)
             
             #if DEBUG
             if #available(iOS 16.4, *) {
@@ -197,9 +205,8 @@ final class WebViewNativeJSContextImpl: HLSJSContext {
                 }
             }
             
-            let timeoutPolyfill = TimeoutPolyfill(queue: self.queue)
-            self.context.setObject(timeoutPolyfill, forKeyedSubscript: "_timeoutPolyfill" as (NSCopying & NSObjectProtocol))
-            timeoutPolyfill.register(jsContext: self.context)
+            self.context.setObject(self.timeoutPolyfill, forKeyedSubscript: "_timeoutPolyfill" as (NSCopying & NSObjectProtocol))
+            self.timeoutPolyfill.register(jsContext: self.context)
             
             self.context.setObject(JsCorePolyfills(queue: self.queue, context: Reference(context: self)), forKeyedSubscript: "_JsCorePolyfills" as (NSCopying & NSObjectProtocol))
             
@@ -219,6 +226,7 @@ final class WebViewNativeJSContextImpl: HLSJSContext {
         }
         
         deinit {
+            self.timeoutPolyfill.cleanup()
             print("WebViewNativeJSContextImpl.deinit")
         }
         
