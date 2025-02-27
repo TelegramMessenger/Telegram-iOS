@@ -90,7 +90,7 @@ public final class BatchVideoRenderingContext {
     
     private final class TargetContext {
         weak var target: Target?
-        let file: TelegramMediaFile
+        let file: FileMediaReference
         let userLocation: MediaResourceUserLocation
         
         var readingContext: QueueLocalObject<ReadingContext>?
@@ -100,7 +100,7 @@ public final class BatchVideoRenderingContext {
         
         init(
             target: Target,
-            file: TelegramMediaFile,
+            file: FileMediaReference,
             userLocation: MediaResourceUserLocation
         ) {
             self.target = target
@@ -128,7 +128,7 @@ public final class BatchVideoRenderingContext {
         self.context = context
     }
     
-    public func add(target: Target, file: TelegramMediaFile, userLocation: MediaResourceUserLocation) -> TargetHandle {
+    public func add(target: Target, file: FileMediaReference, userLocation: MediaResourceUserLocation) -> TargetHandle {
         let id = self.nextId
         self.nextId += 1
         
@@ -158,11 +158,11 @@ public final class BatchVideoRenderingContext {
                         mediaBox: self.context.account.postbox.mediaBox,
                         userLocation: targetContext.userLocation,
                         userContentType: .sticker,
-                        reference: .media(media: .standalone(media: targetContext.file), resource: targetContext.file.resource)
+                        reference: targetContext.file.resourceReference(targetContext.file.media.resource)
                     ).startStrict()
                 }
                 if targetContext.dataDisposable == nil {
-                    targetContext.dataDisposable = (self.context.account.postbox.mediaBox.resourceData(targetContext.file.resource)
+                    targetContext.dataDisposable = (self.context.account.postbox.mediaBox.resourceData(targetContext.file.media.resource)
                     |> deliverOnMainQueue).startStrict(next: { [weak self, weak targetContext] data in
                         guard let self, let targetContext else {
                             return

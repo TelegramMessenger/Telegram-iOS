@@ -332,6 +332,7 @@ private final class StickerSelectionComponent: Component {
                             interaction: interaction,
                             inputNodeInteraction: inputNodeInteraction,
                             mode: mappedMode,
+                            batchVideoRenderingContext: nil,
                             stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
                             trendingGifsPromise: self.component?.getController()?.node.trendingGifsPromise ?? Promise(nil),
                             cancel: {

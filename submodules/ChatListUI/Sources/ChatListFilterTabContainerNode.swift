@@ -298,7 +298,6 @@ private final class ItemNode: ASDisplayNode {
         self.shortTitleActiveNode.visibility = title.enableAnimations
         
         if themeUpdated || titleUpdated {
-            //TODO:release
             self.titleNode.attributedText = title.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             self.titleActiveNode.attributedText = title.attributedString(font: Font.medium(14.0), textColor: presentationData.theme.list.itemAccentColor)
             

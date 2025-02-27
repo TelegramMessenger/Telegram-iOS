@@ -1912,6 +1912,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                         interaction: interaction,
                         inputNodeInteraction: inputNodeInteraction,
                         mode: mappedMode,
+                        batchVideoRenderingContext: nil,
                         trendingGifsPromise: trendingGifsPromise,
                         cancel: {
                         },

@@ -2420,7 +2420,6 @@ final class VideoChatScreenComponent: Component {
                 }
                 videoButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
             } else {
-                //TODO:release
                 videoButtonContent = .video(isActive: false)
             }
             let _ = self.videoButton.update(
