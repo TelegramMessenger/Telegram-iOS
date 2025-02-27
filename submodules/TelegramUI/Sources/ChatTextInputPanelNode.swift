@@ -1915,7 +1915,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                 placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
                             } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost, replyThreadMessage.peerId != self.context?.account.peerId {
                                 if replyThreadMessage.isChannelPost {
-                                    placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
+                                    if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+                                        placeholder = interfaceState.strings.Chat_InputTextPaidCommentPlaceholder(" # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), interfaceState.dateTimeFormat.groupingSeparator))").string
+                                        placeholderHasStar = true
+                                    } else {
+                                        placeholder = interfaceState.strings.Conversation_InputTextPlaceholderComment
+                                    }
                                 } else {
                                     placeholder = interfaceState.strings.Conversation_InputTextPlaceholderReply
                                 }

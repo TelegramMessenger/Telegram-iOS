@@ -4703,6 +4703,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 let sourceRect = sourceView.convert(sourceView.bounds, to: controller.view)
+                guard sourceRect.minY > 44.0 else {
+                    return
+                }
                 
                 let backgroundColor: UIColor
                 if !self.headerNode.isAvatarExpanded, let contentButtonBackgroundColor = self.headerNode.contentButtonBackgroundColor {

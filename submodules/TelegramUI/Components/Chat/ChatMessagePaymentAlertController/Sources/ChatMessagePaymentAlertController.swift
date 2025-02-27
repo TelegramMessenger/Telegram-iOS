@@ -439,7 +439,11 @@ public func chatMessagePaymentAlertController(
     if peers.count == 1, let peer = peers.first {
         let amountString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value))
         let totalString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Stars(Int32(amount.value * Int64(count)))
-        text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
+        if case let .channel(channel) = peer, case .broadcast = channel.info {
+            text = presentationData.strings.Chat_PaidMessage_Confirm_SingleComment_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
+        } else {
+            text = presentationData.strings.Chat_PaidMessage_Confirm_Single_Text(peer.compactDisplayTitle, amountString, totalString, messagesString).string
+        }
     } else {
         let amount = totalAmount ?? amount
         let usersString = presentationData.strings.Chat_PaidMessage_Confirm_Text_Users(Int32(peers.count))

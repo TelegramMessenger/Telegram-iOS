@@ -92,7 +92,7 @@ public final class ChatUserInfoItem: ListViewItem {
     }
 }
 
-public final class ChatUserInfoItemNode: ListViewItemNode {
+public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDelegate {
     public var controllerInteraction: ChatControllerInteraction?
     
     public let offsetContainer: ASDisplayNode
@@ -210,6 +210,29 @@ public final class ChatUserInfoItemNode: ListViewItemNode {
         self.groupsButtonNode.addTarget(self, action: #selector(self.groupsPressed), forControlEvents: .touchUpInside)
     }
                 
+    override public func didLoad() {
+        super.didLoad()
+        
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        tapRecognizer.delegate = self.wrappedGestureRecognizerDelegate
+        self.offsetContainer.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let location = gestureRecognizer.location(in: self.offsetContainer.view)
+        if let backgroundContent = self.backgroundContent, backgroundContent.frame.contains(location) {
+            return true
+        }
+        return false
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.openPeer(item.peer, .info(nil), nil, .default)
+    }
+    
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         super.updateAbsoluteRect(rect, within: containerSize)
         

@@ -5742,11 +5742,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if case .broadcast = peer.info {
                                 starGiftsAvailable = cachedData.flags.contains(.starGiftsAvailable)
-                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
-                                    peerDiscussionId = value
-                                }
                             } else {
                                 peerGeoLocation = cachedData.peerGeoLocation
+                            }
+                            if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                peerDiscussionId = value
                             }
                         }
                         var renderedPeer: RenderedPeer?
@@ -5786,7 +5786,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                                     if channel.flags.contains(.isCreator) || channel.adminRights != nil {
-                                        
                                     } else {
                                         sendPaidMessageStars = channel.sendPaidMessageStars
                                     }
@@ -5944,7 +5943,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if strongSelf.preloadHistoryPeerId != peerDiscussionId {
                             strongSelf.preloadHistoryPeerId = peerDiscussionId
-                            if let peerDiscussionId = peerDiscussionId {
+                            if let peerDiscussionId = peerDiscussionId, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = channel.info {
                                 let combinedDisposable = DisposableSet()
                                 strongSelf.preloadHistoryPeerIdDisposable.set(combinedDisposable)
                                 combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: peerDiscussionId).startStrict())
@@ -6346,6 +6345,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var contactStatus: ChatContactStatus?
                         var copyProtectionEnabled: Bool = false
                         var businessIntro: TelegramBusinessIntro?
+                        var sendPaidMessageStars: StarsAmount?
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
@@ -6374,6 +6374,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                               
+                                if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
+                                }
                             }
                             
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -6516,12 +6523,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             var currentSendAsPeerId: PeerId?
                             if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                                 currentSendAsPeerId = cachedData.sendAsPeerId
-                                if case .broadcast = peer.info {
-                                    if case let .known(value) = cachedData.linkedDiscussionPeerId {
-                                        peerDiscussionId = value
-                                    }
-                                } else {
+                                if case .group = peer.info {
                                     peerGeoLocation = cachedData.peerGeoLocation
+                                }
+                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                    peerDiscussionId = value
                                 }
                             }
                             
@@ -6637,6 +6643,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedAppliedBoosts(appliedBoosts)
                                     .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedBusinessIntro(businessIntro)
+                                    .updatedSendPaidMessageStars(sendPaidMessageStars)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         

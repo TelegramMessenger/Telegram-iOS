@@ -13896,6 +13896,7 @@ Sorry for the inconvenience.";
 "Chat.NonContactUser.UpdatedDays_any" = "%@ days ago";
 
 "Chat.InputTextPaidMessagePlaceholder" = "Message for %@";
+"Chat.InputTextPaidCommentPlaceholder" = "Comment for %@";
 
 "Privacy.Messages.Stars_1" = "%@ Star";
 "Privacy.Messages.Stars_any" = "%@ Stars";
@@ -13943,6 +13944,7 @@ Sorry for the inconvenience.";
 "Chat.PaidMessage.Confirm.PayForMessage_1" = "Pay for %@ Message";
 "Chat.PaidMessage.Confirm.PayForMessage_any" = "Pay for %@ Messages";
 "Chat.PaidMessage.Confirm.Single.Text" = "**%1$@** charges **%2$@** per incoming message. Would you like to pay **%3$@** to send %4$@?";
+"Chat.PaidMessage.Confirm.SingleComment.Text" = "**%1$@** charges **%2$@** per comment. Would you like to pay **%3$@** to send %4$@?";
 "Chat.PaidMessage.Confirm.Multiple.Text" = "You selected %1$@ who charge Stars for messages. Would you like to pay **%2$@** Stars to send %3$@?";
 "Chat.PaidMessage.Confirm.Text.Users_1" = "**%@** user";
 "Chat.PaidMessage.Confirm.Text.Users_any" = "**%@** users";
