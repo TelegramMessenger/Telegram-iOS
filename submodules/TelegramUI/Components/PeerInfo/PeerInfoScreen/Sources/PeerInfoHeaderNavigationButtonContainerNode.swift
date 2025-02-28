@@ -64,6 +64,12 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 accumulatedRightButtonOffset -= 6.0
             }
         }
+        for (key, button) in self.rightButtonNodes {
+            if !self.currentRightButtons.contains(where: { $0.key == key }) {
+                button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
+                transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: 0.0, y: 0.0))
+            }
+        }
     }
     
     func update(size: CGSize, presentationData: PresentationData, leftButtons: [PeerInfoHeaderNavigationButtonSpec], rightButtons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, shouldAnimateIn: Bool, transition: ContainedViewLayoutTransition) {
