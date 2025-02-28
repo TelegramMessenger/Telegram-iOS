@@ -219,11 +219,14 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
     }
     
     public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        let location = gestureRecognizer.location(in: self.offsetContainer.view)
-        if let backgroundContent = self.backgroundContent, backgroundContent.frame.contains(location) {
-            return true
+        if gestureRecognizer.view === self.offsetContainer.view {
+            let location = gestureRecognizer.location(in: self.offsetContainer.view)
+            if let backgroundContent = self.backgroundContent, backgroundContent.frame.contains(location) {
+                return true
+            }
+            return false
         }
-        return false
+        return true
     }
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -366,7 +369,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
             var estimatedValueOffset: CGFloat = 0.0
             if groupsInCommonCount > 0 {
                 groupsValueText = NSMutableAttributedString(string: item.presentationData.strings.Chat_NonContactUser_GroupsCount(groupsInCommonCount), font: Font.semibold(13.0), textColor: primaryTextColor)
-                estimatedValueOffset = avatarImageSize + CGFloat(min(2, max(0, item.groupsInCommonCount - 1))) * avatarSpacing + 4.0
+                estimatedValueOffset = avatarImageSize + CGFloat(min(2, max(0, item.groupsInCommonCount - 1))) * avatarSpacing + 4.0 + 10.0
             } else {
                 groupsValueText = NSMutableAttributedString(string: "", font: Font.semibold(13.0), textColor: primaryTextColor)
             }
@@ -380,7 +383,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                 backgroundSize.height += groupsValueLayoutAndApply?.0.size.height ?? 0.0
                 
                 maxTitleWidth = max(maxTitleWidth, groupsTitleLayoutAndApply?.0.size.width ?? 0)
-                maxValueWidth = max(maxValueWidth, groupsValueLayoutAndApply?.0.size.width ?? 0 + estimatedValueOffset)
+                maxValueWidth = max(maxValueWidth, (groupsValueLayoutAndApply?.0.size.width ?? 0) + estimatedValueOffset)
             } else {
                 groupsTitleLayoutAndApply = nil
                 groupsValueLayoutAndApply = nil
@@ -474,15 +477,15 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                     
                     var attributeMidpoints: [CGFloat] = []
                     
-                    func appendAttributeMidpoint(titleLayout: TextNodeLayout?, valueLayout: TextNodeLayout?) {
+                    func appendAttributeMidpoint(titleLayout: TextNodeLayout?, valueLayout: TextNodeLayout?, valueOffset: CGFloat = 0.0) {
                         if let valueLayout {
-                            let midpoint = backgroundSize.width - horizontalContentInset - valueLayout.size.width - attributeSpacing / 2.0
+                            let midpoint = backgroundSize.width - horizontalContentInset - valueLayout.size.width - valueOffset - attributeSpacing / 2.0
                             attributeMidpoints.append(midpoint)
                         }
                     }
                     appendAttributeMidpoint(titleLayout: phoneCountryTitleLayoutAndApply?.0, valueLayout: phoneCountryValueLayoutAndApply?.0)
                     appendAttributeMidpoint(titleLayout: registrationDateTitleLayoutAndApply?.0, valueLayout: registrationDateValueLayoutAndApply?.0)
-                    appendAttributeMidpoint(titleLayout: groupsTitleLayoutAndApply?.0, valueLayout: groupsValueLayoutAndApply?.0)
+                    appendAttributeMidpoint(titleLayout: groupsTitleLayoutAndApply?.0, valueLayout: groupsValueLayoutAndApply?.0, valueOffset: estimatedValueOffset)
                     
                     let middleX = floorToScreenPixels(attributeMidpoints.min() ?? backgroundSize.width / 2.0)
                                                       

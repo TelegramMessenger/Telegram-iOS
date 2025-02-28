@@ -629,6 +629,7 @@ private class SendStarsButtonView: HighlightTrackingButton, TGPhotoSendStarsButt
     
     override init(frame: CGRect) {
         self.backgroundView = UIView()
+        self.backgroundView.isUserInteractionEnabled = false
         
         self.textNode = ImmediateAnimatedCountLabelNode()
         self.textNode.isUserInteractionEnabled = false
@@ -654,10 +655,20 @@ private class SendStarsButtonView: HighlightTrackingButton, TGPhotoSendStarsButt
                 self.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
             }
         }
+        
+        self.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
     }
     
     required init?(coder: NSCoder) {
         preconditionFailure()
+    }
+    
+    deinit {
+        print()
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed?()
     }
     
     func updateFrame(_ frame: CGRect) {

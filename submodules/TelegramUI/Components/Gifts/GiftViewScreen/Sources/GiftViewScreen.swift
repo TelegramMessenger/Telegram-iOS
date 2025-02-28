@@ -2678,7 +2678,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         convertToStarsImpl = { [weak self] in
-            guard let self, let arguments = self.subject.arguments, let reference = arguments.reference, let fromPeerName = arguments.fromPeerName, let convertStars = arguments.convertStars, let navigationController = self.navigationController as? NavigationController else {
+            guard let self, let starsContext = context.starsContext, let arguments = self.subject.arguments, let reference = arguments.reference, let fromPeerName = arguments.fromPeerName, let convertStars = arguments.convertStars, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             
@@ -2725,6 +2725,8 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             
                             if let navigationController {
                                 Queue.mainQueue().after(0.5) {
+                                    starsContext.load(force: true)
+                                    
                                     let text: String
                                     if isChannelGift {
                                         text = presentationData.strings.Gift_Convert_Success_ChannelText(presentationData.strings.Gift_Convert_Success_ChannelText_Stars(Int32(convertStars))).string

@@ -304,7 +304,10 @@ final class StarsTransactionsListPanelComponent: Component {
                     var uniqueGift: StarGift.UniqueGift?
                     switch item.peer {
                     case let .peer(peer):
-                        if item.flags.contains(.isPaidMessage) {
+                        if let months = item.premiumGiftMonths {
+                            itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
+                            itemSubtitle = environment.strings.Stars_Intro_Transaction_TelegramPremium(months)
+                        } else if item.flags.contains(.isPaidMessage) {
                             itemTitle = peer.displayTitle(strings: environment.strings, displayOrder: .firstLast)
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_PaidMessage(item.paidMessageCount ?? 1)
                         } else if let starGift = item.starGift {
@@ -353,8 +356,13 @@ final class StarsTransactionsListPanelComponent: Component {
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_Gift_Title
                                 itemPeer = .fragment
                             } else {
-                                itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
-                                itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                                if (item.count.value < 0 && !item.flags.contains(.isRefund)) || (item.count.value > 0 && item.flags.contains(.isRefund)) {
+                                    itemTitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Title
+                                    itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentWithdrawal_Subtitle
+                                } else {
+                                    itemTitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Title
+                                    itemSubtitle = environment.strings.Stars_Intro_Transaction_FragmentTopUp_Subtitle
+                                }
                             }
                         } else {
                             if item.count > StarsAmount.zero && !item.flags.contains(.isRefund) {

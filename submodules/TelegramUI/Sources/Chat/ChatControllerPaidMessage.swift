@@ -20,7 +20,7 @@ extension ChatControllerImpl {
             completion(false)
             return
         }
-        if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
+        if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars, self.presentationInterfaceState.interfaceState.editMessage == nil {
             let totalAmount = sendPaidMessageStars.value * Int64(count)
             
             let _ = (ApplicationSpecificNotice.dismissedPaidMessageWarningNamespace(accountManager: self.context.sharedContext.accountManager, peerId: peer.id)

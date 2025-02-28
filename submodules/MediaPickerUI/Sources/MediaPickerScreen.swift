@@ -1322,7 +1322,7 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                 }
             }
             
-            let proceed: (Bool) -> Void = { convertToJpeg in
+            let proceed: (Bool) -> Void = { [weak self] convertToJpeg in
                 let signals: [Any]!
                 switch controller.subject {
                 case .assets:
@@ -1340,6 +1340,11 @@ public final class MediaPickerScreenImpl: ViewController, MediaPickerScreen, Att
                     completion()
                     self?.controller?.dismiss(animated: animated)
                 })
+                
+                Queue.mainQueue().after(1.5) {
+                    controller.isDismissing = false
+                    controller.completed = false
+                }
             }
             
             if asFile && hasHeic {

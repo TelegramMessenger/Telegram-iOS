@@ -1452,7 +1452,7 @@ public final class MessageInputPanelComponent: Component {
                     inputActionButtonMode = .send
                 } else {
                     if self.textFieldExternalState.hasText {
-                        if let sendPaidMessageStars = component.sendPaidMessageStars {
+                        if let sendPaidMessageStars = component.sendPaidMessageStars, "".isEmpty {
                             inputActionButtonMode = .stars(sendPaidMessageStars.value)
                         } else {
                             inputActionButtonMode = .send

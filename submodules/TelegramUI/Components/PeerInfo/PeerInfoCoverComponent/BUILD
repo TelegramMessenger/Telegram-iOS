@@ -22,6 +22,7 @@ swift_library(
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Utils/LokiRng",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

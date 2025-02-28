@@ -836,6 +836,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         starsState = .single(nil)
     }
     
+    let profileGiftsContext = ProfileGiftsContext(account: context.account, peerId: peerId)
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -945,7 +947,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             starsRevenueStatsContext: nil,
             revenueStatsState: nil,
             revenueStatsContext: nil,
-            profileGiftsContext: nil,
+            profileGiftsContext: profileGiftsContext,
             premiumGiftOptions: [],
             webAppPermissions: nil
         )
