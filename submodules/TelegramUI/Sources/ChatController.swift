@@ -2067,11 +2067,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }
         }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
-            if let strongSelf = self {
-                if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                    strongSelf.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+            if let self {
+                if let _ = self.presentationInterfaceState.interfaceState.mediaDraftState {
+                    self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
                 } else {
-                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, messageEffect: messageEffect)
+                    self.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                        if let self {
+                            self.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, postpone: postpone, messageEffect: messageEffect)
+                        }
+                    })
                 }
             }
         }, sendMessage: { [weak self] text in

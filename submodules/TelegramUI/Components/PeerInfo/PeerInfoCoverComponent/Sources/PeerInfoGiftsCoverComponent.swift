@@ -138,11 +138,11 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 
         private var giftsDisposable: Disposable?
         private var gifts: [ProfileGiftsContext.State.StarGift] = []
+        private var appliedGiftIds: [Int64] = []
         
         private var iconLayers: [AnyHashable: GiftIconLayer] = [:]
         
         private var iconPositions: [PositionGenerator.Position] = []
-        private let seed = UInt(Date().timeIntervalSince1970)
         
         override public init(frame: CGRect) {
             self.avatarBackgroundGradientLayer = SimpleGradientLayer()
@@ -185,6 +185,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 self.isUpdating = false
             }
             
+            let previousComponent = self.component
             self.component = component
             self.state = state
             
@@ -193,7 +194,15 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     
             let iconSize = CGSize(width: 32.0, height: 32.0)
             
-            if previousCurrentSize?.width != availableSize.width {
+            let giftIds = self.gifts.map { gift in
+                if case let .unique(gift) = gift.gift {
+                    return gift.id
+                } else {
+                    return 0
+                }
+            }
+            
+            if previousCurrentSize?.width != availableSize.width || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds {
                 var excludeRects: [CGRect] = []
                 excludeRects.append(CGRect(origin: .zero, size: CGSize(width: 50.0, height: 90.0)))
                 excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - 105.0, y: 0.0), size: CGSize(width: 105.0, height: 90.0)))
@@ -209,11 +218,12 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     minDistance: 75.0,
                     maxDistance: availableSize.width / 2.0,
                     padding: 12.0,
-                    seed: self.seed,
+                    seed: UInt(Date().timeIntervalSince1970),
                     excludeRects: excludeRects
                 )
                 self.iconPositions = positionGenerator.generatePositions(count: 9, viewSize: iconSize)
             }
+            self.appliedGiftIds = giftIds
             
             if self.giftsDisposable == nil {
                 self.giftsDisposable = combineLatest(
@@ -243,7 +253,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     self.gifts = pinnedGifts
                     
                     if !self.isUpdating {
-                        self.state?.updated(transition: .immediate)
+                        self.state?.updated(transition: .spring(duration: 0.4))
                     }
                 })
             }
@@ -271,11 +281,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 validIds.insert(id)
                 
+                var iconTransition = transition
                 let iconPosition = self.iconPositions[index]
                 let iconLayer: GiftIconLayer
                 if let current = self.iconLayers[id] {
                     iconLayer = current
                 } else {
+                    iconTransition = .immediate
                     iconLayer = GiftIconLayer(context: component.context, gift: gift, size: iconSize, glowing: component.hasBackground)
                     iconLayer.startHovering()
                     self.iconLayers[id] = iconLayer
@@ -284,6 +296,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     iconLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     iconLayer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                 }
+                iconLayer.glowing = component.hasBackground
                 
                 let centerPosition = component.avatarCenter
                 let finalPosition = iconPosition.center.offsetBy(dx: component.avatarCenter.x, dy: component.avatarCenter.y)
@@ -303,10 +316,10 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 
                 let effectivePosition = interpolateRect(from: finalPosition, to: centerPosition, t: itemScaleFraction)
                 
-                transition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
-                transition.setPosition(layer: iconLayer, position: effectivePosition)
-                transition.setScale(layer: iconLayer, scale: iconPosition.scale * (1.0 - itemScaleFraction))
-                transition.setAlpha(layer: iconLayer, alpha: 1.0 - itemScaleFraction)
+                iconTransition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
+                iconTransition.setPosition(layer: iconLayer, position: effectivePosition)
+                iconTransition.setScale(layer: iconLayer, scale: iconPosition.scale * (1.0 - itemScaleFraction))
+                iconTransition.setAlpha(layer: iconLayer, alpha: 1.0 - itemScaleFraction)
                 
                 index += 1
             }
@@ -434,7 +447,7 @@ private class PositionGenerator {
                 let distance = hypot(result.x - self.avatarFrame.center.x, result.y - self.avatarFrame.center.y)
                 let baseScale = min(1.0, max(0.77, 1.0 - (distance - 75.0) / 75.0))
                 
-                let randomFactor = 0.05 + (1.0 - baseScale) * 0.1
+                let randomFactor = 0.14 + (1.0 - baseScale) * 0.2
                 let randomValue = -randomFactor + CGFloat(self.rng.next()) * 2.0 * randomFactor
                 
                 let finalScale = min(1.2, max(baseScale * 0.65, baseScale + randomValue))
@@ -563,6 +576,8 @@ private final class StarsEffectLayer: SimpleLayer {
     }
     
     func setup(color: UIColor, size: CGSize) {
+        self.color = color
+        
         let emitter = CAEmitterCell()
         emitter.name = "emitter"
         emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
@@ -586,8 +601,10 @@ private final class StarsEffectLayer: SimpleLayer {
         self.emitterLayer.emitterCells = [emitter]
     }
     
+    private var color: UIColor?
+        
     func update(color: UIColor, size: CGSize) {
-        if self.emitterLayer.emitterCells == nil {
+        if self.color != color {
             self.setup(color: color, size: size)
         }
         self.emitterLayer.seed = UInt32.random(in: .min ..< .max)
@@ -604,7 +621,25 @@ private class GiftIconLayer: SimpleLayer {
     private let context: AccountContext
     private let gift: ProfileGiftsContext.State.StarGift
     private let size: CGSize
-    private let glowing: Bool
+    var glowing: Bool {
+        didSet {
+            self.shadowLayer.opacity = self.glowing ? 1.0 : 0.0
+            
+            let color: UIColor
+            if self.glowing {
+                color = .white
+            } else if let layerTintColor = self.shadowLayer.layerTintColor {
+                color = UIColor(cgColor: layerTintColor)
+            } else {
+                color = .white
+            }
+            
+            let side = floor(self.size.width * 1.25)
+            let starsFrame = CGSize(width: side, height: side).centered(in: CGRect(origin: .zero, size: self.size))
+            self.starsLayer.frame = starsFrame
+            self.starsLayer.update(color: color, size: starsFrame.size)
+        }
+    }
     
     let shadowLayer = SimpleLayer()
     let starsLayer = StarsEffectLayer()
@@ -656,6 +691,7 @@ private class GiftIconLayer: SimpleLayer {
         
         self.shadowLayer.contents = shadowImage?.cgImage
         self.shadowLayer.layerTintColor = color.cgColor
+        self.shadowLayer.opacity = glowing ? 1.0 : 0.0
         
         self.context = context
         self.gift = gift
@@ -669,9 +705,7 @@ private class GiftIconLayer: SimpleLayer {
         self.starsLayer.frame = starsFrame
         self.starsLayer.update(color: glowing ? .white : color, size: starsFrame.size)
         
-        if glowing {
-            self.addSublayer(self.shadowLayer)
-        }
+        self.addSublayer(self.shadowLayer)
         self.addSublayer(self.starsLayer)
         self.addSublayer(self.animationLayer)
     }
@@ -723,6 +757,7 @@ private class GiftIconLayer: SimpleLayer {
         
         self.shadowLayer.contents = shadowImage?.cgImage
         self.shadowLayer.layerTintColor = color.cgColor
+        self.shadowLayer.opacity = glowing ? 1.0 : 0.0
         
         super.init()
         
@@ -731,9 +766,7 @@ private class GiftIconLayer: SimpleLayer {
         self.starsLayer.frame = starsFrame
         self.starsLayer.update(color: glowing ? .white : color, size: starsFrame.size)
         
-        if glowing {
-            self.addSublayer(self.shadowLayer)
-        }
+        self.addSublayer(self.shadowLayer)
         self.addSublayer(self.starsLayer)
         self.addSublayer(self.animationLayer)
     }

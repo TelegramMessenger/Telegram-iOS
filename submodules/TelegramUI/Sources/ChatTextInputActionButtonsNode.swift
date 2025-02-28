@@ -272,7 +272,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
         self.validLayout = size
         
         var innerSize = size
-        if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+        if let sendPaidMessageStars = interfaceState.sendPaidMessageStars, interfaceState.interfaceState.editMessage == nil {
             self.sendButton.imageNode.alpha = 0.0
             self.textNode.isHidden = false
             

@@ -1915,7 +1915,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                 placeholder = interfaceState.strings.Conversation_InputTextAnonymousPlaceholder
                             } else if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation, !replyThreadMessage.isForumPost, replyThreadMessage.peerId != self.context?.account.peerId {
                                 if replyThreadMessage.isChannelPost {
-                                    if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+                                    if let sendPaidMessageStars = interfaceState.sendPaidMessageStars, interfaceState.interfaceState.editMessage == nil {
                                         placeholder = interfaceState.strings.Chat_InputTextPaidCommentPlaceholder(" # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), interfaceState.dateTimeFormat.groupingSeparator))").string
                                         placeholderHasStar = true
                                     } else {
@@ -1931,7 +1931,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                                     placeholder = interfaceState.strings.Chat_InputPlaceholderMessageInTopic(forumTopicData.title).string
                                 }
                             } else {
-                                if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+                                if let sendPaidMessageStars = interfaceState.sendPaidMessageStars, interfaceState.interfaceState.editMessage == nil {
                                     placeholder = interfaceState.strings.Chat_InputTextPaidMessagePlaceholder(" # \(presentationStringsFormattedNumber(Int32(sendPaidMessageStars.value), interfaceState.dateTimeFormat.groupingSeparator))").string
                                     placeholderHasStar = true
                                 } else {
