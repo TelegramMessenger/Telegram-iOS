@@ -472,8 +472,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
         if let startAtTimestamp = mediaParameters?.startAtTimestamp {
-            //TODO:localize
-            self.startAtTimestampNode = ShareStartAtTimestampNode(titleText: "Start at \(textForTimeout(value: startAtTimestamp))", titleTextColor: self.presentationData.theme.actionSheet.secondaryTextColor, checkNodeTheme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
+            self.startAtTimestampNode = ShareStartAtTimestampNode(titleText: self.presentationData.strings.Share_VideoStartAt(textForTimeout(value: startAtTimestamp)).string, titleTextColor: self.presentationData.theme.actionSheet.secondaryTextColor, checkNodeTheme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
         } else {
             self.startAtTimestampNode = nil
         }

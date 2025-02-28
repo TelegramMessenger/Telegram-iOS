@@ -3566,12 +3566,24 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                     })
                 }, openStories: { peerId, avatarNode in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     strongSelf.interaction.openStories?(peerId, avatarNode)
                 }, openPublicPosts: {
+                    guard let strongSelf = self else {
+                        return
+                    }
                     strongSelf.interaction.switchToFilter(.publicPosts)
                 }, openMessagesFilter: { sourceNode in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     strongSelf.openMessagesFilter(sourceNode: sourceNode)
                 }, switchMessagesFilter: { filter in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     strongSelf.searchScopePromise.set(.everywhere)
                 })
                 strongSelf.currentEntries = newEntries

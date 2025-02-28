@@ -15,13 +15,14 @@ import AccountContext
 import DeviceProximity
 import PhoneNumberFormat
 
-final class SharedCallAudioContext {
+public final class SharedCallAudioContext {
     let audioDevice: OngoingCallContext.AudioDevice?
     let callKitIntegration: CallKitIntegration?
     
     private var audioSessionDisposable: Disposable?
     private var audioSessionShouldBeActiveDisposable: Disposable?
     private var isAudioSessionActiveDisposable: Disposable?
+    private var audioOutputStateDisposable: Disposable?
     
     private(set) var audioSessionControl: ManagedAudioSessionControl?
     
@@ -32,7 +33,7 @@ final class SharedCallAudioContext {
     
     private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
     private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
-    private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    public private(set) var currentAudioOutputValue: AudioSessionOutput = .builtin
     private var didSetCurrentAudioOutputValue: Bool = false
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
         return self.audioOutputStatePromise.get()
@@ -141,12 +142,24 @@ final class SharedCallAudioContext {
             }
             self.audioDevice?.setIsAudioSessionActive(value)
         })
+        
+        self.audioOutputStateDisposable = (self.audioOutputStatePromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            self.audioOutputStateValue = value
+            if let currentOutput = value.1 {
+                self.currentAudioOutputValue = currentOutput
+            }
+        })
     }
     
     deinit {
         self.audioSessionDisposable?.dispose()
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.isAudioSessionActiveDisposable?.dispose()
+        self.audioOutputStateDisposable?.dispose()
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -201,7 +214,7 @@ public final class PresentationCallImpl: PresentationCall {
     private let currentNetworkType: NetworkType
     private let updatedNetworkType: Signal<NetworkType, NoError>
     
-    private var sharedAudioContext: SharedCallAudioContext?
+    public private(set) var sharedAudioContext: SharedCallAudioContext?
     
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
@@ -1609,6 +1622,29 @@ public final class PresentationCallImpl: PresentationCall {
         }
         self.useFrontCamera = !self.useFrontCamera
         self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
+    }
+    
+    public func playRemoteCameraTone() {
+        let name: String
+        name = "voip_group_recording_started.mp3"
+
+        self.beginTone(tone: .custom(name: name, loopCount: 1))
+    }
+    
+    private func beginTone(tone: PresentationCallTone?) {
+        if let tone, let toneData = presentationCallToneData(tone) {
+            if let sharedAudioContext = self.sharedAudioContext {
+                sharedAudioContext.audioDevice?.setTone(tone: OngoingCallContext.Tone(
+                    samples: toneData,
+                    sampleRate: 48000,
+                    loopCount: tone.loopCount ?? 100000
+                ))
+            }
+        } else {
+            if let sharedAudioContext = self.sharedAudioContext {
+                sharedAudioContext.audioDevice?.setTone(tone: nil)
+            }
+        }
     }
 }
 

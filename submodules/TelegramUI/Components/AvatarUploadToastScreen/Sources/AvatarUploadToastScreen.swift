@@ -264,7 +264,6 @@ private final class AvatarUploadToastScreenComponent: Component {
                 containerSize: CGSize(width: availableContentSize.width - contentInsets.left - contentInsets.right - spacing - iconSize.width, height: availableContentSize.height)
             )
             
-            //TODO:localize
             let contentSize = self.content.update(
                 transition: transition,
                 component: AnyComponent(AnimatedTextComponent(

@@ -153,7 +153,6 @@ public final class BatchVideoRenderingContext {
         for (id, targetContext) in self.targetContexts {
             if targetContext.target != nil {
                 if targetContext.fetchDisposable == nil {
-                    //TODO:release pass resource reference
                     targetContext.fetchDisposable = fetchedMediaResource(
                         mediaBox: self.context.account.postbox.mediaBox,
                         userLocation: targetContext.userLocation,

@@ -167,6 +167,14 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             self.conferenceAddParticipant?()
         }
         
+        var isConferencePossible = false
+        if self.call.context.sharedContext.immediateExperimentalUISettings.conferenceDebug {
+            isConferencePossible = true
+        }
+        if let data = self.call.context.currentAppConfiguration.with({ $0 }).data, let value = data["ios_enable_conference"] as? Double {
+            isConferencePossible = value != 0.0
+        }
+        
         self.callScreenState = PrivateCallScreen.State(
             strings: presentationData.strings,
             lifecycleState: .connecting,
@@ -180,7 +188,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             remoteVideo: nil,
             isRemoteBatteryLow: false,
             isEnergySavingEnabled: !self.sharedContext.energyUsageSettings.fullTranslucency,
-            isConferencePossible: true
+            isConferencePossible: isConferencePossible
         )
         
         self.isMicrophoneMutedDisposable = (call.isMuted
@@ -520,6 +528,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
         
         if var callScreenState = self.callScreenState {
+            if callScreenState.remoteVideo == nil && self.remoteVideo != nil {
+                if let call = self.call as? PresentationCallImpl, let sharedAudioContext = call.sharedAudioContext, case .builtin = sharedAudioContext.currentAudioOutputValue {
+                    call.playRemoteCameraTone()
+                }
+            }
+            
             callScreenState.lifecycleState = mappedLifecycleState
             callScreenState.remoteVideo = self.remoteVideo
             callScreenState.localVideo = self.localVideo

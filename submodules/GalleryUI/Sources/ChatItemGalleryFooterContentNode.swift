@@ -1755,7 +1755,6 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                             let text: String
                             if let timestamp {
-                                //TODO:localize
                                 let startTimeString: String
                                 let hours = timestamp / (60 * 60)
                                 let minutes = timestamp % (60 * 60) / 60
@@ -1765,7 +1764,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
                                 } else {
                                     startTimeString = String(format: "%d:%02d", minutes, seconds)
                                 }
-                                text = "Link with start time at \(startTimeString) copied to clipboard."
+                                text = presentationData.strings.Conversation_VideoTimeLinkCopied(startTimeString).string
                             } else {
                                 text = presentationData.strings.Conversation_LinkCopied
                             }

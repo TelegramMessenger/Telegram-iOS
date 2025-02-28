@@ -323,8 +323,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return true
                 }
             
+                params.blockInteraction.set(.single(true))
+            
                 let _ = (gallery
                 |> deliverOnMainQueue).startStandalone(next: { gallery in
+                    params.blockInteraction.set(.single(false))
+                    
                     gallery.centralItemUpdated = { messageId in
                         params.centralItemUpdated?(messageId)
                     }
