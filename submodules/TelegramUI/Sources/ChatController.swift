@@ -533,6 +533,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let selectAddMemberDisposable = MetaDisposable()
     let addMemberDisposable = MetaDisposable()
     let joinChannelDisposable = MetaDisposable()
+    var premiumOrStarsRequiredDisposable: Disposable?
     
     var shouldDisplayDownButton = false
 
@@ -5976,6 +5977,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                         }
                         
+                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                            strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
+                        }
+                        
                         var adMessage = adMessage
                         if let peer = peerView.peers[peerView.peerId] as? TelegramUser, peer.botInfo != nil {
                         } else {
@@ -6646,6 +6651,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                                 appliedBoosts = cachedChannelData.appliedBoosts
                                 boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                            }
+                            
+                            if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                                strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
                             }
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
@@ -7355,6 +7364,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.displaySendWhenOnlineTipDisposable.dispose()
             self.networkSpeedEventsDisposable?.dispose()
             self.postedScheduledMessagesEventsDisposable?.dispose()
+            self.premiumOrStarsRequiredDisposable?.dispose()
         }
         deallocate()
     }
