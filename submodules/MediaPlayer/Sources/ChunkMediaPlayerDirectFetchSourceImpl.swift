@@ -472,11 +472,15 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
         return self.partsStateValue.get()
     }
     
+    private var resourceSizeDisposable: Disposable?
     private var completeFetchDisposable: Disposable?
     
     private var seekTimestamp: Double?
     private var currentLookaheadId: Int = 0
     private var lookahead: FFMpegLookahead?
+    
+    private var resolvedResourceSize: Int64?
+    private var pendingSeek: (id: Int, position: Double)?
     
     init(resource: ChunkMediaPlayerV2.SourceDescription.ResourceDescription) {
         self.resource = resource
@@ -494,16 +498,43 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
     }
     
     deinit {
+        self.resourceSizeDisposable?.dispose()
         self.completeFetchDisposable?.dispose()
     }
     
     func seek(id: Int, position: Double) {
+        if self.resource.size == 0 && self.resolvedResourceSize == nil {
+            self.pendingSeek = (id, position)
+            
+            if self.resourceSizeDisposable == nil {
+                self.resourceSizeDisposable = (self.resource.postbox.mediaBox.resourceData(self.resource.reference.resource, option: .complete(waitUntilFetchStatus: false))
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let self else {
+                        return
+                    }
+                    if data.complete {
+                        if self.resolvedResourceSize == nil {
+                            self.resolvedResourceSize = data.size
+                            
+                            if let pendingSeek = self.pendingSeek {
+                                self.seek(id: pendingSeek.id, position: pendingSeek.position)
+                            }
+                        }
+                    }
+                })
+            }
+            
+            return
+        }
+        
         self.seekTimestamp = position
         
         self.currentLookaheadId += 1
         let lookaheadId = self.currentLookaheadId
         
         let resource = self.resource
+        let resourceSize = self.resolvedResourceSize ?? Int64(resource.size)
+        
         let updateState: (FFMpegLookahead.State) -> Void = { [weak self] state in
             Queue.mainQueue().async {
                 guard let self else {
@@ -559,7 +590,7 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
                                 return ChunkMediaPlayerPartsState.DirectReader.Stream(
                                     mediaBox: resource.postbox.mediaBox,
                                     resource: resource.reference.resource,
-                                    size: resource.size,
+                                    size: resourceSize,
                                     index: media.info.index,
                                     seek: (streamIndex: state.seek.streamIndex, pts: state.seek.pts),
                                     maxReadablePts: (streamIndex: maxReadablePts.streamIndex, pts: maxReadablePts.pts, isEnded: state.isEnded),
@@ -602,18 +633,18 @@ final class ChunkMediaPlayerDirectFetchSourceImpl: ChunkMediaPlayerSourceImpl {
                 ).startStrict()
             },
             getDataInRange: { range, completion in
-                return resource.postbox.mediaBox.resourceData(resource.reference.resource, size: resource.size, in: range, mode: .complete).start(next: { result, isComplete in
+                return resource.postbox.mediaBox.resourceData(resource.reference.resource, size: resourceSize, in: range, mode: .complete).start(next: { result, isComplete in
                     completion(isComplete ? result : nil)
                 })
             },
             isDataCachedInRange: { range in
                 return resource.postbox.mediaBox.internal_resourceDataIsCached(
                     id: resource.reference.resource.id,
-                    size: resource.size,
+                    size: resourceSize,
                     in: range
                 )
             },
-            size: self.resource.size
+            size: resourceSize
         )
     }
     
