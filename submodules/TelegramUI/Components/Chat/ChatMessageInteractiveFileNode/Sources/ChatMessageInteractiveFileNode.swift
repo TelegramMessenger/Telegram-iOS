@@ -34,6 +34,7 @@ import ChatMessageItemCommon
 import TelegramStringFormatting
 import AnimatedCountLabelNode
 import AudioWaveform
+import DeviceProximity
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -1561,6 +1562,12 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let arguments = self.arguments else {
             return
         }
+        
+        var animated = animated
+        if DeviceProximityManager.shared().currentValue() {
+            animated = false
+        }
+        
         let incoming = message.effectivelyIncoming(context.account.peerId)
         let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
         
