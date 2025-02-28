@@ -613,7 +613,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
             case .requesting, .ringing, .connecting, .reconnecting:
-                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden {
+                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden && self.activeRemoteVideoSource == nil && self.activeLocalVideoSource == nil {
                     self.displayEmojiTooltip = true
                     
                     self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in

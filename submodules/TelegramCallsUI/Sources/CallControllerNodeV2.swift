@@ -528,6 +528,12 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
         }
         
         if var callScreenState = self.callScreenState {
+            if callScreenState.remoteVideo == nil && self.remoteVideo != nil {
+                if let call = self.call as? PresentationCallImpl, let sharedAudioContext = call.sharedAudioContext, case .builtin = sharedAudioContext.currentAudioOutputValue {
+                    call.playRemoteCameraTone()
+                }
+            }
+            
             callScreenState.lifecycleState = mappedLifecycleState
             callScreenState.remoteVideo = self.remoteVideo
             callScreenState.localVideo = self.localVideo
