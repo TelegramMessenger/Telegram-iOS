@@ -524,15 +524,34 @@ private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResource
                     thumbnail = .single(decodedThumbnailData)
                 }
             } else if let thumbnailResource = thumbnailResource {
-                thumbnail = Signal { subscriber in
-                    let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: customUserContentType ?? MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video).start()
-                    let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource, attemptSynchronously: synchronousLoad).start(next: { next in
-                        subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
-                    }, error: subscriber.putError, completed: subscriber.putCompletion)
-                    
-                    return ActionDisposable {
-                        fetchedDisposable.dispose()
-                        thumbnailDisposable.dispose()
+                if autoFetchFullSizeThumbnail, let thumbnailRepresentation = thumbnailRepresentation, (thumbnailRepresentation.dimensions.width > 200 || thumbnailRepresentation.dimensions.height > 200) {
+                    thumbnail = Signal { subscriber in
+                        let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: customUserContentType ?? MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(thumbnailRepresentation.resource), statsCategory: .video).start()
+                        let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailRepresentation.resource, attemptSynchronously: synchronousLoad).start(next: { next in
+                            let data: Data? = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                            if let data {
+                                subscriber.putNext(data)
+                            } else {
+                                subscriber.putNext(nil)
+                            }
+                        }, error: subscriber.putError, completed: subscriber.putCompletion)
+                        
+                        return ActionDisposable {
+                            fetchedDisposable.dispose()
+                            thumbnailDisposable.dispose()
+                        }
+                    }
+                } else {
+                    thumbnail = Signal { subscriber in
+                        let fetchedDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: customUserContentType ?? MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(thumbnailResource), statsCategory: .video).start()
+                        let thumbnailDisposable = postbox.mediaBox.resourceData(thumbnailResource, attemptSynchronously: synchronousLoad).start(next: { next in
+                            subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+                        }, error: subscriber.putError, completed: subscriber.putCompletion)
+                        
+                        return ActionDisposable {
+                            fetchedDisposable.dispose()
+                            thumbnailDisposable.dispose()
+                        }
                     }
                 }
             } else {
