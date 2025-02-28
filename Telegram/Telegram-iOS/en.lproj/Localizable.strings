@@ -13975,3 +13975,7 @@ Sorry for the inconvenience.";
 
 "Privacy.Review.Invite.Title" = "Invitation Settings";
 "Privacy.Review.Invite.Text" = "You've restricted who can message you, but anyone can still invite you to groups and channels. Would you like to review these settings?";
+
+"Conversation.VideoTimeLinkCopied" = "Link with start time at %@ copied to clipboard.";
+"Share.VideoStartAt" = "Start at %@";
+"SendStarReactions.SubtitleFrom" = "from %@";

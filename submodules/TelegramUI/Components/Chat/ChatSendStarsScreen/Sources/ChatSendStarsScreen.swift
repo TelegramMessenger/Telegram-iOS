@@ -1794,11 +1794,10 @@ private final class ChatSendStarsScreenComponent: Component {
             
             let titleSubtitleSpacing: CGFloat = 1.0
             
-            //TODO:localize
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: "from \(currentMyPeer.compactDisplayTitle)", font: Font.regular(12.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                    text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SubtitleFrom(currentMyPeer.compactDisplayTitle).string, font: Font.regular(12.0), textColor: environment.theme.list.itemSecondaryTextColor))
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
