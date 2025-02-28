@@ -959,6 +959,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             textFieldInsets.right += additionalSideInsets.right / 3.0
         }
         
+        var isPaidMessage = false
         var textBackgroundInset: CGFloat = 0.0
         let actionButtonsSize: CGSize
         if let presentationInterfaceState = self.presentationInterfaceState {
@@ -968,6 +969,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 isMinimized = false
                 let count = max(1, presentationInterfaceState.interfaceState.forwardMessageIds?.count ?? 1)
                 text = "⭐️\(sendPaidMessageStars.value * Int64(count))"
+                isPaidMessage = true
             } else {
                 isMinimized = !self.isAttachment || inputHasText
                 text = presentationInterfaceState.strings.MediaPicker_Send
@@ -981,7 +983,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - actionButtonsSize.width + 1.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: actionButtonsSize)
         transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
         
-        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset, height: textInputFrame.size.height))
+        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: textInputFrame.size.height))
         transition.updateFrame(node: self.textInputContainerBackgroundNode, frame: textInputBackgroundFrame)
         
         transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset - textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
@@ -1028,7 +1030,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
         transition.updateFrame(node: self.textPlaceholderNode, frame: placeholderFrame)
         
-        return textBackgroundInset
+        return isPaidMessage ? textBackgroundInset : 0.0
     }
         
     private var skipUpdate = false

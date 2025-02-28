@@ -968,8 +968,8 @@ final class GiftSetupScreenComponent: Component {
             
             switch component.subject {
             case let .premium(product):
-                if let starsPrice = product.starsPrice {
-                    let balance = component.context.starsContext?.currentState?.balance.value ?? 0
+                let balance = component.context.starsContext?.currentState?.balance.value ?? 0
+                if let starsPrice = product.starsPrice, balance >= starsPrice {
                     let balanceString = presentationStringsFormattedNumber(Int32(balance), environment.dateTimeFormat.groupingSeparator)
                     
                     let starsFooterRawString = environment.strings.Gift_Send_PayWithStars_Info("# \(balanceString)").string
