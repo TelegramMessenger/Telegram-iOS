@@ -356,7 +356,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
         },
         openPremiumInfo: {
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .paidMessages, forceDark: false, action: {
+            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .messagePrivacy, forceDark: false, action: {
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .paidMessages, forceDark: false, dismissed: nil)
                 replaceImpl?(controller)
             }, dismissed: nil)

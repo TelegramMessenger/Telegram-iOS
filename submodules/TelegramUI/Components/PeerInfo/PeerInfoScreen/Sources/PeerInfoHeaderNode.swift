@@ -2277,6 +2277,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let backgroundCoverSubject: PeerInfoCoverComponent.Subject?
         var backgroundCoverAnimateIn = false
         var backgroundDefaultHeight: CGFloat = 254.0
+        var hasBackground = false
         if let status = peer?.emojiStatus, case .starGift = status.content {
             backgroundCoverSubject = .status(status)
             if !self.didSetupBackgroundCover {
@@ -2288,8 +2289,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if !buttonKeys.isEmpty {
                 backgroundDefaultHeight = 327.0
             }
+            hasBackground = true
         } else if let peer {
             backgroundCoverSubject = .peer(EnginePeer(peer))
+            if peer.profileColor != nil {
+                hasBackground = true
+            }
         } else {
             backgroundCoverSubject = nil
         }
@@ -2344,6 +2349,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     context: self.context,
                     peerId: peer.id,
                     giftsContext: profileGiftsContext,
+                    hasBackground: hasBackground,
                     avatarCenter: apparentAvatarFrame.center,
                     avatarScale: avatarScale,
                     defaultHeight: backgroundDefaultHeight,

@@ -63,6 +63,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
     public let context: AccountContext
     public let peerId: EnginePeer.Id
     public let giftsContext: ProfileGiftsContext
+    public let hasBackground: Bool
     public let avatarCenter: CGPoint
     public let avatarScale: CGFloat
     public let defaultHeight: CGFloat
@@ -74,6 +75,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
         context: AccountContext,
         peerId: EnginePeer.Id,
         giftsContext: ProfileGiftsContext,
+        hasBackground: Bool,
         avatarCenter: CGPoint,
         avatarScale: CGFloat,
         defaultHeight: CGFloat,
@@ -84,6 +86,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
         self.context = context
         self.peerId = peerId
         self.giftsContext = giftsContext
+        self.hasBackground = hasBackground
         self.avatarCenter = avatarCenter
         self.avatarScale = avatarScale
         self.defaultHeight = defaultHeight
@@ -97,6 +100,9 @@ public final class PeerInfoGiftsCoverComponent: Component {
             return false
         }
         if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.hasBackground != rhs.hasBackground {
             return false
         }
         if lhs.avatarCenter != rhs.avatarCenter {
@@ -202,11 +208,11 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     avatarFrame: CGSize(width: 100, height: 100).centered(around: component.avatarCenter),
                     minDistance: 75.0,
                     maxDistance: availableSize.width / 2.0,
-                    padding: 16.0,
+                    padding: 12.0,
                     seed: self.seed,
                     excludeRects: excludeRects
                 )
-                self.iconPositions = positionGenerator.generatePositions(count: 6, viewSize: iconSize)
+                self.iconPositions = positionGenerator.generatePositions(count: 9, viewSize: iconSize)
             }
             
             if self.giftsDisposable == nil {
@@ -256,7 +262,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
             
             var validIds = Set<AnyHashable>()
             var index = 0
-            for gift in self.gifts.prefix(6) {
+            for gift in self.gifts.prefix(9) {
                 let id: AnyHashable
                 if case let .unique(uniqueGift) = gift.gift {
                     id = uniqueGift.slug
@@ -270,7 +276,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 if let current = self.iconLayers[id] {
                     iconLayer = current
                 } else {
-                    iconLayer = GiftIconLayer(context: component.context, gift: gift, size: iconSize)
+                    iconLayer = GiftIconLayer(context: component.context, gift: gift, size: iconSize, glowing: component.hasBackground)
                     iconLayer.startHovering()
                     self.iconLayers[id] = iconLayer
                     self.layer.addSublayer(iconLayer)
@@ -279,8 +285,8 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     iconLayer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                 }
                 
-                let zeroPosition = component.avatarCenter
-                let finalPosition = iconPosition.center
+                let centerPosition = component.avatarCenter
+                let finalPosition = iconPosition.center.offsetBy(dx: component.avatarCenter.x, dy: component.avatarCenter.y)
                 let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: 0.0, reverse: false)
                
                 func interpolateRect(from: CGPoint, to: CGPoint, t: CGFloat) -> CGPoint {
@@ -295,7 +301,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     )
                 }
                 
-                let effectivePosition = interpolateRect(from: finalPosition, to: zeroPosition, t: itemScaleFraction)
+                let effectivePosition = interpolateRect(from: finalPosition, to: centerPosition, t: itemScaleFraction)
                                 
                 transition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
                 transition.setPosition(layer: iconLayer, position: effectivePosition)
@@ -350,10 +356,10 @@ private class PositionGenerator {
     init(
         containerSize: CGSize,
         avatarFrame: CGRect,
-        minDistance: CGFloat = 20,
-        maxDistance: CGFloat = 100,
-        padding: CGFloat = 10,
-        seed: UInt = UInt.random(in: 0 ..< 10),
+        minDistance: CGFloat,
+        maxDistance: CGFloat,
+        padding: CGFloat,
+        seed: UInt,
         excludeRects: [CGRect] = []
     ) {
         self.containerSize = containerSize
@@ -376,13 +382,13 @@ private class PositionGenerator {
             let maxDist = distanceRanges[i].1
             let isEven = i % 2 == 0
             
-            // Try to generate a valid position with multiple attempts
             var attempts = 0
             let maxAttempts = 20
-            var foundPosition = false
             var currentMaxDist = maxDist
             
-            while !foundPosition && attempts < maxAttempts {
+            var result: CGPoint?
+            
+            while result == nil && attempts < maxAttempts {
                 attempts += 1
                 
                 if let position = generateSinglePosition(
@@ -391,54 +397,55 @@ private class PositionGenerator {
                     maxDist: currentMaxDist,
                     rightSide: !isEven
                 ) {
-                    // Skip distance check if this is the first position
                     let isFarEnough = positions.isEmpty || positions.allSatisfy { existingPosition in
                         let distance = hypot(position.x - existingPosition.center.x, position.y - existingPosition.center.y)
-                        return distance > (viewSize.width + padding)
+                        let minRequiredDistance = max(viewSize.width, viewSize.height) / 2 + max(viewSize.width, viewSize.height) / 2 + padding
+                        return distance > minRequiredDistance
                     }
-                    
-                    let distance = hypot(position.x - self.avatarFrame.center.x, position.y - self.avatarFrame.center.y)
-                    var scale = max(1.0, min(0.55, 1.0 - (distance - 50.0) / 100.0))
-                    scale = scale * scale
-                    
                     if isFarEnough {
-                        positions.append(Position(center: position, scale: scale))
-                        foundPosition = true
+                        result = position
                         break
                     }
                 }
                 
-                if attempts % 5 == 0 && !foundPosition {
+                if attempts % 5 == 0 && result == nil {
                     currentMaxDist *= 1.2
                 }
             }
             
-            if !foundPosition {
-                if let lastChancePosition = generateSinglePosition(
+            if result == nil {
+                if let lastChancePosition = self.generateSinglePosition(
                     viewSize: viewSize,
                     minDist: minDist,
-                    maxDist: maxDist * 2.0, // Try with a much larger distance
+                    maxDist: maxDist * 2.0,
                     rightSide: !isEven
                 ) {
-                    let distance = hypot(lastChancePosition.x - self.avatarFrame.center.x,
-                                        lastChancePosition.y - self.avatarFrame.center.y)
-                    var scale = max(1.0, min(0.55, 1.0 - (distance - 50.0) / 100.0))
-                    scale = scale * scale
-                    
-                    positions.append(Position(center: lastChancePosition, scale: scale))
+                    result = lastChancePosition
                 } else {
-                    // If all else fails, create a position with default values to ensure we don't return fewer positions than requested
                     let defaultX = self.avatarFrame.center.x + (isEven ? -1 : 1) * (minDist + CGFloat(i * 20))
                     let defaultY = self.avatarFrame.center.y + CGFloat(i * 15)
                     let defaultPosition = CGPoint(x: defaultX, y: defaultY)
                     
-                    // Use a smaller scale for these fallback positions
-                    positions.append(Position(center: defaultPosition, scale: 0.5))
+                    result = defaultPosition
                 }
+            }
+            
+            if let result {
+                let distance = hypot(result.x - self.avatarFrame.center.x, result.y - self.avatarFrame.center.y)
+                let baseScale = min(1.0, max(0.77, 1.0 - (distance - 75.0) / 75.0))
+                
+                let randomFactor = 0.05 + (1.0 - baseScale) * 0.1
+                let randomValue = -randomFactor + CGFloat(self.rng.next()) * 2.0 * randomFactor
+                
+                let finalScale = min(1.1, max(baseScale * 0.7, baseScale + randomValue))
+                
+                positions.append(Position(center: result, scale: finalScale))
             }
         }
         
-        return positions
+        return positions.map {
+            Position(center: $0.center.offsetBy(dx: -self.avatarFrame.center.x, dy: -self.avatarFrame.center.y), scale: $0.scale)
+        }
     }
     
     private func calculateDistanceRanges(count: Int) -> [(CGFloat, CGFloat)] {
@@ -452,7 +459,7 @@ private class PositionGenerator {
         }
         
         for _ in 0..<4 {
-            let min = self.minDistance + (totalRange * 0.16)
+            let min = self.minDistance + (totalRange * 0.19)
             let max = self.minDistance + (totalRange * 0.6)
             ranges.append((min, max))
         }
@@ -533,25 +540,83 @@ private var shadowImage: UIImage? = {
     })
 }()
 
+private final class StarsEffectLayer: SimpleLayer {
+    private let emitterLayer = CAEmitterLayer()
+    
+    override init() {
+        super.init()
+        
+        self.addSublayer(self.emitterLayer)
+    }
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func setup(color: UIColor, size: CGSize) {
+        let emitter = CAEmitterCell()
+        emitter.name = "emitter"
+        emitter.contents = UIImage(bundleImageName: "Premium/Stars/Particle")?.cgImage
+        emitter.birthRate = 8.0
+        emitter.lifetime = 2.0
+        emitter.velocity = 0.1
+        emitter.scale = (size.width / 40.0) * 0.12
+        emitter.scaleRange = 0.02
+        emitter.alphaRange = 0.1
+        emitter.emissionRange = .pi * 2.0
+        
+        let staticColors: [Any] = [
+            color.withAlphaComponent(0.0).cgColor,
+            color.withAlphaComponent(0.58).cgColor,
+            color.withAlphaComponent(0.58).cgColor,
+            color.withAlphaComponent(0.0).cgColor
+        ]
+        let staticColorBehavior = CAEmitterCell.createEmitterBehavior(type: "colorOverLife")
+        staticColorBehavior.setValue(staticColors, forKey: "colors")
+        emitter.setValue([staticColorBehavior], forKey: "emitterBehaviors")
+        self.emitterLayer.emitterCells = [emitter]
+    }
+    
+    func update(color: UIColor, size: CGSize) {
+        if self.emitterLayer.emitterCells == nil {
+            self.setup(color: color, size: size)
+        }
+        self.emitterLayer.seed = UInt32.random(in: .min ..< .max)
+        self.emitterLayer.emitterShape = .circle
+        self.emitterLayer.emitterSize = size
+        self.emitterLayer.emitterMode = .surface
+        self.emitterLayer.frame = CGRect(origin: .zero, size: size)
+        self.emitterLayer.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+    }
+}
+
+
 private class GiftIconLayer: SimpleLayer {
     private let context: AccountContext
     private let gift: ProfileGiftsContext.State.StarGift
     private let size: CGSize
+    private let glowing: Bool
     
     let shadowLayer = SimpleLayer()
+    let starsLayer = StarsEffectLayer()
     let animationLayer: InlineStickerItemLayer
     
     override init(layer: Any) {
         guard let layer = layer as? GiftIconLayer else {
             fatalError()
         }
-        
+                
         let context = layer.context
         let gift = layer.gift
         let size = layer.size
-                
+        let glowing = layer.glowing
+        
         var file: TelegramMediaFile?
-        var color: UIColor?
+        var color: UIColor = .white
         switch gift.gift {
         case let .generic(gift):
             file = gift.file
@@ -585,29 +650,40 @@ private class GiftIconLayer: SimpleLayer {
         )
         
         self.shadowLayer.contents = shadowImage?.cgImage
-        self.shadowLayer.layerTintColor = color?.cgColor
+        self.shadowLayer.layerTintColor = color.cgColor
         
         self.context = context
         self.gift = gift
         self.size = size
+        self.glowing = glowing
         
         super.init()
         
-        self.addSublayer(self.shadowLayer)
+        let side = floor(size.width * 1.25)
+        let starsFrame = CGSize(width: side, height: side).centered(in: CGRect(origin: .zero, size: size))
+        self.starsLayer.frame = starsFrame
+        self.starsLayer.update(color: glowing ? .white : color, size: starsFrame.size)
+        
+        if glowing {
+            self.addSublayer(self.shadowLayer)
+        }
+        self.addSublayer(self.starsLayer)
         self.addSublayer(self.animationLayer)
     }
     
     init(
         context: AccountContext,
         gift: ProfileGiftsContext.State.StarGift,
-        size: CGSize
+        size: CGSize,
+        glowing: Bool
     ) {
         self.context = context
         self.gift = gift
         self.size = size
+        self.glowing = glowing
         
         var file: TelegramMediaFile?
-        var color: UIColor?
+        var color: UIColor = .white
         switch gift.gift {
         case let .generic(gift):
             file = gift.file
@@ -641,11 +717,19 @@ private class GiftIconLayer: SimpleLayer {
         )
         
         self.shadowLayer.contents = shadowImage?.cgImage
-        self.shadowLayer.layerTintColor = color?.cgColor
+        self.shadowLayer.layerTintColor = color.cgColor
         
         super.init()
         
-        self.addSublayer(self.shadowLayer)
+        let side = floor(size.width * 1.25)
+        let starsFrame = CGSize(width: side, height: side).centered(in: CGRect(origin: .zero, size: size))
+        self.starsLayer.frame = starsFrame
+        self.starsLayer.update(color: glowing ? .white : color, size: starsFrame.size)
+        
+        if glowing {
+            self.addSublayer(self.shadowLayer)
+        }
+        self.addSublayer(self.starsLayer)
         self.addSublayer(self.animationLayer)
     }
     
@@ -658,30 +742,26 @@ private class GiftIconLayer: SimpleLayer {
         self.animationLayer.frame = CGRect(origin: .zero, size: self.bounds.size)
     }
     
-    func startHovering(
-            distance: CGFloat = 3.0,
-            duration: TimeInterval = 4.0,
-            timingFunction: CAMediaTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        ) {
-            let hoverAnimation = CABasicAnimation(keyPath: "transform.translation.y")
-            hoverAnimation.duration = duration
-            hoverAnimation.fromValue = -distance
-            hoverAnimation.toValue = distance
-            hoverAnimation.autoreverses = true
-            hoverAnimation.repeatCount = .infinity
-            hoverAnimation.timingFunction = timingFunction
-            hoverAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
-            hoverAnimation.isAdditive = true
-            self.add(hoverAnimation, forKey: "hover")
-            
-            let glowAnimation = CABasicAnimation(keyPath: "transform.scale")
-            glowAnimation.duration = duration
-            glowAnimation.fromValue = 1.0
-            glowAnimation.toValue = 1.2
-            glowAnimation.autoreverses = true
-            glowAnimation.repeatCount = .infinity
-            glowAnimation.timingFunction = timingFunction
-            glowAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
-            self.shadowLayer.add(glowAnimation, forKey: "glow")
-        }
+    func startHovering(distance: CGFloat = 3.0, duration: TimeInterval = 4.0, timingFunction: CAMediaTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)) {
+        let hoverAnimation = CABasicAnimation(keyPath: "transform.translation.y")
+        hoverAnimation.duration = duration
+        hoverAnimation.fromValue = -distance
+        hoverAnimation.toValue = distance
+        hoverAnimation.autoreverses = true
+        hoverAnimation.repeatCount = .infinity
+        hoverAnimation.timingFunction = timingFunction
+        hoverAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
+        hoverAnimation.isAdditive = true
+        self.add(hoverAnimation, forKey: "hover")
+        
+        let glowAnimation = CABasicAnimation(keyPath: "transform.scale")
+        glowAnimation.duration = duration
+        glowAnimation.fromValue = 1.0
+        glowAnimation.toValue = 1.2
+        glowAnimation.autoreverses = true
+        glowAnimation.repeatCount = .infinity
+        glowAnimation.timingFunction = timingFunction
+        glowAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
+        self.shadowLayer.add(glowAnimation, forKey: "glow")
+    }
 }

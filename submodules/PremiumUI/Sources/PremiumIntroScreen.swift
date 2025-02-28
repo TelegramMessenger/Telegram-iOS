@@ -885,13 +885,7 @@ struct PremiumIntroConfiguration {
             if perks.count < 4 {
                 perks = PremiumIntroConfiguration.defaultValue.perks
             }
-            
-            #if DEBUG
-            if !perks.contains(.paidMessages) {
-                perks.append(.paidMessages)
-            }
-            #endif
-            
+                        
             var businessPerks: [PremiumPerk] = []
             if let values = data["business_promo_order"] as? [String] {
                 for value in values {
