@@ -302,10 +302,10 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 
                 let effectivePosition = interpolateRect(from: finalPosition, to: centerPosition, t: itemScaleFraction)
-                                
+                
                 transition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
                 transition.setPosition(layer: iconLayer, position: effectivePosition)
-                transition.setScale(layer: iconLayer, scale: iconPosition.scale)
+                transition.setScale(layer: iconLayer, scale: iconPosition.scale * (1.0 - itemScaleFraction))
                 transition.setAlpha(layer: iconLayer, alpha: 1.0 - itemScaleFraction)
                 
                 index += 1
@@ -437,8 +437,7 @@ private class PositionGenerator {
                 let randomFactor = 0.05 + (1.0 - baseScale) * 0.1
                 let randomValue = -randomFactor + CGFloat(self.rng.next()) * 2.0 * randomFactor
                 
-                let finalScale = min(1.1, max(baseScale * 0.7, baseScale + randomValue))
-                
+                let finalScale = min(1.2, max(baseScale * 0.65, baseScale + randomValue))
                 positions.append(Position(center: result, scale: finalScale))
             }
         }
@@ -460,7 +459,13 @@ private class PositionGenerator {
         
         for _ in 0..<4 {
             let min = self.minDistance + (totalRange * 0.19)
-            let max = self.minDistance + (totalRange * 0.6)
+            let max = self.minDistance + (totalRange * 0.55)
+            ranges.append((min, max))
+        }
+        
+        for _ in 0..<4 {
+            let min = self.minDistance + (totalRange * 0.6)
+            let max = self.minDistance + (totalRange * 0.9)
             ranges.append((min, max))
         }
         
