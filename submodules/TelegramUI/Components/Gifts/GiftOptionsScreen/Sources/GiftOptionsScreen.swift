@@ -869,6 +869,8 @@ final class GiftOptionsScreenComponent: Component {
             let optionSpacing: CGFloat = 10.0
             let optionWidth = (availableSize.width - sideInset * 2.0 - optionSpacing * 2.0) / 3.0
             
+            let showStarPrice = (self.starsState?.balance.value ?? 0) > 10
+            
             if isSelfGift || isChannelGift || isPremiumDisabled {
                 contentHeight += 6.0
             } else {
@@ -906,7 +908,7 @@ final class GiftOptionsScreenComponent: Component {
                         default:
                             title = strings.Gift_Options_Premium_Months(3)
                         }
-                                                                      
+                        
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(
@@ -920,7 +922,7 @@ final class GiftOptionsScreenComponent: Component {
                                             subject: .premium(months: product.months, price: product.price),
                                             title: title,
                                             subtitle: strings.Gift_Options_Premium_Premium,
-                                            label: product.starsPrice.flatMap { strings.Gift_Options_Premium_OrStars("**#\(presentationStringsFormattedNumber(Int32($0), environment.dateTimeFormat.groupingSeparator))**").string },
+                                            label: showStarPrice ? product.starsPrice.flatMap { strings.Gift_Options_Premium_OrStars("**#\(presentationStringsFormattedNumber(Int32($0), environment.dateTimeFormat.groupingSeparator))**").string } : nil,
                                             ribbon: product.discount.flatMap {
                                                 GiftItemComponent.Ribbon(
                                                     text:  "-\($0)%",
