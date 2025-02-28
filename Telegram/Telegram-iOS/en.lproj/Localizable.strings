@@ -13863,6 +13863,12 @@ Sorry for the inconvenience.";
 "Stars.Intro.Transaction.PaidMessage_1" = "Fee for %@ Message";
 "Stars.Intro.Transaction.PaidMessage_any" = "Fee for %@ Messages";
 
+"Stars.Transaction.TelegramPremium_1" = "Premium for %@ Month";
+"Stars.Transaction.TelegramPremium_any" = "Premium for %@ Months";
+
+"Stars.Intro.Transaction.TelegramPremium_1" = "Premium for %@ Month";
+"Stars.Intro.Transaction.TelegramPremium_any" = "Premium for %@ Months";
+
 "Stars.Purchase.SendMessageInfo" = "Buy Stars to send a message to **%@**.";
 "Stars.Purchase.SendGroupMessageInfo" = "Buy Stars to send a message in **%@**.";
 

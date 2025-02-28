@@ -1329,9 +1329,11 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         if !self.inputFieldNode.text.isEmpty {
             count += 1
         }
+        var chargingPeers: [EnginePeer] = []
         var totalAmount: StarsAmount = .zero
         for peer in peers {
             if let stars = requiresStars[peer.id] {
+                chargingPeers.append(peer)
                 totalAmount = totalAmount + StarsAmount(value: stars, nanos: 0)
             }
         }
@@ -1340,7 +1342,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 context: nil,
                 presentationData: self.presentationData,
                 updatedPresentationData: nil,
-                peers: peers,
+                peers: chargingPeers,
                 count: count,
                 amount: totalAmount,
                 totalAmount: totalAmount,

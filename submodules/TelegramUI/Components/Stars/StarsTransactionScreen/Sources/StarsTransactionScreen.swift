@@ -455,7 +455,9 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     switch transaction.peer {
                     case let .peer(peer):
-                        if transaction.flags.contains(.isPaidMessage) {
+                        if let months = transaction.premiumGiftMonths {
+                            titleText = strings.Stars_Transaction_TelegramPremium(months)
+                        } else if transaction.flags.contains(.isPaidMessage) {
                             isPaidMessage = true
                             titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
                         } else if !transaction.media.isEmpty {
@@ -474,8 +476,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                     case .fragment:
                         if parentPeer.id == component.context.account.peerId {
-                            titleText = strings.Stars_Transaction_FragmentTopUp_Title
-                            via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                            if (transaction.count.value < 0 && !transaction.flags.contains(.isRefund)) || (transaction.count.value > 0 && transaction.flags.contains(.isRefund)) {
+                                titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
+                                via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
+                            } else {
+                                titleText = strings.Stars_Transaction_FragmentTopUp_Title
+                                via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                            }
                         } else {
                             titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
                             via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle

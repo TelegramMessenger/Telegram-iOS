@@ -102,6 +102,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     let backgroundBannerView: UIView
     let backgroundCover = ComponentView<Empty>()
+    let giftsCover = ComponentView<Empty>()
     var didSetupBackgroundCover = false
     let buttonsContainerNode: SparseNode
     let buttonsBackgroundNode: NavigationBackgroundNode
@@ -491,7 +492,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentStatusIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, profileGiftsContext: ProfileGiftsContext?, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
         if self.appliedCustomNavigationContentNode !== self.customNavigationContentNode {
             if let previous = self.appliedCustomNavigationContentNode {
                 transition.updateAlpha(node: previous, alpha: 0.0, completion: { [weak previous] _ in
@@ -2332,6 +2333,35 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     Queue.mainQueue().after(0.5) {
                         self.invokeDisplayGiftInfo()
                     }
+                }
+            }
+        }
+        
+        if let profileGiftsContext, let peer {
+            let giftsCoverSize = self.giftsCover.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(PeerInfoGiftsCoverComponent(
+                    context: self.context,
+                    peerId: peer.id,
+                    giftsContext: profileGiftsContext,
+                    avatarCenter: apparentAvatarFrame.center,
+                    avatarScale: avatarScale,
+                    defaultHeight: backgroundDefaultHeight,
+                    avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
+                    patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction,
+                    hasButtons: !buttonKeys.isEmpty
+                )),
+                environment: {},
+                containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
+            )
+            if let giftsCoverView = self.giftsCover.view as? PeerInfoGiftsCoverComponent.View {
+                if giftsCoverView.superview == nil {
+                    self.backgroundBannerView.addSubview(giftsCoverView)
+                }
+                if additive {
+                    transition.updateFrameAdditive(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - giftsCoverSize.height - bannerInset), size: giftsCoverSize))
+                } else {
+                    transition.updateFrame(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - giftsCoverSize.height - bannerInset), size: giftsCoverSize))
                 }
             }
         }

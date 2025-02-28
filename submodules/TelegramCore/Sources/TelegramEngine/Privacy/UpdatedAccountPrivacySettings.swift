@@ -352,7 +352,8 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
     var noncontactPeersPaidStars: Int64?
     switch settings.nonContactChatsPrivacy {
     case .everybody:
-        break
+        flags |= 1 << 5
+        noncontactPeersPaidStars = 0
     case .requirePremium:
         flags |= 1 << 4
     case let .paidMessages(starsAmount):
