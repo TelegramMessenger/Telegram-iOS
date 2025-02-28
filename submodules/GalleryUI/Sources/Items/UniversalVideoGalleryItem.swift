@@ -1076,7 +1076,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     private var customUnembedWhenPortrait: ((OverlayMediaItemNode) -> Bool)?
 
-    private var pictureInPictureContent: AnyObject?
     private var nativePictureInPictureContent: AnyObject?
     
     private var activePictureInPictureNavigationController: NavigationController?
@@ -1543,10 +1542,6 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if let playbackRate = strongSelf.playbackRate {
                             strongSelf.videoNode?.setBaseRate(playbackRate)
                         }
-                    }
-                    
-                    if strongSelf.nativePictureInPictureContent == nil {
-                        strongSelf.setupNativePictureInPicture()
                     }
                 }
             }
@@ -2963,18 +2958,28 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
     
     @objc func pictureInPictureButtonPressed() {
-        if let currentPictureInPictureNode = self.context.sharedContext.mediaManager.currentPictureInPictureNode as? UniversalVideoGalleryItemNode, let currentItem = currentPictureInPictureNode.item, case let .message(currentMessage, _) = currentItem.contentInfo, case let .message(message, _) = self.item?.contentInfo, currentMessage.id == message.id {
-            if let controller = self.galleryController() as? GalleryController {
-                controller.dismiss(forceAway: true)
-            }
-            return
+        if self.nativePictureInPictureContent == nil {
+            self.setupNativePictureInPicture()
         }
         
-        if #available(iOS 15.0, *) {
-            if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
-                addAppLogEvent(postbox: self.context.account.postbox, type: "pip_btn", peerId: self.context.account.peerId)
-                nativePictureInPictureContent.beginPictureInPicture()
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
                 return
+            }
+            
+            if let currentPictureInPictureNode = self.context.sharedContext.mediaManager.currentPictureInPictureNode as? UniversalVideoGalleryItemNode, let currentItem = currentPictureInPictureNode.item, case let .message(currentMessage, _) = currentItem.contentInfo, case let .message(message, _) = self.item?.contentInfo, currentMessage.id == message.id {
+                if let controller = self.galleryController() as? GalleryController {
+                    controller.dismiss(forceAway: true)
+                }
+                return
+            }
+            
+            if #available(iOS 15.0, *) {
+                if let nativePictureInPictureContent = self.nativePictureInPictureContent as? NativePictureInPictureContentImpl {
+                    addAppLogEvent(postbox: self.context.account.postbox, type: "pip_btn", peerId: self.context.account.peerId)
+                    nativePictureInPictureContent.beginPictureInPicture()
+                    return
+                }
             }
         }
     }
