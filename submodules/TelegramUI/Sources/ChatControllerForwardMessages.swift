@@ -111,9 +111,11 @@ extension ChatControllerImpl {
                         count += 1
                     }
                     var totalAmount: StarsAmount = .zero
+                    var chargingPeers: [EnginePeer] = []
                     for peer in peers {
                         if let maybeAmount = sendPaidMessageStars[peer.id], let amount = maybeAmount {
                             totalAmount = totalAmount + amount
+                            chargingPeers.append(peer)
                         }
                     }
                                         
@@ -320,7 +322,7 @@ extension ChatControllerImpl {
                             context: nil,
                             presentationData: strongSelf.presentationData,
                             updatedPresentationData: nil,
-                            peers: peers,
+                            peers: chargingPeers,
                             count: count,
                             amount: totalAmount,
                             totalAmount: totalAmount,

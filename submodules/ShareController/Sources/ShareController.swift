@@ -674,8 +674,8 @@ public final class ShareController: ViewController {
         
         if case let .messages(messages) = self.subject {
             messageCount = messages.count
-        } else if case let .image(images) = self.subject {
-            messageCount = images.count
+        } else if case .image = self.subject {
+            messageCount = 1
         } else if case let .fromExternal(count, _) = self.subject {
             messageCount = count
         }
@@ -2516,6 +2516,8 @@ public final class ShareController: ViewController {
                         peers.append(EngineRenderedPeer(entryData.renderedPeer))
                         if let user = peer as? TelegramUser, user.flags.contains(.requirePremium) || user.flags.contains(.requireStars) {
                             possiblePremiumRequiredPeers.insert(user.id)
+                        } else if let channel = peer as? TelegramChannel, let _ = channel.sendPaidMessageStars {
+                            possiblePremiumRequiredPeers.insert(channel.id)
                         }
                     }
                 default:
@@ -2529,6 +2531,7 @@ public final class ShareController: ViewController {
             keys.append(peerPresencesKey)
             
             for id in possiblePremiumRequiredPeers {
+                keys.append(.basicPeer(id))
                 keys.append(.cachedPeerData(peerId: id))
             }
             
@@ -2546,6 +2549,8 @@ public final class ShareController: ViewController {
                     if let view = views.views[.cachedPeerData(peerId: id)] as? CachedPeerDataView, let data = view.cachedPeerData as? CachedUserData {
                         requiresPremiumForMessaging[id] = data.flags.contains(.premiumRequired)
                         requiresStars[id] = data.sendPaidMessageStars?.value
+                    } else if let view = views.views[.basicPeer(id)] as? BasicPeerView, let channel = view.peer as? TelegramChannel {
+                        requiresStars[id] = channel.sendPaidMessageStars?.value
                     } else {
                         requiresPremiumForMessaging[id] = false
                     }

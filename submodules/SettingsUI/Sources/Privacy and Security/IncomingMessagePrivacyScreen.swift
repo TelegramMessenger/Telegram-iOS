@@ -346,7 +346,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                     updateState { state in
                         var updatedState = state
                         updatedState.disableFor = updatedPeerIds
-                        return state
+                        return updatedState
                     }
                     let settings: SelectivePrivacySettings = .enableContacts(enableFor: updatedPeerIds, disableFor: [:], enableForPremium: false, enableForBots: false)
                     let _ = context.engine.privacy.updateSelectiveAccountPrivacySettings(type: .noPaidMessages, settings: settings).start()

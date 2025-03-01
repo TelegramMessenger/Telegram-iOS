@@ -276,11 +276,18 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
             self.sendButton.imageNode.alpha = 0.0
             self.textNode.isHidden = false
             
-            var amount = sendPaidMessageStars.value
+            var amount: Int64
             if let forwardedCount = interfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
                 amount = sendPaidMessageStars.value * Int64(forwardedCount)
                 if interfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
                     amount += sendPaidMessageStars.value
+                }
+            } else {
+                if interfaceState.interfaceState.effectiveInputState.inputText.length > 4096 {
+                    let messageCount = Int32(ceil(CGFloat(interfaceState.interfaceState.effectiveInputState.inputText.length) / 4096.0))
+                    amount = sendPaidMessageStars.value * Int64(messageCount)
+                } else {
+                    amount = sendPaidMessageStars.value
                 }
             }
             

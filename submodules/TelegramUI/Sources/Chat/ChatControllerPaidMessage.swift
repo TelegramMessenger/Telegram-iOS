@@ -28,9 +28,13 @@ extension ChatControllerImpl {
                 guard let self, let starsContext = self.context.starsContext else {
                     return
                 }
-                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance.value > totalAmount, count < 3 && totalAmount < 100 {
-                    completion(true)
-                    self.displayPaidMessageUndo(count: count, amount: sendPaidMessageStars)
+                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance.value > totalAmount {
+                    if count < 3 && totalAmount < 100 {
+                        completion(false)
+                    } else {
+                        completion(true)
+                        self.displayPaidMessageUndo(count: count, amount: sendPaidMessageStars)
+                    }
                 } else {
                     var presentationData = self.presentationData
                     if forceDark {

@@ -40,6 +40,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
     private var itemNodes: [MediaId: HorizontalStickerGridItemNode] = [:]
     
     private var validLayout: CGSize?
+    fileprivate weak var currentInterfaceState: ChatPresentationInterfaceState?
     private var ignoreScrolling: Bool = false
     private var animateInOnLayout: Bool = false
     
@@ -123,18 +124,20 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                 })))
                             }
                         
-                            menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                if let strongSelf = self, let peekController = strongSelf.peekController {
-                                    if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, animationNode.view, animationNode.bounds, nil, [])
-                                    } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, imageNode.view, imageNode.bounds, nil, [])
+                            if strongSelf.currentInterfaceState?.sendPaidMessageStars == nil {
+                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    if let strongSelf = self, let peekController = strongSelf.peekController {
+                                        if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, animationNode.view, animationNode.bounds, nil, [])
+                                        } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, imageNode.view, imageNode.bounds, nil, [])
+                                        }
                                     }
-                                }
-                                f(.default)
-                            })))
+                                    f(.default)
+                                })))
+                            }
                             
                             menuItems.append(
                                 .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -604,6 +607,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = (size, leftInset)
+        self.stickersNode.currentInterfaceState = interfaceState
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         

@@ -566,11 +566,11 @@ extension ChatControllerImpl {
                                                 }
                                             }
                                             enqueueMessages.append(.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
-                                            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                                            strongSelf.presentPaidMessageAlertIfNeeded(count: Int32(enqueueMessages.count), completion: { [weak self] postpone in
                                                 guard let strongSelf = self else {
                                                     return
                                                 }
-                                                strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime), postpone: postpone)
+                                                strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime, postpone: postpone), postpone: postpone)
                                             })
                                         } else {
                                             let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: ShareControllerAppAccountContext(context: strongSelf.context), environment: ShareControllerAppEnvironment(sharedContext: strongSelf.context.sharedContext), subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
@@ -596,11 +596,11 @@ extension ChatControllerImpl {
                                                         enqueueMessages.append(textEnqueueMessage)
                                                     }
                                                     enqueueMessages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: media), threadId: strongSelf.chatLocation.threadId, replyToMessageId: replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
-                                                    strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                                                    strongSelf.presentPaidMessageAlertIfNeeded(count: Int32(enqueueMessages.count), completion: { [weak self] postpone in
                                                         guard let strongSelf = self else {
                                                             return
                                                         }
-                                                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime), postpone: postpone)
+                                                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime, postpone: postpone), postpone: postpone)
                                                     })
                                                 }
                                             }), completed: nil, cancelled: nil)
@@ -1834,7 +1834,7 @@ extension ChatControllerImpl {
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             
-            presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, parameters in
+            presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars?.value ?? 0, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, parameters in
                 if let strongSelf = self {
                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, parameters: parameters)
                     if !inputText.string.isEmpty {

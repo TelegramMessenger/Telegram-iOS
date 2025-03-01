@@ -429,15 +429,17 @@ final class StoryItemSetContainerSendMessage {
             })))
         }
         
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self, weak view] _, a in
-            a(.default)
-            
-            guard let self, let view else {
-                return
-            }
-            self.presentScheduleTimePicker(view: view)
-        })))
+        if component.slice.additionalPeerData.sendPaidMessageStars == nil {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self, weak view] _, a in
+                a(.default)
+                
+                guard let self, let view else {
+                    return
+                }
+                self.presentScheduleTimePicker(view: view)
+            })))
+        }
         
         
         let contextItems = ContextController.Items(content: .list(items))

@@ -533,6 +533,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let selectAddMemberDisposable = MetaDisposable()
     let addMemberDisposable = MetaDisposable()
     let joinChannelDisposable = MetaDisposable()
+    var premiumOrStarsRequiredDisposable: Disposable?
     
     var shouldDisplayDownButton = false
 
@@ -5976,6 +5977,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                         }
                         
+                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                            strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
+                        }
+                        
                         var adMessage = adMessage
                         if let peer = peerView.peers[peerView.peerId] as? TelegramUser, peer.botInfo != nil {
                         } else {
@@ -6646,6 +6651,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                                 appliedBoosts = cachedChannelData.appliedBoosts
                                 boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                            }
+                            
+                            if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                                strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
                             }
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
@@ -7355,6 +7364,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.displaySendWhenOnlineTipDisposable.dispose()
             self.networkSpeedEventsDisposable?.dispose()
             self.postedScheduledMessagesEventsDisposable?.dispose()
+            self.premiumOrStarsRequiredDisposable?.dispose()
         }
         deallocate()
     }
@@ -9031,40 +9041,45 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
-                    })
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
                 }
-            }, nil)
-            let message: EnqueueMessage = .message(
-                text: "",
-                attributes: [],
-                inlineStickers: [:],
-                mediaReference: .standalone(media: TelegramMediaPoll(
-                    pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
-                    publicity: poll.publicity,
-                    kind: poll.kind,
-                    text: poll.text.string,
-                    textEntities: poll.text.entities,
-                    options: poll.options,
-                    correctAnswers: poll.correctAnswers,
-                    results: poll.results,
-                    isClosed: false,
-                    deadlineTimeout: poll.deadlineTimeout
-                )),
-                threadId: strongSelf.chatLocation.threadId,
-                replyToMessageId: nil,
-                replyToStoryId: nil,
-                localGroupingKey: nil,
-                correlationId: nil,
-                bubbleUpEmojiOrStickersets: []
-            )
-            strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                        })
+                    }
+                }, nil)
+                let message: EnqueueMessage = .message(
+                    text: "",
+                    attributes: [],
+                    inlineStickers: [:],
+                    mediaReference: .standalone(media: TelegramMediaPoll(
+                        pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
+                        publicity: poll.publicity,
+                        kind: poll.kind,
+                        text: poll.text.string,
+                        textEntities: poll.text.entities,
+                        options: poll.options,
+                        correctAnswers: poll.correctAnswers,
+                        results: poll.results,
+                        isClosed: false,
+                        deadlineTimeout: poll.deadlineTimeout
+                    )),
+                    threadId: strongSelf.chatLocation.threadId,
+                    replyToMessageId: nil,
+                    replyToStoryId: nil,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                )
+                strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+            })
         })
     }
     
@@ -9273,7 +9288,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var attributes = attributes
                 
                 if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
-                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: postpone))
+                    var effectivePostpone = postpone
+                    for i in (0 ..< attributes.count).reversed() {
+                        if let paidStarsMessageAttribute = attributes[i] as? PaidStarsMessageAttribute {
+                            effectivePostpone = effectivePostpone || paidStarsMessageAttribute.postponeSending
+                            attributes.remove(at: i)
+                        }
+                    }
+                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: effectivePostpone))
                 }
                 
                 if silentPosting || scheduleTime != nil {

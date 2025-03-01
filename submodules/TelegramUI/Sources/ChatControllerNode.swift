@@ -886,12 +886,14 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                     self.controllerInteraction.scheduleCurrentMessage(nil)
                 } else {
                     if let _ = self.chatPresentationInterfaceState.sendPaidMessageStars {
-                        var count: Int32 = 1
+                        var count: Int32
                         if let forwardedCount = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
                             count = Int32(forwardedCount)
                             if self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
                                 count += 1
                             }
+                        } else {
+                            count = Int32(ceil(CGFloat(self.chatPresentationInterfaceState.interfaceState.effectiveInputState.inputText.length) / 4096.0))
                         }
                         controller.presentPaidMessageAlertIfNeeded(count: count, completion: { [weak self] postpone in
                             self?.sendCurrentMessage(postpone: postpone)
