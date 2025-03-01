@@ -254,6 +254,7 @@ public final class PendingMessageManager {
                     context.sendDisposable.dispose()
                     context.uploadDisposable.dispose()
                     context.activityDisposable.dispose()
+                    context.postponeDisposable.dispose()
                     
                     if context.status != nil {
                         context.status = nil
