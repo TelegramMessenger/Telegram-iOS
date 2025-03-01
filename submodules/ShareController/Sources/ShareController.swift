@@ -674,8 +674,8 @@ public final class ShareController: ViewController {
         
         if case let .messages(messages) = self.subject {
             messageCount = messages.count
-        } else if case let .image(images) = self.subject {
-            messageCount = images.count
+        } else if case .image = self.subject {
+            messageCount = 1
         } else if case let .fromExternal(count, _) = self.subject {
             messageCount = count
         }

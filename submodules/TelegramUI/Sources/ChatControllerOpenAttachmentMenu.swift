@@ -1834,7 +1834,7 @@ extension ChatControllerImpl {
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
             
-            presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, parameters in
+            presentedLegacyCamera(context: strongSelf.context, peer: strongSelf.presentationInterfaceState.renderedPeer?.peer, chatLocation: strongSelf.chatLocation, cameraView: cameraView, menuController: nil, parentController: strongSelf, attachmentController: self?.attachmentController, editingMedia: false, saveCapturedPhotos: storeCapturedMedia, mediaGrouping: true, initialCaption: inputText, hasSchedule: hasSchedule, enablePhoto: enablePhoto, enableVideo: enableVideo, sendPaidMessageStars: strongSelf.presentationInterfaceState.sendPaidMessageStars?.value ?? 0, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime, parameters in
                 if let strongSelf = self {
                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil, parameters: parameters)
                     if !inputText.string.isEmpty {

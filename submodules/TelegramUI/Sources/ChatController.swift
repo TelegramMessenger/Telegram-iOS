@@ -9288,12 +9288,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var attributes = attributes
                 
                 if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
+                    var effectivePostpone = postpone
                     for i in (0 ..< attributes.count).reversed() {
-                        if attributes[i] is PaidStarsMessageAttribute {
+                        if let paidStarsMessageAttribute = attributes[i] as? PaidStarsMessageAttribute {
+                            effectivePostpone = effectivePostpone || paidStarsMessageAttribute.postponeSending
                             attributes.remove(at: i)
                         }
                     }
-                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: postpone))
+                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: effectivePostpone))
                 }
                 
                 if silentPosting || scheduleTime != nil {
