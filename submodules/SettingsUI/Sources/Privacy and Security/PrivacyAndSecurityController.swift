@@ -432,7 +432,11 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 })
             case let .messagePrivacy(theme, value, hasPremium):
                 let label: String
-                switch value {
+                var effectiveValue = value
+                if !hasPremium {
+                    effectiveValue = .everybody
+                }
+                switch effectiveValue {
                 case .everybody:
                     label = presentationData.strings.Settings_Privacy_Messages_ValueEveryone
                 case .requirePremium:
@@ -669,7 +673,7 @@ private func privacyAndSecurityControllerEntries(
         entries.append(.forwardPrivacy(presentationData.theme, presentationData.strings.Privacy_Forwards, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.forwards)))
         entries.append(.voiceCallPrivacy(presentationData.theme, presentationData.strings.Privacy_Calls, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceCalls)))
         if !isPremiumDisabled || isPremium {
-            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.voiceMessages), isPremium))
+            entries.append(.voiceMessagePrivacy(presentationData.theme, presentationData.strings.Privacy_VoiceMessages, stringForSelectiveSettings(strings: presentationData.strings, settings: isPremium ? privacySettings.voiceMessages : .enableEveryone(disableFor: [:])), isPremium))
             entries.append(.messagePrivacy(presentationData.theme, privacySettings.globalSettings.nonContactChatsPrivacy, isPremium))
         }
         entries.append(.groupPrivacy(presentationData.theme, presentationData.strings.PrivacySettings_InviteItem, stringForSelectiveSettings(strings: presentationData.strings, settings: privacySettings.groupInvitations)))

@@ -243,6 +243,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var giftAvailability: StarGift.Gift.Availability?
             var isRefProgram = false
             var isPaidMessage = false
+            var premiumGiftMonths: Int32?
             
             var delayedCloseOnOpenPeer = true
             switch subject {
@@ -456,6 +457,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     switch transaction.peer {
                     case let .peer(peer):
                         if let months = transaction.premiumGiftMonths {
+                            premiumGiftMonths = months
                             titleText = strings.Stars_Transaction_TelegramPremium(months)
                         } else if transaction.flags.contains(.isPaidMessage) {
                             isPaidMessage = true
@@ -679,8 +681,18 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let imageSubject: StarsImageComponent.Subject
             var imageIcon: StarsImageComponent.Icon?
-            if isGift {
-                imageSubject = .gift(count.value)
+            if let premiumGiftMonths {
+                imageSubject = .gift(premiumGiftMonths)
+            } else if isGift {
+                var value: Int32 = 3
+                if count.value <= 1000 {
+                    value = 3
+                } else if count.value < 2500 {
+                    value = 6
+                } else {
+                    value = 12
+                }
+                imageSubject = .gift(value)
             } else if !media.isEmpty {
                 imageSubject = .media(media)
             } else if let photo {
@@ -1852,13 +1864,16 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
-            self.dismissAnimated()
             let _ = (context.engine.privacy.requestAccountPrivacySettings()
-            |> deliverOnMainQueue).start(next: { [weak navigationController] privacySettings in
+            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] privacySettings in
                 let controller = context.sharedContext.makeIncomingMessagePrivacyScreen(context: context, value: privacySettings.globalSettings.nonContactChatsPrivacy, exceptions: privacySettings.noPaidMessages, update: { settingValue in
                     let _ = context.engine.privacy.updateNonContactChatsPrivacy(value: settingValue).start()
                 })
                 navigationController?.pushViewController(controller)
+                
+                Queue.mainQueue().after(0.6) {
+                    self?.dismissAnimated()
+                }
             })
         }
         

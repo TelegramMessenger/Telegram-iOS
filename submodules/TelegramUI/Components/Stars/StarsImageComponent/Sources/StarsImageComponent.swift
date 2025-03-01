@@ -253,7 +253,7 @@ public final class StarsImageComponent: Component {
         case media([AnyMediaReference])
         case extendedMedia([TelegramExtendedMedia])
         case transactionPeer(StarsContext.State.Transaction.Peer)
-        case gift(Int64)
+        case gift(Int32)
         case color(UIColor)
         
         public static func == (lhs: StarsImageComponent.Subject, rhs: StarsImageComponent.Subject) -> Bool {
@@ -850,14 +850,7 @@ public final class StarsImageComponent: Component {
                 if let current = self.animationNode {
                     animationNode = current
                 } else {
-                    let stickerName: String
-                    if count <= 1000 {
-                        stickerName = "Gift3"
-                    } else if count < 2500 {
-                        stickerName = "Gift6"
-                    } else {
-                        stickerName = "Gift12"
-                    }
+                    let stickerName: String = "Gift\(count)"
                     animationNode = DefaultAnimatedStickerNodeImpl()
                     animationNode.autoplay = true
                     animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: stickerName), width: 384, height: 384, playbackMode: .still(.end), mode: .direct(cachePathPrefix: nil))
