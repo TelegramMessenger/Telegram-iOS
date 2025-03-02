@@ -924,13 +924,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(strongSelf.titleStatusIconView, uniqueGiftSlug)
+                        if let uniqueGiftSlug, !self.isSettings {
+                            self.openUniqueGift?(self.titleStatusIconView, uniqueGiftSlug)
                         } else {
-                            strongSelf.displayPremiumIntro?(strongSelf.titleStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
+                            self.displayPremiumIntro?(self.titleStatusIconView, currentEmojiStatus, self.emojiStatusFileAndPackTitle.get(), false)
                         }
                     },
                     emojiFileUpdated: { [weak self] emojiFile in
@@ -985,13 +985,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(strongSelf.titleExpandedStatusIconView, uniqueGiftSlug)
+                        if let uniqueGiftSlug, !self.isSettings {
+                            self.openUniqueGift?(self.titleExpandedStatusIconView, uniqueGiftSlug)
                         } else {
-                            strongSelf.displayPremiumIntro?(strongSelf.titleExpandedStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
+                            self.displayPremiumIntro?(self.titleExpandedStatusIconView, currentEmojiStatus, self.emojiStatusFileAndPackTitle.get(), true)
                         }
                     }
                 )),
@@ -2306,7 +2306,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subject: backgroundCoverSubject,
                 files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
-                avatarCenter: apparentAvatarFrame.center,
+                avatarCenter: apparentAvatarFrame.center.offsetBy(dx: bannerInset, dy: 0.0),
                 avatarScale: avatarScale,
                 defaultHeight: backgroundDefaultHeight,
                 gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),
@@ -2321,9 +2321,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
             if additive {
-                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             } else {
-                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             }
             if backgroundCoverAnimateIn {
                 if !self.isAvatarExpanded {
@@ -2351,24 +2351,32 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     giftsContext: profileGiftsContext,
                     hasBackground: hasBackground,
                     avatarCenter: apparentAvatarFrame.center,
-                    avatarScale: avatarScale,
-                    defaultHeight: backgroundDefaultHeight,
                     avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
-                    patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction,
-                    hasButtons: !buttonKeys.isEmpty
+                    statusBarHeight: statusBarHeight,
+                    topLeftButtonsSize: CGSize(width: (self.isSettings ? 57.0 : 47.0), height: 46.0),
+                    topRightButtonsSize: CGSize(width: 76.0 + (self.isMyProfile ? 38.0 : 0.0), height: 46.0),
+                    titleWidth: titleFrame.width + 42.0,
+                    hasButtons: !buttonKeys.isEmpty,
+                    action: { [weak self] gift in
+                        guard let self, case let .unique(gift) = gift.gift else {
+                            return
+                        }
+                        self.openUniqueGift?(self.view, gift.slug)
+                    }
                 )),
                 environment: {},
-                containerSize: CGSize(width: width + bannerInset * 2.0, height: apparentBackgroundHeight + bannerInset)
+                containerSize: CGSize(width: width, height: apparentBackgroundHeight)
             )
             if let giftsCoverView = self.giftsCover.view as? PeerInfoGiftsCoverComponent.View {
                 if giftsCoverView.superview == nil {
-                    self.backgroundBannerView.addSubview(giftsCoverView)
+                    self.view.insertSubview(giftsCoverView, aboveSubview: self.backgroundBannerView)
                 }
                 if additive {
-                    transition.updateFrameAdditive(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - giftsCoverSize.height - bannerInset), size: giftsCoverSize))
+                    transition.updateFrameAdditive(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: giftsCoverSize))
                 } else {
-                    transition.updateFrame(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - giftsCoverSize.height - bannerInset), size: giftsCoverSize))
+                    transition.updateFrame(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: giftsCoverSize))
                 }
+                navigationTransition.updateAlpha(layer: giftsCoverView.layer, alpha: backgroundBannerAlpha)
             }
         }
         
@@ -2488,6 +2496,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let result = self.buttonsContainerNode.view.hitTest(self.view.convert(point, to: self.buttonsContainerNode.view), with: event) {
             return result
+        }
+        
+        if let giftsCoverView = self.giftsCover.view, giftsCoverView.alpha > 0.0, giftsCoverView.point(inside: self.view.convert(point, to: giftsCoverView), with: event) {
+            return giftsCoverView
         }
         
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {

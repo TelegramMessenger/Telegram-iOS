@@ -11,53 +11,7 @@ import SwiftSignalKit
 import EmojiTextAttachmentView
 import LokiRng
 import TextFormat
-
-private final class PatternContentsTarget: MultiAnimationRenderTarget {
-    private let imageUpdated: (Bool) -> Void
-    
-    init(imageUpdated: @escaping (Bool) -> Void) {
-        self.imageUpdated = imageUpdated
-        
-        super.init()
-    }
-    
-    required init(coder: NSCoder) {
-        preconditionFailure()
-    }
-    
-    override func transitionToContents(_ contents: AnyObject, didLoop: Bool) {
-        let hadContents = self.contents != nil
-        self.contents = contents
-        self.imageUpdated(hadContents)
-    }
-}
-
-private func windowFunction(t: CGFloat) -> CGFloat {
-    return bezierPoint(0.6, 0.0, 0.4, 1.0, t)
-}
-
-private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -> CGFloat {
-    let windowSize: CGFloat = 0.8
-
-    let effectiveT: CGFloat
-    let windowStartOffset: CGFloat
-    let windowEndOffset: CGFloat
-    if reverse {
-        effectiveT = 1.0 - t
-        windowStartOffset = 1.0
-        windowEndOffset = -windowSize
-    } else {
-        effectiveT = t
-        windowStartOffset = -windowSize
-        windowEndOffset = 1.0
-    }
-
-    let windowPosition = (1.0 - fraction) * windowStartOffset + fraction * windowEndOffset
-    let windowT = max(0.0, min(windowSize, effectiveT - windowPosition)) / windowSize
-    let localT = 1.0 - windowFunction(t: windowT)
-
-    return localT
-}
+import HierarchyTrackingLayer
 
 public final class PeerInfoGiftsCoverComponent: Component {
     public let context: AccountContext
@@ -65,11 +19,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
     public let giftsContext: ProfileGiftsContext
     public let hasBackground: Bool
     public let avatarCenter: CGPoint
-    public let avatarScale: CGFloat
-    public let defaultHeight: CGFloat
     public let avatarTransitionFraction: CGFloat
-    public let patternTransitionFraction: CGFloat
+    public let statusBarHeight: CGFloat
+    public let topLeftButtonsSize: CGSize
+    public let topRightButtonsSize: CGSize
+    public let titleWidth: CGFloat
     public let hasButtons: Bool
+    public let action: (ProfileGiftsContext.State.StarGift) -> Void
     
     public init(
         context: AccountContext,
@@ -77,22 +33,26 @@ public final class PeerInfoGiftsCoverComponent: Component {
         giftsContext: ProfileGiftsContext,
         hasBackground: Bool,
         avatarCenter: CGPoint,
-        avatarScale: CGFloat,
-        defaultHeight: CGFloat,
         avatarTransitionFraction: CGFloat,
-        patternTransitionFraction: CGFloat,
-        hasButtons: Bool
+        statusBarHeight: CGFloat,
+        topLeftButtonsSize: CGSize,
+        topRightButtonsSize: CGSize,
+        titleWidth: CGFloat,
+        hasButtons: Bool,
+        action: @escaping (ProfileGiftsContext.State.StarGift) -> Void
     ) {
         self.context = context
         self.peerId = peerId
         self.giftsContext = giftsContext
         self.hasBackground = hasBackground
         self.avatarCenter = avatarCenter
-        self.avatarScale = avatarScale
-        self.defaultHeight = defaultHeight
         self.avatarTransitionFraction = avatarTransitionFraction
-        self.patternTransitionFraction = patternTransitionFraction
+        self.statusBarHeight = statusBarHeight
+        self.topLeftButtonsSize = topLeftButtonsSize
+        self.topRightButtonsSize = topRightButtonsSize
+        self.titleWidth = titleWidth
         self.hasButtons = hasButtons
+        self.action = action
     }
     
     public static func ==(lhs: PeerInfoGiftsCoverComponent, rhs: PeerInfoGiftsCoverComponent) -> Bool {
@@ -108,16 +68,19 @@ public final class PeerInfoGiftsCoverComponent: Component {
         if lhs.avatarCenter != rhs.avatarCenter {
             return false
         }
-        if lhs.avatarScale != rhs.avatarScale {
-            return false
-        }
-        if lhs.defaultHeight != rhs.defaultHeight {
-            return false
-        }
         if lhs.avatarTransitionFraction != rhs.avatarTransitionFraction {
             return false
         }
-        if lhs.patternTransitionFraction != rhs.patternTransitionFraction {
+        if lhs.statusBarHeight != rhs.statusBarHeight {
+            return false
+        }
+        if lhs.topLeftButtonsSize != rhs.topLeftButtonsSize {
+            return false
+        }
+        if lhs.topRightButtonsSize != rhs.topRightButtonsSize {
+            return false
+        }
+        if lhs.titleWidth != rhs.titleWidth {
             return false
         }
         if lhs.hasButtons != rhs.hasButtons {
@@ -127,11 +90,6 @@ public final class PeerInfoGiftsCoverComponent: Component {
     }
     
     public final class View: UIView {
-        private let avatarBackgroundPatternContentsLayer: SimpleGradientLayer
-        private let avatarBackgroundPatternMaskLayer: SimpleLayer
-        private let avatarBackgroundGradientLayer: SimpleGradientLayer
-        private let backgroundPatternContainer: UIView
-        
         private var currentSize: CGSize?
         private var component: PeerInfoGiftsCoverComponent?
         private var state: EmptyComponentState?
@@ -141,33 +99,37 @@ public final class PeerInfoGiftsCoverComponent: Component {
         private var appliedGiftIds: [Int64] = []
         
         private var iconLayers: [AnyHashable: GiftIconLayer] = [:]
-        
         private var iconPositions: [PositionGenerator.Position] = []
+        private let seed = UInt(Date().timeIntervalSince1970)
+        
+        private let trackingLayer = HierarchyTrackingLayer()
+        private var isCurrentlyInHierarchy = false
+        
+        private var isUpdating = false
         
         override public init(frame: CGRect) {
-            self.avatarBackgroundGradientLayer = SimpleGradientLayer()
-            self.avatarBackgroundGradientLayer.opacity = 0.0
-          
-            self.avatarBackgroundGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-            self.avatarBackgroundGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-            self.avatarBackgroundGradientLayer.type = .radial
-            
-            self.avatarBackgroundPatternContentsLayer = SimpleGradientLayer()
-            self.avatarBackgroundPatternContentsLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-            self.avatarBackgroundPatternContentsLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-            self.avatarBackgroundPatternContentsLayer.type = .radial
-            
-            self.avatarBackgroundPatternMaskLayer = SimpleLayer()
-            self.backgroundPatternContainer = UIView()
-            
             super.init(frame: frame)
             
             self.clipsToBounds = true
-                        
-            self.avatarBackgroundPatternContentsLayer.mask = self.avatarBackgroundPatternMaskLayer
-            self.layer.addSublayer(self.avatarBackgroundPatternContentsLayer)
             
-            self.addSubview(self.backgroundPatternContainer)
+            self.layer.addSublayer(self.trackingLayer)
+            
+            self.trackingLayer.didEnterHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isCurrentlyInHierarchy = true
+                self.updateAnimations()
+            }
+            
+            self.trackingLayer.didExitHierarchy = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.isCurrentlyInHierarchy = false
+            }
+            
+            self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapped(_:))))
         }
         
         required public init?(coder aDecoder: NSCoder) {
@@ -178,7 +140,38 @@ public final class PeerInfoGiftsCoverComponent: Component {
             self.giftsDisposable?.dispose()
         }
         
-        private var isUpdating = false
+        @objc private func tapped(_ gestureRecognizer: UITapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            let location = gestureRecognizer.location(in: self)
+            for (_, iconLayer) in self.iconLayers {
+                if iconLayer.frame.contains(location) {
+                    component.action(iconLayer.gift)
+                    break
+                }
+            }
+        }
+        
+        public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            for (_, iconLayer) in self.iconLayers {
+                if iconLayer.frame.contains(point) {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        func updateAnimations() {
+            var index = 0
+            for (_, iconLayer) in self.iconLayers {
+                if self.isCurrentlyInHierarchy {
+                    iconLayer.startAnimations(index: index)
+                }
+                index += 1
+            }
+        }
+    
         func update(component: PeerInfoGiftsCoverComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             self.isUpdating = true
             defer {
@@ -202,26 +195,30 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
             }
             
-            if previousCurrentSize?.width != availableSize.width || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds {
+            if !giftIds.isEmpty && (self.iconPositions.isEmpty || previousCurrentSize?.width != availableSize.width || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds) {
                 var excludeRects: [CGRect] = []
-                excludeRects.append(CGRect(origin: .zero, size: CGSize(width: 50.0, height: 90.0)))
-                excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - 105.0, y: 0.0), size: CGSize(width: 105.0, height: 90.0)))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - 390.0) / 2.0), y: 0.0), size: CGSize(width: 390.0, height: 50.0)))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - 280.0) / 2.0), y: component.avatarCenter.y + 56.0), size: CGSize(width: 280.0, height: 65.0)))
+                if component.statusBarHeight > 0.0 {
+                    excludeRects.append(CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: component.statusBarHeight + 4.0)))
+                }
+                excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.statusBarHeight), size: component.topLeftButtonsSize))
+                excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - component.topRightButtonsSize.width, y: component.statusBarHeight), size: component.topRightButtonsSize))
+                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: component.avatarCenter.y + 56.0), size: CGSize(width: component.titleWidth, height: 72.0)))
                 if component.hasButtons {
                     excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - 81.0), size: CGSize(width: availableSize.width, height: 81.0)))
                 }
-                
+                                
                 let positionGenerator = PositionGenerator(
                     containerSize: availableSize,
-                    avatarFrame: CGSize(width: 100, height: 100).centered(around: component.avatarCenter),
-                    minDistance: 75.0,
-                    maxDistance: availableSize.width / 2.0,
-                    padding: 12.0,
-                    seed: UInt(Date().timeIntervalSince1970),
-                    excludeRects: excludeRects
+                    centerFrame: CGSize(width: 100, height: 100).centered(around: component.avatarCenter),
+                    exclusionZones: excludeRects,
+                    minimumDistance: 42.0,
+                    edgePadding: 5.0,
+                    seed: self.seed
                 )
-                self.iconPositions = positionGenerator.generatePositions(count: 9, viewSize: iconSize)
+                
+                let start = CACurrentMediaTime()
+                self.iconPositions = positionGenerator.generatePositions(count: 12, itemSize: iconSize)
+                print("generated icon positions in \( CACurrentMediaTime() - start )s")
             }
             self.appliedGiftIds = giftIds
             
@@ -257,22 +254,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     }
                 })
             }
-                                              
-            let avatarPatternFrame = CGSize(width: 380.0, height: floor(component.defaultHeight * 1.0)).centered(around: component.avatarCenter)
-            transition.setFrame(layer: self.avatarBackgroundPatternContentsLayer, frame: avatarPatternFrame)
-            
-            self.avatarBackgroundPatternContentsLayer.colors = [
-                UIColor.red.withAlphaComponent(0.6).cgColor,
-                UIColor.red.withAlphaComponent(0.0).cgColor
-            ]
-                
-            let backgroundPatternContainerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height), size: CGSize(width: availableSize.width, height: 0.0))
-            transition.containedViewLayoutTransition.updateFrameAdditive(view: self.backgroundPatternContainer, frame: backgroundPatternContainerFrame)
-            transition.setAlpha(view: self.backgroundPatternContainer, alpha: component.patternTransitionFraction)
-            
+                                                                          
             var validIds = Set<AnyHashable>()
             var index = 0
-            for gift in self.gifts.prefix(9) {
+            for gift in self.gifts.prefix(12) {
+                guard index < self.iconPositions.count else {
+                    break
+                }
                 let id: AnyHashable
                 if case let .unique(uniqueGift) = gift.gift {
                     id = uniqueGift.slug
@@ -289,12 +277,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 } else {
                     iconTransition = .immediate
                     iconLayer = GiftIconLayer(context: component.context, gift: gift, size: iconSize, glowing: component.hasBackground)
-                    iconLayer.startHovering()
                     self.iconLayers[id] = iconLayer
                     self.layer.addSublayer(iconLayer)
                     
                     iconLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     iconLayer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                    
+                    iconLayer.startAnimations(index: index)
                 }
                 iconLayer.glowing = component.hasBackground
                 
@@ -347,202 +336,6 @@ public final class PeerInfoGiftsCoverComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
-
-private class PositionGenerator {
-    private let containerSize: CGSize
-    private let avatarFrame: CGRect
-    private let padding: CGFloat
-    private let minDistance: CGFloat
-    private let maxDistance: CGFloat
-    private let rng: LokiRng
-    
-    private let excludeRects: [CGRect]
-    
-    struct Position {
-        let center: CGPoint
-        let scale: CGFloat
-    }
-    
-    init(
-        containerSize: CGSize,
-        avatarFrame: CGRect,
-        minDistance: CGFloat,
-        maxDistance: CGFloat,
-        padding: CGFloat,
-        seed: UInt,
-        excludeRects: [CGRect] = []
-    ) {
-        self.containerSize = containerSize
-        self.avatarFrame = avatarFrame
-        self.minDistance = minDistance
-        self.maxDistance = maxDistance
-        self.padding = padding
-        self.rng = LokiRng(seed0: seed, seed1: 0, seed2: 0)
-        self.excludeRects = excludeRects
-    }
-    
-    func generatePositions(count: Int, viewSize: CGSize) -> [Position] {
-        let safeCount = min(max(count, 1), 12) // Ensure between 1 and 12
-        var positions: [Position] = []
-        
-        let distanceRanges = calculateDistanceRanges(count: safeCount)
-        
-        for i in 0..<safeCount {
-            let minDist = distanceRanges[i].0
-            let maxDist = distanceRanges[i].1
-            let isEven = i % 2 == 0
-            
-            var attempts = 0
-            let maxAttempts = 20
-            var currentMaxDist = maxDist
-            
-            var result: CGPoint?
-            
-            while result == nil && attempts < maxAttempts {
-                attempts += 1
-                
-                if let position = generateSinglePosition(
-                    viewSize: viewSize,
-                    minDist: minDist,
-                    maxDist: currentMaxDist,
-                    rightSide: !isEven
-                ) {
-                    let isFarEnough = positions.isEmpty || positions.allSatisfy { existingPosition in
-                        let distance = hypot(position.x - existingPosition.center.x, position.y - existingPosition.center.y)
-                        let minRequiredDistance = max(viewSize.width, viewSize.height) / 2 + max(viewSize.width, viewSize.height) / 2 + padding
-                        return distance > minRequiredDistance
-                    }
-                    if isFarEnough {
-                        result = position
-                        break
-                    }
-                }
-                
-                if attempts % 5 == 0 && result == nil {
-                    currentMaxDist *= 1.2
-                }
-            }
-            
-            if result == nil {
-                if let lastChancePosition = self.generateSinglePosition(
-                    viewSize: viewSize,
-                    minDist: minDist,
-                    maxDist: maxDist * 2.0,
-                    rightSide: !isEven
-                ) {
-                    result = lastChancePosition
-                } else {
-                    let defaultX = self.avatarFrame.center.x + (isEven ? -1 : 1) * (minDist + CGFloat(i * 20))
-                    let defaultY = self.avatarFrame.center.y + CGFloat(i * 15)
-                    let defaultPosition = CGPoint(x: defaultX, y: defaultY)
-                    
-                    result = defaultPosition
-                }
-            }
-            
-            if let result {
-                let distance = hypot(result.x - self.avatarFrame.center.x, result.y - self.avatarFrame.center.y)
-                let baseScale = min(1.0, max(0.77, 1.0 - (distance - 75.0) / 75.0))
-                
-                let randomFactor = 0.14 + (1.0 - baseScale) * 0.2
-                let randomValue = -randomFactor + CGFloat(self.rng.next()) * 2.0 * randomFactor
-                
-                let finalScale = min(1.2, max(baseScale * 0.65, baseScale + randomValue))
-                positions.append(Position(center: result, scale: finalScale))
-            }
-        }
-        
-        return positions.map {
-            Position(center: $0.center.offsetBy(dx: -self.avatarFrame.center.x, dy: -self.avatarFrame.center.y), scale: $0.scale)
-        }
-    }
-    
-    private func calculateDistanceRanges(count: Int) -> [(CGFloat, CGFloat)] {
-        var ranges: [(CGFloat, CGFloat)] = []
-        
-        let totalRange = self.maxDistance - self.minDistance
-        for _ in 0..<4 {
-            let min = self.minDistance
-            let max = self.minDistance + (totalRange * 0.12)
-            ranges.append((min, max))
-        }
-        
-        for _ in 0..<4 {
-            let min = self.minDistance + (totalRange * 0.19)
-            let max = self.minDistance + (totalRange * 0.55)
-            ranges.append((min, max))
-        }
-        
-        for _ in 0..<4 {
-            let min = self.minDistance + (totalRange * 0.6)
-            let max = self.minDistance + (totalRange * 0.9)
-            ranges.append((min, max))
-        }
-        
-        return ranges
-    }
-    
-    private func generateSinglePosition(viewSize: CGSize, minDist: CGFloat, maxDist: CGFloat, rightSide: Bool) -> CGPoint? {
-        let avatarCenter = avatarFrame.center
-
-        for _ in 0..<50 {
-            let baseAngle: CGFloat
-            let angleSpread: CGFloat
-            
-            if rightSide {
-                baseAngle = 0
-                angleSpread = .pi / 2
-            } else {
-                baseAngle = .pi
-                angleSpread = .pi / 2
-            }
-            
-            let angleOffset = (CGFloat(rng.next()) * 2.0 - 1.0) * angleSpread
-            let angle = baseAngle + angleOffset
-            
-            let distance = minDist + CGFloat(rng.next()) * (maxDist - minDist)
-            
-            let x = avatarCenter.x + cos(angle) * distance
-            let y = avatarCenter.y + sin(angle) * distance
-            
-            let position = CGPoint(x: x, y: y)
-            
-            let viewFrame = CGRect(
-                x: position.x - viewSize.width / 2,
-                y: position.y - viewSize.height / 2,
-                width: viewSize.width,
-                height: viewSize.height
-            )
-            
-            if isFrameWithinBounds(viewFrame) && !isFrameInExclusionZone(viewFrame) {
-                return CGPoint(x: round(position.x), y: round(position.y))
-            }
-        }
-        
-        return nil
-    }
-    
-    private func isFrameWithinBounds(_ frame: CGRect) -> Bool {
-        return frame.minX >= self.padding &&
-        frame.minY >= self.padding &&
-        frame.maxX <= self.containerSize.width - self.padding &&
-        frame.maxY <= self.containerSize.height - self.padding
-    }
-    
-    private func isFrameInExclusionZone(_ frame: CGRect) -> Bool {
-        if frame.intersects(avatarFrame) {
-            return true
-        }
-        let padding: CGFloat = -8.0
-        for excludeRect in self.excludeRects {
-            if frame.intersects(excludeRect.insetBy(dx: padding, dy: padding)) {
-                return true
-            }
-        }
-        return false
     }
 }
 
@@ -616,10 +409,9 @@ private final class StarsEffectLayer: SimpleLayer {
     }
 }
 
-
 private class GiftIconLayer: SimpleLayer {
     private let context: AccountContext
-    private let gift: ProfileGiftsContext.State.StarGift
+    let gift: ProfileGiftsContext.State.StarGift
     private let size: CGSize
     var glowing: Bool {
         didSet {
@@ -780,26 +572,273 @@ private class GiftIconLayer: SimpleLayer {
         self.animationLayer.frame = CGRect(origin: .zero, size: self.bounds.size)
     }
     
-    func startHovering(distance: CGFloat = 3.0, duration: TimeInterval = 4.0, timingFunction: CAMediaTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)) {
-        let hoverAnimation = CABasicAnimation(keyPath: "transform.translation.y")
-        hoverAnimation.duration = duration
-        hoverAnimation.fromValue = -distance
-        hoverAnimation.toValue = distance
-        hoverAnimation.autoreverses = true
-        hoverAnimation.repeatCount = .infinity
-        hoverAnimation.timingFunction = timingFunction
-        hoverAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
-        hoverAnimation.isAdditive = true
-        self.add(hoverAnimation, forKey: "hover")
+    func startAnimations(index: Int) {
+        let beginTime = Double(index) * 1.5
         
-        let glowAnimation = CABasicAnimation(keyPath: "transform.scale")
-        glowAnimation.duration = duration
-        glowAnimation.fromValue = 1.0
-        glowAnimation.toValue = 1.2
-        glowAnimation.autoreverses = true
-        glowAnimation.repeatCount = .infinity
-        glowAnimation.timingFunction = timingFunction
-        glowAnimation.beginTime = Double.random(in: 0.0 ..< 12.0)
-        self.shadowLayer.add(glowAnimation, forKey: "glow")
+        if self.animation(forKey: "hover") == nil {
+            let upDistance = CGFloat.random(in: 1.0 ..< 2.0)
+            let downDistance = CGFloat.random(in: 1.0 ..< 2.0)
+            let hoverDuration = TimeInterval.random(in: 3.5 ..< 4.5)
+            
+            let hoverAnimation = CABasicAnimation(keyPath: "transform.translation.y")
+            hoverAnimation.duration = duration
+            hoverAnimation.fromValue = -upDistance
+            hoverAnimation.toValue = downDistance
+            hoverAnimation.autoreverses = true
+            hoverAnimation.repeatCount = .infinity
+            hoverAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            hoverAnimation.beginTime = beginTime
+            hoverAnimation.isAdditive = true
+            self.add(hoverAnimation, forKey: "hover")
+        }
+        
+        if self.animationLayer.animation(forKey: "wiggle") == nil {
+            let fromRotationAngle = CGFloat.random(in: 0.025 ..< 0.05)
+            let toRotationAngle = CGFloat.random(in: 0.025 ..< 0.05)
+            let wiggleDuration = TimeInterval.random(in: 2.0 ..< 3.0)
+            
+            let wiggleAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
+            wiggleAnimation.duration = wiggleDuration
+            wiggleAnimation.fromValue = -fromRotationAngle
+            wiggleAnimation.toValue = toRotationAngle
+            wiggleAnimation.autoreverses = true
+            wiggleAnimation.repeatCount = .infinity
+            wiggleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            wiggleAnimation.beginTime = beginTime
+            wiggleAnimation.isAdditive = true
+            self.animationLayer.add(wiggleAnimation, forKey: "wiggle")
+        }
+        
+        if self.shadowLayer.animation(forKey: "glow") == nil {
+            let glowDuration = TimeInterval.random(in: 2.0 ..< 3.0)
+            
+            let glowAnimation = CABasicAnimation(keyPath: "transform.scale")
+            glowAnimation.duration = glowDuration
+            glowAnimation.fromValue = 1.0
+            glowAnimation.toValue = 1.2
+            glowAnimation.autoreverses = true
+            glowAnimation.repeatCount = .infinity
+            glowAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            glowAnimation.beginTime = beginTime
+            self.shadowLayer.add(glowAnimation, forKey: "glow")
+        }
     }
+}
+
+private struct PositionGenerator {
+    struct Position {
+        let center: CGPoint
+        let scale: CGFloat
+    }
+    
+    let containerSize: CGSize
+    let centerFrame: CGRect
+    let exclusionZones: [CGRect]
+    let minimumDistance: CGFloat
+    let edgePadding: CGFloat
+    let scaleRange: (min: CGFloat, max: CGFloat)
+    
+    let innerOrbitRange: (min: CGFloat, max: CGFloat)
+    let outerOrbitRange: (min: CGFloat, max: CGFloat)
+    let innerOrbitCount: Int
+    
+    private let lokiRng: LokiRng
+    
+    init(
+        containerSize: CGSize,
+        centerFrame: CGRect,
+        exclusionZones: [CGRect],
+        minimumDistance: CGFloat,
+        edgePadding: CGFloat,
+        seed: UInt,
+        scaleRange: (min: CGFloat, max: CGFloat) = (0.7, 1.15),
+        innerOrbitRange: (min: CGFloat, max: CGFloat) = (1.4, 2.2),
+        outerOrbitRange: (min: CGFloat, max: CGFloat) = (2.5, 3.6),
+        innerOrbitCount: Int = 4
+    ) {
+        self.containerSize = containerSize
+        self.centerFrame = centerFrame
+        self.exclusionZones = exclusionZones
+        self.minimumDistance = minimumDistance
+        self.edgePadding = edgePadding
+        self.scaleRange = scaleRange
+        self.innerOrbitRange = innerOrbitRange
+        self.outerOrbitRange = outerOrbitRange
+        self.innerOrbitCount = innerOrbitCount
+        self.lokiRng = LokiRng(seed0: seed, seed1: 0, seed2: 0)
+    }
+    
+    func generatePositions(count: Int, itemSize: CGSize) -> [Position] {
+        var positions: [Position] = []
+        
+        let centerPoint = CGPoint(x: self.centerFrame.midX, y: self.centerFrame.midY)
+        let centerRadius = min(self.centerFrame.width, self.centerFrame.height) / 2.0
+        
+        let maxAttempts = count * 200
+        var attempts = 0
+        
+        var leftPositions = 0
+        var rightPositions = 0
+        
+        let innerCount = min(self.innerOrbitCount, count)
+        
+        while positions.count < innerCount && attempts < maxAttempts {
+            attempts += 1
+            
+            let placeOnLeftSide = rightPositions > leftPositions
+            
+            let orbitRangeSize = self.innerOrbitRange.max - self.innerOrbitRange.min
+            let orbitDistanceFactor = self.innerOrbitRange.min + orbitRangeSize * CGFloat(self.lokiRng.next())
+            let orbitDistance = orbitDistanceFactor * centerRadius
+            
+            let angleRange: CGFloat = placeOnLeftSide ? .pi : .pi
+            let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
+            let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
+            
+            let absoluteX = centerPoint.x + orbitDistance * cos(angle)
+            let absoluteY = centerPoint.y + orbitDistance * sin(angle)
+            let absolutePosition = CGPoint(x: absoluteX, y: absoluteY)
+            
+            if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
+                absolutePosition.x + itemSize.width/2 > self.containerSize.width - self.edgePadding ||
+                absolutePosition.y - itemSize.height/2 < self.edgePadding ||
+                absolutePosition.y + itemSize.height/2 > self.containerSize.height - self.edgePadding {
+                continue
+            }
+            
+            let relativePosition = CGPoint(
+                x: absolutePosition.x - centerPoint.x,
+                y: absolutePosition.y - centerPoint.y
+            )
+            
+            let itemRect = CGRect(
+                x: absolutePosition.x - itemSize.width/2,
+                y: absolutePosition.y - itemSize.height/2,
+                width: itemSize.width,
+                height: itemSize.height
+            )
+            
+            if self.isValidPosition(itemRect, existingPositions: positions.map { self.posToAbsolute($0.center, centerPoint: centerPoint) }, itemSize: itemSize) {
+                let scaleRangeSize = max(self.scaleRange.min + 0.1, 0.75) - self.scaleRange.max
+                let scale = self.scaleRange.max + scaleRangeSize * CGFloat(self.lokiRng.next())
+                positions.append(Position(center: relativePosition, scale: scale))
+                
+                if absolutePosition.x < centerPoint.x {
+                    leftPositions += 1
+                } else {
+                    rightPositions += 1
+                }
+            }
+        }
+        
+        let maxPossibleDistance = hypot(self.containerSize.width, self.containerSize.height) / 2
+        
+        while positions.count < count && attempts < maxAttempts {
+            attempts += 1
+            
+            let placeOnLeftSide = rightPositions >= leftPositions
+            
+            let orbitRangeSize = self.outerOrbitRange.max - self.outerOrbitRange.min
+            let orbitDistanceFactor = self.outerOrbitRange.min + orbitRangeSize * CGFloat(self.lokiRng.next())
+            let orbitDistance = orbitDistanceFactor * centerRadius
+            
+            let angleRange: CGFloat = placeOnLeftSide ? .pi : .pi
+            let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
+            let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
+            
+            let absoluteX = centerPoint.x + orbitDistance * cos(angle)
+            let absoluteY = centerPoint.y + orbitDistance * sin(angle)
+            let absolutePosition = CGPoint(x: absoluteX, y: absoluteY)
+            
+            if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
+                absolutePosition.x + itemSize.width/2 > self.containerSize.width - self.edgePadding ||
+                absolutePosition.y - itemSize.height/2 < self.edgePadding ||
+                absolutePosition.y + itemSize.height/2 > self.containerSize.height - self.edgePadding {
+                continue
+            }
+            
+            let relativePosition = CGPoint(
+                x: absolutePosition.x - centerPoint.x,
+                y: absolutePosition.y - centerPoint.y
+            )
+            
+            let itemRect = CGRect(
+                x: absolutePosition.x - itemSize.width/2,
+                y: absolutePosition.y - itemSize.height/2,
+                width: itemSize.width,
+                height: itemSize.height
+            )
+            
+            if self.isValidPosition(itemRect, existingPositions: positions.map { self.posToAbsolute($0.center, centerPoint: centerPoint) }, itemSize: itemSize) {
+                let distance = hypot(absolutePosition.x - centerPoint.x, absolutePosition.y - centerPoint.y)
+                
+                let normalizedDistance = min(distance / maxPossibleDistance, 1.0)
+                let scale = self.scaleRange.max - normalizedDistance * (self.scaleRange.max - self.scaleRange.min)
+                positions.append(Position(center: relativePosition, scale: scale))
+                
+                if absolutePosition.x < centerPoint.x {
+                    leftPositions += 1
+                } else {
+                    rightPositions += 1
+                }
+            }
+        }
+        
+        return positions
+    }
+    
+    private func posToAbsolute(_ relativePos: CGPoint, centerPoint: CGPoint) -> CGPoint {
+        return CGPoint(x: relativePos.x + centerPoint.x, y: relativePos.y + centerPoint.y)
+    }
+    
+    private func isValidPosition(_ rect: CGRect, existingPositions: [CGPoint], itemSize: CGSize) -> Bool {
+        if rect.minX < self.edgePadding || rect.maxX > self.containerSize.width - self.edgePadding ||
+            rect.minY < self.edgePadding || rect.maxY > self.containerSize.height - self.edgePadding {
+            return false
+        }
+        
+        for zone in self.exclusionZones {
+            if rect.intersects(zone) {
+                return false
+            }
+        }
+        
+        let effectiveMinDistance = existingPositions.count > 5 ? max(self.minimumDistance * 0.7, 10.0) : self.minimumDistance
+        
+        for existingPosition in existingPositions {
+            let distance = hypot(existingPosition.x - rect.midX, existingPosition.y - rect.midY)
+            if distance < effectiveMinDistance {
+                return false
+            }
+        }
+        
+        return true
+    }
+}
+
+private func windowFunction(t: CGFloat) -> CGFloat {
+    return bezierPoint(0.6, 0.0, 0.4, 1.0, t)
+}
+
+private func patternScaleValueAt(fraction: CGFloat, t: CGFloat, reverse: Bool) -> CGFloat {
+    let windowSize: CGFloat = 0.8
+
+    let effectiveT: CGFloat
+    let windowStartOffset: CGFloat
+    let windowEndOffset: CGFloat
+    if reverse {
+        effectiveT = 1.0 - t
+        windowStartOffset = 1.0
+        windowEndOffset = -windowSize
+    } else {
+        effectiveT = t
+        windowStartOffset = -windowSize
+        windowEndOffset = 1.0
+    }
+
+    let windowPosition = (1.0 - fraction) * windowStartOffset + fraction * windowEndOffset
+    let windowT = max(0.0, min(windowSize, effectiveT - windowPosition)) / windowSize
+    let localT = 1.0 - windowFunction(t: windowT)
+
+    return localT
 }

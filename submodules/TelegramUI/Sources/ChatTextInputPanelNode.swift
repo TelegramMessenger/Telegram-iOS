@@ -2517,7 +2517,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             self.actionButtons.updateAbsoluteRect(CGRect(x: rect.origin.x + actionButtonsFrame.origin.x, y: rect.origin.y + actionButtonsFrame.origin.y, width: actionButtonsFrame.width, height: actionButtonsFrame.height), within: containerSize, transition: transition)
         }
         
-        
         let slowModeButtonFrame = CGRect(origin: CGPoint(x: hideOffset.x + width - rightInset - 5.0 - slowModeButtonSize.width + composeButtonsOffset, y: hideOffset.y + panelHeight - minimalHeight + 6.0), size: slowModeButtonSize)
         transition.updateFrame(node: self.slowModeButton, frame: slowModeButtonFrame)
         
@@ -2767,12 +2766,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             mediaInputDisabled = false
         }
         
-        var mediaInputIsActive = false
-        if case .media = interfaceState.inputMode {
-            mediaInputIsActive = true
-        }
-        
-        self.actionButtons.micButton.fadeDisabled = mediaInputDisabled || mediaInputIsActive
+        self.actionButtons.micButton.fadeDisabled = mediaInputDisabled
         
         var viewOnceIsVisible = false
         if let recordingState = interfaceState.inputTextPanelState.mediaRecordingState {

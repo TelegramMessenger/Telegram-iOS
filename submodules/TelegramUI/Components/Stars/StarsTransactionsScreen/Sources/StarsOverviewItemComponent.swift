@@ -81,7 +81,7 @@ final class StarsOverviewItemComponent: Component {
                 valueOffset += icon.size.width
             }
             
-            let valueString = presentationStringsFormattedNumber(component.value, component.dateTimeFormat.groupingSeparator)
+            let valueString = formatStarsAmountText(component.value, dateTimeFormat: component.dateTimeFormat)
             let usdValueString = formatTonUsdValue(component.value.value, divide: false, rate: component.rate, dateTimeFormat: component.dateTimeFormat)
             
             let valueSize = self.value.update(

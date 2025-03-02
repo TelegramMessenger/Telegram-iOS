@@ -111,6 +111,7 @@ import UIKitRuntimeUtils
 import OldChannelsController
 import UrlHandling
 import VerifyAlertController
+import GiftViewScreen
 
 public enum PeerInfoAvatarEditingMode {
     case generic
@@ -4641,10 +4642,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.emojiStatusSelectionController = emojiStatusSelectionController
                 strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
             }
-            
-            self.headerNode.openUniqueGift = { [weak self] sourceView, _ in
-                self?.headerNode.displayPremiumIntro?(sourceView, nil, .single(nil), false)
-            }
         } else {
             if peerId == context.account.peerId {
                 self.privacySettings.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
@@ -4729,13 +4726,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 )
                 controller.present(tooltipController, in: .current)
-            }
-            
-            self.headerNode.openUniqueGift = { [weak self] _, slug in
-                guard let self else {
-                    return
-                }
-                self.openUrl(url: "https://t.me/nft/\(slug)", concealed: false, external: false)
             }
             
             self.headerNode.displayStatusPremiumIntro = { [weak self] in
@@ -4831,6 +4821,64 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {
                 self.displayAsPeersPromise.set(context.engine.calls.cachedGroupCallDisplayAsAvailablePeers(peerId: peerId))
+            }
+        }
+        
+        self.headerNode.openUniqueGift = { [weak self] _, slug in
+            guard let self, let profileGifts = self.data?.profileGiftsContext else {
+                return
+            }
+            var found = false
+            if let state = profileGifts.currentState {
+                for gift in state.gifts {
+                    if case let .unique(uniqueGift) = gift.gift, uniqueGift.slug == slug {
+                        found = true
+                        
+                        let controller = GiftViewScreen(
+                            context: self.context,
+                            subject: .profileGift(self.peerId, gift),
+                            updateSavedToProfile: { [weak profileGifts] reference, added in
+                                guard let profileGifts else {
+                                    return
+                                }
+                                profileGifts.updateStarGiftAddedToProfile(reference: reference, added: added)
+                            },
+                            convertToStars: { [weak profileGifts] in
+                                guard let profileGifts, let reference = gift.reference else {
+                                    return
+                                }
+                                profileGifts.convertStarGift(reference: reference)
+                            },
+                            transferGift: { [weak profileGifts] prepaid, peerId in
+                                guard let profileGifts, let reference = gift.reference else {
+                                    return
+                                }
+                                profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+                            },
+                            upgradeGift: { [weak profileGifts] formId, keepOriginalInfo in
+                                guard let profileGifts, let reference = gift.reference else {
+                                    return .never()
+                                }
+                                return profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
+                            },
+                            shareStory: { [weak self] uniqueGift in
+                                guard let self, let controller = self.controller else {
+                                    return
+                                }
+                                Queue.mainQueue().after(0.15) {
+                                    let shareController = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: controller)
+                                    controller.push(shareController)
+                                }
+                            }
+                        )
+                        self.controller?.push(controller)
+                        
+                        break
+                    }
+                }
+            }
+            if !found {
+                self.openUrl(url: "https://t.me/nft/\(slug)", concealed: false, external: false)
             }
         }
         
