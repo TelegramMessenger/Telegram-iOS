@@ -2351,12 +2351,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     giftsContext: profileGiftsContext,
                     hasBackground: hasBackground,
                     avatarCenter: apparentAvatarFrame.center,
+                    defaultHeight: backgroundDefaultHeight,
                     avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
                     statusBarHeight: statusBarHeight,
                     topLeftButtonsSize: CGSize(width: (self.isSettings ? 57.0 : 47.0), height: 46.0),
                     topRightButtonsSize: CGSize(width: 76.0 + (self.isMyProfile ? 38.0 : 0.0), height: 46.0),
-                    titleWidth: titleFrame.width + 42.0,
-                    hasButtons: !buttonKeys.isEmpty,
+                    titleWidth: max(140.0, titleFrame.width) + 42.0,
+                    bottomHeight: !buttonKeys.isEmpty ? 81.0 : 30.0,
                     action: { [weak self] gift in
                         guard let self, case let .unique(gift) = gift.gift else {
                             return

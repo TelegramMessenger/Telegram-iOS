@@ -19,12 +19,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
     public let giftsContext: ProfileGiftsContext
     public let hasBackground: Bool
     public let avatarCenter: CGPoint
+    public let defaultHeight: CGFloat
     public let avatarTransitionFraction: CGFloat
     public let statusBarHeight: CGFloat
     public let topLeftButtonsSize: CGSize
     public let topRightButtonsSize: CGSize
     public let titleWidth: CGFloat
-    public let hasButtons: Bool
+    public let bottomHeight: CGFloat
     public let action: (ProfileGiftsContext.State.StarGift) -> Void
     
     public init(
@@ -33,12 +34,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
         giftsContext: ProfileGiftsContext,
         hasBackground: Bool,
         avatarCenter: CGPoint,
+        defaultHeight: CGFloat,
         avatarTransitionFraction: CGFloat,
         statusBarHeight: CGFloat,
         topLeftButtonsSize: CGSize,
         topRightButtonsSize: CGSize,
         titleWidth: CGFloat,
-        hasButtons: Bool,
+        bottomHeight: CGFloat,
         action: @escaping (ProfileGiftsContext.State.StarGift) -> Void
     ) {
         self.context = context
@@ -46,12 +48,13 @@ public final class PeerInfoGiftsCoverComponent: Component {
         self.giftsContext = giftsContext
         self.hasBackground = hasBackground
         self.avatarCenter = avatarCenter
+        self.defaultHeight = defaultHeight
         self.avatarTransitionFraction = avatarTransitionFraction
         self.statusBarHeight = statusBarHeight
         self.topLeftButtonsSize = topLeftButtonsSize
         self.topRightButtonsSize = topRightButtonsSize
         self.titleWidth = titleWidth
-        self.hasButtons = hasButtons
+        self.bottomHeight = bottomHeight
         self.action = action
     }
     
@@ -66,6 +69,9 @@ public final class PeerInfoGiftsCoverComponent: Component {
             return false
         }
         if lhs.avatarCenter != rhs.avatarCenter {
+            return false
+        }
+        if lhs.defaultHeight != rhs.defaultHeight {
             return false
         }
         if lhs.avatarTransitionFraction != rhs.avatarTransitionFraction {
@@ -83,7 +89,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
         if lhs.titleWidth != rhs.titleWidth {
             return false
         }
-        if lhs.hasButtons != rhs.hasButtons {
+        if lhs.bottomHeight != rhs.bottomHeight {
             return false
         }
         return true
@@ -196,20 +202,25 @@ public final class PeerInfoGiftsCoverComponent: Component {
             }
             
             if !giftIds.isEmpty && (self.iconPositions.isEmpty || previousCurrentSize?.width != availableSize.width || (previousComponent != nil && previousComponent?.hasBackground != component.hasBackground) || self.appliedGiftIds != giftIds) {
+                var avatarCenter = component.avatarCenter
+                if avatarCenter.y < 0.0 {
+                    avatarCenter.y = component.statusBarHeight + 75.0
+                }
+                
                 var excludeRects: [CGRect] = []
                 if component.statusBarHeight > 0.0 {
                     excludeRects.append(CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: component.statusBarHeight + 4.0)))
                 }
                 excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.statusBarHeight), size: component.topLeftButtonsSize))
                 excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - component.topRightButtonsSize.width, y: component.statusBarHeight), size: component.topRightButtonsSize))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: component.avatarCenter.y + 56.0), size: CGSize(width: component.titleWidth, height: 72.0)))
-                if component.hasButtons {
-                    excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - 81.0), size: CGSize(width: availableSize.width, height: 81.0)))
+                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + 56.0), size: CGSize(width: component.titleWidth, height: 72.0)))
+                if component.bottomHeight > 0.0 {
+                    excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.defaultHeight - component.bottomHeight), size: CGSize(width: availableSize.width, height: component.bottomHeight)))
                 }
-                                
+                                                
                 let positionGenerator = PositionGenerator(
-                    containerSize: availableSize,
-                    centerFrame: CGSize(width: 100, height: 100).centered(around: component.avatarCenter),
+                    containerSize: CGSize(width: availableSize.width, height: component.defaultHeight),
+                    centerFrame: CGSize(width: 100, height: 100).centered(around: avatarCenter),
                     exclusionZones: excludeRects,
                     minimumDistance: 42.0,
                     edgePadding: 5.0,
@@ -581,7 +592,7 @@ private class GiftIconLayer: SimpleLayer {
             let hoverDuration = TimeInterval.random(in: 3.5 ..< 4.5)
             
             let hoverAnimation = CABasicAnimation(keyPath: "transform.translation.y")
-            hoverAnimation.duration = duration
+            hoverAnimation.duration = hoverDuration
             hoverAnimation.fromValue = -upDistance
             hoverAnimation.toValue = downDistance
             hoverAnimation.autoreverses = true
