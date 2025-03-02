@@ -632,8 +632,10 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     }
     
     private func calculateTextFieldMetrics(width: CGFloat, maxHeight: CGFloat, metrics: LayoutMetrics) -> (accessoryButtonsWidth: CGFloat, textFieldHeight: CGFloat) {
-        let textFieldInsets = self.textFieldInsets(metrics: metrics)
-        
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if self.actionButtons.frame.width > 44.0 {
+            textFieldInsets.right = self.actionButtons.frame.width
+        }
         let fieldMaxHeight = textFieldMaxHeight(maxHeight, metrics: metrics)
         
         var textFieldMinHeight: CGFloat = 35.0

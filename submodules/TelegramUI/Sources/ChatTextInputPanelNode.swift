@@ -1316,7 +1316,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         let accessoryButtonInset = self.accessoryButtonInset
         let accessoryButtonSpacing = self.accessoryButtonSpacing
         
-        let textFieldInsets = self.textFieldInsets(metrics: metrics)
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if  self.actionButtons.frame.width > 44.0 {
+            textFieldInsets.right = self.actionButtons.frame.width - 2.0
+        }
         
         let fieldMaxHeight = textFieldMaxHeight(maxHeight, metrics: metrics)
         
