@@ -1214,6 +1214,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.textInputBackgroundNode.isUserInteractionEnabled = !textInputNode.isUserInteractionEnabled
         //self.textInputBackgroundNode.view.removeGestureRecognizer(self.textInputBackgroundNode.view.gestureRecognizers![0])
         
+        textInputNode.textView.onUpdateLayout = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.updateSpoiler()
+        }
         textInputNode.textView.toggleQuoteCollapse = { [weak self] range in
             guard let self else {
                 return

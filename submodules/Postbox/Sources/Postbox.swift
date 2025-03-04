@@ -3014,8 +3014,8 @@ final class PostboxImpl {
         
         let endTime = CFAbsoluteTimeGetCurrent()
         let transactionDuration = endTime - startTime
-        if transactionDuration > 0.1 {
-            postboxLog("Postbox transaction took \(transactionDuration * 1000.0) ms, from: \(file), on:\(line)")
+        if transactionDuration > 0.01 {
+            postboxLog("Postbox transaction took \(transactionDuration * 1000.0) ms, from: \(file):\(line)")
         }
         
         let _ = self.isInTransaction.swap(false)
@@ -3028,7 +3028,7 @@ final class PostboxImpl {
         return (result, updatedTransactionState, updatedMasterClientId)
     }
     
-    public func transactionSignal<T, E>(userInteractive: Bool = false, _ f: @escaping(Subscriber<T, E>, Transaction) -> Disposable) -> Signal<T, E> {
+    public func transactionSignal<T, E>(userInteractive: Bool = false, _ f: @escaping(Subscriber<T, E>, Transaction) -> Disposable, file: String = #file, line: Int = #line) -> Signal<T, E> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -3036,7 +3036,7 @@ final class PostboxImpl {
                 self.beginInternalTransaction {
                     let (_, updatedTransactionState, updatedMasterClientId) = self.internalTransaction({ transaction in
                         disposable.set(f(subscriber, transaction))
-                    })
+                    }, file: file, line: line)
                     
                     if updatedTransactionState != nil || updatedMasterClientId != nil {
                         //self.pipeNotifier.notify()

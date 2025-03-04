@@ -1050,6 +1050,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
     }
     
     public var toggleQuoteCollapse: ((NSRange) -> Void)?
+    public var onUpdateLayout: (() -> Void)?
         
     private let displayInternal: ChatInputTextInternal
     private let measureInternal: ChatInputTextInternal
@@ -1385,6 +1386,8 @@ public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate,
         for id in removedBlockQuotes {
             self.blockQuotes.removeValue(forKey: id)
         }
+        
+        self.onUpdateLayout?()
     }
     
     override public func caretRect(for position: UITextPosition) -> CGRect {
