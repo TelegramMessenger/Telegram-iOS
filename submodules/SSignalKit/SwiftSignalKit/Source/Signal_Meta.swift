@@ -246,3 +246,25 @@ public func deferred<T, E>(_ generator: @escaping() -> Signal<T, E>) -> Signal<T
         })
     }
 }
+
+public func debug_measureTimeToFirstEvent<T, E>(label: String) -> (Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        #if DEBUG || true
+        if "".isEmpty {
+            var isFirst = true
+            return Signal { subscriber in
+                let startTimestamp = CFAbsoluteTimeGetCurrent()
+                return signal.start(next: { value in
+                    if isFirst {
+                        isFirst = false
+                        let deltaTime = (CFAbsoluteTimeGetCurrent() - startTimestamp) * 1000.0
+                        print("measureTimeToFirstEvent(\(label): \(deltaTime) ms")
+                    }
+                    subscriber.putNext(value)
+                }, error: subscriber.putError, completed: subscriber.putCompletion)
+            }
+        }
+        #endif
+        return signal
+    }
+}

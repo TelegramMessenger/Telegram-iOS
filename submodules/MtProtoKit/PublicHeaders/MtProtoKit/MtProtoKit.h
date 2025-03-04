@@ -1,8 +1,6 @@
 #import <Foundation/Foundation.h>
 
 #import <MtProtoKit/MTDatacenterAuthInfo.h>
-#import <MtProtoKit/AFHTTPRequestOperation.h>
-#import <MtProtoKit/AFURLConnectionOperation.h>
 #import <MtProtoKit/MTApiEnvironment.h>
 #import <MtProtoKit/MTAtomic.h>
 #import <MtProtoKit/MTBackupAddressSignals.h>

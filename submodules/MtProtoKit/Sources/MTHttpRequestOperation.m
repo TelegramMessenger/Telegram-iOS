@@ -1,6 +1,5 @@
 #import <MtProtoKit/MTHttpRequestOperation.h>
 
-#import <MtProtoKit/AFHTTPRequestOperation.h>
 #import <MtProtoKit/MTDisposable.h>
 #import <MtProtoKit/MTSignal.h>
 
@@ -29,30 +28,30 @@
         [headers enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, __unused BOOL *stop) {
             [request setValue:value forHTTPHeaderField:key];
         }];
-        AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
         
-        [operation setSuccessCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
-        [operation setFailureCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
-        
-        [operation setCompletionBlockWithSuccess:^(__unused NSOperation *operation, __unused id responseObject)
-        {
-            AFHTTPRequestOperation *concreteOperation = (AFHTTPRequestOperation *)operation;
-            MTHttpResponse *result = [[MTHttpResponse alloc] initWithHeaders:[concreteOperation response].allHeaderFields data:[concreteOperation responseData]];
-            [subscriber putNext:result];
-            [subscriber putCompletion];
-        } failure:^(__unused NSOperation *operation, __unused NSError *error)
-        {
-            [subscriber putError:error];
+        NSURLSessionDataTask *dataTask = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData *data, NSURLResponse * response, NSError *error) {
+            if (error) {
+                [subscriber putError:error];
+            } else {
+                if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
+                    NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+                    MTHttpResponse *result = [[MTHttpResponse alloc] initWithHeaders:httpResponse.allHeaderFields data:data];
+                    [subscriber putNext:result];
+                    [subscriber putCompletion];
+                } else {
+                    [subscriber putError:nil];
+                }
+            }
         }];
+        [dataTask resume];
         
-        [operation start];
-        
-        __weak AFHTTPRequestOperation *weakOperation = operation;
-        
+        __weak NSURLSessionDataTask *weakDataTask = dataTask;
         return [[MTBlockDisposable alloc] initWithBlock:^
         {
-            __strong AFHTTPRequestOperation *strongOperation = weakOperation;
-            [strongOperation cancel];
+            __strong NSURLSessionDataTask *strongDataTask = weakDataTask;
+            if (strongDataTask) {
+                [strongDataTask cancel];
+            }
         }];
     }];
 }
