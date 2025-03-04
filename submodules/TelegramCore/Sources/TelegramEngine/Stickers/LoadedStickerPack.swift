@@ -37,7 +37,7 @@ extension StickerPackReference {
 public enum LoadedStickerPack {
     case fetching
     case none
-    case result(info: StickerPackCollectionInfo, items: [StickerPackItem], installed: Bool)
+    case result(info: StickerPackCollectionInfo.Accessor, items: [StickerPackItem], installed: Bool)
 }
 
 func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: StickerPackReference) -> Signal<(StickerPackCollectionInfo, [StickerPackItem])?, NoError> {

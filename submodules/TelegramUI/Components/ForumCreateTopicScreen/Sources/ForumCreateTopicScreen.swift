@@ -910,7 +910,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                                 }
                                 for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
                                     if featuredEmojiPack.info.id == collectionId {
-                                        let _ = accountContext.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                                        let _ = accountContext.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info._parse(), items: featuredEmojiPack.topItems).start()
                                         
                                         break
                                     }

@@ -787,7 +787,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                             if let strongSelf = self {
                                 strongSelf.scheduledContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId, scrollToGroup: scrollToGroup))
                             }
-                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info._parse(), items: featuredEmojiPack.topItems).start()
                             
                             break
                         }
@@ -1300,7 +1300,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     if installed {
                                         return .complete()
                                     } else {
-                                        return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                        return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                     }
                                 case .fetching:
                                     break

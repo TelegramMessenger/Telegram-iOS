@@ -1,5 +1,7 @@
 import Foundation
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 public struct StickerPackCollectionInfoFlags: OptionSet {
     public var rawValue: Int32
@@ -38,7 +40,6 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public static let isCustomTemplateEmoji = StickerPackCollectionInfoFlags(rawValue: 1 << 6)
     public static let isCreator = StickerPackCollectionInfoFlags(rawValue: 1 << 7)
 }
-
 
 public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
     public let id: ItemCollectionId
@@ -102,6 +103,56 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         encoder.encodeInt32(self.hash, forKey: "h")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         encoder.encodeInt32(self.count, forKey: "n")
+        
+        #if DEBUG
+        var builder = FlatBufferBuilder(initialSize: 1024)
+        let offset = self.encodeToFlatBuffers(builder: &builder)
+        builder.finish(offset: offset)
+        let serializedData = builder.data
+        var byteBuffer = ByteBuffer(data: serializedData)
+        let deserializedValue = FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_StickerPackCollectionInfo
+        let parsedValue = try! StickerPackCollectionInfo(flatBuffersObject: deserializedValue)
+        assert(self == parsedValue)
+        #endif
+    }
+    
+    public init(flatBuffersObject: TelegramCore_StickerPackCollectionInfo) throws {
+        self.id = ItemCollectionId(flatBuffersObject.id)
+        self.flags = StickerPackCollectionInfoFlags(rawValue: flatBuffersObject.flags)
+        self.accessHash = flatBuffersObject.accessHash
+        self.title = flatBuffersObject.title
+        self.shortName = flatBuffersObject.shortName
+        self.thumbnail = try flatBuffersObject.thumbnail.flatMap(TelegramMediaImageRepresentation.init(flatBuffersObject:))
+        self.thumbnailFileId = flatBuffersObject.thumbnailFileId == Int64.min ? nil : flatBuffersObject.thumbnailFileId
+        self.immediateThumbnailData = flatBuffersObject.immediateThumbnailData.isEmpty ? nil : Data(flatBuffersObject.immediateThumbnailData)
+        self.hash = flatBuffersObject.hash
+        self.count = flatBuffersObject.count
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let titleOffset = builder.create(string: self.title)
+        let shortNameOffset = builder.create(string: self.shortName)
+        let thumbnailOffset = self.thumbnail.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        let immediateThumbnailDataOffset = self.immediateThumbnailData.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_StickerPackCollectionInfo.startStickerPackCollectionInfo(&builder)
+        
+        TelegramCore_StickerPackCollectionInfo.add(id: self.id.asFlatBuffersObject(), &builder)
+        TelegramCore_StickerPackCollectionInfo.add(flags: self.flags.rawValue, &builder)
+        TelegramCore_StickerPackCollectionInfo.add(accessHash: self.accessHash, &builder)
+        TelegramCore_StickerPackCollectionInfo.add(title: titleOffset, &builder)
+        TelegramCore_StickerPackCollectionInfo.add(shortName: shortNameOffset, &builder)
+        if let thumbnailOffset {
+            TelegramCore_StickerPackCollectionInfo.add(thumbnail: thumbnailOffset, &builder)
+        }
+        TelegramCore_StickerPackCollectionInfo.add(thumbnailFileId: self.thumbnailFileId ?? Int64.min, &builder)
+        if let immediateThumbnailDataOffset {
+            TelegramCore_StickerPackCollectionInfo.addVectorOf(immediateThumbnailData: immediateThumbnailDataOffset, &builder)
+        }
+        TelegramCore_StickerPackCollectionInfo.add(hash: self.hash, &builder)
+        TelegramCore_StickerPackCollectionInfo.add(count: self.count, &builder)
+        
+        return TelegramCore_StickerPackCollectionInfo.endStickerPackCollectionInfo(&builder, start: start)
     }
     
     public static func ==(lhs: StickerPackCollectionInfo, rhs: StickerPackCollectionInfo) -> Bool {
@@ -129,6 +180,141 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         if lhs.count != rhs.count {
             return false
         }
+        if lhs.thumbnail != rhs.thumbnail {
+            return false
+        }
         return true
+    }
+}
+
+public extension StickerPackCollectionInfo {
+    struct Accessor: Equatable {
+        let _wrappedObject: StickerPackCollectionInfo?
+        let _wrapped: TelegramCore_StickerPackCollectionInfo?
+        let _wrappedData: Data?
+        
+        public init(_ wrapped: TelegramCore_StickerPackCollectionInfo, _ _wrappedData: Data) {
+            self._wrapped = wrapped
+            self._wrappedData = _wrappedData
+            self._wrappedObject = nil
+        }
+        
+        public init(_ wrapped: StickerPackCollectionInfo) {
+            self._wrapped = nil
+            self._wrappedData = nil
+            self._wrappedObject = wrapped
+        }
+        
+        public func _parse() -> StickerPackCollectionInfo {
+            if let _wrappedObject = self._wrappedObject {
+                return _wrappedObject
+            } else {
+                return try! StickerPackCollectionInfo(flatBuffersObject: self._wrapped!)
+            }
+        }
+        
+        public static func ==(lhs: StickerPackCollectionInfo.Accessor, rhs: StickerPackCollectionInfo.Accessor) -> Bool {
+            if let lhsWrappedObject = lhs._wrappedObject, let rhsWrappedObject = rhs._wrappedObject {
+                return lhsWrappedObject == rhsWrappedObject
+            } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
+                return lhsWrappedData == rhsWrappedData
+            } else {
+                return lhs._parse() == rhs._parse()
+            }
+        }
+    }
+}
+
+public extension StickerPackCollectionInfo.Accessor {
+    var id: ItemCollectionId {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.id
+        }
+        
+        return ItemCollectionId(self._wrapped!.id)
+    }
+    
+    var accessHash: Int64 {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.accessHash
+        }
+        
+        return self._wrapped!.accessHash
+    }
+    
+    var flags: StickerPackCollectionInfoFlags {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.flags
+        }
+        
+        return StickerPackCollectionInfoFlags(rawValue: self._wrapped!.flags)
+    }
+    
+    var title: String {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.title
+        }
+        
+        return self._wrapped!.title
+    }
+    
+    var shortName: String {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.shortName
+        }
+        
+        return self._wrapped!.shortName
+    }
+    
+    var hash: Int32 {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.hash
+        }
+        
+        return self._wrapped!.hash
+    }
+    
+    var immediateThumbnailData: Data? {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.immediateThumbnailData
+        }
+        
+        return self._wrapped!.immediateThumbnailData.isEmpty ? nil : Data(self._wrapped!.immediateThumbnailData)
+    }
+    
+    var thumbnailFileId: Int64? {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.thumbnailFileId
+        }
+        
+        return self._wrapped!.thumbnailFileId == Int64.min ? nil : self._wrapped!.thumbnailFileId
+    }
+    
+    var count: Int32 {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.count
+        }
+        
+        return self._wrapped!.count
+    }
+    
+    var hasThumbnail: Bool {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.thumbnail != nil
+        }
+        
+        return self._wrapped!.thumbnail != nil
+    }
+    
+    var thumbnailDimensions: PixelDimensions? {
+        if let _wrappedObject = self._wrappedObject {
+            return _wrappedObject.thumbnail?.dimensions
+        }
+        
+        if let thumbnail = self._wrapped!.thumbnail {
+            return PixelDimensions(width: thumbnail.width, height: thumbnail.height)
+        } else {
+            return nil
+        }
     }
 }

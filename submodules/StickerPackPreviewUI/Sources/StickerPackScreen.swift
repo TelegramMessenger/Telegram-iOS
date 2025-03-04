@@ -459,7 +459,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 var contents: [LoadedStickerPack] = []
                 for (info, items, isInstalled) in strongSelf.currentStickerPacks {
-                    contents.append(.result(info: info, items: items, installed: isInstalled))
+                    contents.append(.result(info: StickerPackCollectionInfo.Accessor(info), items: items, installed: isInstalled))
                 }
                 strongSelf.updateStickerPackContents(contents, hasPremium: false)
                 
@@ -476,7 +476,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 
                 var contents: [LoadedStickerPack] = []
                 for (info, items, isInstalled) in strongSelf.currentStickerPacks {
-                    contents.append(.result(info: info, items: items, installed: isInstalled))
+                    contents.append(.result(info: StickerPackCollectionInfo.Accessor(info), items: items, installed: isInstalled))
                 }
                 strongSelf.updateStickerPackContents(contents, hasPremium: false)
                 
@@ -1534,7 +1534,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     self.requestDismiss()
                     dismissed = true
                 case .navigatedNext, .ignored:
-                    self.updateStickerPackContents([.result(info: info, items: items, installed: !installed)], hasPremium: false)
+                    self.updateStickerPackContents([.result(info: StickerPackCollectionInfo.Accessor(info), items: items, installed: !installed)], hasPremium: false)
             }
             
             let actionPerformed = self.controller?.actionPerformed
@@ -1707,11 +1707,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 var installedCount = 0
                 for content in contents {
                     if case let .result(info, items, isInstalled) = content {
-                        entries.append(.emojis(index: index, stableId: index, info: info, items: items, title: info.title, isInstalled: isInstalled))
+                        entries.append(.emojis(index: index, stableId: index, info: info._parse(), items: items, title: info.title, isInstalled: isInstalled))
                         if isInstalled {
                             installedCount += 1
                         }
-                        currentStickerPacks.append((info, items, isInstalled))
+                        currentStickerPacks.append((info._parse(), items, isInstalled))
                     }
                     index += 1
                 }
@@ -1772,6 +1772,9 @@ private final class StickerPackContainer: ASDisplayNode {
             case let .result(info, items, installed):
                 isEditable = info.flags.contains(.isCreator) && !info.flags.contains(.isEmoji)
                 self.onReady()
+                
+                let info = info._parse()
+                
                 if !items.isEmpty && self.currentStickerPack == nil {
                     if let _ = self.validLayout, abs(self.expandScrollProgress - 1.0) < .ulpOfOne {
                         scrollToItem = GridNodeScrollToItem(index: 0, position: .top(0.0), transition: .immediate, directionHint: .up, adjustForSection: false)

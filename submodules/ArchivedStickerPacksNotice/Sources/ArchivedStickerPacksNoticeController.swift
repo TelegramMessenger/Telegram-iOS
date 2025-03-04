@@ -15,7 +15,7 @@ import ItemListStickerPackItem
 
 private struct ArchivedStickersNoticeEntry: Comparable, Identifiable {
     let index: Int
-    let info: StickerPackCollectionInfo
+    let info: StickerPackCollectionInfo.Accessor
     let topItem: StickerPackItem?
     let count: String
     
@@ -135,7 +135,7 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
             } else {
                 countTitle = presentationData.strings.StickerPack_StickerCount(pack.0.count)
             }
-            entries.append(ArchivedStickersNoticeEntry(index: index, info: pack.0, topItem: pack.1, count: countTitle))
+            entries.append(ArchivedStickersNoticeEntry(index: index, info: StickerPackCollectionInfo.Accessor(pack.0), topItem: pack.1, count: countTitle))
             index += 1
         }
         

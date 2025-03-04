@@ -552,7 +552,6 @@ extension ChatControllerImpl {
                     return .single(true)
                 } else {
                     return .single(false)
-                    |> delay(0.1, queue: .mainQueue())
                 }
             }
             |> distinctUntilChanged
@@ -717,15 +716,15 @@ extension ChatControllerImpl {
                 }
             )
             
-            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
-                hasPendingMessages,
-                isTopReplyThreadMessageShown,
-                topPinnedMessage,
-                customEmojiAvailable,
-                isForum,
-                threadData,
-                forumTopicData,
-                premiumGiftOptions
+            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages |> debug_measureTimeToFirstEvent(label: "cachedData_cachedPeerDataAndMessages"),
+                hasPendingMessages |> debug_measureTimeToFirstEvent(label: "cachedData_hasPendingMessages"),
+                isTopReplyThreadMessageShown |> debug_measureTimeToFirstEvent(label: "cachedData_isTopReplyThreadMessageShown"),
+                topPinnedMessage |> debug_measureTimeToFirstEvent(label: "cachedData_topPinnedMessage"),
+                customEmojiAvailable |> debug_measureTimeToFirstEvent(label: "cachedData_customEmojiAvailable"),
+                isForum |> debug_measureTimeToFirstEvent(label: "cachedData_isForum"),
+                threadData |> debug_measureTimeToFirstEvent(label: "cachedData_threadData"),
+                forumTopicData |> debug_measureTimeToFirstEvent(label: "cachedData_forumTopicData"),
+                premiumGiftOptions |> debug_measureTimeToFirstEvent(label: "cachedData_premiumGiftOptions")
             ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData, premiumGiftOptions in
                 if let strongSelf = self {
                     let (cachedData, messages) = cachedDataAndMessages
@@ -990,21 +989,26 @@ extension ChatControllerImpl {
         if case .replyThread = self.chatLocation {
             effectiveCachedDataReady = self.cachedDataReady.get()
         } else {
-            //effectiveCachedDataReady = .single(true)
             effectiveCachedDataReady = self.cachedDataReady.get()
         }
         var measure_isFirstTime = true
         let initTimestamp = self.initTimestamp
+        
+        let mapped_chatLocationInfoReady = self._chatLocationInfoReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "chatLocationInfoReady")
+        let mapped_effectiveCachedDataReady = effectiveCachedDataReady |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "effectiveCachedDataReady")
+        let mapped_initialDataReady = initialData |> map { $0 != nil } |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "initialDataReady")
+        let mapped_wallpaperReady = self.wallpaperReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "wallpaperReady")
+        let mapped_presentationReady = self.presentationReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "presentationReady")
+        
         self.ready.set(combineLatest(queue: .mainQueue(),
-            self.chatDisplayNode.historyNode.historyState.get(),
-            self._chatLocationInfoReady.get(),
-            effectiveCachedDataReady,
-            initialData,
-            self.wallpaperReady.get(),
-            self.presentationReady.get()
+            mapped_chatLocationInfoReady,
+            mapped_effectiveCachedDataReady,
+            mapped_initialDataReady,
+            mapped_wallpaperReady,
+            mapped_presentationReady
         )
-        |> map { _, chatLocationInfoReady, cachedDataReady, _, wallpaperReady, presentationReady in
-            return chatLocationInfoReady && cachedDataReady && wallpaperReady && presentationReady
+        |> map { chatLocationInfoReady, cachedDataReady, initialData, wallpaperReady, presentationReady in
+            return chatLocationInfoReady && cachedDataReady && initialData && wallpaperReady && presentationReady
         }
         |> distinctUntilChanged
         |> beforeNext { value in
@@ -1016,6 +1020,9 @@ extension ChatControllerImpl {
                 #endif
             }
         })
+        #if DEBUG
+        //self.ready.set(.single(true))
+        #endif
         
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()

@@ -34,7 +34,7 @@ private enum FeaturedStickerPacksEntryId: Hashable {
 }
 
 private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
-    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo, Bool, StickerPackItem?, String, Bool, Bool)
+    case pack(Int32, PresentationTheme, PresentationStrings, StickerPackCollectionInfo.Accessor, Bool, StickerPackItem?, String, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -103,10 +103,10 @@ private enum FeaturedStickerPacksEntry: ItemListNodeEntry {
         switch self {
             case let .pack(_, _, _, info, unread, topItem, count, playAnimatedStickers, installed):
                 return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: unread, control: .installation(installed: installed), editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
-                    arguments.openStickerPack(info)
+                    arguments.openStickerPack(info._parse())
                 }, setPackIdWithRevealedOptions: { _, _ in
                 }, addPack: {
-                    arguments.addPack(info)
+                    arguments.addPack(info._parse())
                 }, removePack: {
                 }, toggleSelected: {
                 })
@@ -178,7 +178,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
                     if installed {
                         return .complete()
                     } else {
-                        return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                        return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                     }
                 case .fetching:
                     break

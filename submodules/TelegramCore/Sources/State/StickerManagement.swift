@@ -159,7 +159,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                                     items = Array(items.prefix(5))
                                 }
                             }
-                            updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+                            updatedPacks.append(FeaturedStickerPackItem(info: StickerPackCollectionInfo.Accessor(info), topItems: items, unread: unreadIds.contains(info.id.id)))
                         }
                         let isPremium = flags & (1 << 0) != 0
                         return .content(FeaturedListContent(
@@ -194,7 +194,7 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox, category: F
                                     items = previousPack.topItems
                                 }
                             }
-                            updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+                            updatedPacks.append(FeaturedStickerPackItem(info: StickerPackCollectionInfo.Accessor(info), topItems: items, unread: unreadIds.contains(info.id.id)))
                         }
                         let isPremium = flags & (1 << 0) != 0
                         return .content(FeaturedListContent(
@@ -247,7 +247,7 @@ public func requestOldFeaturedStickerPacks(network: Network, postbox: Postbox, o
             var updatedPacks: [FeaturedStickerPackItem] = []
             for set in sets {
                 let (info, items) = parsePreviewStickerSet(set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
-                updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+                updatedPacks.append(FeaturedStickerPackItem(info: StickerPackCollectionInfo.Accessor(info), topItems: items, unread: unreadIds.contains(info.id.id)))
             }
             return updatedPacks
         }

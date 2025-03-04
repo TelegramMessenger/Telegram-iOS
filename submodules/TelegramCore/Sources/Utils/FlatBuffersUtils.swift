@@ -52,3 +52,13 @@ public extension PixelDimensions {
         return TelegramCore_PixelDimensions(width: self.width, height: self.height)
     }
 }
+
+public extension ItemCollectionId {
+    init(_ id: TelegramCore_ItemCollectionId) {
+        self.init(namespace: id.namespace, id: id.id)
+    }
+
+    func asFlatBuffersObject() -> TelegramCore_ItemCollectionId {
+        return TelegramCore_ItemCollectionId(namespace: self.namespace, id: self.id)
+    }
+}

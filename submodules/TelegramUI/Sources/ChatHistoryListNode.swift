@@ -1720,8 +1720,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         let startTime = CFAbsoluteTimeGetCurrent()
         var measure_isFirstTime = true
         let messageViewQueue = Queue.mainQueue()
-        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
-            historyViewUpdate,
+        let historyViewTransitionDisposable = (combineLatest(queue: messageViewQueue,
+            historyViewUpdate |> debug_measureTimeToFirstEvent(label: "historyViewUpdate"),
             self.chatPresentationDataPromise.get(),
             selectedMessages,
             updatingMedia,
@@ -1746,7 +1746,7 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
             chatThemes,
             deviceContactsNumbers,
             contentSettings
-        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
+        ) |> debug_measureTimeToFirstEvent(label: "firstChatHistoryTransition")).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, preferredStoryHighQuality, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, availableMessageEffects, savedMessageTags, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, translationState, maxReadStoryId, recommendedChannels, audioTranscriptionTrial, chatThemes, deviceContactsNumbers, contentSettings in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots, allAdMessages) = promises
             
             if measure_isFirstTime {
