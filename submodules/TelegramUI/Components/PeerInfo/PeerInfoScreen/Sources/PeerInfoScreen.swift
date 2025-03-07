@@ -12708,6 +12708,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
         
         if isMyProfile, let profileGiftsContext {
+            profileGiftsContext.updateFilter(.All)
+            profileGiftsContext.updateSorting(.date)
             profileGiftsContext.reload()
         }
         
