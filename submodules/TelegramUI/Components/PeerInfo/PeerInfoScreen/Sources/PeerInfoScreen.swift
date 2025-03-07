@@ -12707,6 +12707,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.starsContext = nil
         }
         
+        if isMyProfile, let profileGiftsContext {
+            profileGiftsContext.updateFilter(.All)
+            profileGiftsContext.updateSorting(.date)
+            profileGiftsContext.reload()
+        }
+        
         self.presentationData = updatedPresentationData?.0 ?? context.sharedContext.currentPresentationData.with { $0 }
         
         let baseNavigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
