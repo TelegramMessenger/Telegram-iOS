@@ -3703,6 +3703,18 @@ Unused sets are archived when you add more.";
 "NotificationsSound.Pulse" = "Pulse";
 "NotificationsSound.Synth" = "Synth";
 
+"NotificationsSound.Rebound" = "Rebound";
+"NotificationsSound.Antic" = "Antic";
+"NotificationsSound.Cheers" = "Cheers";
+"NotificationsSound.Droplet" = "Droplet";
+"NotificationsSound.Handoff" = "Handoff";
+"NotificationsSound.Milestone" = "Milestone";
+"NotificationsSound.Passage" = "Passage";
+"NotificationsSound.Portal" = "Portal";
+"NotificationsSound.Rattle" = "Rattle";
+"NotificationsSound.Slide" = "Slide";
+"NotificationsSound.Welcome" = "Welcome";
+
 "NotificationsSound.Tritone" = "Tri-tone";
 "NotificationsSound.Tremolo" = "Tremolo";
 "NotificationsSound.Alert" = "Alert";
@@ -9813,10 +9825,6 @@ Sorry for the inconvenience.";
 "Premium.Stories.Format.Title" = "Links and Formatting";
 "Premium.Stories.Format.Text" = "Add links and formatting in captions to your stories.";
 
-"Premium.MaxExpiringStoriesText" = "You can post **%@** stories in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
-"Premium.MaxExpiringStoriesNoPremiumText" = "You have reached the limit of **%@** stories per **24** hours.";
-"Premium.MaxExpiringStoriesFinalText" = "You have reached the limit of **%@** stories per **24** hours.";
-
 "Premium.MaxStoriesWeeklyText" = "You can post **%@** stories in a week. Upgrade to **Telegram Premium** to increase this limit to **%@**.";
 "Premium.MaxStoriesWeeklyNoPremiumText" = "You have reached the limit of **%@** stories per week.";
 "Premium.MaxStoriesWeeklyFinalText" = "You have reached the limit of **%@** stories per week.";
@@ -13992,3 +14000,17 @@ Sorry for the inconvenience.";
 "Conversation.VideoTimeLinkCopied" = "Link with start time at %@ copied to clipboard.";
 "Share.VideoStartAt" = "Start at %@";
 "SendStarReactions.SubtitleFrom" = "from %@";
+
+"Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesTextPremiumNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesTextPremiumNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesTextFormat" = "You can post %@ in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
+
+"Premium.MaxExpiringStoriesNoPremiumTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesNoPremiumTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesNoPremiumTextFormat" = "You have reached the limit of %@ per **24** hours.";
+
+"Premium.MaxExpiringStoriesFinalTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesFinalTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesFinalTextFormat" = "You have reached the limit of %@ stories per **24** hours.";
