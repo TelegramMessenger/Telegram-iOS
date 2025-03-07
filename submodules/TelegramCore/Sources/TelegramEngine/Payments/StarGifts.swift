@@ -1210,6 +1210,10 @@ private final class ProfileGiftsContextImpl {
             if let reference = gift.reference, existingGifts.contains(reference) {
                 continue
             }
+            var gift = gift
+            if gift.reference == reference {
+                gift = gift.withPinnedToTop(pinnedToTop)
+            }
             updatedGifts.append(gift)
         }
         updatedGifts.sort { lhs, rhs in
@@ -1237,6 +1241,10 @@ private final class ProfileGiftsContextImpl {
             for gift in self.filteredGifts {
                 if let reference = gift.reference, existingFilteredGifts.contains(reference) {
                     continue
+                }
+                var gift = gift
+                if gift.reference == reference {
+                    gift = gift.withPinnedToTop(pinnedToTop)
                 }
                 updatedFilteredGifts.append(gift)
             }
