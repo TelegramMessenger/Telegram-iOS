@@ -971,6 +971,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     if groupCallController.view.superview == nil {
                         (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                     }
+                } else if let streamController = self.streamController {
+                    mainWindow.hostView.containerView.endEditing(true)
+                    if streamController.view.superview == nil {
+                        (mainWindow.viewController as? NavigationController)?.pushViewController(streamController)
+                    }
                 }
             }
         } else {
@@ -1357,7 +1362,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let streamController = MediaStreamComponentController(call: group)
                 streamController.navigationPresentation = .flatModal
                 streamController.parentNavigationController = navigationController
+                
+                let thisCallIsOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+                streamController.onViewDidAppear = {
+                    thisCallIsOnScreenPromise.set(true)
+                }
+                streamController.onViewDidDisappear = {
+                    thisCallIsOnScreenPromise.set(false)
+                }
+                
                 self.streamController = streamController
+                
+                self.mainWindow?.hostView.containerView.endEditing(true)
+                
+                thisCallIsOnScreenPromise.set(true)
+                self.hasGroupCallOnScreenPromise.set(thisCallIsOnScreenPromise.get())
+                beginDisplayingCallStatusBar.set(.single(Void()))
                 
                 navigationController.pushViewController(streamController)
             }
@@ -1785,6 +1805,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
+            }
+        } else if let streamController = self.streamController {
+            if streamController.isNodeLoaded && streamController.view.superview == nil {
+                mainWindow.hostView.containerView.endEditing(true)
+                (mainWindow.viewController as? NavigationController)?.pushViewController(streamController)
             }
         }
     }
