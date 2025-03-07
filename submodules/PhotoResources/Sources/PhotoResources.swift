@@ -448,7 +448,7 @@ private func chatMessageImageFileThumbnailDatas(account: Account, userLocation: 
     return signal
 }
 
-private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, previewSourceFileReference: FileMediaReference?, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
+private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, previewSourceFileReference: FileMediaReference?, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
     let fullSizeResource = fileReference.media.resource
     var reducedSizeResource: MediaResource?
     if let videoThumbnail = fileReference.media.videoThumbnails.first {
@@ -1627,7 +1627,7 @@ public func mediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceU
     }
 }
 
-public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, previewSourceFileReference: FileMediaReference? = nil, imageReference: ImageMediaReference? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, previewSourceFileReference: FileMediaReference? = nil, imageReference: ImageMediaReference? = nil, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal: Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError>
     if let imageReference = imageReference {
         signal = chatMessagePhotoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad, forceThumbnail: blurred)
@@ -1638,7 +1638,7 @@ public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaR
             return Tuple(thumbnailData, fullSizeData.flatMap({ Tuple($0, "") }), fullSizeComplete)
         }
     } else {
-        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, previewSourceFileReference: previewSourceFileReference, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
+        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, previewSourceFileReference: previewSourceFileReference, alternativeFileAndRange: alternativeFileAndRange, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
     }
     
     return signal

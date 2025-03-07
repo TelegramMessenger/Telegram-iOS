@@ -2286,7 +2286,8 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                 
                                 if automaticDownload != .none, let file = media as? TelegramMediaFile, NativeVideoContent.isHLSVideo(file: file) {
                                     let postbox = context.account.postbox
-                                    let fetchSignal = HLSVideoContent.minimizedHLSQualityPreloadData(postbox: context.account.postbox, file: .message(message: MessageReference(message), media: file), userLocation: .peer(message.id.peerId), prefixSeconds: 10, autofetchPlaylist: true, codecConfiguration: HLSCodecConfiguration(context: context))
+                                    let fetchSignal: Signal<Never, NoError>
+                                    fetchSignal = HLSVideoContent.minimizedHLSQualityPreloadData(postbox: context.account.postbox, file: .message(message: MessageReference(message), media: file), userLocation: .peer(message.id.peerId), prefixSeconds: 10, autofetchPlaylist: true, codecConfiguration: HLSCodecConfiguration(context: context))
                                     |> mapToSignal { fileAndRange -> Signal<Never, NoError> in
                                         guard let fileAndRange else {
                                             return .complete()

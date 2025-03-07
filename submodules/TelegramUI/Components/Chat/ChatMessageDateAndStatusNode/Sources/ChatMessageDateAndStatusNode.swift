@@ -1116,7 +1116,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 
                                 var centerAnimation: TelegramMediaFile?
                                 
-                                centerAnimation = messageEffect.staticIcon
+                                centerAnimation = messageEffect.staticIcon?._parse()
                                 
                                 node.update(
                                     context: arguments.context,

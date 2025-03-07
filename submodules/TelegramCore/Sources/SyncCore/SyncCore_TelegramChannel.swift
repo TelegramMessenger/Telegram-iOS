@@ -347,7 +347,7 @@ public final class TelegramChannel: Peer, Equatable {
         self.verificationIconFileId = decoder.decodeOptionalInt64ForKey("vfid")
         self.sendPaidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "sendPaidMessageStars")
         
-        #if DEBUG
+        #if DEBUG && false
         var builder = FlatBufferBuilder(initialSize: 1024)
         let offset = self.encodeToFlatBuffers(builder: &builder)
         builder.finish(offset: offset)

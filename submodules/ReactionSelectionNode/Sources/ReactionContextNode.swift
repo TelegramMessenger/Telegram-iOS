@@ -1893,7 +1893,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                     for i in 0 ..< 2 {
                                         let groupId = i == 0 ? "reactions" : "stickers"
                                         for item in i == 0 ? reactionEffects : stickerEffects {
-                                            let itemFile: TelegramMediaFile = item.effectSticker
+                                            let itemFile = item.effectSticker
                                             
                                             var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
                                             if itemFile.isCustomTemplateEmoji {
@@ -1917,11 +1917,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                                 }
                                             }
                                             
-                                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile), partialReference: .none)
+                                            let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                                             let resultItem = EmojiPagerContentComponent.Item(
                                                 animationData: animationData,
                                                 content: .animation(animationData),
-                                                itemFile: TelegramMediaFile.Accessor(itemFile),
+                                                itemFile: itemFile,
                                                 subgroupId: nil,
                                                 icon: icon,
                                                 tintMode: tintMode
@@ -2257,7 +2257,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                 for i in 0 ..< 2 {
                                     let groupId = i == 0 ? "reactions" : "stickers"
                                     for item in i == 0 ? reactionEffects : stickerEffects {
-                                        let itemFile: TelegramMediaFile = item.effectSticker
+                                        let itemFile = item.effectSticker
                                         
                                         var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
                                         if itemFile.isCustomTemplateEmoji {
@@ -2281,11 +2281,11 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
                                             }
                                         }
                                         
-                                        let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile), partialReference: .none)
+                                        let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                                         let resultItem = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
-                                            itemFile: TelegramMediaFile.Accessor(itemFile),
+                                            itemFile: itemFile,
                                             subgroupId: nil,
                                             icon: icon,
                                             tintMode: tintMode

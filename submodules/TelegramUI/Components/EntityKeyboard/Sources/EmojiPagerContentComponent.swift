@@ -43,10 +43,10 @@ public final class EntityKeyboardAnimationData: Equatable {
         case gift(String)
     }
     
-    public enum ItemType {
+    public enum ItemType: Equatable {
         case still
         case lottie
-        case video
+        case video(isVP9: Bool)
         
         var animationCacheAnimationType: AnimationCacheAnimationType {
             switch self {
@@ -54,8 +54,8 @@ public final class EntityKeyboardAnimationData: Equatable {
                 return .still
             case .lottie:
                 return .lottie
-            case .video:
-                return .video
+            case let .video(isVP9):
+                return .video(isVP9: isVP9)
             }
         }
     }
@@ -105,9 +105,11 @@ public final class EntityKeyboardAnimationData: Equatable {
     public convenience init(file: TelegramMediaFile.Accessor, isReaction: Bool = false, partialReference: PartialMediaReference? = nil) {
         let type: ItemType
         if file.isVideoSticker || file.isVideoEmoji {
-            type = .video
+            type = .video(isVP9: true)
         } else if file.isAnimatedSticker {
             type = .lottie
+        } else if file.isVideo {
+            type = .video(isVP9: false)
         } else {
             type = .still
         }
@@ -406,7 +408,7 @@ public final class EmojiPagerContentComponent: Component {
             case locked
             case premium
             case text(String)
-            case customFile(TelegramMediaFile)
+            case customFile(TelegramMediaFile.Accessor)
         }
         
         public enum TintMode: Equatable {

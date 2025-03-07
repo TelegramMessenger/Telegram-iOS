@@ -33,7 +33,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         case locked
         case featured
         case text(String)
-        case customFile(TelegramMediaFile)
+        case customFile(TelegramMediaFile.Accessor)
     }
     
     public let item: EmojiPagerContentComponent.Item

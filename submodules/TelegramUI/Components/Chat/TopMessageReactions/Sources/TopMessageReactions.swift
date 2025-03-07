@@ -501,7 +501,7 @@ public func effectMessageReactions(context: AccountContext) -> Signal<[ReactionI
             }
             existingIds.insert(messageEffect.id)
             
-            let mainFile = TelegramMediaFile.Accessor(messageEffect.effectSticker)
+            let mainFile = messageEffect.effectSticker
             
             result.append(ReactionItem(
                 reaction: ReactionItem.Reaction(rawValue: .custom(messageEffect.id)),

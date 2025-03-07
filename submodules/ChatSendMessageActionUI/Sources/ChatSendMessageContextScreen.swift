@@ -954,10 +954,10 @@ final class ChatSendMessageContextScreenComponent: Component {
                             }
                             
                             var customEffectResource: (FileMediaReference, MediaResource)?
-                            if let effectAnimation = messageEffect.effectAnimation {
+                            if let effectAnimation = messageEffect.effectAnimation?._parse() {
                                 customEffectResource = (FileMediaReference.standalone(media: effectAnimation), effectAnimation.resource)
                             } else {
-                                let effectSticker = messageEffect.effectSticker
+                                let effectSticker = messageEffect.effectSticker._parse()
                                 if let effectFile = effectSticker.videoThumbnails.first {
                                     customEffectResource = (FileMediaReference.standalone(media: effectSticker), effectFile.resource)
                                 }

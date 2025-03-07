@@ -331,7 +331,7 @@ public final class TelegramUser: Peer, Equatable {
         self.subscriberCount = decoder.decodeOptionalInt32ForKey("ssc")
         self.verificationIconFileId = decoder.decodeOptionalInt64ForKey("vfid")
         
-        #if DEBUG
+        #if DEBUG && false
         var builder = FlatBufferBuilder(initialSize: 1024)
         let offset = self.encodeToFlatBuffers(builder: &builder)
         builder.finish(offset: offset)

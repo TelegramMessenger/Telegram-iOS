@@ -207,7 +207,7 @@ public final class TelegramGroup: Peer, Equatable {
         self.creationDate = decoder.decodeInt32ForKey("d", orElse: 0)
         self.version = Int(decoder.decodeInt32ForKey("v", orElse: 0))
         
-        #if DEBUG
+        #if DEBUG && false
         var builder = FlatBufferBuilder(initialSize: 1024)
         let offset = self.encodeToFlatBuffers(builder: &builder)
         builder.finish(offset: offset)

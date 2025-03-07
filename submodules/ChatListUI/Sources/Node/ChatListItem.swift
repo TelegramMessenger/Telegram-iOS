@@ -1747,7 +1747,11 @@ public class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.avatarNode.font = avatarPlaceholderFont(size: avatarFontSize)
                 }
             }
-            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            if peer.smallProfileImage != nil && overrideImage == nil {
+                self.avatarNode.setPeerV2(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            } else {
+                self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForumAvatar ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            }
             
             if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context

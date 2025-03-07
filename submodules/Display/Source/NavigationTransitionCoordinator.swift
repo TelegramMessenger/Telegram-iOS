@@ -52,6 +52,8 @@ final class NavigationTransitionCoordinator {
     private var currentCompletion: (() -> Void)?
     private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)?
     
+    private var frameRateLink: SharedDisplayLinkDriver.Link?
+    
     init(transition: NavigationTransition, isInteractive: Bool, isFlat: Bool, container: NavigationContainer, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
         self.isInteractive = isInteractive
@@ -114,6 +116,8 @@ final class NavigationTransitionCoordinator {
         
         self.maybeCreateNavigationBarTransition()
         self.updateProgress(0.0, transition: .immediate, completion: {})
+        
+        self.frameRateLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { _ in })
     }
 
     required init(coder aDecoder: NSCoder) {

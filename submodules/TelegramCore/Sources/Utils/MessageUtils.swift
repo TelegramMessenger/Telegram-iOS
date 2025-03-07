@@ -642,3 +642,22 @@ public func _internal_parseMediaAttachment(data: Data) -> Media? {
         return nil
     }
 }
+
+public extension Message {
+    func messageEffect(availableMessageEffects: AvailableMessageEffects?) -> AvailableMessageEffects.MessageEffect? {
+        guard let availableMessageEffects else {
+            return nil
+        }
+        for attribute in self.attributes {
+            if let attribute = attribute as? EffectMessageAttribute {
+                for effect in availableMessageEffects.messageEffects {
+                    if effect.id == attribute.id {
+                        return effect
+                    }
+                }
+                break
+            }
+        }
+        return nil
+    }
+}

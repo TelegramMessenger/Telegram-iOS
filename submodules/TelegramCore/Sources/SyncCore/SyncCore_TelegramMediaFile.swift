@@ -698,8 +698,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
                 return lhsWrappedData == rhsWrappedData
             } else {
-                assertionFailure()
-                return false
+                return lhs._parse() == rhs._parse()
             }
         }
     }
@@ -901,13 +900,6 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(postboxEncoder.makeData(), forKey: .data)
-    }
-    
-    public func encodeToFlatBuffersData() -> Data {
-        var builder = FlatBufferBuilder(initialSize: 1024)
-        let value = self.encodeToFlatBuffers(builder: &builder)
-        builder.finish(offset: value)
-        return builder.data
     }
     
     public init(flatBuffersObject: TelegramCore_TelegramMediaFile) throws {
