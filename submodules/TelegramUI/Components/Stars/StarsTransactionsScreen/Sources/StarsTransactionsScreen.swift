@@ -658,7 +658,6 @@ final class StarsTransactionsScreenComponent: Component {
                             },
                             secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Stats : nil,
                             secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListStatsIcon(environment.theme) : nil,
-                            secondaryActionCooldownUntilTimestamp: self.revenueState?.balances.nextWithdrawalTimestamp,
                             secondaryAction: withdrawAvailable ? { [weak self] in
                                 guard let self, let component = self.component else {
                                     return

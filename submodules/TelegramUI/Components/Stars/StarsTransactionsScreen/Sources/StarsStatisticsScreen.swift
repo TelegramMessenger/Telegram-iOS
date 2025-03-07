@@ -628,7 +628,6 @@ final class StarsStatisticsScreenComponent: Component {
                             actionAvailable: true,
                             actionIsEnabled: self.starsState?.balances.withdrawEnabled ?? true,
                             actionCooldownUntilTimestamp: self.starsState?.balances.nextWithdrawalTimestamp,
-                            actionIcon: PresentationResourcesItemList.itemListRoundTopupIcon(environment.theme),
                             action: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
@@ -648,7 +647,6 @@ final class StarsStatisticsScreenComponent: Component {
                                 }
                             },
                             secondaryActionTitle: strings.Stars_BotRevenue_Withdraw_BuyAds,
-                            secondaryActionIcon: PresentationResourcesItemList.itemListRoundWithdrawIcon(environment.theme),
                             secondaryAction: { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
