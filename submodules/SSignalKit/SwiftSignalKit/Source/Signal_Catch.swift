@@ -3,14 +3,15 @@ import Foundation
 public func `catch`<T, E, R>(_ f: @escaping(E) -> Signal<T, R>) -> (Signal<T, E>) -> Signal<T, R> {
     return { signal in
         return Signal<T, R> { subscriber in
-            let disposable = DisposableSet()
+            let mainDisposable = MetaDisposable()
+            let alternativeDisposable = MetaDisposable()
             
-            disposable.add(signal.start(next: { next in
+            mainDisposable.set(signal.start(next: { next in
                 subscriber.putNext(next)
             }, error: { error in
                 let anotherSignal = f(error)
                 
-                disposable.add(anotherSignal.start(next: { next in
+                alternativeDisposable.set(anotherSignal.start(next: { next in
                     subscriber.putNext(next)
                 }, error: { error in
                    subscriber.putError(error)
@@ -21,7 +22,10 @@ public func `catch`<T, E, R>(_ f: @escaping(E) -> Signal<T, R>) -> (Signal<T, E>
                 subscriber.putCompletion()
             }))
             
-            return disposable
+            return ActionDisposable {
+                mainDisposable.dispose()
+                alternativeDisposable.dispose()
+            }
         }
     }
 }

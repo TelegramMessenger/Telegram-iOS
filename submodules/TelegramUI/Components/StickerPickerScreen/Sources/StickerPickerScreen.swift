@@ -955,7 +955,7 @@ public class StickerPickerScreen: ViewController {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break
@@ -1370,7 +1370,7 @@ public class StickerPickerScreen: ViewController {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break

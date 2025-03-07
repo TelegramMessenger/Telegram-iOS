@@ -141,7 +141,7 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
             case let .info(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, animatedStickers, enabled, editing, selected):
-                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: StickerPackCollectionInfo.Accessor(info), itemCount: count, topItem: topItem, unread: false, control: editing.editing ? .check(checked: selected ?? false) : .installation(installed: false), editing: editing, enabled: enabled, playAnimatedStickers: animatedStickers, sectionId: self.section, action: {
                     arguments.openStickerPack(info)
                 }, setPackIdWithRevealedOptions: { current, previous in
                     arguments.setPackIdWithRevealedOptions(current, previous)
@@ -323,11 +323,12 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                 if installed {
                     return .complete()
                 } else {
-                    return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                    let parsedInfo = info._parse()
+                    return context.engine.stickers.addStickerPackInteractively(info: parsedInfo, items: items)
                     |> ignoreValues
                     |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                     }
-                    |> then(.single((info, items)))
+                    |> then(.single((parsedInfo, items)))
                 }
             case .fetching:
                 break
@@ -489,11 +490,12 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            let parsedInfo = info._parse()
+                                            return context.engine.stickers.addStickerPackInteractively(info: parsedInfo, items: items)
                                             |> ignoreValues
                                             |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                                             }
-                                            |> then(.single((info, items)))
+                                            |> then(.single((parsedInfo, items)))
                                         }
                                     case .fetching:
                                         break

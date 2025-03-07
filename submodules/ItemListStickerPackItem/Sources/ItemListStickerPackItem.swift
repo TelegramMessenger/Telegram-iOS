@@ -40,7 +40,7 @@ public enum ItemListStickerPackItemControl: Equatable {
 public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let context: AccountContext
-    let packInfo: StickerPackCollectionInfo
+    let packInfo: StickerPackCollectionInfo.Accessor
     let itemCount: String
     let topItem: StickerPackItem?
     let unread: Bool
@@ -56,7 +56,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let removePack: () -> Void
     let toggleSelected: () -> Void
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, style: ItemListStyle = .blocks, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo.Accessor, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, style: ItemListStyle = .blocks, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
         self.presentationData = presentationData
         self.context = context
         self.packInfo = packInfo
@@ -487,7 +487,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             var thumbnailItem: StickerPackThumbnailItem?
             var resourceReference: MediaResourceReference?
-            if let thumbnail = item.packInfo.thumbnail {
+            if item.packInfo.hasThumbnail, let thumbnail = item.packInfo._parse().thumbnail {
                 if thumbnail.typeHint != .generic {
                     thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, thumbnail.typeHint == .video, item.packInfo.flags.contains(.isCustomTemplateEmoji))
                 } else {
@@ -845,7 +845,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         var imageSize = PixelDimensions(width: 512, height: 512)
                         var immediateThumbnailData: Data?
                         if let data = item.packInfo.immediateThumbnailData {
-                            if item.packInfo.thumbnail?.typeHint == .video || item.topItem?.file.isVideoSticker == true {
+                            var isVideoTypeHint = false
+                            if item.packInfo.hasThumbnail, let thumbnail = item.packInfo._parse().thumbnail {
+                                isVideoTypeHint = thumbnail.typeHint == .video
+                            }
+                            
+                            if isVideoTypeHint || item.topItem?.file.isVideoSticker == true {
                                 imageSize = PixelDimensions(width: 100, height: 100)
                             }
                             immediateThumbnailData = data

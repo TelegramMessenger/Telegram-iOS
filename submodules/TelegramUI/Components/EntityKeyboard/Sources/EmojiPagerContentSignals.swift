@@ -73,7 +73,7 @@ public extension EmojiPagerContentComponent {
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
         struct PeerSpecificPackData: Equatable {
-            var info: StickerPackCollectionInfo
+            var info: StickerPackCollectionInfo.Accessor
             var items: [StickerPackItem]
             var peer: EnginePeer
             
@@ -282,7 +282,7 @@ public extension EmojiPagerContentComponent {
                     
                     let animationData: EntityKeyboardAnimationData
                     
-                    if let thumbnail = featuredEmojiPack.info.thumbnail {
+                    if let thumbnailDimensions = featuredEmojiPack.info.thumbnailDimensions {
                         let type: EntityKeyboardAnimationData.ItemType
                         if item.file.isAnimatedSticker {
                             type = .lottie
@@ -295,8 +295,8 @@ public extension EmojiPagerContentComponent {
                         animationData = EntityKeyboardAnimationData(
                             id: .stickerPackThumbnail(featuredEmojiPack.info.id),
                             type: type,
-                            resource: .resource(.stickerPackThumbnail(stickerPack: .id(id: featuredEmojiPack.info.id.id, accessHash: featuredEmojiPack.info.accessHash), resource: thumbnail.resource)),
-                            dimensions: thumbnail.dimensions.cgSize,
+                            resource: .stickerPackThumbnail(id: featuredEmojiPack.info.id.id, accessHash: featuredEmojiPack.info.accessHash, info: featuredEmojiPack.info),
+                            dimensions: thumbnailDimensions.cgSize,
                             immediateThumbnailData: featuredEmojiPack.info.immediateThumbnailData,
                             isReaction: false,
                             isTemplate: false
@@ -1471,7 +1471,7 @@ public extension EmojiPagerContentComponent {
                                 var headerItem: EntityKeyboardAnimationData?
                                 if let thumbnailFileId = featuredEmojiPack.info.thumbnailFileId, let file = featuredEmojiPack.topItems.first(where: { $0.file.fileId.id == thumbnailFileId }) {
                                     headerItem = EntityKeyboardAnimationData(file: file.file)
-                                } else if let thumbnail = featuredEmojiPack.info.thumbnail {
+                                } else if let thumbnailDimensions = featuredEmojiPack.info.thumbnailDimensions {
                                     let info = featuredEmojiPack.info
                                     let type: EntityKeyboardAnimationData.ItemType
                                     if item.file.isAnimatedSticker {
@@ -1485,8 +1485,8 @@ public extension EmojiPagerContentComponent {
                                     headerItem = EntityKeyboardAnimationData(
                                         id: .stickerPackThumbnail(info.id),
                                         type: type,
-                                        resource: .resource(.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)),
-                                        dimensions: thumbnail.dimensions.cgSize,
+                                        resource: .stickerPackThumbnail(id: featuredEmojiPack.info.id.id, accessHash: featuredEmojiPack.info.accessHash, info: featuredEmojiPack.info),
+                                        dimensions: thumbnailDimensions.cgSize,
                                         immediateThumbnailData: info.immediateThumbnailData,
                                         isReaction: false,
                                         isTemplate: false
@@ -1632,7 +1632,7 @@ public extension EmojiPagerContentComponent {
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
         
         struct PeerSpecificPackData: Equatable {
-            var info: StickerPackCollectionInfo
+            var info: StickerPackCollectionInfo.Accessor
             var items: [StickerPackItem]
             var peer: EnginePeer
             
@@ -1769,7 +1769,7 @@ public extension EmojiPagerContentComponent {
                     
                     let animationData: EntityKeyboardAnimationData
                     
-                    if let thumbnail = featuredStickerPack.info.thumbnail {
+                    if let thumbnailDimensions = featuredStickerPack.info.thumbnailDimensions {
                         let type: EntityKeyboardAnimationData.ItemType
                         if item.file.isAnimatedSticker {
                             type = .lottie
@@ -1782,8 +1782,8 @@ public extension EmojiPagerContentComponent {
                         animationData = EntityKeyboardAnimationData(
                             id: .stickerPackThumbnail(featuredStickerPack.info.id),
                             type: type,
-                            resource: .resource(.stickerPackThumbnail(stickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), resource: thumbnail.resource)),
-                            dimensions: thumbnail.dimensions.cgSize,
+                            resource: .stickerPackThumbnail(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash, info: featuredStickerPack.info),
+                            dimensions: thumbnailDimensions.cgSize,
                             immediateThumbnailData: featuredStickerPack.info.immediateThumbnailData,
                             isReaction: false,
                             isTemplate: false
@@ -2084,7 +2084,7 @@ public extension EmojiPagerContentComponent {
                         
                         if let thumbnailFileId = featuredStickerPack.info.thumbnailFileId, let file = featuredStickerPack.topItems.first(where: { $0.file.fileId.id == thumbnailFileId }) {
                             headerItem = EntityKeyboardAnimationData(file: file.file)
-                        } else if let thumbnail = featuredStickerPack.info.thumbnail {
+                        } else if let thumbnailDimensions = featuredStickerPack.info.thumbnailDimensions {
                             let info = featuredStickerPack.info
                             let type: EntityKeyboardAnimationData.ItemType
                             if item.file.isAnimatedSticker {
@@ -2098,8 +2098,8 @@ public extension EmojiPagerContentComponent {
                             headerItem = EntityKeyboardAnimationData(
                                 id: .stickerPackThumbnail(info.id),
                                 type: type,
-                                resource: .resource(.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)),
-                                dimensions: thumbnail.dimensions.cgSize,
+                                resource: .stickerPackThumbnail(id: info.id.id, accessHash: info.accessHash, info: info),
+                                dimensions: thumbnailDimensions.cgSize,
                                 immediateThumbnailData: info.immediateThumbnailData,
                                 isReaction: false,
                                 isTemplate: false

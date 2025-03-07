@@ -539,11 +539,12 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, ASScrol
                             guard let strongSelf = self, let (positionInList, _) = indexAndItems else {
                                 return
                             }
-                            strongSelf.actionPerformed?(info, items, .remove(positionInList: positionInList))
+                            strongSelf.actionPerformed?(info._parse(), items, .remove(positionInList: positionInList))
                         })
                     } else {
-                        let _ = self.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
-                        self.actionPerformed?(info, items, .add)
+                        let parsedInfo = info._parse()
+                        let _ = self.context.engine.stickers.addStickerPackInteractively(info: parsedInfo, items: items).start()
+                        self.actionPerformed?(parsedInfo, items, .add)
                     }
                     self.cancelButtonPressed()
                 default:

@@ -196,6 +196,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 case let .result(info, items, _):
                     var preloadSignals: [Signal<Bool, NoError>] = []
                     
+                    let info = info._parse()
                     if let thumbnail = info.thumbnail {
                         let signal = Signal<Bool, NoError> { subscriber in
                             let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()

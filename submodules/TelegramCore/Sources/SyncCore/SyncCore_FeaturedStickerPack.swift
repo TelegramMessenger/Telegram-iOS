@@ -1,5 +1,7 @@
 import Foundation
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 public struct FeaturedStickerPackItemId {
     public let rawValue: MemoryBuffer
@@ -22,11 +24,11 @@ public struct FeaturedStickerPackItemId {
 }
 
 public final class FeaturedStickerPackItem: Codable {
-    public let info: StickerPackCollectionInfo
+    public let info: StickerPackCollectionInfo.Accessor
     public let topItems: [StickerPackItem]
     public let unread: Bool
     
-    public init(info: StickerPackCollectionInfo, topItems: [StickerPackItem], unread: Bool) {
+    public init(info: StickerPackCollectionInfo.Accessor, topItems: [StickerPackItem], unread: Bool) {
         self.info = info
         self.topItems = topItems
         self.unread = unread
@@ -35,8 +37,13 @@ public final class FeaturedStickerPackItem: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        let infoData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "i")
-        self.info = StickerPackCollectionInfo(decoder: PostboxDecoder(buffer: MemoryBuffer(data: infoData.data)))
+        if let serializedInfoData = try container.decodeIfPresent(Data.self, forKey: "infd") {
+            var byteBuffer = ByteBuffer(data: serializedInfoData)
+            self.info = StickerPackCollectionInfo.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_StickerPackCollectionInfo, serializedInfoData)
+        } else {
+            let infoData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "i")
+            self.info = StickerPackCollectionInfo.Accessor(StickerPackCollectionInfo(decoder: PostboxDecoder(buffer: MemoryBuffer(data: infoData.data))))
+        }
 
         self.topItems = (try container.decode([AdaptedPostboxDecoder.RawObjectData].self, forKey: "t")).map { itemData in
             return StickerPackItem(decoder: PostboxDecoder(buffer: MemoryBuffer(data: itemData.data)))
@@ -48,7 +55,17 @@ public final class FeaturedStickerPackItem: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(PostboxEncoder().encodeObjectToRawData(self.info), forKey: "i")
+        if let infoData = self.info._wrappedData {
+            try container.encode(infoData, forKey: "infd")
+        } else if let info = self.info._wrappedObject {
+            var builder = FlatBufferBuilder(initialSize: 1024)
+            let value = info.encodeToFlatBuffers(builder: &builder)
+            builder.finish(offset: value)
+            let serializedInstantPage = builder.data
+            try container.encode(serializedInstantPage, forKey: "infd")
+        } else {
+            preconditionFailure()
+        }
         try container.encode(self.topItems.map { item in
             return PostboxEncoder().encodeObjectToRawData(item)
         }, forKey: "t")

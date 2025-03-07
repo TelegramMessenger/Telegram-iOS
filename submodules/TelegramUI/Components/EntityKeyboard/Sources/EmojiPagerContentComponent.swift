@@ -62,12 +62,15 @@ public final class EntityKeyboardAnimationData: Equatable {
     
     public enum Resource: Equatable {
         case resource(MediaResourceReference)
+        case stickerPackThumbnail(id: Int64, accessHash: Int64, info: StickerPackCollectionInfo.Accessor)
         case file(PartialMediaReference?, TelegramMediaFile.Accessor)
         
         func _parse() -> MediaResourceReference {
             switch self {
             case let .resource(resource):
                 return resource
+            case let .stickerPackThumbnail(id, accessHash, info):
+                return .stickerPackThumbnail(stickerPack: .id(id: id, accessHash: accessHash), resource: info._parse().thumbnail!.resource)
             case let .file(partialReference, file):
                 let file = file._parse()
                 if let partialReference {

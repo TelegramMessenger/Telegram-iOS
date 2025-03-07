@@ -556,7 +556,7 @@ final class AvatarEditorScreenComponent: Component {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break
@@ -691,7 +691,7 @@ final class AvatarEditorScreenComponent: Component {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break

@@ -2853,7 +2853,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                                 }
                                 |> map { result -> StickerPackCollectionInfo? in
                                     if case let .result(info, _, _) = result {
-                                        return info
+                                        return info._parse()
                                     } else {
                                         return nil
                                     }

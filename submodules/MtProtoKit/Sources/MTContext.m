@@ -1261,16 +1261,25 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
                 }
             }] take:1];
 
-            _transportSchemeDisposableByDatacenterId[@(datacenterId)] = [[filteredSignal onDispose:^
+            MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+            _transportSchemeDisposableByDatacenterId[@(datacenterId)] = disposable;
+            
+            __weak MTMetaDisposable *weakDisposable = disposable;
+            [disposable setDisposable:[[filteredSignal onDispose:^
             {
                 __strong MTContext *strongSelf = weakSelf;
                 if (strongSelf != nil)
                 {
                     [[MTContext contextQueue] dispatchOnQueue:^
                     {
-                        id<MTDisposable> disposable = strongSelf->_transportSchemeDisposableByDatacenterId[@(datacenterId)];
-                        [strongSelf->_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
-                        [disposable dispose];
+                        __strong MTMetaDisposable *strongDisposable = weakDisposable;
+                        if (strongDisposable) {
+                            id<MTDisposable> disposable = strongSelf->_transportSchemeDisposableByDatacenterId[@(datacenterId)];
+                            if (disposable == strongDisposable) {
+                                [strongSelf->_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+                                [disposable dispose];
+                            }
+                        }
                     }];
                 }
             }] startWithNextStrict:^(MTTransportScheme *next)
@@ -1289,7 +1298,7 @@ static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Non
             } completed:^
             {
                 
-            } file:__FILE_NAME__ line:__LINE__];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
     }];
 }

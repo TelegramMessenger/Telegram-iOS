@@ -12,7 +12,7 @@ private struct WrappedStickerPackCollectionInfo: Equatable {
 }
 
 public struct PeerSpecificStickerPackData {
-    public let packInfo: (StickerPackCollectionInfo, [ItemCollectionItem])?
+    public let packInfo: (StickerPackCollectionInfo.Accessor, [ItemCollectionItem])?
     public let canSetup: Bool
 }
 
