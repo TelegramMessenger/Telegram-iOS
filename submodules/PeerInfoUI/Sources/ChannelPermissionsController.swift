@@ -37,10 +37,10 @@ private final class ChannelPermissionsControllerArguments {
     let openChannelExample: () -> Void
     let updateSlowmode: (Int32) -> Void
     let updateUnrestrictBoosters: (Int32) -> Void
-    let updateStarsAmount: (StarsAmount?) -> Void
+    let updateStarsAmount: (StarsAmount?, Bool) -> Void
     let toggleIsOptionExpanded: (TelegramChatBannedRightsFlags) -> Void
     
-    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, updateStarsAmount: @escaping (StarsAmount?) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
+    init(context: AccountContext, updatePermission: @escaping (TelegramChatBannedRightsFlags, Bool) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, addPeer: @escaping  () -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, openPeer: @escaping (ChannelParticipant) -> Void, openPeerInfo: @escaping (EnginePeer) -> Void, openKicked: @escaping () -> Void, presentRestrictedPermissionAlert: @escaping (TelegramChatBannedRightsFlags) -> Void, presentConversionToBroadcastGroup: @escaping () -> Void, openChannelExample: @escaping () -> Void, updateSlowmode: @escaping (Int32) -> Void, updateUnrestrictBoosters: @escaping (Int32) -> Void, updateStarsAmount: @escaping (StarsAmount?, Bool) -> Void, toggleIsOptionExpanded: @escaping (TelegramChatBannedRightsFlags) -> Void) {
         self.context = context
         self.updatePermission = updatePermission
         self.addPeer = addPeer
@@ -418,15 +418,15 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                 }
             case let .chargeForMessages(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateStarsAmount(value ? StarsAmount(value: 400, nanos: 0) : nil)
+                    arguments.updateStarsAmount(value ? StarsAmount(value: 400, nanos: 0) : nil, true)
                 })
             case let .chargeForMessagesInfo(_, value):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
             case let .messagePriceHeader(_, value):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: value, sectionId: self.section)
             case let .messagePrice(_, value, maxValue, price):
-                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: true, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value in
-                    arguments.updateStarsAmount(StarsAmount(value: value, nanos: 0))
+                return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: true, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value, apply in
+                    arguments.updateStarsAmount(StarsAmount(value: value, nanos: 0), apply)
                 })
             case let .messagePriceInfo(_, value):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(value), sectionId: self.section)
@@ -1248,23 +1248,25 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             updateUnrestrictBoostersDisposable.set((context.engine.peers.updateChannelBoostsToUnlockRestrictions(peerId: view.peerId, boosts: value)
             |> deliverOnMainQueue).start())
         })
-    }, updateStarsAmount: { value in
+    }, updateStarsAmount: { value, apply in
         updateState { state in
             var state = state
             state.modifiedStarsAmount = value
             return state
         }
         
-        let _ = (peerView.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { view in
-            var effectiveValue = value
-            if value?.value == 0 {
-                effectiveValue = nil
-            }
-            updateSendPaidMessageStarsDisposable.set((context.engine.peers.updateChannelPaidMessagesStars(peerId: view.peerId, stars: effectiveValue)
-            |> deliverOnMainQueue).start())
-        })
+        if apply {
+            let _ = (peerView.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { view in
+                var effectiveValue = value
+                if value?.value == 0 {
+                    effectiveValue = nil
+                }
+                updateSendPaidMessageStarsDisposable.set((context.engine.peers.updateChannelPaidMessagesStars(peerId: view.peerId, stars: effectiveValue)
+                |> deliverOnMainQueue).start())
+            })
+        }
     }, toggleIsOptionExpanded: { flags in
         updateState { state in
             var state = state

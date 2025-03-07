@@ -274,7 +274,7 @@ public func giftWithdrawAlertController(context: AccountContext, gift: StarGift.
     let strings = presentationData.strings
     
     let title = strings.Gift_Withdraw_Title
-    let text = strings.Gift_Withdraw_Text("\(gift.title) #\(gift.number)").string
+    let text = strings.Gift_Withdraw_Text("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))").string
     let buttonText = strings.Gift_Withdraw_Proceed
     
     var dismissImpl: ((Bool) -> Void)?

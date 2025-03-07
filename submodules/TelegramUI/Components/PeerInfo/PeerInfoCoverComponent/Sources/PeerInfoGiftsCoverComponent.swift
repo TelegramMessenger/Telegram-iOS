@@ -579,7 +579,7 @@ private class GiftIconLayer: SimpleLayer {
     }
     
     override func layoutSublayers() {
-        self.shadowLayer.frame = CGRect(origin: .zero, size: self.bounds.size).insetBy(dx: -4.0, dy: -4.0)
+        self.shadowLayer.frame = CGRect(origin: .zero, size: self.bounds.size).insetBy(dx: -8.0, dy: -8.0)
         self.animationLayer.frame = CGRect(origin: .zero, size: self.bounds.size)
     }
     

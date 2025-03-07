@@ -2968,7 +2968,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             } else {
                 let contentProperties = contentPropertiesAndLayouts[i].3
                 
-                if i == 0 && !headerSize.height.isZero {
+                if (i == 0 || (i == 1 && detachedContentNodesHeight > 0)) && !headerSize.height.isZero {
                     if contentGroupId == nil {
                         contentNodesHeight += properties.headerSpacing
                     }
@@ -2981,7 +2981,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if !contentContainerNodeFrames.isEmpty {
                             overlapOffset = currentContainerGroupOverlap
                         }
-                        let containerFrame = CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight)
+                        var containerContentNodesOrigin = contentNodesHeight
+                        var containerContentNodesHeight = contentNodesHeight
+                        if detachedContentNodesHeight > 0 {
+                            if contentContainerNodeFrames.isEmpty {
+                                containerContentNodesHeight -= detachedContentNodesHeight - 4.0
+                                containerContentNodesOrigin -= detachedContentNodesHeight - 4.0
+                            }
+                        }
+                        let containerFrame = CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - containerContentNodesOrigin - overlapOffset, width: maxContentWidth, height: containerContentNodesHeight)
                         contentContainerNodeFrames.append((containerGroupId, containerFrame, currentItemSelection, currentContainerGroupOverlap))
                                                 
                         if !overlapOffset.isZero {
@@ -2997,7 +3005,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 var contentNodeOriginY = contentNodesHeight
-                if detachedContentNodesHeight > 0 {
+                if detachedContentNodesHeight > 0, contentContainerNodeFrames.isEmpty {
                     contentNodeOriginY -= detachedContentNodesHeight - 4.0
                 }
                 
@@ -3025,7 +3033,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if !contentContainerNodeFrames.isEmpty {
                 overlapOffset = currentContainerGroupOverlap
             }
-            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection, currentContainerGroupOverlap))
+            var containerContentNodesOrigin = contentNodesHeight
+            var containerContentNodesHeight = contentNodesHeight
+            if detachedContentNodesHeight > 0 {
+                if contentContainerNodeFrames.isEmpty {
+                    containerContentNodesHeight -= detachedContentNodesHeight - 4.0
+                    containerContentNodesOrigin -= detachedContentNodesHeight - 4.0
+                }
+            }
+            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - containerContentNodesOrigin - overlapOffset, width: maxContentWidth, height: containerContentNodesHeight), currentItemSelection, currentContainerGroupOverlap))
             if !overlapOffset.isZero {
                 totalContentNodesHeight -= currentContainerGroupOverlap
             }

@@ -424,7 +424,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         isPaidMessage = true
                         titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
                         countOnTop = true
-                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(starrefCommissionPermille)).string
+                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(1000 - starrefCommissionPermille)).string
                     } else if transaction.starrefPeerId == nil {
                         titleText = strings.StarsTransaction_TitleCommission(formatPermille(starrefCommissionPermille)).string
                         countOnTop = false

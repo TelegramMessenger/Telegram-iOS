@@ -25,10 +25,10 @@ public final class MessagePriceItem: ListViewItem, ItemListItem {
     let value: Int64
     let price: String
     public let sectionId: ItemListSectionId
-    let updated: (Int64) -> Void
+    let updated: (Int64, Bool) -> Void
     let openPremiumInfo: (() -> Void)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, isEnabled: Bool, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64) -> Void, openPremiumInfo: (() -> Void)? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, isEnabled: Bool, minValue: Int64, maxValue: Int64, value: Int64, price: String, sectionId: ItemListSectionId, updated: @escaping (Int64, Bool) -> Void, openPremiumInfo: (() -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.isEnabled = isEnabled
@@ -259,7 +259,7 @@ private class MessagePriceItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
-                    
+                                        
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -342,6 +342,13 @@ private class MessagePriceItemNode: ListViewItemNode {
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 18.0, y: 36.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 18.0 * 2.0, height: 44.0))
+                        
+                        sliderView.interactionEnded = { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.item?.updated(Int64(self.amount.realValue), true)
+                        }
                     }
                     
                     strongSelf.lockIconNode.isHidden = item.isEnabled
@@ -436,7 +443,7 @@ private class MessagePriceItemNode: ListViewItemNode {
         }
         self.amount = updatedAmount
         
-        self.item?.updated(Int64(self.amount.realValue))
+        self.item?.updated(Int64(self.amount.realValue), false)
     }
 }
 
