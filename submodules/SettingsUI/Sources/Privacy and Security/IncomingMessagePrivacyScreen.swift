@@ -281,8 +281,9 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                     chatListFilters: nil,
                     onlyUsers: false,
                     disableChannels: true,
-                    disableBots: false
-                )), filters: [.excludeSelf]))
+                    disableBots: true,
+                    disableContacts: true
+                ))))
                 addPeerDisposable.set((controller.result
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak controller] result in
@@ -342,7 +343,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                 controller.navigationPresentation = .modal
                 pushControllerImpl?(controller)
             } else {
-                let controller = selectivePrivacyPeersController(context: context, title: presentationData.strings.Privacy_Messages_Exceptions_Title, footer: presentationData.strings.Privacy_Messages_RemoveFeeInfo, initialPeers: peerIds, initialEnableForPremium: false, displayPremiumCategory: false, initialEnableForBots: false, displayBotsCategory: false, updated: { updatedPeerIds, _, _ in
+                let controller = selectivePrivacyPeersController(context: context, title: presentationData.strings.Privacy_Messages_Exceptions_Title, footer: presentationData.strings.Privacy_Messages_RemoveFeeInfo, hideContacts: true, initialPeers: peerIds, initialEnableForPremium: false, displayPremiumCategory: false, initialEnableForBots: false, displayBotsCategory: false, updated: { updatedPeerIds, _, _ in
                     updateState { state in
                         var updatedState = state
                         updatedState.disableFor = updatedPeerIds

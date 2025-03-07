@@ -13949,6 +13949,7 @@ Sorry for the inconvenience.";
 
 "Stars.Intro.BuyShort" = "Top Up";
 "Stars.Intro.Withdraw" = "Withdraw";
+"Stars.Intro.Stats" = "Stats";
 
 "Group.Info.Settings" = "Group Settings";
 
@@ -14014,3 +14015,6 @@ Sorry for the inconvenience.";
 "Premium.MaxExpiringStoriesFinalTextNumberFormat_1" = "**%d** story";
 "Premium.MaxExpiringStoriesFinalTextNumberFormat_any" = "**%d** stories";
 "Premium.MaxExpiringStoriesFinalTextFormat" = "You have reached the limit of %@ stories per **24** hours.";
+
+"Stars.AccountRevenue.Proceeds.Info" = "Stars from your total balance can be withdrawn as rewards 21 days after they are earned.";
+"Stars.AccountRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
