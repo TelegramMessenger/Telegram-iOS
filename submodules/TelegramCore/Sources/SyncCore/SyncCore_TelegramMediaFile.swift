@@ -698,8 +698,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
                 return lhsWrappedData == rhsWrappedData
             } else {
-                assertionFailure()
-                return false
+                return lhs._parse() == rhs._parse()
             }
         }
     }
