@@ -5,6 +5,8 @@
 #import "TGDateUtils.h"
 #import "TGNeoChatsController.h"
 
+#import "FlickTypeKit/FlickTypeKit.h"
+
 @interface TGExtensionDelegate ()
 {
     NSString *_cachedContentSize;
@@ -112,6 +114,21 @@
 + (instancetype)instance
 {
     return (TGExtensionDelegate *)[[WKExtension sharedExtension] delegate];
+}
+
+@end
+
+
+@implementation TGExtensionDelegate (FlickType)
+
+- (void)applicationDidFinishLaunching
+{
+    FlickType.returnURL = [NSURL URLWithString:@"https://telegram.me/flicktype/"];
+}
+
+- (void)handleActivity:(NSUserActivity *)userActivity
+{
+    if ([FlickType handle:userActivity]) { return; }
 }
 
 @end
