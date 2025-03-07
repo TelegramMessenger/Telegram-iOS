@@ -465,4 +465,10 @@ public struct PresentationResourcesItemList {
             })
         })
     }
+    
+    public static func itemListStatsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListStatsIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Premium/Stars/Stats"), color: .white)?.withRenderingMode(.alwaysTemplate)
+        })
+    }
 }
