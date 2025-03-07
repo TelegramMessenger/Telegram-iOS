@@ -3728,7 +3728,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
-        }, sendGift: { _ in
+        }, sendGift: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.openPremiumGift()
         }, openUniqueGift: { _ in
         }, openMessageFeeException: {
         }, requestMessageUpdate: { _, _ in

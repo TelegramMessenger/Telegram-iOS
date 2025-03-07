@@ -120,7 +120,7 @@ private final class GiftContextPreviewComponent: Component {
                 let subtitleSize = self.subtitle.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(text: .plain(
-                        NSAttributedString(string: "\(environment.strings.Gift_Unique_Collectible) #\(uniqueGift.number)", font: Font.regular(13.0), textColor: vibrantColor)
+                        NSAttributedString(string: "\(environment.strings.Gift_Unique_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))", font: Font.regular(13.0), textColor: vibrantColor)
                     ))),
                     environment: {},
                     containerSize: availableSize

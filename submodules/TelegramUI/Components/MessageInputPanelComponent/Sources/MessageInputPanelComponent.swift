@@ -681,7 +681,7 @@ public final class MessageInputPanelComponent: Component {
             if self.contextQueryPeer == nil, let peerId = component.chatLocation?.peerId {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self, peer?.addressName != nil else {
+                    guard let self, let peer, case .channel = peer, peer.addressName != nil else {
                         return
                     }
                     self.contextQueryPeer = peer

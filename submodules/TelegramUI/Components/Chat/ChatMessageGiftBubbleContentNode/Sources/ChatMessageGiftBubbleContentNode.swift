@@ -354,8 +354,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId)
             
-                let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
-                
+                var primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                                
                 var months: Int32 = 3
                 var animationName: String = ""
                 var animationFile: TelegramMediaFile?
@@ -582,7 +582,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 } else {
                                     title = isStoryEntity ? uniqueGift.title : item.presentationData.strings.Notification_StarGift_Title(authorName).string
                                 }
-                                text =  isStoryEntity ? "**\(item.presentationData.strings.Notification_StarGift_Collectible) #\(uniqueGift.number)**" : "**\(uniqueGift.title) #\(uniqueGift.number)**"
+                                text =  isStoryEntity ? "**\(item.presentationData.strings.Notification_StarGift_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**" : "**\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, item.presentationData.dateTimeFormat.groupingSeparator))**"
                                 ribbonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_Gift
                                 buttonTitle = isStoryEntity ? "" : item.presentationData.strings.Notification_StarGift_View
                                 modelTitle = item.presentationData.strings.Notification_StarGift_Model
@@ -599,6 +599,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                         uniqueSecondBackgroundColor = UIColor(rgb: UInt32(bitPattern: innerColor))
                                         uniquePatternColor = UIColor(rgb: UInt32(bitPattern: patternColor))
                                         backdropValue = name
+                                        primaryTextColor = UIColor(rgb: 0xffffff)
                                         subtitleColor = UIColor(rgb: UInt32(bitPattern: innerColor)).withMultiplied(hue: 1.0, saturation: 1.02, brightness: 1.25).mixedWith(UIColor.white, alpha: 0.3)
                                     case let .pattern(name, file, _):
                                         symbolValue = name

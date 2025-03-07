@@ -255,6 +255,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.buttonsContainerNode.clipsToBounds = true
         
         self.buttonsBackgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true, enableSaturation: false)
+        self.buttonsBackgroundNode.isUserInteractionEnabled = false
         self.buttonsContainerNode.addSubnode(self.buttonsBackgroundNode)
         self.buttonsMaskView = UIView()
         self.buttonsBackgroundNode.view.mask = self.buttonsMaskView

@@ -312,7 +312,7 @@ final class StarsTransactionsListPanelComponent: Component {
                             itemSubtitle = environment.strings.Stars_Intro_Transaction_PaidMessage(item.paidMessageCount ?? 1)
                         } else if let starGift = item.starGift {
                             if item.flags.contains(.isStarGiftUpgrade), case let .unique(gift) = starGift {
-                                itemTitle = "\(gift.title) #\(gift.number)"
+                                itemTitle = "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, environment.dateTimeFormat.groupingSeparator))"
                                 itemSubtitle = environment.strings.Stars_Intro_Transaction_GiftUpgrade
                                 uniqueGift = gift
                             } else {
