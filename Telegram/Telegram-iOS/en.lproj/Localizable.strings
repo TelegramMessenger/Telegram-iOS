@@ -13941,6 +13941,7 @@ Sorry for the inconvenience.";
 
 "Stars.Intro.BuyShort" = "Top Up";
 "Stars.Intro.Withdraw" = "Withdraw";
+"Stars.Intro.Stats" = "Stats";
 
 "Group.Info.Settings" = "Group Settings";
 
@@ -13992,3 +13993,6 @@ Sorry for the inconvenience.";
 "Conversation.VideoTimeLinkCopied" = "Link with start time at %@ copied to clipboard.";
 "Share.VideoStartAt" = "Start at %@";
 "SendStarReactions.SubtitleFrom" = "from %@";
+
+"Stars.AccountRevenue.Proceeds.Info" = "Stars from your total balance can be withdrawn as rewards 21 days after they are earned.";
+"Stars.AccountRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
