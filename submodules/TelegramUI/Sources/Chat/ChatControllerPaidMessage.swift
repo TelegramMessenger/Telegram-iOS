@@ -15,7 +15,7 @@ import TelegramPresentationData
 import TelegramNotices
 
 extension ChatControllerImpl {
-    func presentPaidMessageAlertIfNeeded(count: Int32 = 1, forceDark: Bool = false, completion: @escaping (Bool) -> Void) {
+    func presentPaidMessageAlertIfNeeded(count: Int32 = 1, forceDark: Bool = false, alwaysAsk: Bool = false, completion: @escaping (Bool) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
             completion(false)
             return
@@ -24,11 +24,12 @@ extension ChatControllerImpl {
             let totalAmount = sendPaidMessageStars.value * Int64(count)
             
             let _ = (ApplicationSpecificNotice.dismissedPaidMessageWarningNamespace(accountManager: self.context.sharedContext.accountManager, peerId: peer.id)
+            |> take(1)
             |> deliverOnMainQueue).start(next: { [weak self] dismissedAmount in
                 guard let self, let starsContext = self.context.starsContext else {
                     return
                 }
-                if let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance.value > totalAmount {
+                if !alwaysAsk, let dismissedAmount, dismissedAmount == sendPaidMessageStars.value, let currentState = starsContext.currentState, currentState.balance.value > totalAmount {
                     if count < 3 && totalAmount < 100 {
                         completion(false)
                     } else {
@@ -52,6 +53,7 @@ extension ChatControllerImpl {
                         count: count,
                         amount: sendPaidMessageStars,
                         totalAmount: nil,
+                        hasCheck: !alwaysAsk,
                         navigationController: self.navigationController as? NavigationController,
                         completion: { [weak self] dontAskAgain in
                             guard let self else {
