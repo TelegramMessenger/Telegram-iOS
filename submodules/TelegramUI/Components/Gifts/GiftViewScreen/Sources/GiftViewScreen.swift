@@ -2638,7 +2638,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 giftsPeerId = peerId
                 text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
             } else {
-                giftsPeerId = arguments.peerId
+                giftsPeerId = context.account.peerId
                 text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
             }
             
