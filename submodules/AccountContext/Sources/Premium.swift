@@ -294,6 +294,44 @@ public struct PremiumConfiguration {
     }
 }
 
+public struct AccountFreezeConfiguration {
+    public static var defaultValue: AccountFreezeConfiguration {
+        return AccountFreezeConfiguration(
+            freezeSinceDate: nil,
+            freezeUntilDate: nil,
+            freezeAppealUrl: nil
+        )
+    }
+    
+    public let freezeSinceDate: Int32?
+    public let freezeUntilDate: Int32?
+    public let freezeAppealUrl: String?
+    
+    fileprivate init(
+        freezeSinceDate: Int32?,
+        freezeUntilDate: Int32?,
+        freezeAppealUrl: String?
+    ) {
+        self.freezeSinceDate = freezeSinceDate
+        self.freezeUntilDate = freezeUntilDate
+        self.freezeAppealUrl = freezeAppealUrl
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> AccountFreezeConfiguration {
+        let defaultValue = self.defaultValue
+        if let data = appConfiguration.data {
+            return AccountFreezeConfiguration(
+                freezeSinceDate: (data["freeze_since_date"] as? Double).flatMap(Int32.init) ?? defaultValue.freezeSinceDate,
+                freezeUntilDate: (data["freeze_until_date"] as? Double).flatMap(Int32.init) ?? defaultValue.freezeUntilDate,
+                freezeAppealUrl: data["freeze_appeal_url"] as? String ?? defaultValue.freezeAppealUrl
+            )
+        } else {
+            return defaultValue
+        }
+    }
+}
+
+
 public protocol GiftOptionsScreenProtocol {
     
 }

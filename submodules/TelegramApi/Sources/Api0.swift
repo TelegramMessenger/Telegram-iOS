@@ -84,7 +84,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1778593322] = { return Api.BotApp.parse_botApp($0) }
     dict[1571189943] = { return Api.BotApp.parse_botAppNotModified($0) }
     dict[-912582320] = { return Api.BotAppSettings.parse_botAppSettings($0) }
-    dict[-1989921868] = { return Api.BotBusinessConnection.parse_botBusinessConnection($0) }
+    dict[-1892371723] = { return Api.BotBusinessConnection.parse_botBusinessConnection($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
     dict[-1180016534] = { return Api.BotCommandScope.parse_botCommandScopeChatAdmins($0) }
     dict[1877059713] = { return Api.BotCommandScope.parse_botCommandScopeChats($0) }
@@ -118,6 +118,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-867328308] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleCustom($0) }
     dict[-1007487743] = { return Api.BusinessAwayMessageSchedule.parse_businessAwayMessageScheduleOutsideWorkHours($0) }
     dict[-1198722189] = { return Api.BusinessBotRecipients.parse_businessBotRecipients($0) }
+    dict[-1604170505] = { return Api.BusinessBotRights.parse_businessBotRights($0) }
     dict[-1263638929] = { return Api.BusinessChatLink.parse_businessChatLink($0) }
     dict[-451302485] = { return Api.BusinessGreetingMessage.parse_businessGreetingMessage($0) }
     dict[1510606445] = { return Api.BusinessIntro.parse_businessIntro($0) }
@@ -224,7 +225,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1713193015] = { return Api.ChatReactions.parse_chatReactionsSome($0) }
     dict[-1390068360] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[-870702050] = { return Api.Config.parse_config($0) }
-    dict[-1123645951] = { return Api.ConnectedBot.parse_connectedBot($0) }
+    dict[-849058964] = { return Api.ConnectedBot.parse_connectedBot($0) }
     dict[429997937] = { return Api.ConnectedBotStarRef.parse_connectedBotStarRef($0) }
     dict[341499403] = { return Api.Contact.parse_contact($0) }
     dict[496600883] = { return Api.ContactBirthday.parse_contactBirthday($0) }
@@ -480,6 +481,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[853188252] = { return Api.InputStickerSetItem.parse_inputStickerSetItem($0) }
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
     dict[1251549527] = { return Api.InputStickeredMedia.parse_inputStickeredMediaPhoto($0) }
+    dict[-1682807955] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentAuthCode($0) }
     dict[1634697192] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentGiftPremium($0) }
     dict[-75955309] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiftCode($0) }
     dict[369444042] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiveaway($0) }
@@ -1110,6 +1112,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1821035490] = { return Api.Update.parse_updateSavedGifs($0) }
     dict[969307186] = { return Api.Update.parse_updateSavedReactionTags($0) }
     dict[1960361625] = { return Api.Update.parse_updateSavedRingtones($0) }
+    dict[1347068303] = { return Api.Update.parse_updateSentPhoneCode($0) }
     dict[2103604867] = { return Api.Update.parse_updateSentStoryReaction($0) }
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[-245208620] = { return Api.Update.parse_updateSmsJob($0) }
@@ -1217,6 +1220,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[957176926] = { return Api.auth.LoginToken.parse_loginTokenSuccess($0) }
     dict[326715557] = { return Api.auth.PasswordRecovery.parse_passwordRecovery($0) }
     dict[1577067778] = { return Api.auth.SentCode.parse_sentCode($0) }
+    dict[304435204] = { return Api.auth.SentCode.parse_sentCodePaymentRequired($0) }
     dict[596704836] = { return Api.auth.SentCode.parse_sentCodeSuccess($0) }
     dict[1035688326] = { return Api.auth.SentCodeType.parse_sentCodeTypeApp($0) }
     dict[1398007207] = { return Api.auth.SentCodeType.parse_sentCodeTypeCall($0) }
@@ -1588,6 +1592,8 @@ public extension Api {
             case let _1 as Api.BusinessAwayMessageSchedule:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessBotRecipients:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BusinessBotRights:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BusinessChatLink:
                 _1.serialize(buffer, boxed)

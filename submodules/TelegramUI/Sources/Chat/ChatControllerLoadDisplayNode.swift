@@ -4412,7 +4412,18 @@ extension ChatControllerImpl {
         }, openMessagePayment: {
             
         }, openBoostToUnrestrict: { [weak self] in
-            guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
+            guard let self else {
+                return
+            }
+            
+            let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+            if let _ = accountFreezeConfiguration.freezeUntilDate {
+                let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
+                self.push(controller)
+                return
+            }
+            
+            guard let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return
             }
             

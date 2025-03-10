@@ -898,7 +898,7 @@
                             }
                             restartRequest = true;
                         }
-                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound || [rpcError.errorDescription rangeOfString:@"FLOOD_PREMIUM_WAIT_"].location != NSNotFound) {
+                        else if ((rpcError.errorCode == 420 && [rpcError.errorDescription rangeOfString:@"FROZEN_METHOD_INVALID"].location == NSNotFound) || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound || [rpcError.errorDescription rangeOfString:@"FLOOD_PREMIUM_WAIT_"].location != NSNotFound) {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             

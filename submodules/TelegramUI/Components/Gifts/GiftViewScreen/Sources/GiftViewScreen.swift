@@ -383,10 +383,14 @@ private final class GiftViewSheetContent: CombinedComponent {
                             options: options ?? [],
                             purpose: .upgradeStarGift(requiredStars: price),
                             completion: { [weak starsContext] stars in
-                                starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
-                                Queue.mainQueue().after(2.0) {
-                                    proceed(upgradeForm.id)
+                                guard let starsContext else {
+                                    return
                                 }
+                                starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                let _ = (starsContext.onUpdate
+                                |> deliverOnMainQueue).start(next: {
+                                    proceed(upgradeForm.id)
+                                })
                             }
                         )
                         controller.push(purchaseController)

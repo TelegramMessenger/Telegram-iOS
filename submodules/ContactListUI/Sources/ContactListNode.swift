@@ -591,7 +591,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     allSelected = false
                 }
                 var actionTitle: String?
-                if peerIds.count > 1 {
+                if !"".isEmpty, peerIds.count > 1 {
                     actionTitle = allSelected ? strings.Premium_Gift_ContactSelection_DeselectAll.uppercased() : strings.Premium_Gift_ContactSelection_SelectAll.uppercased()
                 }
                 let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text(title.uppercased(), AnyHashable(10 * sectionId + (allSelected ? 1 : 0))), theme: theme, strings: strings, actionTitle: actionTitle, action: { _ in

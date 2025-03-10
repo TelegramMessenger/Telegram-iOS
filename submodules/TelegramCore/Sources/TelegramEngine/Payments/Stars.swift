@@ -568,6 +568,21 @@ private final class StarsContextImpl {
         self._state = state
         self._statePromise.set(.single(state))
     }
+    
+    var onUpdate: Signal<Void, NoError> {
+        return self._statePromise.get()
+        |> take(until: { value in
+            if let value {
+                if !value.flags.contains(.isPendingBalance) {
+                    return SignalTakeAction(passthrough: true, complete: true)
+                }
+            }
+            return SignalTakeAction(passthrough: false, complete: false)
+        })
+        |> map { _ in
+            return Void()
+        }
+    }
 }
 
 private extension StarsContext.State.Transaction {
@@ -1008,6 +1023,18 @@ public final class StarsContext {
     public func load(force: Bool) {
         self.impl.with {
             $0.load(force: force)
+        }
+    }
+    
+    public var onUpdate: Signal<Void, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.onUpdate.start(next: { value in
+                    subscriber.putNext(value)
+                }))
+            }
+            return disposable
         }
     }
     

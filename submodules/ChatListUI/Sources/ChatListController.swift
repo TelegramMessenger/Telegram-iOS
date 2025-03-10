@@ -1208,6 +1208,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             )
         }
         
+        self.chatListDisplayNode.mainContainerNode.openAccountFreezeInfo = { [weak self] in
+            guard let self else {
+                return
+            }
+            let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
+            self.push(controller)
+        }
+        
         self.chatListDisplayNode.mainContainerNode.openPhotoSetup = { [weak self] in
             guard let self else {
                 return

@@ -55,6 +55,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BusinessBotRights: TypeConstructorDescription {
+        case businessBotRights(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .businessBotRights(let flags):
+                    if boxed {
+                        buffer.appendInt32(-1604170505)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .businessBotRights(let flags):
+                return ("businessBotRights", [("flags", flags as Any)])
+    }
+    }
+    
+        public static func parse_businessBotRights(_ reader: BufferReader) -> BusinessBotRights? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.BusinessBotRights.businessBotRights(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BusinessChatLink: TypeConstructorDescription {
         case businessChatLink(flags: Int32, link: String, message: String, entities: [Api.MessageEntity]?, title: String?, views: Int32)
     

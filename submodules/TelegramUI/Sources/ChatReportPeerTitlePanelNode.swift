@@ -583,11 +583,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
         }
         
-        /*#if DEBUG
-        emojiStatus = PeerEmojiStatus(fileId: 5062172592505356289, expirationDate: nil)
-        #endif*/
-        
-        if let emojiStatus = emojiStatus {
+        if let emojiStatus = emojiStatus, case .emoji = emojiStatus.content {
             self.emojiSeparatorNode.isHidden = false
             
             transition.updateFrame(node: self.emojiSeparatorNode, frame: CGRect(origin: CGPoint(x: leftInset + 12.0, y: 40.0), size: CGSize(width: width - leftInset - rightInset - 24.0, height: UIScreenPixel)))

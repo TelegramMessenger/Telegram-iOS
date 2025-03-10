@@ -357,6 +357,9 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
         itemNode.listNode.openPhotoSetup = { [weak self] in
             self?.openPhotoSetup?()
         }
+        itemNode.listNode.openAccountFreezeInfo = { [weak self] in
+            self?.openAccountFreezeInfo?()
+        }
         
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?
@@ -425,6 +428,7 @@ public final class ChatListContainerNode: ASDisplayNode, ASGestureRecognizerDele
     var openStarsTopup: ((Int64?) -> Void)?
     var openWebApp: ((TelegramUser) -> Void)?
     var openPhotoSetup: (() -> Void)?
+    var openAccountFreezeInfo: (() -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     var canExpandHiddenItems: (() -> Bool)?

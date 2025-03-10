@@ -116,6 +116,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum InputStorePaymentPurpose: TypeConstructorDescription {
+        case inputStorePaymentAuthCode(flags: Int32, phoneNumber: String, phoneCodeHash: String, currency: String, amount: Int64)
         case inputStorePaymentGiftPremium(userId: Api.InputUser, currency: String, amount: Int64)
         case inputStorePaymentPremiumGiftCode(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64, message: Api.TextWithEntities?)
         case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, prizeDescription: String?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
@@ -126,6 +127,16 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .inputStorePaymentAuthCode(let flags, let phoneNumber, let phoneCodeHash, let currency, let amount):
+                    if boxed {
+                        buffer.appendInt32(-1682807955)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(phoneNumber, buffer: buffer, boxed: false)
+                    serializeString(phoneCodeHash, buffer: buffer, boxed: false)
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
                 case .inputStorePaymentGiftPremium(let userId, let currency, let amount):
                     if boxed {
                         buffer.appendInt32(1634697192)
@@ -223,6 +234,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .inputStorePaymentAuthCode(let flags, let phoneNumber, let phoneCodeHash, let currency, let amount):
+                return ("inputStorePaymentAuthCode", [("flags", flags as Any), ("phoneNumber", phoneNumber as Any), ("phoneCodeHash", phoneCodeHash as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentGiftPremium(let userId, let currency, let amount):
                 return ("inputStorePaymentGiftPremium", [("userId", userId as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount, let message):
@@ -240,6 +253,29 @@ public extension Api {
     }
     }
     
+        public static func parse_inputStorePaymentAuthCode(_ reader: BufferReader) -> InputStorePaymentPurpose? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentAuthCode(flags: _1!, phoneNumber: _2!, phoneCodeHash: _3!, currency: _4!, amount: _5!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_inputStorePaymentGiftPremium(_ reader: BufferReader) -> InputStorePaymentPurpose? {
             var _1: Api.InputUser?
             if let signature = reader.readInt32() {

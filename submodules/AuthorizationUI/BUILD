@@ -42,6 +42,7 @@ swift_library(
         "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/InAppPurchaseManager",
     ],
     visibility = [
         "//visibility:public",

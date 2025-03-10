@@ -567,6 +567,7 @@ public extension Api.auth {
 public extension Api.auth {
     enum SentCode: TypeConstructorDescription {
         case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
+        case sentCodePaymentRequired(storeProduct: String)
         case sentCodeSuccess(authorization: Api.auth.Authorization)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -581,6 +582,12 @@ public extension Api.auth {
                     if Int(flags) & Int(1 << 1) != 0 {nextType!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
                     break
+                case .sentCodePaymentRequired(let storeProduct):
+                    if boxed {
+                        buffer.appendInt32(304435204)
+                    }
+                    serializeString(storeProduct, buffer: buffer, boxed: false)
+                    break
                 case .sentCodeSuccess(let authorization):
                     if boxed {
                         buffer.appendInt32(596704836)
@@ -594,6 +601,8 @@ public extension Api.auth {
         switch self {
                 case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
                 return ("sentCode", [("flags", flags as Any), ("type", type as Any), ("phoneCodeHash", phoneCodeHash as Any), ("nextType", nextType as Any), ("timeout", timeout as Any)])
+                case .sentCodePaymentRequired(let storeProduct):
+                return ("sentCodePaymentRequired", [("storeProduct", storeProduct as Any)])
                 case .sentCodeSuccess(let authorization):
                 return ("sentCodeSuccess", [("authorization", authorization as Any)])
     }
@@ -621,6 +630,17 @@ public extension Api.auth {
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sentCodePaymentRequired(_ reader: BufferReader) -> SentCode? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.auth.SentCode.sentCodePaymentRequired(storeProduct: _1!)
             }
             else {
                 return nil

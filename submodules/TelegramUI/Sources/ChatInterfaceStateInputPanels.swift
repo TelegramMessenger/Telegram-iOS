@@ -21,6 +21,18 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         return (nil, nil)
     }
     
+    let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    if let _ = accountFreezeConfiguration.freezeUntilDate {
+        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+            return (currentPanel, nil)
+        } else {
+            let panel = ChatRestrictedInputPanelNode()
+            panel.context = context
+            panel.interfaceInteraction = interfaceInteraction
+            return (panel, nil)
+        }
+    }
+    
     if let _ = chatPresentationInterfaceState.search {
         var selectionPanel: ChatMessageSelectionInputPanelNode?
         if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState {

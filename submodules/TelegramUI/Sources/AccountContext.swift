@@ -294,7 +294,7 @@ public final class AccountContextImpl: AccountContext {
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
             
-            self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
+            self.inAppPurchaseManager = InAppPurchaseManager(engine: .authorized(self.engine))
             self.starsContext = self.engine.payments.peerStarsContext()
         } else {
             self.prefetchManager = nil
@@ -356,8 +356,9 @@ public final class AccountContextImpl: AccountContext {
         
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
         if !temp {
+            let langCode = sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
             let currentCountriesConfiguration = self.currentCountriesConfiguration
-            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: langCode)
             |> deliverOnMainQueue).start(next: { value in
                 let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
             })

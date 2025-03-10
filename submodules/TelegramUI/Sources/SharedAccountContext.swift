@@ -77,6 +77,7 @@ import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
 import ShareController
+import AccountFreezeInfoScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -3468,6 +3469,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controller.setHintWillBePresentedInPreviewingContext(true)
         }
         return controller
+    }
+    
+    public func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController {
+        return AccountFreezeInfoScreen(context: context)
     }
 }
 

@@ -998,7 +998,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 })))
             }
             
-            if canReorder {
+            if case .unique = gift.gift, canReorder {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Context_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     c?.dismiss(completion: { [weak self] in
                         guard let self else {

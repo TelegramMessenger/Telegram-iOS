@@ -9,10 +9,12 @@ import TelegramStringFormatting
 import ChatPresentationInterfaceState
 import TelegramPresentationData
 import ChatInputPanelNode
+import AccountContext
 
 final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
     private let buttonNode: HighlightTrackingButtonNode
     private let textNode: ImmediateTextNode
+    private let subtitleNode: ImmediateTextNode
     private var iconView: UIImageView?
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
@@ -22,12 +24,17 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         self.textNode.maximumNumberOfLines = 2
         self.textNode.textAlignment = .center
         
+        self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.maximumNumberOfLines = 1
+        self.subtitleNode.textAlignment = .center
+        
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.isUserInteractionEnabled = false
         
         super.init()
         
         self.addSubnode(self.textNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
@@ -37,11 +44,15 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
                     self.iconView?.alpha = 0.4
                     self.textNode.layer.removeAnimation(forKey: "opacity")
                     self.textNode.alpha = 0.4
+                    self.subtitleNode.layer.removeAnimation(forKey: "opacity")
+                    self.subtitleNode.alpha = 0.4
                 } else {
                     self.iconView?.alpha = 1.0
                     self.iconView?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                     self.textNode.alpha = 1.0
                     self.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    self.subtitleNode.alpha = 1.0
+                    self.subtitleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
         }
@@ -74,7 +85,16 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         var iconSpacing: CGFloat = 4.0
         var isUserInteractionEnabled = false
         
-        if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == self.context?.account.peerId {
+        var accountFreezeConfiguration: AccountFreezeConfiguration?
+        if let context = self.context {
+            accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        }
+        //TODO:localize
+        if let _ = accountFreezeConfiguration?.freezeUntilDate {
+            self.textNode.attributedText = NSAttributedString(string: "You account is frozen", font: Font.semibold(15.0), textColor: interfaceState.theme.list.itemDestructiveColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: "Tap to view details", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            isUserInteractionEnabled = true
+        } else if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == self.context?.account.peerId {
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelStatusAuthorHidden, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
         } else if let threadData = interfaceState.threadData, threadData.isClosed {
             iconImage = PresentationResourcesChat.chatPanelLockIcon(interfaceState.theme)
@@ -116,6 +136,7 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         
         let panelHeight = defaultHeight(metrics: metrics)
         let textSize = self.textNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
+        let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: width - leftInset - rightInset - 8.0 * 2.0, height: panelHeight))
         
         var originX: CGFloat = leftInset + floor((width - leftInset - rightInset - textSize.width) / 2.0)
         
@@ -139,10 +160,18 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             iconView.removeFromSuperview()
         }
         
-        let textFrame = CGRect(origin: CGPoint(x: originX, y: floor((panelHeight - textSize.height) / 2.0)), size: textSize)
+        var combinedHeight: CGFloat = textSize.height
+        if subtitleSize.height > 0.0 {
+            combinedHeight += subtitleSize.height + 2.0
+        }
+        let textFrame = CGRect(origin: CGPoint(x: originX, y: floor((panelHeight - combinedHeight) / 2.0)), size: textSize)
         self.textNode.frame = textFrame
         
-        self.buttonNode.frame = textFrame.insetBy(dx: -8.0, dy: -12.0)
+        let subtitleFrame = CGRect(origin: CGPoint(x: leftInset + floor((width - leftInset - rightInset - subtitleSize.width) / 2.0), y: floor((panelHeight + combinedHeight) / 2.0) - subtitleSize.height), size: subtitleSize)
+        self.subtitleNode.frame = subtitleFrame
+        
+        let combinedFrame = textFrame.union(subtitleFrame)
+        self.buttonNode.frame = combinedFrame.insetBy(dx: -8.0, dy: -12.0)
         
         return panelHeight
     }

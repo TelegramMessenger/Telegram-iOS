@@ -30,7 +30,7 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
         switch sentCode {
         case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
             return .single(SecureIdPreparePhoneVerificationPayload(type: SentAuthorizationCodeType(apiType: type), nextType: nextType.flatMap(AuthorizationCodeNextType.init), timeout: timeout, phone: value.phone, phoneCodeHash: phoneCodeHash))
-        case .sentCodeSuccess:
+        case .sentCodeSuccess, .sentCodePaymentRequired:
             return .never()
         }
     }

@@ -1787,7 +1787,7 @@ public final class ChatEmptyNode: ASDisplayNode {
             isScheduledMessages = true
         }
         
-        let contentType: ChatEmptyNodeContentType
+        var contentType: ChatEmptyNodeContentType
         var displayAttachedDescription = false
         switch subject {
         case .detailsPlaceholder:
@@ -1815,7 +1815,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                 } else if let _ = interfaceState.peerNearbyData {
                     contentType = .peerNearby
                 } else if let peer = peer as? TelegramUser {
-                    if let _ = interfaceState.sendPaidMessageStars {
+                    if let _ = interfaceState.sendPaidMessageStars, interfaceState.businessIntro == nil {
                         contentType = .starsRequired
                     } else if interfaceState.isPremiumRequiredForMessaging {
                         contentType = .premiumRequired

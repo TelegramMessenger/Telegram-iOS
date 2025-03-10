@@ -356,6 +356,9 @@ public func sendAuthorizationCode(accountManager: AccountManager<TelegramAccount
                             }
                         }
                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: parsedType, hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: previousCodeEntry, usePrevious: false)))
+                    case let .sentCodePaymentRequired(storeProduct):
+                        //TODO:release
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .payment(number: phoneNumber, codeHash: "", storeProduct: storeProduct)))
                     case let .sentCodeSuccess(authorization):
                         switch authorization {
                         case let .authorization(_, otherwiseReloginDays, _, futureAuthToken, user):
@@ -516,6 +519,10 @@ private func internalResendAuthorizationCode(accountManager: AccountManager<Tele
                 transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: previousCodeEntry, usePrevious: false)))
                 
                 return .single(.sentCode(account))
+            case let .sentCodePaymentRequired(storeProduct):
+                //TODO:release
+                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .payment(number: number, codeHash: "", storeProduct: storeProduct)))
+                return .single(.sentCode(account))
             case .sentCodeSuccess:
                 return .single(.loggedIn)
             }
@@ -621,6 +628,9 @@ public func resendAuthorizationCode(accountManager: AccountManager<TelegramAccou
                                     }
                                     
                                     transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: number, type: parsedType, hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: previousCodeEntry, usePrevious: false)))
+                                case let .sentCodePaymentRequired(storeProduct):
+                                    //TODO:release
+                                    transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .payment(number: number, codeHash: "", storeProduct: storeProduct)))
                                 case .sentCodeSuccess:
                                     break
                                 }
@@ -898,6 +908,9 @@ public func verifyLoginEmailSetup(account: UnauthorizedAccount, code: Authorizat
                                         }
                                         
                                         transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: nil, usePrevious: false)))
+                                    case let .sentCodePaymentRequired(storeProduct):
+                                        //TODO:release
+                                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .payment(number: phoneNumber, codeHash: phoneCodeHash, storeProduct: storeProduct)))
                                     case .sentCodeSuccess:
                                         break
                                     }
@@ -960,6 +973,10 @@ public func resetLoginEmail(account: UnauthorizedAccount, phoneNumber: String, p
                                 
                                 transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: nil, usePrevious: false)))
                                 
+                                return .complete()
+                            case let .sentCodePaymentRequired(storeProduct):
+                                //TODO:release
+                                transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .payment(number: phoneNumber, codeHash: phoneCodeHash, storeProduct: storeProduct)))
                                 return .complete()
                             case .sentCodeSuccess:
                                 return .complete()

@@ -498,16 +498,8 @@ final class GiftSetupScreenComponent: Component {
                             
                             starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
                             
-                            let _ = (starsContext.state
-                            |> take(until: { value in
-                                if let value {
-                                    if !value.flags.contains(.isPendingBalance) {
-                                        return SignalTakeAction(passthrough: true, complete: true)
-                                    }
-                                }
-                                return SignalTakeAction(passthrough: false, complete: false)
-                            })
-                            |> deliverOnMainQueue).start(next: { _ in
+                            let _ = (starsContext.onUpdate
+                            |> deliverOnMainQueue).start(next: {
                                 proceed()
                             })
                         }
