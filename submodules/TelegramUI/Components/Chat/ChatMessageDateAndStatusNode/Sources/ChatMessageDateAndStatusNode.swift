@@ -413,7 +413,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.incomingDateAndStatusPinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.incomingDateAndStatusRepliesIcon
+                    starsImage = graphics.incomingDateAndStatusStarsIcon
                 }
             case let .BubbleOutgoing(status):
                 dateColor = arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
@@ -432,7 +432,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.outgoingDateAndStatusPinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.outgoingDateAndStatusRepliesIcon
+                    starsImage = graphics.outgoingDateAndStatusStarsIcon
                 }
             case .ImageIncoming:
                 dateColor = arguments.presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -451,7 +451,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.mediaPinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.mediaRepliesIcon
+                    starsImage = graphics.mediaStarsIcon
                 }
             case let .ImageOutgoing(status):
                 dateColor = arguments.presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -471,7 +471,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.mediaPinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.mediaRepliesIcon
+                    starsImage = graphics.mediaStarsIcon
                 }
             case .FreeIncoming:
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
@@ -492,7 +492,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.freePinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.freeRepliesIcon
+                    starsImage = graphics.freeStarsIcon
                 }
             case let .FreeOutgoing(status):
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
@@ -513,7 +513,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.freePinnedIcon
                 }
                 if (arguments.starsCount ?? 0)  != 0 {
-                    starsImage = graphics.freeRepliesIcon
+                    starsImage = graphics.freeStarsIcon
                 }
             }
             

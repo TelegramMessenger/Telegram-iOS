@@ -109,7 +109,14 @@ func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network,
             return .single([])
         }
         
-        if let channel = peer as? TelegramChannel, case .group = channel.info {
+        if let channel = peer as? TelegramChannel {
+            if case .group = channel.info {
+                
+            } else if channel.adminRights != nil || channel.flags.contains(.isCreator) {
+                
+            } else {
+                return .single([])
+            }
         } else {
             return .single([])
         }

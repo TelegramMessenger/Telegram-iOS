@@ -309,6 +309,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case let .auth(lhsPrice):
+            if case let .auth(rhsPrice) = rhs, lhsPrice == rhsPrice {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -357,6 +363,7 @@ public enum PremiumSource: Equatable {
     case folderTags
     case messageEffects
     case paidMessages
+    case auth(String)
     
     var identifier: String? {
         switch self {
@@ -452,6 +459,8 @@ public enum PremiumSource: Equatable {
             return "effects"
         case .paidMessages:
             return "paid_messages"
+        case .auth:
+            return "auth"
         }
     }
 }
@@ -1214,6 +1223,7 @@ final class PerkComponent: CombinedComponent {
     let subtitleColor: UIColor
     let arrowColor: UIColor
     let accentColor: UIColor
+    let displayArrow: Bool
     let badge: String?
     
     init(
@@ -1225,6 +1235,7 @@ final class PerkComponent: CombinedComponent {
         subtitleColor: UIColor,
         arrowColor: UIColor,
         accentColor: UIColor,
+        displayArrow: Bool = true,
         badge: String? = nil
     ) {
         self.iconName = iconName
@@ -1235,6 +1246,7 @@ final class PerkComponent: CombinedComponent {
         self.subtitleColor = subtitleColor
         self.arrowColor = arrowColor
         self.accentColor = accentColor
+        self.displayArrow = displayArrow
         self.badge = badge
     }
     
@@ -1261,6 +1273,9 @@ final class PerkComponent: CombinedComponent {
             return false
         }
         if lhs.accentColor != rhs.accentColor {
+            return false
+        }
+        if lhs.displayArrow != rhs.displayArrow {
             return false
         }
         if lhs.badge != rhs.badge {
@@ -1305,16 +1320,7 @@ final class PerkComponent: CombinedComponent {
                 availableSize: iconSize,
                 transition: context.transition
             )
-            
-            let arrow = arrow.update(
-                component: BundleIconComponent(
-                    name: "Item List/DisclosureArrow",
-                    tintColor: component.arrowColor
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
+                        
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(
@@ -1391,9 +1397,20 @@ final class PerkComponent: CombinedComponent {
             )
             
             let size = CGSize(width: context.availableSize.width, height: textTopInset + title.size.height + spacing + subtitle.size.height + textBottomInset)
-            context.add(arrow
-                .position(CGPoint(x: context.availableSize.width - 7.0 - arrow.size.width / 2.0, y: size.height / 2.0))
-            )
+            
+            if component.displayArrow {
+                let arrow = arrow.update(
+                    component: BundleIconComponent(
+                        name: "Item List/DisclosureArrow",
+                        tintColor: component.arrowColor
+                    ),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                context.add(arrow
+                    .position(CGPoint(x: context.availableSize.width - 7.0 - arrow.size.width / 2.0, y: size.height / 2.0))
+                )
+            }
             
             return size
         }
@@ -2086,6 +2103,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             foregroundColor: .white,
                             iconName: perk.iconName
                         ))), false),
+                        accessory: accountContext != nil ? .arrow : nil,
                         action: { [weak state] _ in
                             guard let accountContext else {
                                 return
@@ -2162,7 +2180,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             updateIsFocused(true)
 
                             addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
-                        }
+                        },
+                        highlighting: accountContext != nil ? .default : .disabled
                     ))))
                     i += 1
                 }
@@ -3660,7 +3679,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             if !buttonIsHidden {
                 let buttonTitle: String
-                if isUnusedGift {
+                var buttonSubtitle: String?
+                if case let .auth(price) = context.component.source {
+                    buttonTitle = "Sign up for \(price)"
+                    buttonSubtitle = "Get Telegram Premium for 1 week"
+                } else if isUnusedGift {
                     buttonTitle = environment.strings.Premium_Gift_ApplyLink
                 } else if state.isPremium == true && state.canUpgrade {
                     buttonTitle = state.isAnnual ? environment.strings.Premium_UpgradeForAnnual(state.price ?? "—").string : environment.strings.Premium_UpgradeFor(state.price ?? "—").string
@@ -3668,10 +3691,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     buttonTitle = state.isAnnual ? environment.strings.Premium_SubscribeForAnnual(state.price ?? "—").string : environment.strings.Premium_SubscribeFor(state.price ?? "—").string
                 }
                 
+                let controller = environment.controller
                 let sideInset: CGFloat = 16.0
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
                         title: buttonTitle,
+                        subtitle: buttonSubtitle,
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: UIColor(rgb: 0x8878ff),
                             backgroundColors: [
@@ -3687,7 +3712,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         gloss: true,
                         isLoading: state.inProgress,
                         action: {
-                            state.buy()
+                            if let controller = controller() as? PremiumIntroScreen, let customProceed = controller.customProceed {
+                                controller.dismiss()
+                                customProceed()
+                            } else {
+                                state.buy()
+                            }
                         }
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 50.0),

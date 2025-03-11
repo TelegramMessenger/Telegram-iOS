@@ -43,6 +43,7 @@ public enum PremiumIntroSource {
     case animatedEmoji
     case messageEffects
     case paidMessages
+    case auth(String)
 }
 
 public enum PremiumGiftSource: Equatable {

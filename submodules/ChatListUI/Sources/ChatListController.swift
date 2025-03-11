@@ -2794,6 +2794,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private weak var storyCameraTooltip: TooltipScreen?
     fileprivate func openStoryCamera(fromList: Bool) {
+        guard !self.context.isFrozen else {
+            let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
+            self.push(controller)
+            return
+        }
+        
         var reachedCountLimit = false
         var premiumNeeded = false
         var hasActiveCall = false
@@ -4641,6 +4647,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     @objc fileprivate func composePressed() {
+        guard !self.context.isFrozen else {
+            let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
+            self.push(controller)
+            return
+        }
+        
         guard let navigationController = self.navigationController as? NavigationController else {
             return
         }

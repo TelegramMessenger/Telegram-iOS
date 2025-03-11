@@ -242,6 +242,7 @@ open class ViewControllerComponentContainer: ViewController {
     public private(set) var validLayout: ContainerViewLayout?
     
     public var wasDismissed: (() -> Void)?
+    public var customProceed: (() -> Void)?
     
     public init<C: Component>(
         context: AccountContext,

@@ -165,9 +165,9 @@ private final class SheetContent: CombinedComponent {
                         iconName: "Account Freeze/Appeal",
                         iconColor: linkColor,
                         action: {
-                            component.submitAppeal()
-                            Queue.mainQueue().after(1.0) {
-                                component.dismiss()
+                            component.dismiss()
+                            Queue.mainQueue().after(0.5) {
+                                component.submitAppeal()
                             }
                         }
                     ))
@@ -201,9 +201,9 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: true,
                     displaysProgress: false,
                     action: {
-                        component.submitAppeal()
-                        Queue.mainQueue().after(1.0) {
-                            component.dismiss()
+                        component.dismiss()
+                        Queue.mainQueue().after(0.5) {
+                            component.submitAppeal()
                         }
                     }
                 ),

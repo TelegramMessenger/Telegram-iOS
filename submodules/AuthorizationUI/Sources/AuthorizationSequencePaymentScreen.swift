@@ -251,15 +251,17 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                         iconName: "Premium/Authorization/Support",
                         iconColor: linkColor,
                         action: { [weak self] in
-                            guard let self, let controller = self.environment?.controller() else {
+                            guard let self, let controller = self.environment?.controller(), let product = self.products.first(where: { $0.id == component.storeProduct }) else {
                                 return
                             }
                             let introController = component.sharedContext.makePremiumIntroController(
                                 sharedContext: component.sharedContext,
                                 engine: component.engine,
                                 inAppPurchaseManager: component.inAppPurchaseManager,
-                                source: .about,
-                                dismissed: nil
+                                source: .auth(product.price),
+                                proceed: { [weak self] in
+                                    self?.proceed()
+                                }
                             )
                             controller.push(introController)
                         }
@@ -274,11 +276,13 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
             
+            let buttonHeight: CGFloat = 50.0
+            let bottomPanelPadding: CGFloat = 12.0
             let titleSpacing: CGFloat = -24.0
             let listSpacing: CGFloat = 12.0
             let totalHeight = animationSize.height + titleSpacing + titleSize.height + listSpacing + listSize.height
             
-            var originY = floor((availableSize.height - totalHeight) / 2.0)
+            var originY = floor((availableSize.height - buttonHeight - bottomPanelPadding * 2.0 - totalHeight) / 2.0)
             
             if let animationView = self.animation.view {
                 if animationView.superview == nil {
@@ -302,8 +306,6 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                 listView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - listSize.width) / 2.0), y: originY), size: listSize)
             }
         
-            let buttonHeight: CGFloat = 50.0
-            let bottomPanelPadding: CGFloat = 12.0
             let bottomInset: CGFloat = environment.safeInsets.bottom > 0.0 ? environment.safeInsets.bottom + 5.0 : bottomPanelPadding
             let bottomPanelHeight = bottomPanelPadding + buttonHeight + bottomInset
                                     
@@ -329,7 +331,7 @@ final class AuthorizationSequencePaymentScreenComponent: Component {
                         component: AnyComponent(
                             VStack([
                                 AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))),
-                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Get Telegram Premium for 1 week", font: Font.regular(11.0), textColor: environment.theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center)))))
+                                AnyComponentWithIdentity(id: AnyHashable(1), component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Get Telegram Premium for 1 week", font: Font.medium(11.0), textColor: environment.theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center)))))
                             ], spacing: 1.0)
                         )
                     ),
@@ -408,6 +410,10 @@ public final class AuthorizationSequencePaymentScreen: ViewControllerComponentCo
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
     }
     
     @objc private func cancelPressed() {

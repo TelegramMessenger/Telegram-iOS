@@ -2451,6 +2451,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .animatedEmoji
         case .paidMessages:
             mappedSource = .paidMessages
+        case let .auth(price):
+            mappedSource = .auth(price)
         }
         return mappedSource
     }
@@ -2465,13 +2467,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return controller
     }
     
-    public func makePremiumIntroController(sharedContext: SharedAccountContext, engine: TelegramEngineUnauthorized, inAppPurchaseManager: InAppPurchaseManager, source: PremiumIntroSource, dismissed: (() -> Void)?) -> ViewController {
+    public func makePremiumIntroController(sharedContext: SharedAccountContext, engine: TelegramEngineUnauthorized, inAppPurchaseManager: InAppPurchaseManager, source: PremiumIntroSource, proceed: (() -> Void)?) -> ViewController {
         var modal = true
         if case .settings = source {
             modal = false
         }
         let controller = PremiumIntroScreen(screenContext: .sharedContext(sharedContext, engine, inAppPurchaseManager), source: self.mapIntroSource(source: source), modal: modal)
-        controller.wasDismissed = dismissed
+        controller.customProceed = proceed
         return controller
     }
     

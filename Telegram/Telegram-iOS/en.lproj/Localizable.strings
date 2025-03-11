@@ -13996,3 +13996,13 @@ Sorry for the inconvenience.";
 
 "Stars.AccountRevenue.Proceeds.Info" = "Stars from your total balance can be withdrawn as rewards 21 days after they are earned.";
 "Stars.AccountRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
+
+"Notification.PaidMessageRefund.Stars_1" = "%@ Star";
+"Notification.PaidMessageRefund.Stars_any" = "%@ Stars";
+"Notification.PaidMessageRefund" = "%1$@ refunded you %2$@";
+"Notification.PaidMessageRefundYou" = "You refunded %1$@ to %2$@";
+
+"Notification.PaidMessagePriceChanged.Stars_1" = "%@ Star";
+"Notification.PaidMessagePriceChanged.Stars_any" = "%@ Stars";
+"Notification.PaidMessagePriceChanged" = "%1$@ changed price to %2$@ per message";
+"Notification.PaidMessagePriceChangedYou" = "You changed price to %1$@ per message";

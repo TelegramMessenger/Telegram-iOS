@@ -9,6 +9,7 @@ public final class SolidRoundedButtonComponent: Component {
     public typealias Theme = SolidRoundedButtonTheme
     
     public let title: String?
+    public let subtitle: String?
     public let label: String?
     public let badge: String?
     public let icon: UIImage?
@@ -28,6 +29,7 @@ public final class SolidRoundedButtonComponent: Component {
     
     public init(
         title: String? = nil,
+        subtitle: String? = nil,
         label: String? = nil,
         badge: String? = nil,
         icon: UIImage? = nil,
@@ -46,6 +48,7 @@ public final class SolidRoundedButtonComponent: Component {
         action: @escaping () -> Void
     ) {
         self.title = title
+        self.subtitle = subtitle
         self.label = label
         self.badge = badge
         self.icon = icon
@@ -66,6 +69,9 @@ public final class SolidRoundedButtonComponent: Component {
     
     public static func ==(lhs: SolidRoundedButtonComponent, rhs: SolidRoundedButtonComponent) -> Bool {
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.subtitle != rhs.subtitle {
             return false
         }
         if lhs.label != rhs.label {
@@ -147,6 +153,7 @@ public final class SolidRoundedButtonComponent: Component {
             
             if let button = self.button {
                 button.title = component.title
+                button.subtitle = component.subtitle
                 button.label = component.label
                 button.badge = component.badge
                 button.iconPosition = component.iconPosition

@@ -1865,6 +1865,12 @@ extension ChatControllerImpl {
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
+            
+            guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
+                completion(.immediate, {})
+                return
+            }
+            
             if let messageId = messageId {
                 let intrinsicCanSendMessagesHere = canSendMessagesToChat(strongSelf.presentationInterfaceState)
                 var canSendMessagesHere = intrinsicCanSendMessagesHere
@@ -2114,6 +2120,11 @@ extension ChatControllerImpl {
             })
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
+                guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
+                    completion(.default)
+                    return
+                }
+                
                 let messageIds = Set(messages.map { $0.id })
                 strongSelf.messageContextDisposable.set((strongSelf.context.sharedContext.chatAvailableMessageActions(engine: strongSelf.context.engine, accountPeerId: strongSelf.context.account.peerId, messageIds: messageIds, keepUpdated: false)
                 |> deliverOnMainQueue).startStrict(next: { actions in
@@ -4416,13 +4427,10 @@ extension ChatControllerImpl {
                 return
             }
             
-            let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-            if let _ = accountFreezeConfiguration.freezeUntilDate {
-                let controller = self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context)
-                self.push(controller)
+            guard !self.presentAccountFrozenInfoIfNeeded() else {
                 return
             }
-            
+                        
             guard let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return
             }

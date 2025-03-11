@@ -67,9 +67,7 @@
 - (SSignal *)coverImageSignalForItem:(NSObject<TGMediaEditableItem> *)item;
 - (void)setCoverImage:(UIImage *)image position:(NSNumber *)position forItem:(id<TGMediaEditableItem>)item;
 - (UIImage *)coverImageForItem:(NSObject<TGMediaEditableItem> *)item;
-
 - (NSNumber *)coverPositionForItem:(NSObject<TGMediaEditableItem> *)item;
-- (void)setCoverImage:(UIImage *)image position:(NSNumber *)position forItem:(id<TGMediaEditableItem>)item;
 
 - (void)setTemporaryRep:(id)rep forItem:(id<TGMediaEditableItem>)item;
 

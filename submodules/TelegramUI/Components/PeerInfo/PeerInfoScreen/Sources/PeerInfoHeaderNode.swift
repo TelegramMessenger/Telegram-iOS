@@ -2352,6 +2352,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     giftsContext: profileGiftsContext,
                     hasBackground: hasBackground,
                     avatarCenter: apparentAvatarFrame.center,
+                    avatarSize: apparentAvatarFrame.size,
                     defaultHeight: backgroundDefaultHeight,
                     avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
                     statusBarHeight: statusBarHeight,

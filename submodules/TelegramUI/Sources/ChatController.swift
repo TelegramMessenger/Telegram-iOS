@@ -3399,42 +3399,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, scheduleCurrentMessage: { [weak self] params in
-            if let strongSelf = self {
-                strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
-                    if let strongSelf = self {
-                        if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: (params?.effect).flatMap {
-                                return ChatSendMessageEffect(id: $0.id)
-                            })
-                        } else {
-                            let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
-                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: (params?.effect).flatMap {
-                                return ChatSendMessageEffect(id: $0.id)
-                            }) { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                                    })
-                                    
-                                    if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
-                                        strongSelf.openScheduledMessages()
-                                    }
+            guard let self else {
+                return
+            }
+            guard !self.presentAccountFrozenInfoIfNeeded() else {
+                return
+            }
+            self.presentScheduleTimePicker(completion: { [weak self] time in
+                if let strongSelf = self {
+                    if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
+                        strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                            return ChatSendMessageEffect(id: $0.id)
+                        })
+                    } else {
+                        let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
+                        strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                            return ChatSendMessageEffect(id: $0.id)
+                        }) { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                })
+                                
+                                if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
+                                    strongSelf.openScheduledMessages()
                                 }
                             }
                         }
                     }
-                })
-            }
-        }, sendScheduledMessagesNow: { [weak self] messageIds in
-            if let strongSelf = self {
-                if let _ = strongSelf.presentationInterfaceState.slowmodeState {
-                    if let rect = strongSelf.chatDisplayNode.frameForInputActionButton() {
-                        strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf.chatDisplayNode.view, rect)
-                    }
-                    return
-                } else {
-                    let _ = strongSelf.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).startStandalone()
                 }
+            })
+        }, sendScheduledMessagesNow: { [weak self] messageIds in
+            guard let self else {
+                return
+            }
+            guard !self.presentAccountFrozenInfoIfNeeded() else {
+                return
+            }
+            
+            if let _ = self.presentationInterfaceState.slowmodeState {
+                if let rect = self.chatDisplayNode.frameForInputActionButton() {
+                    self.interfaceInteraction?.displaySlowmodeTooltip(self.chatDisplayNode.view, rect)
+                }
+                return
+            } else {
+                let _ = self.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).startStandalone()
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
             if let strongSelf = self, let messageId = messageIds.first {

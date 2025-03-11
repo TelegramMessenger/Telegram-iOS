@@ -516,7 +516,7 @@ public final class PeerInfoCoverComponent: Component {
                     let baseItemDistance: CGFloat = baseDistance + CGFloat(row) * baseRowDistance
                     
                     let itemDistanceFraction = max(0.0, min(1.0, baseItemDistance / (baseDistance * 2.0)))
-                    let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: itemDistanceFraction, reverse: false)
+                    let itemScaleFraction = patternScaleValueAt(fraction: min(1.0, component.avatarTransitionFraction * 1.56), t: itemDistanceFraction, reverse: false)
                     let itemDistance = baseItemDistance * (1.0 - itemScaleFraction) + 20.0 * itemScaleFraction
                     
                     var itemAngle: CGFloat
