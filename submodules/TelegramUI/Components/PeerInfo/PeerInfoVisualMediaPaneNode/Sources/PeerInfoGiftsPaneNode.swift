@@ -677,13 +677,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             let buttonSideInset = sideInset + 16.0
             let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-            var bottomPanelHeight = max(8.0, bottomInset) + buttonSize.height + 8.0
+            let effectiveBottomInset = max(8.0, bottomInset)
+            var bottomPanelHeight = effectiveBottomInset + buttonSize.height + 8.0
             if params.visibleHeight < 110.0 {
                 scrollOffset -= bottomPanelHeight
             }
             
             let panelTransition = ComponentTransition.immediate
-            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
+            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - effectiveBottomInset - buttonSize.height - scrollOffset), size: buttonSize))
             panelTransition.setAlpha(view: panelButton.view, alpha: panelAlpha)
             let _ = panelButton.updateLayout(width: buttonSize.width, transition: .immediate)
             
@@ -754,7 +755,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if panelCheckView.superview == nil {
                         self.view.addSubview(panelCheckView)
                     }
-                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - bottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
+                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - effectiveBottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
                     panelTransition.setAlpha(view: panelCheckView, alpha: panelAlpha)
                 }
                 panelButton.isHidden = true
@@ -998,7 +999,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 })))
             }
             
-            if canReorder {
+            if case .unique = gift.gift, canReorder {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Context_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     c?.dismiss(completion: { [weak self] in
                         guard let self else {

@@ -257,7 +257,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
             for key in removeKeys {
                 if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
                     if key == .moreSearchSort || key == .searchWithTags || key == .standaloneSearch {
-                        buttonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
+                        buttonNode.layer.animateAlpha(from: buttonNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
                             buttonNode?.removeFromSupernode()
                         })
                         buttonNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)

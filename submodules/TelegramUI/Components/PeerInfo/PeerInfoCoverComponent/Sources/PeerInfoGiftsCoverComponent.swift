@@ -19,6 +19,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
     public let giftsContext: ProfileGiftsContext
     public let hasBackground: Bool
     public let avatarCenter: CGPoint
+    public let avatarSize: CGSize
     public let defaultHeight: CGFloat
     public let avatarTransitionFraction: CGFloat
     public let statusBarHeight: CGFloat
@@ -34,6 +35,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
         giftsContext: ProfileGiftsContext,
         hasBackground: Bool,
         avatarCenter: CGPoint,
+        avatarSize: CGSize,
         defaultHeight: CGFloat,
         avatarTransitionFraction: CGFloat,
         statusBarHeight: CGFloat,
@@ -48,6 +50,7 @@ public final class PeerInfoGiftsCoverComponent: Component {
         self.giftsContext = giftsContext
         self.hasBackground = hasBackground
         self.avatarCenter = avatarCenter
+        self.avatarSize = avatarSize
         self.defaultHeight = defaultHeight
         self.avatarTransitionFraction = avatarTransitionFraction
         self.statusBarHeight = statusBarHeight
@@ -69,6 +72,9 @@ public final class PeerInfoGiftsCoverComponent: Component {
             return false
         }
         if lhs.avatarCenter != rhs.avatarCenter {
+            return false
+        }
+        if lhs.avatarSize != rhs.avatarSize {
             return false
         }
         if lhs.defaultHeight != rhs.defaultHeight {
@@ -213,14 +219,14 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.statusBarHeight), size: component.topLeftButtonsSize))
                 excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - component.topRightButtonsSize.width, y: component.statusBarHeight), size: component.topRightButtonsSize))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + 56.0), size: CGSize(width: component.titleWidth, height: 72.0)))
+                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + component.avatarSize.height / 2.0 + 6.0), size: CGSize(width: component.titleWidth, height: 100.0)))
                 if component.bottomHeight > 0.0 {
                     excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.defaultHeight - component.bottomHeight), size: CGSize(width: availableSize.width, height: component.bottomHeight)))
                 }
                                                 
                 let positionGenerator = PositionGenerator(
                     containerSize: CGSize(width: availableSize.width, height: component.defaultHeight),
-                    centerFrame: CGSize(width: 100, height: 100).centered(around: avatarCenter),
+                    centerFrame: component.avatarSize.centered(around: avatarCenter),
                     exclusionZones: excludeRects,
                     minimumDistance: 42.0,
                     edgePadding: 5.0,

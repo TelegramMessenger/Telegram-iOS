@@ -589,10 +589,15 @@ private final class SheetContent: CombinedComponent {
                                     options: state?.options ?? [],
                                     purpose: purpose,
                                     completion: { [weak starsContext] stars in
-                                        starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
-                                        Queue.mainQueue().after(0.1) {
-                                            completion()
+                                        guard let starsContext else {
+                                            return
                                         }
+                                        starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                        
+                                        let _ = (starsContext.onUpdate
+                                        |> deliverOnMainQueue).start(next: {
+                                            completion()
+                                        })
                                     }
                                 )
                                 controller?.push(purchaseController)

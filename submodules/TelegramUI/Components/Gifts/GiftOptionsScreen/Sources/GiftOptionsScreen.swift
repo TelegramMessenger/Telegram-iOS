@@ -1237,6 +1237,11 @@ final class GiftOptionsScreenComponent: Component {
                     if availableProducts.isEmpty {
                         var premiumProducts: [PremiumGiftProduct] = []
                         for option in premiumOptions {
+                            if option.currency == "XTR" {
+                                continue
+                            }
+                            let starsGiftOption = premiumOptions.first(where: { $0.currency == "XTR" && $0.months == option.months })
+
                             premiumProducts.append(
                                 PremiumGiftProduct(
                                     giftOption: CachedPremiumGiftOption(
@@ -1246,7 +1251,7 @@ final class GiftOptionsScreenComponent: Component {
                                         botUrl: "",
                                         storeProductId: option.storeProductId
                                     ),
-                                    starsGiftOption: nil,
+                                    starsGiftOption: starsGiftOption,
                                     storeProduct: nil,
                                     discount: nil
                                 )

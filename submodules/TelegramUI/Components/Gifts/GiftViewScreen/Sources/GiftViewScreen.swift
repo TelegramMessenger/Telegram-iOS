@@ -351,8 +351,12 @@ private final class GiftViewSheetContent: CombinedComponent {
                 self.inProgress = true
                 self.updated()
                 
+                if let controller = self.getController() as? GiftViewScreen {
+                    controller.showBalance = false
+                }
+                
                 self.upgradeDisposable = (self.upgradeGift(formId, self.keepOriginalInfo)
-                |> deliverOnMainQueue).start(next: { [weak self] result in
+                |> deliverOnMainQueue).start(next: { [weak self, weak starsContext] result in
                     guard let self, let controller = self.getController() as? GiftViewScreen else {
                         return
                     }
@@ -363,6 +367,10 @@ private final class GiftViewSheetContent: CombinedComponent {
                     controller.subject = self.subject
                     controller.animateSuccess()
                     self.updated(transition: .spring(duration: 0.4))
+                    
+                    Queue.mainQueue().after(0.5) {
+                        starsContext?.load(force: true)
+                    }
                 })
             }
             
@@ -382,11 +390,18 @@ private final class GiftViewSheetContent: CombinedComponent {
                             starsContext: starsContext,
                             options: options ?? [],
                             purpose: .upgradeStarGift(requiredStars: price),
-                            completion: { [weak starsContext] stars in
-                                starsContext?.add(balance: StarsAmount(value: stars, nanos: 0))
-                                Queue.mainQueue().after(2.0) {
-                                    proceed(upgradeForm.id)
+                            completion: { [weak self, weak starsContext] stars in
+                                guard let self, let starsContext else {
+                                    return
                                 }
+                                self.inProgress = true
+                                self.updated()
+                                
+                                starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                let _ = (starsContext.onUpdate
+                                |> deliverOnMainQueue).start(next: {
+                                    proceed(upgradeForm.id)
+                                })
                             }
                         )
                         controller.push(purchaseController)
@@ -2226,9 +2241,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - 16.0 - buttons.size.width / 2.0, y: 28.0))
             )
             
-            let contentSize = CGSize(width: context.availableSize.width, height: originY + 5.0 + environment.safeInsets.bottom)
-        
-            return contentSize
+            let effectiveBottomInset: CGFloat = environment.metrics.isTablet ? 0.0 : environment.safeInsets.bottom
+            return CGSize(width: context.availableSize.width, height: originY + 5.0 + effectiveBottomInset)
         }
     }
 }

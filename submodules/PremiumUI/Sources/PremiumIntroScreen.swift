@@ -3706,6 +3706,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     }
     
     public weak var sourceView: UIView?
+    public var sourceRect: CGRect?
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
@@ -3884,6 +3885,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
                 
                 if let sourceView = self.sourceView {
                     view.animateFrom = sourceView
+                    view.sourceRect = self.sourceRect
                     view.containerView = self.containerView
                     
                     view.animateIn()
