@@ -11,6 +11,7 @@ import Markdown
 import TelegramPresentationData
 import BundleIconComponent
 import ScrollComponent
+import PremiumCoinComponent
 
 private final class HeaderComponent: Component {
     let context: AccountContext

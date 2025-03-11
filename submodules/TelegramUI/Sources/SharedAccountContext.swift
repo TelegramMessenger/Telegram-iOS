@@ -2366,13 +2366,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
-        var modal = true
+    private func mapIntroSource(source: PremiumIntroSource) -> PremiumSource {
         let mappedSource: PremiumSource
         switch source {
         case .settings:
             mappedSource = .settings
-            modal = false
         case .stickers:
             mappedSource = .stickers
         case .reactions:
@@ -2454,7 +2452,25 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         case .paidMessages:
             mappedSource = .paidMessages
         }
-        let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
+        return mappedSource
+    }
+    
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
+        var modal = true
+        if case .settings = source {
+            modal = false
+        }
+        let controller = PremiumIntroScreen(context: context, source: self.mapIntroSource(source: source), modal: modal, forceDark: forceDark)
+        controller.wasDismissed = dismissed
+        return controller
+    }
+    
+    public func makePremiumIntroController(sharedContext: SharedAccountContext, engine: TelegramEngineUnauthorized, inAppPurchaseManager: InAppPurchaseManager, source: PremiumIntroSource, dismissed: (() -> Void)?) -> ViewController {
+        var modal = true
+        if case .settings = source {
+            modal = false
+        }
+        let controller = PremiumIntroScreen(screenContext: .sharedContext(sharedContext, engine, inAppPurchaseManager), source: self.mapIntroSource(source: source), modal: modal)
         controller.wasDismissed = dismissed
         return controller
     }

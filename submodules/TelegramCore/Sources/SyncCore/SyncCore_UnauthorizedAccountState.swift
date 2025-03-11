@@ -182,7 +182,7 @@ public indirect enum UnauthorizedAccountStateContents: PostboxCoding, Equatable 
     case passwordRecovery(hint: String, number: String?, code: AuthorizationCode?, emailPattern: String, syncContacts: Bool)
     case awaitingAccountReset(protectedUntil: Int32, number: String?, syncContacts: Bool)
     case signUp(number: String, codeHash: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, syncContacts: Bool)
-    case payment(number: String, codeHash: String, storeProduct: String)
+    case payment(number: String, codeHash: String, storeProduct: String, syncContacts: Bool)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -216,9 +216,8 @@ public indirect enum UnauthorizedAccountStateContents: PostboxCoding, Equatable 
                 self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
                 self = .signUp(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), firstName: decoder.decodeStringForKey("f", orElse: ""), lastName: decoder.decodeStringForKey("l", orElse: ""), termsOfService: decoder.decodeObjectForKey("tos", decoder: { UnauthorizedAccountTermsOfService(decoder: $0) }) as? UnauthorizedAccountTermsOfService, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
-            
             case UnauthorizedAccountStateContentsValue.payment.rawValue:
-                self = .payment(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), storeProduct: decoder.decodeStringForKey("storeProduct", orElse: ""))
+                self = .payment(number: decoder.decodeStringForKey("n", orElse: ""), codeHash: decoder.decodeStringForKey("h", orElse: ""), storeProduct: decoder.decodeStringForKey("storeProduct", orElse: ""), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             default:
                 assertionFailure()
                 self = .empty
@@ -308,11 +307,12 @@ public indirect enum UnauthorizedAccountStateContents: PostboxCoding, Equatable 
                     encoder.encodeNil(forKey: "tos")
                 }
                 encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
-            case let .payment(number, codeHash, storeProduct):
+            case let .payment(number, codeHash, storeProduct, syncContacts):
                 encoder.encodeInt32(UnauthorizedAccountStateContentsValue.payment.rawValue, forKey: "v")
                 encoder.encodeString(number, forKey: "n")
                 encoder.encodeString(codeHash, forKey: "h")
                 encoder.encodeString(storeProduct, forKey: "storeProduct")
+                encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
         }
     }
     
@@ -384,8 +384,8 @@ public indirect enum UnauthorizedAccountStateContents: PostboxCoding, Equatable 
                 } else {
                     return false
                 }
-            case let .payment(number, codeHash, storeProduct):
-                if case .payment(number, codeHash, storeProduct) = rhs {
+            case let .payment(number, codeHash, storeProduct, syncContacts):
+                if case .payment(number, codeHash, storeProduct, syncContacts) = rhs {
                     return true
                 } else {
                     return false

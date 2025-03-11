@@ -73,13 +73,13 @@ public class UnauthorizedAccount {
     public let testingEnvironment: Bool
     public let postbox: Postbox
     public let network: Network
-    private let stateManager: UnauthorizedAccountStateManager
+    let stateManager: UnauthorizedAccountStateManager
     
     private let updateLoginTokenPipe = ValuePipe<Void>()
     public var updateLoginTokenEvents: Signal<Void, NoError> {
         return self.updateLoginTokenPipe.signal()
     }
-
+    
     private let serviceNotificationPipe = ValuePipe<String>()
     public var serviceNotificationEvents: Signal<String, NoError> {
         return self.serviceNotificationPipe.signal()
@@ -91,7 +91,7 @@ public class UnauthorizedAccount {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
-    init(networkArguments: NetworkInitializationArguments, id: AccountRecordId, rootPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
+    init(accountManager: AccountManager<TelegramAccountManagerTypes>, networkArguments: NetworkInitializationArguments, id: AccountRecordId, rootPath: String, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, shouldKeepAutoConnection: Bool = true) {
         self.networkArguments = networkArguments
         self.id = id
         self.rootPath = rootPath
@@ -101,11 +101,84 @@ public class UnauthorizedAccount {
         self.network = network
         let updateLoginTokenPipe = self.updateLoginTokenPipe
         let serviceNotificationPipe = self.serviceNotificationPipe
-        self.stateManager = UnauthorizedAccountStateManager(network: network, updateLoginToken: {
-            updateLoginTokenPipe.putNext(Void())
-        }, displayServiceNotification: { text in
-            serviceNotificationPipe.putNext(text)
-        })
+        let masterDatacenterId = Int32(network.mtProto.datacenterId)
+        
+        var updateSentCodeImpl: ((Api.auth.SentCode) -> Void)?
+        self.stateManager = UnauthorizedAccountStateManager(
+            network: network,
+            updateLoginToken: {
+                updateLoginTokenPipe.putNext(Void())
+            },
+            updateSentCode: { sentCode in
+                updateSentCodeImpl?(sentCode)
+            },
+            displayServiceNotification: { text in
+                serviceNotificationPipe.putNext(text)
+            }
+        )
+        
+        updateSentCodeImpl = { [weak self] sentCode in
+            switch sentCode {
+            case .sentCodePaymentRequired:
+                break
+            case let .sentCode(_, type, phoneCodeHash, nextType, codeTimeout):
+                let _ = postbox.transaction({ transaction in
+                    var parsedNextType: AuthorizationCodeNextType?
+                    if let nextType = nextType {
+                        parsedNextType = AuthorizationCodeNextType(apiType: nextType)
+                    }
+                    if let state = transaction.getState() as? UnauthorizedAccountState, case let .payment(phoneNumber, _, _, syncContacts) = state.contents {
+                        transaction.setState(UnauthorizedAccountState(isTestingEnvironment: testingEnvironment, masterDatacenterId: masterDatacenterId, contents: .confirmationCodeEntry(number: phoneNumber, type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType, syncContacts: syncContacts, previousCodeEntry: nil, usePrevious: false)))
+                    }
+                }).start()
+            case let .sentCodeSuccess(authorization):
+                switch authorization {
+                case let .authorization(_, _, _, futureAuthToken, user):
+                    let _ = postbox.transaction({ [weak self] transaction in
+                        var syncContacts = true
+                        if let state = transaction.getState() as? UnauthorizedAccountState, case let .payment(_, _, _, syncContactsValue) = state.contents {
+                            syncContacts = syncContactsValue
+                        }
+                        
+                        if let futureAuthToken = futureAuthToken {
+                            storeFutureLoginToken(accountManager: accountManager, token: futureAuthToken.makeData())
+                        }
+                        
+                        let user = TelegramUser(user: user)
+                        var isSupportUser = false
+                        if let phone = user.phone, phone.hasPrefix("42"), phone.count <= 5 {
+                            isSupportUser = true
+                        }
+                        let state = AuthorizedAccountState(isTestingEnvironment: testingEnvironment, masterDatacenterId: masterDatacenterId, peerId: user.id, state: nil, invalidatedChannels: [])
+                        initializedAppSettingsAfterLogin(transaction: transaction, appVersion: networkArguments.appVersion, syncContacts: syncContacts)
+                        transaction.setState(state)
+                        return accountManager.transaction { [weak self] transaction -> SendAuthorizationCodeResult in
+                            if let self {
+                                switchToAuthorizedAccount(transaction: transaction, account: self, isSupportUser: isSupportUser)
+                            }
+                            return .loggedIn
+                        }
+                    }).start()
+                case let .authorizationSignUpRequired(_, termsOfService):
+                    let _ = postbox.transaction({ [weak self] transaction in
+                        if let self {
+                            if let state = transaction.getState() as? UnauthorizedAccountState, case let .payment(number, codeHash, _, syncContacts) = state.contents {
+                                let _ = beginSignUp(
+                                    account: self,
+                                    data: AuthorizationSignUpData(
+                                        number: number,
+                                        codeHash: codeHash,
+                                        code: .phoneCode(""),
+                                        termsOfService: termsOfService.flatMap(UnauthorizedAccountTermsOfService.init(apiTermsOfService:)),
+                                        syncContacts: syncContacts
+                                    )
+                                ).start()
+                            }
+                        }
+                    }).start()
+                }
+            }
+        }
         
         network.shouldKeepConnection.set(self.shouldBeServiceTaskMaster.get()
         |> map { mode -> Bool in
@@ -152,7 +225,7 @@ public class UnauthorizedAccount {
             |> mapToSignal { localizationSettings, proxySettings, networkSettings, appConfiguration -> Signal<UnauthorizedAccount, NoError> in
                 return initializedNetwork(accountId: self.id, arguments: self.networkArguments, supplementary: false, datacenterId: Int(masterDatacenterId), keychain: keychain, basePath: self.basePath, testingEnvironment: self.testingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil, useRequestTimeoutTimers: false, appConfiguration: appConfiguration)
                 |> map { network in
-                    let updated = UnauthorizedAccount(networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
+                    let updated = UnauthorizedAccount(accountManager: accountManager, networkArguments: self.networkArguments, id: self.id, rootPath: self.rootPath, basePath: self.basePath, testingEnvironment: self.testingEnvironment, postbox: self.postbox, network: network)
                     updated.shouldBeServiceTaskMaster.set(self.shouldBeServiceTaskMaster.get())
                     return updated
                 }
@@ -250,7 +323,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                 case let unauthorizedState as UnauthorizedAccountState:
                                     return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                                         |> map { network -> AccountResult in
-                                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                                            return .unauthorized(UnauthorizedAccount(accountManager: accountManager, networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: unauthorizedState.isTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                                         }
                                 case let authorizedState as AuthorizedAccountState:
                                     return postbox.transaction { transaction -> String? in
@@ -269,7 +342,7 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                         
                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: 2, keychain: keychain, basePath: path, testingEnvironment: beginWithTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: nil, useRequestTimeoutTimers: useRequestTimeoutTimers, appConfiguration: appConfig)
                         |> map { network -> AccountResult in
-                            return .unauthorized(UnauthorizedAccount(networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
+                            return .unauthorized(UnauthorizedAccount(accountManager: accountManager, networkArguments: networkArguments, id: id, rootPath: rootPath, basePath: path, testingEnvironment: beginWithTestingEnvironment, postbox: postbox, network: network, shouldKeepAutoConnection: shouldKeepAutoConnection))
                         }
                     }
                 }

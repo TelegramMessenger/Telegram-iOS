@@ -148,7 +148,7 @@ private func apiInputStorePaymentPurpose(postbox: Postbox, purpose: AppStoreTran
     }
 }
 
-func _internal_sendAppStoreReceipt(postbox: Postbox, network: Network, stateManager: AccountStateManager?, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
+func _internal_sendAppStoreReceipt(postbox: Postbox, network: Network, stateManager: AccountStateManager, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
     return apiInputStorePaymentPurpose(postbox: postbox, purpose: purpose)
     |> castError(AssignAppStoreTransactionError.self)
     |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
@@ -161,7 +161,26 @@ func _internal_sendAppStoreReceipt(postbox: Postbox, network: Network, stateMana
             }
         }
         |> mapToSignal { updates -> Signal<Never, AssignAppStoreTransactionError> in
-            stateManager?.addUpdates(updates)
+            stateManager.addUpdates(updates)
+            return .complete()
+        }
+    }
+}
+
+func _internal_sendAppStoreReceipt(postbox: Postbox, network: Network, stateManager: UnauthorizedAccountStateManager, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
+    return apiInputStorePaymentPurpose(postbox: postbox, purpose: purpose)
+    |> castError(AssignAppStoreTransactionError.self)
+    |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
+        return network.request(Api.functions.payments.assignAppStoreTransaction(receipt: Buffer(data: receipt), purpose: purpose))
+        |> mapError { error -> AssignAppStoreTransactionError in
+            if error.errorCode == 406 {
+                return .serverProvided
+            } else {
+                return .generic
+            }
+        }
+        |> mapToSignal { updates -> Signal<Never, AssignAppStoreTransactionError> in
+            stateManager.addUpdates(updates)
             return .complete()
         }
     }

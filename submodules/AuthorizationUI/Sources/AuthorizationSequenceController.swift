@@ -764,12 +764,11 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
     }
     
     private func paymentController(number: String, phoneCodeHash: String, storeProduct: String) -> AuthorizationSequencePaymentScreen {
-        let controller = AuthorizationSequencePaymentScreen(engine: self.engine, presentationData: self.presentationData, inAppPurchaseManager: self.inAppPurchaseManager, phoneNumber: number, phoneCodeHash: phoneCodeHash, storeProduct: storeProduct, back: { [weak self] in
+        let controller = AuthorizationSequencePaymentScreen(sharedContext: self.sharedContext, engine: self.engine, presentationData: self.presentationData, inAppPurchaseManager: self.inAppPurchaseManager, phoneNumber: number, phoneCodeHash: phoneCodeHash, storeProduct: storeProduct, back: { [weak self] in
             guard let self else {
                 return
             }
             let countryCode = AuthorizationSequenceController.defaultCountryCode()
-            
             let _ = self.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: self.account.testingEnvironment, masterDatacenterId: self.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
         })
         return controller
@@ -1302,7 +1301,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                     }
                     controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService, displayCancel: displayCancel))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
-                case let .payment(number, codeHash, storeProduct):
+                case let .payment(number, codeHash, storeProduct, _):
                     var controllers: [ViewController] = []
                     if !self.otherAccountPhoneNumbers.1.isEmpty {
                         controllers.append(self.splashController())

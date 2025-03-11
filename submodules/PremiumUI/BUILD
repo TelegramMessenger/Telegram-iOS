@@ -120,6 +120,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiActionIconComponent",
         "//submodules/TelegramUI/Components/ScrollComponent",
         "//submodules/TelegramUI/Components/Premium/PremiumStarComponent",
+        "//submodules/TelegramUI/Components/Premium/PremiumCoinComponent",
     ],
     visibility = [
         "//visibility:public",

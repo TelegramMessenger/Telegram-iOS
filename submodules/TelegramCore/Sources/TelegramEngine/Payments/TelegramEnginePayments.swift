@@ -164,7 +164,7 @@ public extension TelegramEngineUnauthorized {
         }
         
         public func sendAppStoreReceipt(receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
-            return _internal_sendAppStoreReceipt(postbox: self.account.postbox, network: self.account.network, stateManager: nil, receipt: receipt, purpose: purpose)
+            return _internal_sendAppStoreReceipt(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, receipt: receipt, purpose: purpose)
         }
     }
 }
