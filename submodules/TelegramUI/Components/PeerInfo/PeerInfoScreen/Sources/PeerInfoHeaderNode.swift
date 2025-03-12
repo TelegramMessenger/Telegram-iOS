@@ -2311,6 +2311,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center.offsetBy(dx: bannerInset, dy: 0.0),
+                avatarSize: apparentAvatarFrame.size,
                 avatarScale: avatarScale,
                 defaultHeight: backgroundDefaultHeight,
                 gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),

@@ -304,26 +304,28 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 iconLayer.glowing = component.hasBackground
                 
-                let centerPosition = component.avatarCenter
-                let finalPosition = iconPosition.center.offsetBy(dx: component.avatarCenter.x, dy: component.avatarCenter.y)
-                let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: 0.0, reverse: false)
+                let itemDistanceFraction = max(0.0, min(0.5, (iconPosition.distance - component.avatarSize.width / 2.0) / 144.0))
+                let itemScaleFraction = patternScaleValueAt(fraction: min(1.0, component.avatarTransitionFraction * 1.33), t: itemDistanceFraction, reverse: false)
                
-                func interpolateRect(from: CGPoint, to: CGPoint, t: CGFloat) -> CGPoint {
+                func interpolatePosition(from: PositionGenerator.Position, to: PositionGenerator.Position, t: CGFloat) -> PositionGenerator.Position {
                     let clampedT = max(0, min(1, t))
                     
-                    let interpolatedX = from.x + (to.x - from.x) * clampedT
-                    let interpolatedY = from.y + (to.y - from.y) * clampedT
+                    let interpolatedDistance = from.distance + (to.distance - from.distance) * clampedT
+                    let interpolatedAngle = from.angle + (to.angle - from.angle) * clampedT
                     
-                    return CGPoint(
-                        x: interpolatedX,
-                        y: interpolatedY
-                    )
+                    return PositionGenerator.Position(distance: interpolatedDistance, angle: interpolatedAngle, scale: from.scale)
                 }
                 
-                let effectivePosition = interpolateRect(from: finalPosition, to: centerPosition, t: itemScaleFraction)
+                let toAngle: CGFloat = .pi * 0.18
+                let centerPosition = PositionGenerator.Position(distance: 0.0, angle: iconPosition.angle + toAngle, scale: iconPosition.scale)
+                let effectivePosition = interpolatePosition(from: iconPosition, to: centerPosition, t: itemScaleFraction)
+                let effectiveAngle = toAngle * itemScaleFraction
                 
+                let absolutePosition = getAbsolutePosition(position: effectivePosition, centerPoint: component.avatarCenter)
+                                
                 iconTransition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
-                iconTransition.setPosition(layer: iconLayer, position: effectivePosition)
+                iconTransition.setPosition(layer: iconLayer, position: absolutePosition)
+                iconLayer.updateRotation(effectiveAngle, transition: iconTransition)
                 iconTransition.setScale(layer: iconLayer, scale: iconPosition.scale * (1.0 - itemScaleFraction))
                 iconTransition.setAlpha(layer: iconLayer, alpha: 1.0 - itemScaleFraction)
                 
@@ -586,7 +588,12 @@ private class GiftIconLayer: SimpleLayer {
     
     override func layoutSublayers() {
         self.shadowLayer.frame = CGRect(origin: .zero, size: self.bounds.size).insetBy(dx: -8.0, dy: -8.0)
-        self.animationLayer.frame = CGRect(origin: .zero, size: self.bounds.size)
+        self.animationLayer.bounds = CGRect(origin: .zero, size: self.bounds.size)
+        self.animationLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+    }
+    
+    func updateRotation(_ angle: CGFloat, transition: ComponentTransition) {
+        self.animationLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
     }
     
     func startAnimations(index: Int) {
@@ -644,8 +651,16 @@ private class GiftIconLayer: SimpleLayer {
 
 private struct PositionGenerator {
     struct Position {
-        let center: CGPoint
+        let distance: CGFloat
+        let angle: CGFloat
         let scale: CGFloat
+        
+        var relativeCartesian: CGPoint {
+            return CGPoint(
+                x: self.distance * cos(self.angle),
+                y: self.distance * sin(self.angle)
+            )
+        }
     }
     
     let containerSize: CGSize
@@ -706,15 +721,13 @@ private struct PositionGenerator {
             
             let orbitRangeSize = self.innerOrbitRange.max - self.innerOrbitRange.min
             let orbitDistanceFactor = self.innerOrbitRange.min + orbitRangeSize * CGFloat(self.lokiRng.next())
-            let orbitDistance = orbitDistanceFactor * centerRadius
+            let distance = orbitDistanceFactor * centerRadius
             
             let angleRange: CGFloat = placeOnLeftSide ? .pi : .pi
             let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
             let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
             
-            let absoluteX = centerPoint.x + orbitDistance * cos(angle)
-            let absoluteY = centerPoint.y + orbitDistance * sin(angle)
-            let absolutePosition = CGPoint(x: absoluteX, y: absoluteY)
+            let absolutePosition = getAbsolutePosition(distance: distance, angle: angle, centerPoint: centerPoint)
             
             if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
                 absolutePosition.x + itemSize.width/2 > self.containerSize.width - self.edgePadding ||
@@ -723,11 +736,6 @@ private struct PositionGenerator {
                 continue
             }
             
-            let relativePosition = CGPoint(
-                x: absolutePosition.x - centerPoint.x,
-                y: absolutePosition.y - centerPoint.y
-            )
-            
             let itemRect = CGRect(
                 x: absolutePosition.x - itemSize.width/2,
                 y: absolutePosition.y - itemSize.height/2,
@@ -735,10 +743,12 @@ private struct PositionGenerator {
                 height: itemSize.height
             )
             
-            if self.isValidPosition(itemRect, existingPositions: positions.map { self.posToAbsolute($0.center, centerPoint: centerPoint) }, itemSize: itemSize) {
+            if self.isValidPosition(itemRect, existingPositions: positions.map {
+                getAbsolutePosition(distance: $0.distance, angle: $0.angle, centerPoint: centerPoint)
+            }, itemSize: itemSize) {
                 let scaleRangeSize = max(self.scaleRange.min + 0.1, 0.75) - self.scaleRange.max
                 let scale = self.scaleRange.max + scaleRangeSize * CGFloat(self.lokiRng.next())
-                positions.append(Position(center: relativePosition, scale: scale))
+                positions.append(Position(distance: distance, angle: angle, scale: scale))
                 
                 if absolutePosition.x < centerPoint.x {
                     leftPositions += 1
@@ -757,27 +767,19 @@ private struct PositionGenerator {
             
             let orbitRangeSize = self.outerOrbitRange.max - self.outerOrbitRange.min
             let orbitDistanceFactor = self.outerOrbitRange.min + orbitRangeSize * CGFloat(self.lokiRng.next())
-            let orbitDistance = orbitDistanceFactor * centerRadius
+            let distance = orbitDistanceFactor * centerRadius
             
             let angleRange: CGFloat = placeOnLeftSide ? .pi : .pi
             let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
             let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
             
-            let absoluteX = centerPoint.x + orbitDistance * cos(angle)
-            let absoluteY = centerPoint.y + orbitDistance * sin(angle)
-            let absolutePosition = CGPoint(x: absoluteX, y: absoluteY)
-            
+            let absolutePosition = getAbsolutePosition(distance: distance, angle: angle, centerPoint: centerPoint)
             if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
                 absolutePosition.x + itemSize.width/2 > self.containerSize.width - self.edgePadding ||
                 absolutePosition.y - itemSize.height/2 < self.edgePadding ||
                 absolutePosition.y + itemSize.height/2 > self.containerSize.height - self.edgePadding {
                 continue
             }
-            
-            let relativePosition = CGPoint(
-                x: absolutePosition.x - centerPoint.x,
-                y: absolutePosition.y - centerPoint.y
-            )
             
             let itemRect = CGRect(
                 x: absolutePosition.x - itemSize.width/2,
@@ -786,12 +788,12 @@ private struct PositionGenerator {
                 height: itemSize.height
             )
             
-            if self.isValidPosition(itemRect, existingPositions: positions.map { self.posToAbsolute($0.center, centerPoint: centerPoint) }, itemSize: itemSize) {
-                let distance = hypot(absolutePosition.x - centerPoint.x, absolutePosition.y - centerPoint.y)
-                
+            if self.isValidPosition(itemRect, existingPositions: positions.map {
+                getAbsolutePosition(distance: $0.distance, angle: $0.angle, centerPoint: centerPoint)
+            }, itemSize: itemSize) {
                 let normalizedDistance = min(distance / maxPossibleDistance, 1.0)
                 let scale = self.scaleRange.max - normalizedDistance * (self.scaleRange.max - self.scaleRange.min)
-                positions.append(Position(center: relativePosition, scale: scale))
+                positions.append(Position(distance: distance, angle: angle, scale: scale))
                 
                 if absolutePosition.x < centerPoint.x {
                     leftPositions += 1
@@ -804,8 +806,11 @@ private struct PositionGenerator {
         return positions
     }
     
-    private func posToAbsolute(_ relativePos: CGPoint, centerPoint: CGPoint) -> CGPoint {
-        return CGPoint(x: relativePos.x + centerPoint.x, y: relativePos.y + centerPoint.y)
+    func getAbsolutePosition(distance: CGFloat, angle: CGFloat, centerPoint: CGPoint) -> CGPoint {
+        return CGPoint(
+            x: centerPoint.x + distance * cos(angle),
+            y: centerPoint.y + distance * sin(angle)
+        )
     }
     
     private func isValidPosition(_ rect: CGRect, existingPositions: [CGPoint], itemSize: CGSize) -> Bool {
@@ -831,6 +836,20 @@ private struct PositionGenerator {
         
         return true
     }
+}
+
+private func getAbsolutePosition(position: PositionGenerator.Position, centerPoint: CGPoint) -> CGPoint {
+    return CGPoint(
+        x: centerPoint.x + position.distance * cos(position.angle),
+        y: centerPoint.y + position.distance * sin(position.angle)
+    )
+}
+
+private func getAbsolutePosition(distance: CGFloat, angle: CGFloat, centerPoint: CGPoint) -> CGPoint {
+    return CGPoint(
+        x: centerPoint.x + distance * cos(angle),
+        y: centerPoint.y + distance * sin(angle)
+    )
 }
 
 private func windowFunction(t: CGFloat) -> CGFloat {

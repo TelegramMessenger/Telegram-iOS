@@ -111,6 +111,7 @@ public final class PeerInfoCoverComponent: Component {
     public let files: [Int64: TelegramMediaFile]
     public let isDark: Bool
     public let avatarCenter: CGPoint
+    public let avatarSize: CGSize
     public let avatarScale: CGFloat
     public let defaultHeight: CGFloat
     public let gradientOnTop: Bool
@@ -124,6 +125,7 @@ public final class PeerInfoCoverComponent: Component {
         files: [Int64: TelegramMediaFile],
         isDark: Bool,
         avatarCenter: CGPoint,
+        avatarSize: CGSize = CGSize(width: 100.0, height: 100.0),
         avatarScale: CGFloat,
         defaultHeight: CGFloat,
         gradientOnTop: Bool = false,
@@ -136,6 +138,7 @@ public final class PeerInfoCoverComponent: Component {
         self.files = files
         self.isDark = isDark
         self.avatarCenter = avatarCenter
+        self.avatarSize = avatarSize
         self.avatarScale = avatarScale
         self.defaultHeight = defaultHeight
         self.gradientOnTop = gradientOnTop
@@ -158,6 +161,9 @@ public final class PeerInfoCoverComponent: Component {
             return false
         }
         if lhs.avatarCenter != rhs.avatarCenter {
+            return false
+        }
+        if lhs.avatarSize != rhs.avatarSize {
             return false
         }
         if lhs.avatarScale != rhs.avatarScale {
@@ -492,7 +498,7 @@ public final class PeerInfoCoverComponent: Component {
             transition.containedViewLayoutTransition.updateFrameAdditive(view: self.backgroundPatternContainer, frame: backgroundPatternContainerFrame)
             transition.setAlpha(view: self.backgroundPatternContainer, alpha: component.patternTransitionFraction)
             
-            var baseDistance: CGFloat = 72.0
+            var baseDistance: CGFloat = component.avatarSize.width / 2.0 + 22.0
             var baseRowDistance: CGFloat = 28.0
             var baseItemSize: CGFloat = 26.0
             if availableSize.width <= 60.0 {
@@ -516,7 +522,7 @@ public final class PeerInfoCoverComponent: Component {
                     let baseItemDistance: CGFloat = baseDistance + CGFloat(row) * baseRowDistance
                     
                     let itemDistanceFraction = max(0.0, min(1.0, baseItemDistance / (baseDistance * 2.0)))
-                    let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction, t: itemDistanceFraction, reverse: false)
+                    let itemScaleFraction = patternScaleValueAt(fraction: component.avatarTransitionFraction * 1.6, t: itemDistanceFraction, reverse: false)
                     let itemDistance = baseItemDistance * (1.0 - itemScaleFraction) + 20.0 * itemScaleFraction
                     
                     var itemAngle: CGFloat
