@@ -1038,7 +1038,6 @@ public final class StarsContext {
         }
     }
     
-    
     init(account: Account) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
             return StarsContextImpl(account: account)

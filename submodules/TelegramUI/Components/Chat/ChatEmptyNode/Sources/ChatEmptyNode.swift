@@ -1899,7 +1899,7 @@ public final class ChatEmptyNode: ASDisplayNode {
         default:
             self.isUserInteractionEnabled = false
         }
-        
+
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         
         var contentSize = CGSize()

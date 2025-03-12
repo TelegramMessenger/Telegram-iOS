@@ -5795,7 +5795,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
-                                sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+                                } else {
+                                    sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {

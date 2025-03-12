@@ -177,7 +177,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         
         switch content {
         case let .animation(animationData):
-            let animationDataResource = animationData.resource._parse()
+            guard let animationDataResource = animationData.resource._parse() else {
+                return
+            }
             
             let loadAnimation: () -> Void = { [weak self] in
                 guard let strongSelf = self else {

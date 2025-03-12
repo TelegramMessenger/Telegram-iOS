@@ -219,14 +219,14 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.statusBarHeight), size: component.topLeftButtonsSize))
                 excludeRects.append(CGRect(origin: CGPoint(x: availableSize.width - component.topRightButtonsSize.width, y: component.statusBarHeight), size: component.topRightButtonsSize))
-                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + 56.0), size: CGSize(width: component.titleWidth, height: 72.0)))
+                excludeRects.append(CGRect(origin: CGPoint(x: floor((availableSize.width - component.titleWidth) / 2.0), y: avatarCenter.y + component.avatarSize.height / 2.0 + 6.0), size: CGSize(width: component.titleWidth, height: 100.0)))
                 if component.bottomHeight > 0.0 {
                     excludeRects.append(CGRect(origin: CGPoint(x: 0.0, y: component.defaultHeight - component.bottomHeight), size: CGSize(width: availableSize.width, height: component.bottomHeight)))
                 }
                                                 
                 let positionGenerator = PositionGenerator(
                     containerSize: CGSize(width: availableSize.width, height: component.defaultHeight),
-                    centerFrame: CGSize(width: 100, height: 100).centered(around: avatarCenter),
+                    centerFrame: component.avatarSize.centered(around: avatarCenter),
                     exclusionZones: excludeRects,
                     minimumDistance: 42.0,
                     edgePadding: 5.0,
@@ -304,8 +304,8 @@ public final class PeerInfoGiftsCoverComponent: Component {
                 }
                 iconLayer.glowing = component.hasBackground
                 
-                let itemDistanceFraction = max(0.0, min(1.0, iconPosition.distance / 100.0))
-                let itemScaleFraction = patternScaleValueAt(fraction: min(1.0, component.avatarTransitionFraction * 1.56), t: itemDistanceFraction, reverse: false)
+                let itemDistanceFraction = max(0.0, min(0.5, (iconPosition.distance - component.avatarSize.width / 2.0) / 144.0))
+                let itemScaleFraction = patternScaleValueAt(fraction: min(1.0, component.avatarTransitionFraction * 1.33), t: itemDistanceFraction, reverse: false)
                
                 func interpolatePosition(from: PositionGenerator.Position, to: PositionGenerator.Position, t: CGFloat) -> PositionGenerator.Position {
                     let clampedT = max(0, min(1, t))
@@ -316,13 +316,16 @@ public final class PeerInfoGiftsCoverComponent: Component {
                     return PositionGenerator.Position(distance: interpolatedDistance, angle: interpolatedAngle, scale: from.scale)
                 }
                 
-                let centerPosition = PositionGenerator.Position(distance: 0.0, angle: iconPosition.angle + .pi * 0.18, scale: iconPosition.scale)
+                let toAngle: CGFloat = .pi * 0.18
+                let centerPosition = PositionGenerator.Position(distance: 0.0, angle: iconPosition.angle + toAngle, scale: iconPosition.scale)
                 let effectivePosition = interpolatePosition(from: iconPosition, to: centerPosition, t: itemScaleFraction)
+                let effectiveAngle = toAngle * itemScaleFraction
                 
-                let position = getAbsolutePosition(position: effectivePosition, centerPoint: component.avatarCenter)
+                let absolutePosition = getAbsolutePosition(position: effectivePosition, centerPoint: component.avatarCenter)
                                 
                 iconTransition.setBounds(layer: iconLayer, bounds: CGRect(origin: .zero, size: iconSize))
-                iconTransition.setPosition(layer: iconLayer, position: position)
+                iconTransition.setPosition(layer: iconLayer, position: absolutePosition)
+                iconLayer.updateRotation(effectiveAngle, transition: iconTransition)
                 iconTransition.setScale(layer: iconLayer, scale: iconPosition.scale * (1.0 - itemScaleFraction))
                 iconTransition.setAlpha(layer: iconLayer, alpha: 1.0 - itemScaleFraction)
                 
@@ -585,7 +588,12 @@ private class GiftIconLayer: SimpleLayer {
     
     override func layoutSublayers() {
         self.shadowLayer.frame = CGRect(origin: .zero, size: self.bounds.size).insetBy(dx: -8.0, dy: -8.0)
-        self.animationLayer.frame = CGRect(origin: .zero, size: self.bounds.size)
+        self.animationLayer.bounds = CGRect(origin: .zero, size: self.bounds.size)
+        self.animationLayer.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+    }
+    
+    func updateRotation(_ angle: CGFloat, transition: ComponentTransition) {
+        self.animationLayer.transform = CATransform3DMakeRotation(angle, 0.0, 0.0, 1.0)
     }
     
     func startAnimations(index: Int) {
@@ -719,7 +727,6 @@ private struct PositionGenerator {
             let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
             let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
             
-            // Get the absolute position to check boundaries and collisions
             let absolutePosition = getAbsolutePosition(distance: distance, angle: angle, centerPoint: centerPoint)
             
             if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
@@ -766,9 +773,7 @@ private struct PositionGenerator {
             let angleOffset: CGFloat = placeOnLeftSide ? .pi/2 : -(.pi/2)
             let angle = angleOffset + angleRange * CGFloat(self.lokiRng.next())
             
-            // Get the absolute position to check boundaries and collisions
             let absolutePosition = getAbsolutePosition(distance: distance, angle: angle, centerPoint: centerPoint)
-            
             if absolutePosition.x - itemSize.width/2 < self.edgePadding ||
                 absolutePosition.x + itemSize.width/2 > self.containerSize.width - self.edgePadding ||
                 absolutePosition.y - itemSize.height/2 < self.edgePadding ||

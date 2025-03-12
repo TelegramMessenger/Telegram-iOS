@@ -234,7 +234,7 @@ public final class InAppPurchaseManager: NSObject {
     private let disposableSet = DisposableDict<String>()
     
     private var lastRequestTimestamp: Double?
-    
+
     public init(engine: SomeTelegramEngine) {
         self.engine = engine
                 

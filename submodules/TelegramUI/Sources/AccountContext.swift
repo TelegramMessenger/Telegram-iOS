@@ -358,6 +358,7 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentAppConfiguration.swap(value)
         })
         
+        let langCode = sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
         if !temp {
             let langCode = sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode

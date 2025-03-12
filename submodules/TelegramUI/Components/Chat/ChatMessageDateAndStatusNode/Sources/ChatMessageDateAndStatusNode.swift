@@ -267,7 +267,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var replyCountNode: TextNode?
     private var starsIcon: ASImageNode?
     private var starsCountNode: TextNode?
-    
+
     private var type: ChatMessageDateAndStatusType?
     private var theme: ChatPresentationThemeData?
     private var layoutSize: CGSize?
@@ -322,13 +322,13 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentImpressionIcon = self.impressionIcon
         var currentRepliesIcon = self.repliesIcon
         var currentStarsIcon = self.starsIcon
-        
+
         let currentType = self.type
         let currentTheme = self.theme
 
         let makeReplyCountLayout = TextNode.asyncLayout(self.replyCountNode)
         let makeStarsCountLayout = TextNode.asyncLayout(self.starsCountNode)
-        
+
         let reactionButtonsContainer = self.reactionButtonsContainer
         
         return { [weak self] arguments in
@@ -345,7 +345,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             var impressionImage: UIImage?
             var repliesImage: UIImage?
             var starsImage: UIImage?
-            
+
             let themeUpdated = arguments.presentationData.theme != currentTheme || arguments.type != currentType
             
             let graphics = PresentationResourcesChat.principalGraphics(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, bubbleCorners: arguments.presentationData.chatBubbleCorners)
@@ -693,7 +693,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
 
             var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var starsCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
-            
+
             let reactionSize: CGFloat = 8.0
             let reactionSpacing: CGFloat = 2.0
             let reactionTrailingSpacing: CGFloat = 6.0
@@ -712,6 +712,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 
                 let layoutAndApply = makeReplyCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
                 reactionInset += 14.0 + layoutAndApply.0.size.width + 4.0
+                if arguments.starsCount != nil {
+                    reactionInset += 3.0
+                }
                 replyCountLayoutAndApply = layoutAndApply
             } else if arguments.isPinned {
                 reactionInset += 12.0
@@ -1283,6 +1286,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let replyCountFrame = CGRect(origin: CGPoint(x: reactionOffset + 4.0, y: backgroundInsets.top + 1.0 + offset + verticalInset), size: layout.size)
                             animation.animator.updateFrame(layer: node.layer, frame: replyCountFrame, completion: nil)
                             reactionOffset += 4.0 + layout.size.width
+                            if currentStarsIcon != nil {
+                                reactionOffset += 8.0
+                            }
                         } else if let replyCountNode = strongSelf.replyCountNode {
                             strongSelf.replyCountNode = nil
                             if animation.isAnimated {

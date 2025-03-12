@@ -379,7 +379,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = params.size.width > params.size.height ? 5 : 3
+            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 414.0 ? 5 : 3
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
@@ -613,7 +613,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
             
             var bottomScrollInset: CGFloat = 0.0
-            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
+            var contentHeight = ceil(CGFloat(starsProducts.count) / CGFloat(defaultItemsInRow)) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
             
             let size = params.size
             let sideInset = params.sideInset
@@ -677,13 +677,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             let buttonSideInset = sideInset + 16.0
             let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-            var bottomPanelHeight = max(8.0, bottomInset) + buttonSize.height + 8.0
+            let effectiveBottomInset = max(8.0, bottomInset)
+            var bottomPanelHeight = effectiveBottomInset + buttonSize.height + 8.0
             if params.visibleHeight < 110.0 {
                 scrollOffset -= bottomPanelHeight
             }
             
             let panelTransition = ComponentTransition.immediate
-            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
+            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - effectiveBottomInset - buttonSize.height - scrollOffset), size: buttonSize))
             panelTransition.setAlpha(view: panelButton.view, alpha: panelAlpha)
             let _ = panelButton.updateLayout(width: buttonSize.width, transition: .immediate)
             
@@ -754,7 +755,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if panelCheckView.superview == nil {
                         self.view.addSubview(panelCheckView)
                     }
-                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - bottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
+                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - effectiveBottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
                     panelTransition.setAlpha(view: panelCheckView, alpha: panelAlpha)
                 }
                 panelButton.isHidden = true
@@ -1015,7 +1016,26 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         guard let self else {
                             return
                         }
-                        let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        if self.context.isPremium {
+                            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        } else {
+                            let text = strings.Gift_View_TooltipPremiumWearing
+                            let tooltipController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
+                                position: .bottom,
+                                animateInAsReplacement: false,
+                                appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                action: { [weak self] action in
+                                    if let self, case .info = action {
+                                        let premiumController = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .messageEffects, forceDark: false, dismissed: nil)
+                                        self.parentController?.push(premiumController)
+                                    }
+                                    return false
+                                }
+                            )
+                            self.parentController?.present(tooltipController, in: .current)
+                        }
                     })
                 })))
             }
