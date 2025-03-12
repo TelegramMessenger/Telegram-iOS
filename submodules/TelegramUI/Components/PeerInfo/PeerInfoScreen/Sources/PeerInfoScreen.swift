@@ -3728,7 +3728,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openAgeRestrictedMessageMedia: { _, _ in
         }, playMessageEffect: { _ in
         }, editMessageFactCheck: { _ in
-        }, sendGift: { _ in
+        }, sendGift: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            self.openPremiumGift()
         }, openUniqueGift: { _ in
         }, openMessageFeeException: {
         }, requestMessageUpdate: { _, _ in
@@ -12701,6 +12705,12 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             starsContext.load(force: true)
         } else {
             self.starsContext = nil
+        }
+        
+        if isMyProfile, let profileGiftsContext {
+            profileGiftsContext.updateFilter(.All)
+            profileGiftsContext.updateSorting(.date)
+            profileGiftsContext.reload()
         }
         
         self.presentationData = updatedPresentationData?.0 ?? context.sharedContext.currentPresentationData.with { $0 }

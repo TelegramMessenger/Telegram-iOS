@@ -635,7 +635,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if case .wearPreview = component.subject {
                     giftTitle = uniqueGift.title
                 } else {
-                    giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
+                    
+                    giftTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))"
                 }
                 
                 let wearTitle = wearTitle.update(
@@ -1018,7 +1019,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 var descriptionText: String
                 if let uniqueGift {
                     titleString = uniqueGift.title
-                    descriptionText = "\(strings.Gift_Unique_Collectible) #\(uniqueGift.number)"
+                    descriptionText = "\(strings.Gift_Unique_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))"
                 } else if soldOut {
                     descriptionText = strings.Gift_View_UnavailableDescription
                 } else if upgraded {
@@ -1480,7 +1481,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         if isWearing {
                                             state.commitTakeOff()
 
-                                            component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                         } else {
                                             if let controller = controller() as? GiftViewScreen {
                                                 controller.dismissAllTooltips()
@@ -1507,7 +1508,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                     state.requestWearPreview()
                                                 } else {
                                                     state.commitWear(uniqueGift)
-                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                                 }
                                             })
                                         }
@@ -2090,7 +2091,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         component.cancel(true)
                                     } else {
                                         Queue.mainQueue().after(0.2) {
-                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                         }
                                     }
                                 }
@@ -2637,7 +2638,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 giftsPeerId = peerId
                 text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
             } else {
-                giftsPeerId = arguments.peerId
+                giftsPeerId = context.account.peerId
                 text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
             }
             
@@ -3091,15 +3092,32 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if self.showBalance {
+            let context = self.context
             let insets = layout.insets(options: .statusBar)
             let balanceSize = self.balanceOverlay.update(
                 transition: .immediate,
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
-                        context: self.context,
-                        theme: self.context.sharedContext.currentPresentationData.with { $0 }.theme,
-                        action: {
+                        context: context,
+                        theme: context.sharedContext.currentPresentationData.with { $0 }.theme,
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.navigationController as? NavigationController else {
+                                return
+                            }
+                            self.dismissAnimated()
                             
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
                         }
                     )
                 ),

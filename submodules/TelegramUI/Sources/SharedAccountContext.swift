@@ -971,6 +971,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     if groupCallController.view.superview == nil {
                         (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
                     }
+                } else if let streamController = self.streamController {
+                    mainWindow.hostView.containerView.endEditing(true)
+                    if streamController.view.superview == nil {
+                        (mainWindow.viewController as? NavigationController)?.pushViewController(streamController)
+                    }
                 }
             }
         } else {
@@ -1357,7 +1362,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let streamController = MediaStreamComponentController(call: group)
                 streamController.navigationPresentation = .flatModal
                 streamController.parentNavigationController = navigationController
+                
+                let thisCallIsOnScreenPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+                streamController.onViewDidAppear = {
+                    thisCallIsOnScreenPromise.set(true)
+                }
+                streamController.onViewDidDisappear = {
+                    thisCallIsOnScreenPromise.set(false)
+                }
+                
                 self.streamController = streamController
+                
+                self.mainWindow?.hostView.containerView.endEditing(true)
+                
+                thisCallIsOnScreenPromise.set(true)
+                self.hasGroupCallOnScreenPromise.set(thisCallIsOnScreenPromise.get())
+                beginDisplayingCallStatusBar.set(.single(Void()))
                 
                 navigationController.pushViewController(streamController)
             }
@@ -1785,6 +1805,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if groupCallController.isNodeLoaded && groupCallController.view.superview == nil {
                 mainWindow.hostView.containerView.endEditing(true)
                 (mainWindow.viewController as? NavigationController)?.pushViewController(groupCallController)
+            }
+        } else if let streamController = self.streamController {
+            if streamController.isNodeLoaded && streamController.view.superview == nil {
+                mainWindow.hostView.containerView.endEditing(true)
+                (mainWindow.viewController as? NavigationController)?.pushViewController(streamController)
             }
         }
     }
@@ -2905,7 +2930,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 Queue.mainQueue().after(0.3) {
                     let tooltipController = UndoOverlayController(
                         presentationData: presentationData,
-                        content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift.title) #\(gift.number)", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
+                        content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
                         elevatedLayout: false,
                         action: { _ in return true }
                     )

@@ -213,7 +213,7 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
                 } else {
                     textLeftInset = 15.0 + imageSize * min(1.0, CGFloat(replyPeers.count)) + (imageSpacing) * max(0.0, min(2.0, CGFloat(replyPeers.count - 1)))
                 }
-                let textRightInset: CGFloat = 36.0
+                let textRightInset: CGFloat = 24.0
                 
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset - textLeftInset - textRightInset), height: constrainedSize.height)
                 

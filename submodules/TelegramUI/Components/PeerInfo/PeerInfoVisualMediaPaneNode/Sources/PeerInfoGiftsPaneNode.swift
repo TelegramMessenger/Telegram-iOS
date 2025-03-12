@@ -240,6 +240,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func beginReordering() {
+        self.profileGifts.updateFilter(.All)
+        self.profileGifts.updateSorting(.date)
+        
         if let parentController = self.parentController as? PeerInfoScreen {
             parentController.togglePaneIsReordering(isReordering: true)
         } else {
@@ -469,7 +472,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                         return
                                     }
                                     if self.isReordering {
-                                        if !product.pinnedToTop, let reference = product.reference, let items = self.starsProducts {
+                                        if case .unique = product.gift, !product.pinnedToTop, let reference = product.reference, let items = self.starsProducts {
                                             if self.pinnedReferences.count >= self.maxPinnedCount {
                                                 self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                                                 return
@@ -564,7 +567,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             itemFrame = itemFrame.size.centered(around: reorderingItem.position)
                             isReordering = true
                         }
-                        if itemView.layer.animation(forKey: "position") != nil && !isReordering {
+                        if self.isReordering, itemView.layer.animation(forKey: "position") != nil && !isReordering {
                         } else {
                             itemTransition.setFrame(view: itemView, frame: itemFrame)
                         }
@@ -611,8 +614,6 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             var bottomScrollInset: CGFloat = 0.0
             var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
-            
-            let transition = ComponentTransition.immediate
             
             let size = params.size
             let sideInset = params.sideInset
@@ -681,8 +682,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 scrollOffset -= bottomPanelHeight
             }
             
-            transition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
-            transition.setAlpha(view: panelButton.view, alpha: panelAlpha)
+            let panelTransition = ComponentTransition.immediate
+            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
+            panelTransition.setAlpha(view: panelButton.view, alpha: panelAlpha)
             let _ = panelButton.updateLayout(width: buttonSize.width, transition: .immediate)
             
             if self.canManage {
@@ -753,16 +755,16 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.view.addSubview(panelCheckView)
                     }
                     panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - bottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
-                    transition.setAlpha(view: panelCheckView, alpha: panelAlpha)
+                    panelTransition.setAlpha(view: panelCheckView, alpha: panelAlpha)
                 }
                 panelButton.isHidden = true
             }
             
-            transition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
-            transition.setAlpha(view: panelBackground.view, alpha: panelAlpha)
+            panelTransition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
+            panelTransition.setAlpha(view: panelBackground.view, alpha: panelAlpha)
             panelBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
-            transition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
+            panelTransition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
+            panelTransition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
             
             let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
             if self.resultsAreEmpty {
@@ -776,8 +778,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 
                 self.emptyResultsClippingView.isHidden = false
                                 
-                transition.setFrame(view: self.emptyResultsClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
-                transition.setBounds(view: self.emptyResultsClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                panelTransition.setFrame(view: self.emptyResultsClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                panelTransition.setBounds(view: self.emptyResultsClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
                 
                 let emptyResultsTitleSize = self.emptyResultsTitle.update(
                     transition: .immediate,
@@ -840,7 +842,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         view.playOnce()
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
                 }
                 if let view = self.emptyResultsTitle.view {
                     if view.superview == nil {
@@ -849,7 +851,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
                 }
                 if let view = self.emptyResultsAction.view {
                     if view.superview == nil {
@@ -858,7 +860,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
                 }
             } else {
                 if let view = self.emptyResultsAnimation.view {
@@ -879,7 +881,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             }
             
-            if self.peerId == self.context.account.peerId {
+            if self.peerId == self.context.account.peerId, !self.resultsAreEmpty {
                 let footerText: ComponentView<Empty>
                 if let current = self.footerText {
                     footerText = current
@@ -941,21 +943,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.chatControllerInteraction.navigationController()?.pushViewController(controller)
             })
         } else {
-            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Birthday(id: self.peerId))
-            |> deliverOnMainQueue).start(next: { birthday in
-                var hasBirthday = false
-                if let birthday {
-                    hasBirthday = hasBirthdayToday(birthday: birthday)
-                }
-                let controller = self.context.sharedContext.makeGiftOptionsController(
-                    context: self.context,
-                    peerId: self.peerId,
-                    premiumOptions: [],
-                    hasBirthday: hasBirthday,
-                    completion: nil
-                )
-                self.chatControllerInteraction.navigationController()?.pushViewController(controller)
-            })
+            self.chatControllerInteraction.sendGift(self.peerId)
         }
     }
     

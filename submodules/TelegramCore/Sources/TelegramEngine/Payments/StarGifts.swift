@@ -1016,7 +1016,10 @@ private final class ProfileGiftsContextImpl {
         let sorting = self.sorting
         
         let isFiltered = self.filter != .All || self.sorting != .date
-        
+        if !isFiltered {
+            self.filteredGifts = []
+            self.filteredCount = nil
+        }
         let dataState = isFiltered ? self.filteredDataState : self.dataState
         
         if case let .ready(true, initialNextOffset) = dataState {
@@ -1202,11 +1205,14 @@ private final class ProfileGiftsContextImpl {
             }
         }
         let existingGifts = Set(pinnedGifts.compactMap { $0.reference })
-        
         var updatedGifts: [ProfileGiftsContext.State.StarGift] = []
         for gift in self.gifts {
             if let reference = gift.reference, existingGifts.contains(reference) {
                 continue
+            }
+            var gift = gift
+            if gift.reference == reference {
+                gift = gift.withPinnedToTop(pinnedToTop)
             }
             updatedGifts.append(gift)
         }
@@ -1216,18 +1222,48 @@ private final class ProfileGiftsContextImpl {
         updatedGifts.insert(contentsOf: pinnedGifts, at: 0)
         self.gifts = updatedGifts
         
-        if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
-            self.filteredGifts[index] = self.filteredGifts[index].withPinnedToTop(pinnedToTop)
+        var effectiveReferences = pinnedGifts.compactMap { $0.reference }
+        if !self.filteredGifts.isEmpty {
+            var filteredPinnedGifts = self.filteredGifts.filter { $0.pinnedToTop }
+            if var gift = self.filteredGifts.first(where: { $0.reference == reference }) {
+                gift = gift.withPinnedToTop(pinnedToTop)
+                if pinnedToTop {
+                    if !gift.savedToProfile {
+                        gift = gift.withSavedToProfile(true)
+                    }
+                    filteredPinnedGifts.append(gift)
+                } else {
+                    filteredPinnedGifts.removeAll(where: { $0.reference == reference })
+                }
+            }
+            let existingFilteredGifts = Set(filteredPinnedGifts.compactMap { $0.reference })
+            var updatedFilteredGifts: [ProfileGiftsContext.State.StarGift] = []
+            for gift in self.filteredGifts {
+                if let reference = gift.reference, existingFilteredGifts.contains(reference) {
+                    continue
+                }
+                var gift = gift
+                if gift.reference == reference {
+                    gift = gift.withPinnedToTop(pinnedToTop)
+                }
+                updatedFilteredGifts.append(gift)
+            }
+            updatedFilteredGifts.sort { lhs, rhs in
+                lhs.date > rhs.date
+            }
+            updatedFilteredGifts.insert(contentsOf: filteredPinnedGifts, at: 0)
+            self.filteredGifts = updatedFilteredGifts
+            
+            effectiveReferences = filteredPinnedGifts.compactMap { $0.reference }
         }
+
         self.pushState()
         
-        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference })
-        
+        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: effectiveReferences)
         if saveToProfile {
             signal = _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true)
             |> then(signal)
         }
-        
         self.actionDisposable.set(
             (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
@@ -1279,7 +1315,6 @@ private final class ProfileGiftsContextImpl {
             |> ignoreValues
             |> then(signal)
         }
-        
         self.actionDisposable.set(
             (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
@@ -1349,6 +1384,9 @@ private final class ProfileGiftsContextImpl {
     }
     
     func updateFilter(_ filter: ProfileGiftsContext.Filters) {
+        guard self.filter != filter else {
+            return
+        }
         self.filter = filter
         self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()
@@ -1357,6 +1395,9 @@ private final class ProfileGiftsContextImpl {
     }
     
     func updateSorting(_ sorting: ProfileGiftsContext.Sorting) {
+        guard self.sorting != sorting else {
+            return
+        }
         self.sorting = sorting
         self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()

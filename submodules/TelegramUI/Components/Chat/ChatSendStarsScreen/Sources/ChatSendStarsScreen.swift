@@ -1441,14 +1441,31 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
             
+            let context = component.context
             let balanceSize = self.balanceOverlay.update(
                 transition: .immediate,
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: component.context,
                         theme: environment.theme,
-                        action: {
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
+                                return
+                            }
+                            self.environment?.controller()?.dismiss()
                             
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
                         }
                     )
                 ),
