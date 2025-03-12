@@ -13573,6 +13573,7 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
 
 "Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade your gift into a unique collectible.";
+"Stars.Purchase.TransferStarGiftInfo" = "Buy Stars to transfer ownership of your unique collectible.";
 
 "Gift.Send.Upgrade" = "Make Unique for %@";
 "Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";

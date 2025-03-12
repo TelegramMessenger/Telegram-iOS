@@ -12,6 +12,7 @@ import AppBundle
 import AvatarNode
 import Markdown
 import GiftItemComponent
+import ChatMessagePaymentAlertController
 
 private final class GiftTransferAlertContentNode: AlertContentNode {
     private let context: AccountContext
@@ -251,7 +252,14 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
     }
 }
 
-public func giftTransferAlertController(context: AccountContext, gift: StarGift.UniqueGift, peer: EnginePeer, transferStars: Int64, commit: @escaping () -> Void) -> AlertController {
+public func giftTransferAlertController(
+    context: AccountContext,
+    gift: StarGift.UniqueGift,
+    peer: EnginePeer,
+    transferStars: Int64,
+    navigationController: NavigationController?,
+    commit: @escaping () -> Void
+) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
     
@@ -267,7 +275,6 @@ public func giftTransferAlertController(context: AccountContext, gift: StarGift.
     }
     
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: GiftTransferAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: buttonText, action: {
         dismissImpl?(true)
         commit()
@@ -275,9 +282,9 @@ public func giftTransferAlertController(context: AccountContext, gift: StarGift.
         dismissImpl?(true)
     })]
     
-    contentNode = GiftTransferAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, gift: gift, peer: peer, title: title, text: text, actions: actions)
+    let contentNode = GiftTransferAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, gift: gift, peer: peer, title: title, text: text, actions: actions)
     
-    let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, showBalance: transferStars > 0)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

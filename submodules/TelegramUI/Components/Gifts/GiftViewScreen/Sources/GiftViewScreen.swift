@@ -147,13 +147,7 @@ private final class GiftViewSheetContent: CombinedComponent {
         
         var keepOriginalInfo = false
                 
-        private var optionsDisposable: Disposable?
-        private(set) var options: [StarsTopUpOption] = [] {
-            didSet {
-                self.optionsPromise.set(self.options)
-            }
-        }
-        private let optionsPromise = ValuePromise<[StarsTopUpOption]?>(nil)
+        private let optionsPromise = Promise<[StarsTopUpOption]?>(nil)
                 
         init(
             context: AccountContext,
@@ -269,13 +263,8 @@ private final class GiftViewSheetContent: CombinedComponent {
             }
             
             if let starsContext = context.starsContext, let state = starsContext.currentState, state.balance < StarsAmount(value: 100, nanos: 0) {
-                self.optionsDisposable = (context.engine.payments.starsTopUpOptions()
-                |> deliverOnMainQueue).start(next: { [weak self] options in
-                    guard let self else {
-                        return
-                    }
-                    self.options = options
-                })
+                self.optionsPromise.set(context.engine.payments.starsTopUpOptions()
+                |> map(Optional.init))
             }
         }
         

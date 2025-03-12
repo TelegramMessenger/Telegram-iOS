@@ -1016,7 +1016,26 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         guard let self else {
                             return
                         }
-                        let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        if self.context.isPremium {
+                            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        } else {
+                            let text = strings.Gift_View_TooltipPremiumWearing
+                            let tooltipController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
+                                position: .bottom,
+                                animateInAsReplacement: false,
+                                appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                action: { [weak self] action in
+                                    if let self, case .info = action {
+                                        let premiumController = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .messageEffects, forceDark: false, dismissed: nil)
+                                        self.parentController?.push(premiumController)
+                                    }
+                                    return false
+                                }
+                            )
+                            self.parentController?.present(tooltipController, in: .current)
+                        }
                     })
                 })))
             }
