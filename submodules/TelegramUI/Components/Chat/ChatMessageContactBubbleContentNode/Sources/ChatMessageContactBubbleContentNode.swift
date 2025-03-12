@@ -233,6 +233,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                var starsCount: Int64?
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: item.message)
                 if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
@@ -246,6 +247,8 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         if let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute, item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        starsCount = attribute.stars.value
                     }
                 }
                 
@@ -300,6 +303,7 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         areReactionsTags: item.topMessage.areReactionsTags(accountPeerId: item.context.account.peerId),
                         messageEffect: messageEffect,
                         replyCount: dateReplies,
+                        starsCount: starsCount,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
                         canViewReactionList: canViewMessageReactionList(message: item.topMessage),

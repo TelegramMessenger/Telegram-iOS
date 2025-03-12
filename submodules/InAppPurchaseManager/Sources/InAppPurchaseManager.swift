@@ -231,6 +231,8 @@ public final class InAppPurchaseManager: NSObject {
     
     private let disposableSet = DisposableDict<String>()
     
+    private var lastRequestTimestamp: Double?
+
     public init(engine: TelegramEngine) {
         self.engine = engine
                 
@@ -255,11 +257,15 @@ public final class InAppPurchaseManager: NSObject {
         productRequest.start()
         
         self.productRequest = productRequest
+        self.lastRequestTimestamp = CFAbsoluteTimeGetCurrent()
     }
     
     public var availableProducts: Signal<[Product], NoError> {
-        if self.products.isEmpty && self.productRequest == nil {
-            self.requestProducts()
+        if self.products.isEmpty {
+            if let lastRequestTimestamp, CFAbsoluteTimeGetCurrent() - lastRequestTimestamp > 10.0 {
+                Logger.shared.log("InAppPurchaseManager", "No available products, rerequest")
+                self.requestProducts()
+            }
         }
         return self.productsPromise.get()
     }

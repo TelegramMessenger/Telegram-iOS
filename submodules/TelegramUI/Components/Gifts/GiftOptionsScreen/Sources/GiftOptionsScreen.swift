@@ -216,6 +216,8 @@ final class GiftOptionsScreenComponent: Component {
         private var starsStateDisposable: Disposable?
         private var starsState: StarsContext.State?
         
+        private let optionsPromise = Promise<[StarsTopUpOption]?>(nil)
+        
         private var component: GiftOptionsScreenComponent?
         private(set) weak var state: State?
         private var environment: EnvironmentType?
@@ -508,59 +510,94 @@ final class GiftOptionsScreenComponent: Component {
                 gift: transferGift,
                 peer: peer,
                 transferStars: gift.transferStars ?? 0,
-                commit: { [weak controller] in
-                    let _ = (context.engine.payments.transferStarGift(prepaid: gift.transferStars == 0, reference: reference, peerId: peer.id)
-                    |> deliverOnMainQueue).start()
-                    
-                    guard let controller, let navigationController = controller.navigationController as? NavigationController else {
-                        return
-                    }
-                     
-                    if peer.id.namespace == Namespaces.Peer.CloudChannel {
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
-                        var foundController = false
-                        for controller in controllers.reversed() {
-                            if let controller = controller as? PeerInfoScreen, controller.peerId == component.peerId {
-                                foundController = true
-                                break
-                            }
+                navigationController: controller.navigationController as? NavigationController,
+                commit: { [weak self, weak controller] in
+                    let proceed: (Bool) -> Void = { waitForTopUp in
+                        if waitForTopUp, let starsContext = context.starsContext {
+                            let _ = (starsContext.onUpdate
+                            |> deliverOnMainQueue).start(next: {
+                                let _ = (context.engine.payments.transferStarGift(prepaid: gift.transferStars == 0, reference: reference, peerId: peer.id)
+                                |> deliverOnMainQueue).start()
+                            })
+                        } else {
+                            let _ = (context.engine.payments.transferStarGift(prepaid: gift.transferStars == 0, reference: reference, peerId: peer.id)
+                            |> deliverOnMainQueue).start()
                         }
-                        if !foundController {
-                            if let controller = context.sharedContext.makePeerInfoController(
-                                context: context,
-                                updatedPresentationData: nil,
-                                peer: peer._asPeer(),
-                                mode: .gifts,
-                                avatarInitiallyExpanded: false,
-                                fromChat: false,
-                                requestsContext: nil
-                            ) {
-                                controllers.append(controller)
-                            }
+                        
+                        guard let controller, let navigationController = controller.navigationController as? NavigationController else {
+                            return
                         }
-                        navigationController.setViewControllers(controllers, animated: true)
-                    } else {
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                        var foundController = false
-                        for controller in controllers.reversed() {
-                            if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                        
+                        if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let controller = controller as? PeerInfoScreen, controller.peerId == component.peerId {
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                if let controller = context.sharedContext.makePeerInfoController(
+                                    context: context,
+                                    updatedPresentationData: nil,
+                                    peer: peer._asPeer(),
+                                    mode: .gifts,
+                                    avatarInitiallyExpanded: false,
+                                    fromChat: false,
+                                    requestsContext: nil
+                                ) {
+                                    controllers.append(controller)
+                                }
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                        } else {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                            var foundController = false
+                            for controller in controllers.reversed() {
+                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                    chatController.hintPlayNextOutgoingGift()
+                                    foundController = true
+                                    break
+                                }
+                            }
+                            if !foundController {
+                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
                                 chatController.hintPlayNextOutgoingGift()
-                                foundController = true
-                                break
+                                controllers.append(chatController)
                             }
+                            navigationController.setViewControllers(controllers, animated: true)
                         }
-                        if !foundController {
-                            let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                            chatController.hintPlayNextOutgoingGift()
-                            controllers.append(chatController)
+                        if let completion = component.completion {
+                            completion()
                         }
-                        navigationController.setViewControllers(controllers, animated: true)
                     }
-                
-                    if let completion = component.completion {
-                        completion()
+                    
+                    if let self, let transferStars = gift.transferStars, transferStars > 0, let starsContext = context.starsContext, let starsState = self.starsState {
+                        if starsState.balance < StarsAmount(value: transferStars, nanos: 0) {
+                            let _ = (self.optionsPromise.get()
+                            |> filter { $0 != nil }
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak controller] options in
+                                let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options ?? [],
+                                    purpose: .transferStarGift(requiredStars: transferStars),
+                                    completion: { stars in
+                                        starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                        proceed(true)
+                                    }
+                                )
+                                controller?.push(purchaseController)
+                            })
+                        } else {
+                            proceed(false)
+                        }
+                    } else {
+                        proceed(false)
                     }
                 }
             )
@@ -590,6 +627,11 @@ final class GiftOptionsScreenComponent: Component {
                         self.state?.updated()
                     }
                 })
+                
+                if let state = component.starsContext.currentState, state.balance < StarsAmount(value: 100, nanos: 0) {
+                    self.optionsPromise.set(component.context.engine.payments.starsTopUpOptions()
+                    |> map(Optional.init))
+                }
             }
             self.component = component
             
@@ -1237,6 +1279,11 @@ final class GiftOptionsScreenComponent: Component {
                     if availableProducts.isEmpty {
                         var premiumProducts: [PremiumGiftProduct] = []
                         for option in premiumOptions {
+                            if option.currency == "XTR" {
+                                continue
+                            }
+                            let starsGiftOption = premiumOptions.first(where: { $0.currency == "XTR" && $0.months == option.months })
+
                             premiumProducts.append(
                                 PremiumGiftProduct(
                                     giftOption: CachedPremiumGiftOption(
@@ -1246,7 +1293,7 @@ final class GiftOptionsScreenComponent: Component {
                                         botUrl: "",
                                         storeProductId: option.storeProductId
                                     ),
-                                    starsGiftOption: nil,
+                                    starsGiftOption: starsGiftOption,
                                     storeProduct: nil,
                                     discount: nil
                                 )

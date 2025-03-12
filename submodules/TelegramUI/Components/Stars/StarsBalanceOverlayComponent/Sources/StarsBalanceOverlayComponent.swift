@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import TelegramCore
 import AccountContext
 import TelegramPresentationData
@@ -38,6 +39,10 @@ public final class StarsBalanceOverlayComponent: Component {
         private let action = ComponentView<Empty>()
                 
         private var component: StarsBalanceOverlayComponent?
+        private var state: EmptyComponentState?
+        
+        private var balance: Int64 = 0
+        private var balanceDisposable: Disposable?
         
         private var cachedChevronImage: (UIImage, PresentationTheme)?
         
@@ -53,17 +58,43 @@ public final class StarsBalanceOverlayComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.balanceDisposable?.dispose()
+        }
+        
         @objc private func tapped() {
             if let component = self.component {
                 component.action()
             }
         }
         
+        private var isUpdating = false
         func update(component: StarsBalanceOverlayComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
             self.component = component
             
+            if self.balanceDisposable == nil, let starsContext = component.context.starsContext {
+                self.balanceDisposable = (starsContext.state
+                |> map { state -> Int64 in
+                    return state?.balance.value ?? 0
+                }
+                |> distinctUntilChanged
+                |> deliverOnMainQueue).start(next: { [weak self] balance in
+                    guard let self else {
+                        return
+                    }
+                    self.balance = balance
+                    if !self.isUpdating {
+                        self.state?.updated()
+                    }
+                })
+            }
+            
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-            let balance = presentationStringsFormattedNumber(Int32(component.context.starsContext?.currentState?.balance.value ?? 0), presentationData.dateTimeFormat.groupingSeparator)
+            let balance = presentationStringsFormattedNumber(Int32(self.balance), presentationData.dateTimeFormat.groupingSeparator)
             
             let attributedText = parseMarkdownIntoAttributedString(
                 presentationData.strings.StarsBalance_YourBalance("**⭐️\(balance)**").string,
@@ -121,23 +152,27 @@ public final class StarsBalanceOverlayComponent: Component {
             
             if let textView = self.text.view {
                 if textView.superview == nil {
-                    self.addSubview(textView)
+                    self.backgroundView.addSubview(textView)
                 }
                 textView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: 10.0), size: textSize)
             }
             
             if let actionView = self.action.view {
                 if actionView.superview == nil {
-                    self.addSubview(actionView)
+                    self.backgroundView.addSubview(actionView)
                 }
                 actionView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - actionSize.width) / 2.0), y: 29.0), size: actionSize)
             }
 
             self.backgroundView.updateColor(color: component.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)
             self.backgroundView.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: .zero, size: size))
+            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - size.width) / 2.0), y: 0.0), size: size))
             
-            return size
+            return CGSize(width: availableSize.width, height: size.height)
+        }
+        
+        public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+            return self.backgroundView.frame.contains(point)
         }
     }
     

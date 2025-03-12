@@ -2232,6 +2232,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "fullscreen_changed", data: paramsString)
             
             controller.isFullscreen = isFullscreen
+            if isFullscreen {
+                controller.requestAttachmentMenuExpansion()
+            }
             
             if let (layout, _) = self.validLayout, case .regular = layout.metrics.widthClass {
                 if let snapshotView = self.webView?.snapshotView(afterScreenUpdates: false) {

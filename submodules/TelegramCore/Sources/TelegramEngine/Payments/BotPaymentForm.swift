@@ -395,7 +395,7 @@ func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInv
         var flags: Int32 = 0
         var message: Api.TextWithEntities?
         if let text, !text.isEmpty {
-            flags |= (1 << 1)
+            flags |= (1 << 0)
             message = .textWithEntities(text: text, entities: entities.flatMap { apiEntitiesFromMessageTextEntities($0, associatedPeers: SimpleDictionary()) } ?? [])
         }
         return .inputInvoicePremiumGiftStars(flags: flags, userId: inputUser, months: option.months, message: message)

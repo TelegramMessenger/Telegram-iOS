@@ -354,10 +354,11 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentAppConfiguration.swap(value)
         })
         
+        let langCode = sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
         if !temp {
             let currentCountriesConfiguration = self.currentCountriesConfiguration
-            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: langCode)
             |> deliverOnMainQueue).start(next: { value in
                 let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
             })
