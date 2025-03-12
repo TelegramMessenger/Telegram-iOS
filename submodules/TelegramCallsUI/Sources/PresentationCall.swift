@@ -19,6 +19,8 @@ public final class SharedCallAudioContext {
     let audioDevice: OngoingCallContext.AudioDevice?
     let callKitIntegration: CallKitIntegration?
     
+    private let defaultToSpeaker: Bool
+    
     private var audioSessionDisposable: Disposable?
     private var audioSessionShouldBeActiveDisposable: Disposable?
     private var isAudioSessionActiveDisposable: Disposable?
@@ -40,10 +42,17 @@ public final class SharedCallAudioContext {
     }
     
     private let audioSessionShouldBeActive = Promise<Bool>(true)
+    private var initialSetupTimer: Foundation.Timer?
     
-    init(audioSession: ManagedAudioSession, callKitIntegration: CallKitIntegration?) {
+    init(audioSession: ManagedAudioSession, callKitIntegration: CallKitIntegration?, defaultToSpeaker: Bool = false) {
         self.callKitIntegration = callKitIntegration
         self.audioDevice = OngoingCallContext.AudioDevice.create(enableSystemMute: false)
+        self.defaultToSpeaker = defaultToSpeaker
+        
+        if defaultToSpeaker {
+            self.didSetCurrentAudioOutputValue = true
+            self.currentAudioOutputValue = .speaker
+        }
         
         var didReceiveAudioOutputs = false
         self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, manualActivate: { [weak self] control in
@@ -72,6 +81,27 @@ public final class SharedCallAudioContext {
                         audioSessionActive = .single(true)
                     }
                     self.isAudioSessionActivePromise.set(audioSessionActive)
+                    
+                    self.initialSetupTimer?.invalidate()
+                    self.initialSetupTimer = Foundation.Timer(timeInterval: 0.5, repeats: false, block: { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if self.defaultToSpeaker, let audioSessionControl = self.audioSessionControl {
+                            self.currentAudioOutputValue = .speaker
+                            self.didSetCurrentAudioOutputValue = true
+                            
+                            if let callKitIntegration = self.callKitIntegration {
+                                if self.didSetCurrentAudioOutputValue {
+                                    callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+                                }
+                            } else {
+                                audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                                audioSessionControl.setup(synchronous: true)
+                            }
+                        }
+                    })
                 }
             }
         }, deactivate: { [weak self] _ in
@@ -160,9 +190,13 @@ public final class SharedCallAudioContext {
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.isAudioSessionActiveDisposable?.dispose()
         self.audioOutputStateDisposable?.dispose()
+        self.initialSetupTimer?.invalidate()
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        self.initialSetupTimer?.invalidate()
+        self.initialSetupTimer = nil
+        
         guard self.currentAudioOutputValue != output else {
             return
         }
@@ -427,7 +461,7 @@ public final class PresentationCallImpl: PresentationCall {
         if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
             self.sharedAudioContext = nil
         } else {
-            self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+            self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration, defaultToSpeaker: startWithVideo || initialState?.type == .video)
         }
         
         if let _ = self.sharedAudioContext {
