@@ -17,7 +17,7 @@ public enum CreateChannelMode {
     case supergroup(isForum: Bool)
 }
 
-private func createChannel(postbox: Postbox, network: Network, stateManager: AccountStateManager, title: String, description: String?, username: String?, mode: CreateChannelMode, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
+private func createChannel(postbox: Postbox, network: Network, stateManager: AccountStateManager, title: String, description: String?, username: String?, mode: CreateChannelMode, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false, ttlPeriod: Int32?) -> Signal<PeerId, CreateChannelError> {
     return postbox.transaction { transaction -> Signal<PeerId, CreateChannelError> in
         var flags: Int32 = 0
         switch mode {
@@ -43,7 +43,11 @@ private func createChannel(postbox: Postbox, network: Network, stateManager: Acc
         
         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers)
         
-        return network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address, ttlPeriod: nil), automaticFloodWait: false)
+        if ttlPeriod != nil {
+            flags |= (1 << 4)
+        }
+        
+        return network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address, ttlPeriod: ttlPeriod), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
             if error.errorCode == 406 {
                 return .serverProvided(error.errorDescription)
@@ -91,11 +95,11 @@ private func createChannel(postbox: Postbox, network: Network, stateManager: Acc
 }
 
 func _internal_createChannel(account: Account, title: String, description: String?, username: String?) -> Signal<PeerId, CreateChannelError> {
-    return createChannel(postbox: account.postbox, network: account.network, stateManager: account.stateManager, title: title, description: description, username: nil, mode: .channel)
+    return createChannel(postbox: account.postbox, network: account.network, stateManager: account.stateManager, title: title, description: description, username: nil, mode: .channel, ttlPeriod: nil)
 }
 
-public func _internal_createSupergroup(postbox: Postbox, network: Network, stateManager: AccountStateManager, title: String, description: String?, username: String?, isForum: Bool, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-    return createChannel(postbox: postbox, network: network, stateManager: stateManager, title: title, description: description, username: username, mode: .supergroup(isForum: isForum), location: location, isForHistoryImport: isForHistoryImport)
+public func _internal_createSupergroup(postbox: Postbox, network: Network, stateManager: AccountStateManager, title: String, description: String?, username: String?, isForum: Bool, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false, ttlPeriod: Int32? = nil) -> Signal<PeerId, CreateChannelError> {
+    return createChannel(postbox: postbox, network: network, stateManager: stateManager, title: title, description: description, username: username, mode: .supergroup(isForum: isForum), location: location, isForHistoryImport: isForHistoryImport, ttlPeriod: ttlPeriod)
 }
 
 public enum DeleteChannelError {

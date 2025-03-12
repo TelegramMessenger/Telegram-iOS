@@ -675,7 +675,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     case .generic:
                         createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
                     case .supergroup:
-                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
+                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil, ttlPeriod: ttlPeriod)
                         |> map { peerId -> CreateGroupResult? in
                             return CreateGroupResult(peerId: peerId, result: TelegramInvitePeersResult(forbiddenPeers: []))
                         }
@@ -730,7 +730,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         }
                         
                         let createGroupSignal: (Bool) -> Signal<CreateGroupResult?, CreateGroupError> = { isForum in
-                            return context.engine.peers.createSupergroup(title: title, description: nil, isForum: isForum)
+                            return context.engine.peers.createSupergroup(title: title, description: nil, isForum: isForum, ttlPeriod: ttlPeriod)
                             |> map { peerId -> CreateGroupResult? in
                                 return CreateGroupResult(peerId: peerId, result: TelegramInvitePeersResult(forbiddenPeers: []))
                             }
@@ -767,7 +767,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                         } else if isForum || group.userAdminRights != nil {
                             createSignal = createGroupSignal(isForum)
                         } else {
-                            createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: nil)
+                            createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
                         }
 
                         if group.userAdminRights?.rights.contains(.canBeAnonymous) == true {

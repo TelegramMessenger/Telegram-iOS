@@ -2048,11 +2048,31 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         return result
                     }
                     
+                    let updatedLocalPeers = context.engine.contacts.searchLocalPeers(query: query.lowercased())
+                    |> mapToSignal { peers -> Signal<[EngineRenderedPeer], NoError> in
+                        return context.engine.data.subscribe(
+                            EngineDataMap(peers.map { peer in
+                                return TelegramEngine.EngineData.Item.Messages.ChatListIndex(id: peer.peerId)
+                            })
+                        )
+                        |> map { chatListIndices -> [EngineRenderedPeer] in
+                            return peers.filter { peer in
+                                if peer.peerId.namespace == Namespaces.Peer.CloudUser || peer.peerId.namespace == Namespaces.Peer.SecretChat {
+                                    return true
+                                }
+                                if let maybeIndex = chatListIndices[peer.peerId], maybeIndex != nil {
+                                    return true
+                                }
+                                return false
+                            }
+                        }
+                    }
+                    
                     foundLocalPeers = combineLatest(
-                        context.engine.contacts.searchLocalPeers(query: query.lowercased()),
+                        updatedLocalPeers,
                         fixedOrRemovedRecentlySearchedPeers
                     )
-                    |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], Set<EnginePeer.Id>, EngineGlobalNotificationSettings), NoError> in
+                    |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: TelegramEngine.EngineData.Item.Messages.PeerUnreadState.Result], [EngineRenderedPeer], Set<EnginePeer.Id>, EngineGlobalNotificationSettings), NoError> in
                         let recentlySearched = allRecentlySearched.filter { peer in
                             guard let peer = peer.peer.peer else {
                                 return false
@@ -2083,8 +2103,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 }
                             ),
                             EngineDataMap(
-                                peerIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerUnreadCount in
-                                    return TelegramEngine.EngineData.Item.Messages.PeerUnreadCount(id: peerId)
+                                peerIds.map { peerId -> TelegramEngine.EngineData.Item.Messages.PeerUnreadState in
+                                    return TelegramEngine.EngineData.Item.Messages.PeerUnreadState(id: peerId)
                                 }
                             ),
                             TelegramEngine.EngineData.Item.NotificationSettings.Global()
@@ -2118,8 +2138,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 }
                             }
                             let unreadCount = unreadCounts[peer.peerId]
-                            if let unreadCount = unreadCount, unreadCount > 0 {
-                                unread[peer.peerId] = (Int32(unreadCount), isMuted)
+                            if let unreadCount = unreadCount, (unreadCount.count > 0 || unreadCount.isMarkedUnread) {
+                                unread[peer.peerId] = (Int32(unreadCount.count), isMuted)
                             }
                         }
                         return (peers: peers, unread: unread, recentlySearchedPeerIds: recentlySearchedPeerIds)

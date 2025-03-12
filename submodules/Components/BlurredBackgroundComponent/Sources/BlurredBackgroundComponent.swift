@@ -37,7 +37,7 @@ public final class BlurredBackgroundComponent: Component {
         private var vibrancyEffectView: UIVisualEffectView?
         
         public func update(component: BlurredBackgroundComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
-            self.updateColor(color: component.color, transition: transition.containedViewLayoutTransition)
+            self.updateColor(color: component.color, forceKeepBlur: true, transition: transition.containedViewLayoutTransition)
             
             self.update(size: availableSize, cornerRadius: component.cornerRadius, transition: transition.containedViewLayoutTransition)
             
