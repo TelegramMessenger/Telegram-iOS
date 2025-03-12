@@ -333,11 +333,19 @@ extension ChatControllerImpl {
                     }
                     
                     controller?.dismissWithoutContent()
+                    guard !self.presentAccountFrozenInfoIfNeeded() else {
+                        return
+                    }
                     self.presentTagPremiumPaywall()
                 }
                 
                 controller.reactionSelected = { [weak self, weak controller] chosenUpdatedReaction, isLarge in
                     guard let self else {
+                        return
+                    }
+                    
+                    guard !self.presentAccountFrozenInfoIfNeeded() else {
+                        controller?.dismiss(completion: {})
                         return
                     }
                     

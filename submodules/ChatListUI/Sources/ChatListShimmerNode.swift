@@ -162,6 +162,7 @@ public final class ChatListShimmerNode: ASDisplayNode {
             }, openWebApp: { _ in
             }, openPhotoSetup: {
             }, openAdInfo: { _ in
+            }, openAccountFreezeInfo: {
             })
             interaction.isInlineMode = isInlineMode
             

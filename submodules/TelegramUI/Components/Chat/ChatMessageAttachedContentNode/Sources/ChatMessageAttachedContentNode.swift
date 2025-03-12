@@ -675,6 +675,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                var starsCount: Int64?
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: context.account.peerId, accountPeer: associatedData.accountPeer, message: message)
                 if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) || presentationData.isPreview {
                     dateReactionsAndPeers = ([], [])
@@ -688,6 +689,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute, message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        starsCount = attribute.stars.value
                     }
                 }
                 
@@ -747,6 +750,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 areReactionsTags: message.areReactionsTags(accountPeerId: context.account.peerId),
                                 messageEffect: message.messageEffect(availableMessageEffects: associatedData.availableMessageEffects),
                                 replyCount: dateReplies,
+                                starsCount: starsCount,
                                 isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                                 hasAutoremove: message.isSelfExpiring,
                                 canViewReactionList: canViewMessageReactionList(message: message),

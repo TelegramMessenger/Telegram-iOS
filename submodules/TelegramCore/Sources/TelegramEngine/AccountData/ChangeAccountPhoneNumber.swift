@@ -113,7 +113,7 @@ func _internal_requestChangeAccountPhoneNumberVerification(account: Account, api
                 } else {
                     return .single(ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType))
                 }
-            case .sentCodeSuccess:
+            case .sentCodeSuccess, .sentCodePaymentRequired:
                 return .never()
             }
         }
@@ -188,7 +188,7 @@ private func internalResendChangeAccountPhoneNumberVerification(account: Account
             } else {
                 return .single(ChangeAccountPhoneNumberData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: codeTimeout, nextType: parsedNextType))
             }
-        case .sentCodeSuccess:
+        case .sentCodeSuccess, .sentCodePaymentRequired:
             return .never()
         }
     }

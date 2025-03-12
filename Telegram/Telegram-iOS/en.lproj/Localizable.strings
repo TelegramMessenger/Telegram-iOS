@@ -13573,6 +13573,7 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
 
 "Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade your gift into a unique collectible.";
+"Stars.Purchase.TransferStarGiftInfo" = "Buy Stars to transfer ownership of your unique collectible.";
 
 "Gift.Send.Upgrade" = "Make Unique for %@";
 "Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";
@@ -14001,6 +14002,16 @@ Sorry for the inconvenience.";
 "Conversation.VideoTimeLinkCopied" = "Link with start time at %@ copied to clipboard.";
 "Share.VideoStartAt" = "Start at %@";
 "SendStarReactions.SubtitleFrom" = "from %@";
+
+"Notification.PaidMessageRefund.Stars_1" = "%@ Star";
+"Notification.PaidMessageRefund.Stars_any" = "%@ Stars";
+"Notification.PaidMessageRefund" = "%1$@ refunded you %2$@";
+"Notification.PaidMessageRefundYou" = "You refunded %1$@ to %2$@";
+
+"Notification.PaidMessagePriceChanged.Stars_1" = "%@ Star";
+"Notification.PaidMessagePriceChanged.Stars_any" = "%@ Stars";
+"Notification.PaidMessagePriceChanged" = "%1$@ changed price to %2$@ per message";
+"Notification.PaidMessagePriceChangedYou" = "You changed price to %1$@ per message";
 
 "Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
 "Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";

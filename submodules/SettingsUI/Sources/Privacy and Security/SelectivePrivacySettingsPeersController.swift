@@ -315,7 +315,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
         entries.append(.footerItem(footer))
     }
     
-    if !peers.isEmpty {
+    if !peers.isEmpty || state.enableForPremium || state.enableForBots {
         entries.append(.deleteItem(presentationData.strings.Privacy_Exceptions_DeleteAllExceptions))
     }
     

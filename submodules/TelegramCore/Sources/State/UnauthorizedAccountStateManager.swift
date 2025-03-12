@@ -53,11 +53,18 @@ final class UnauthorizedAccountStateManager {
     private var updateService: UnauthorizedUpdateMessageService?
     private let updateServiceDisposable = MetaDisposable()
     private let updateLoginToken: () -> Void
+    private let updateSentCode: (Api.auth.SentCode) -> Void
     private let displayServiceNotification: (String) -> Void
     
-    init(network: Network, updateLoginToken: @escaping () -> Void, displayServiceNotification: @escaping (String) -> Void) {
+    init(
+        network: Network,
+        updateLoginToken: @escaping () -> Void,
+        updateSentCode: @escaping (Api.auth.SentCode) -> Void,
+        displayServiceNotification: @escaping (String) -> Void
+    ) {
         self.network = network
         self.updateLoginToken = updateLoginToken
+        self.updateSentCode = updateSentCode
         self.displayServiceNotification = displayServiceNotification
     }
     
@@ -65,11 +72,18 @@ final class UnauthorizedAccountStateManager {
         self.updateServiceDisposable.dispose()
     }
     
+    func addUpdates(_ updates: Api.Updates) {
+        self.queue.async {
+            self.updateService?.addUpdates(updates)
+        }
+    }
+    
     func reset() {
         self.queue.async {
             if self.updateService == nil {
                 self.updateService = UnauthorizedUpdateMessageService()
                 let updateLoginToken = self.updateLoginToken
+                let updateSentCode = self.updateSentCode
                 let displayServiceNotification = self.displayServiceNotification
                 self.updateServiceDisposable.set(self.updateService!.pipe.signal().start(next: { updates in
                     for update in updates {
@@ -81,6 +95,8 @@ final class UnauthorizedAccountStateManager {
                             if popup {
                                 displayServiceNotification(message)
                             }
+                        case let .updateSentPhoneCode(sentCode):
+                            updateSentCode(sentCode)
                         default:
                             break
                         }

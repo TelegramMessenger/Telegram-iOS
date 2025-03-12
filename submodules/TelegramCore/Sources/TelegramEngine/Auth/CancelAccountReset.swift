@@ -34,7 +34,7 @@ func _internal_requestCancelAccountResetData(network: Network, hash: String) -> 
                 parsedNextType = AuthorizationCodeNextType(apiType: nextType)
             }
             return .single(CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
-        case .sentCodeSuccess:
+        case .sentCodeSuccess, .sentCodePaymentRequired:
             return .never()
         }
     }
@@ -57,7 +57,7 @@ func _internal_requestNextCancelAccountResetOption(network: Network, phoneNumber
                 parsedNextType = AuthorizationCodeNextType(apiType: nextType)
             }
             return .single(CancelAccountResetData(type: SentAuthorizationCodeType(apiType: type), hash: phoneCodeHash, timeout: timeout, nextType: parsedNextType))
-        case .sentCodeSuccess:
+        case .sentCodeSuccess, .sentCodePaymentRequired:
             return .never()
         }
     }

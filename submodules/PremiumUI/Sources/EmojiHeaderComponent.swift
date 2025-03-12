@@ -64,6 +64,7 @@ class EmojiHeaderComponent: Component {
         }
         
         weak var animateFrom: UIView?
+        var sourceRect: CGRect?
         weak var containerView: UIView?
         
         let statusView: ComponentHostView<Empty>
@@ -116,8 +117,13 @@ class EmojiHeaderComponent: Component {
             
             let initialPosition = self.statusView.center
             let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)
-            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: 0.0)
             
+            var sourceOffset: CGPoint = .zero
+            if let sourceRect = self.sourceRect {
+                sourceOffset = CGPoint(x: sourceRect.center.x - animateFrom.frame.width / 2.0, y: 0.0)
+            }
+            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: sourceOffset.x, dy: sourceOffset.y)
+
             containerView.addSubview(self.statusView)
             self.statusView.center = targetPosition
             
@@ -127,6 +133,7 @@ class EmojiHeaderComponent: Component {
             self.statusView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 0.55, timingFunction: kCAMediaTimingFunctionSpring)
             
             Queue.mainQueue().after(0.55, {
+                self.statusView.layer.removeAllAnimations()
                 self.addSubview(self.statusView)
                 self.statusView.center = initialPosition
             })

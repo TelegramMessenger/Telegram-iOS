@@ -28,7 +28,6 @@ swift_library(
         "//submodules/TelegramUI/Components/ListSectionComponent",
         "//submodules/TelegramUI/Components/ListItemSliderSelectorComponent",
         "//submodules/TelegramUI/Components/ListActionItemComponent",
-        "//submodules/PremiumUI",
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/Markdown",
         "//submodules/PresentationDataUtils",
@@ -38,6 +37,7 @@ swift_library(
         "//submodules/TelegramUI/Components/PlainButtonComponent",
         "//submodules/TelegramUI/Components/ToastComponent",
         "//submodules/AvatarNode",
+        "//submodules/TelegramUI/Components/Premium/PremiumCoinComponent",
     ],
     visibility = [
         "//visibility:public",

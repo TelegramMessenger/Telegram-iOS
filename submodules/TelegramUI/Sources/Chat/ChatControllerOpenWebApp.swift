@@ -13,6 +13,7 @@ import PresentationDataUtils
 import UndoUI
 import UrlHandling
 import TelegramPresentationData
+import ChatInterfaceState
 
 func openWebAppImpl(
     context: AccountContext,
@@ -182,7 +183,7 @@ func openWebAppImpl(
                 var isInline = false
                 var botId = botPeer.id
                 var botName = botName
-                var botAddress = ""
+                var botAddress = botPeer.addressName ?? ""
                 var botVerified = botPeer.isVerified
                 if case let .inline(bot) = source {
                     isInline = true
@@ -367,8 +368,20 @@ public extension ChatControllerImpl {
                     }
                 }
             }
+            let inputString = "@\(botAddress) \(query)"
             if let chatController {
-                chatController.controllerInteraction?.activateSwitchInline(selectedPeer?.id ?? peerId, "@\(botAddress) \(query)", nil)
+                chatController.controllerInteraction?.activateSwitchInline(selectedPeer?.id ?? peerId, inputString, nil)
+            } else if let selectedPeer, let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController {
+                let textInputState = ChatTextInputState(inputText: NSAttributedString(string: inputString))
+                let _ = (ChatInterfaceState.update(engine: context.engine, peerId: selectedPeer.id, threadId: nil, { currentState in
+                    return currentState.withUpdatedComposeInputState(textInputState)
+                })
+                |> deliverOnMainQueue).startStandalone(completed: { [weak navigationController] in
+                    guard let navigationController else {
+                        return
+                    }
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(selectedPeer), subject: nil, updateTextInputState: textInputState, peekData: nil))
+                })
             }
         }
     

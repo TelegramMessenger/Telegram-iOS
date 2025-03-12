@@ -664,25 +664,26 @@ public extension Api {
 }
 public extension Api {
     enum ConnectedBot: TypeConstructorDescription {
-        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessBotRecipients)
+        case connectedBot(flags: Int32, botId: Int64, recipients: Api.BusinessBotRecipients, rights: Api.BusinessBotRights)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .connectedBot(let flags, let botId, let recipients):
+                case .connectedBot(let flags, let botId, let recipients, let rights):
                     if boxed {
-                        buffer.appendInt32(-1123645951)
+                        buffer.appendInt32(-849058964)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(botId, buffer: buffer, boxed: false)
                     recipients.serialize(buffer, true)
+                    rights.serialize(buffer, true)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .connectedBot(let flags, let botId, let recipients):
-                return ("connectedBot", [("flags", flags as Any), ("botId", botId as Any), ("recipients", recipients as Any)])
+                case .connectedBot(let flags, let botId, let recipients, let rights):
+                return ("connectedBot", [("flags", flags as Any), ("botId", botId as Any), ("recipients", recipients as Any), ("rights", rights as Any)])
     }
     }
     
@@ -695,11 +696,16 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.BusinessBotRecipients
             }
+            var _4: Api.BusinessBotRights?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.BusinessBotRights
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.ConnectedBot.connectedBot(flags: _1!, botId: _2!, recipients: _3!, rights: _4!)
             }
             else {
                 return nil

@@ -1,0 +1,32 @@
+import Foundation
+import UIKit
+import SwiftSignalKit
+import Postbox
+import TelegramCore
+import AsyncDisplayKit
+import Display
+import ContextUI
+import UndoUI
+import AccountContext
+import ChatControllerInteraction
+import AnimatedTextComponent
+import ChatMessagePaymentAlertController
+import TelegramPresentationData
+import TelegramNotices
+
+extension ChatControllerImpl {
+    func presentAccountFrozenInfoIfNeeded() -> Bool {
+        if self.context.isFrozen {
+            let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+            if let freezeAppealUrl = accountFreezeConfiguration.freezeAppealUrl {
+                let components = freezeAppealUrl.components(separatedBy: "/")
+                if let username = components.last, let peer = self.presentationInterfaceState.renderedPeer?.peer, peer.addressName == username {
+                    return false
+                }
+            }
+            self.push(self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context))
+            return true
+        }
+        return false
+    }
+}

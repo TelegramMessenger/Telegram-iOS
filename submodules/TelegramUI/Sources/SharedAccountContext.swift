@@ -77,6 +77,7 @@ import ContentReportScreen
 import AffiliateProgramSetupScreen
 import GalleryUI
 import ShareController
+import AccountFreezeInfoScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -2390,13 +2391,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
     }
     
-    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
-        var modal = true
+    private func mapIntroSource(source: PremiumIntroSource) -> PremiumSource {
         let mappedSource: PremiumSource
         switch source {
         case .settings:
             mappedSource = .settings
-            modal = false
         case .stickers:
             mappedSource = .stickers
         case .reactions:
@@ -2477,9 +2476,29 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .animatedEmoji
         case .paidMessages:
             mappedSource = .paidMessages
+        case let .auth(price):
+            mappedSource = .auth(price)
         }
-        let controller = PremiumIntroScreen(context: context, source: mappedSource, modal: modal, forceDark: forceDark)
+        return mappedSource
+    }
+    
+    public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController {
+        var modal = true
+        if case .settings = source {
+            modal = false
+        }
+        let controller = PremiumIntroScreen(context: context, source: self.mapIntroSource(source: source), modal: modal, forceDark: forceDark)
         controller.wasDismissed = dismissed
+        return controller
+    }
+    
+    public func makePremiumIntroController(sharedContext: SharedAccountContext, engine: TelegramEngineUnauthorized, inAppPurchaseManager: InAppPurchaseManager, source: PremiumIntroSource, proceed: (() -> Void)?) -> ViewController {
+        var modal = true
+        if case .settings = source {
+            modal = false
+        }
+        let controller = PremiumIntroScreen(screenContext: .sharedContext(sharedContext, engine, inAppPurchaseManager), source: self.mapIntroSource(source: source), modal: modal)
+        controller.customProceed = proceed
         return controller
     }
     
@@ -2883,62 +2902,102 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
         }
         
+        let optionsPromise = Promise<[StarsTopUpOption]?>(nil)
+        if let state = context.starsContext?.currentState, state.balance < StarsAmount(value: 100, nanos: 0) {
+            optionsPromise.set(context.engine.payments.starsTopUpOptions()
+            |> map(Optional.init))
+        }
+        
         presentTransferAlertImpl = { [weak controller] peer in
             guard let controller, case let .starGiftTransfer(_, _, gift, transferStars, _, _) = source else {
                 return
             }
-            let alertController = giftTransferAlertController(context: context, gift: gift, peer: peer, transferStars: transferStars, commit: { [weak controller] in
-                completion?([peer.id])
-                
-                guard let controller, let navigationController = controller.navigationController as? NavigationController else {
-                    return
-                }
-                var controllers = navigationController.viewControllers
-                controllers = controllers.filter { !($0 is ContactSelectionController) }
-                
-                if !isChannelGift {
-                    if peer.id.namespace == Namespaces.Peer.CloudChannel {
-                        if let controller = context.sharedContext.makePeerInfoController(
-                            context: context,
-                            updatedPresentationData: nil,
-                            peer: peer._asPeer(),
-                            mode: .gifts,
-                            avatarInitiallyExpanded: false,
-                            fromChat: false,
-                            requestsContext: nil
-                        ) {
-                            controllers.append(controller)
+            let alertController = giftTransferAlertController(
+                context: context,
+                gift: gift,
+                peer: peer,
+                transferStars: transferStars,
+                navigationController: controller.navigationController as? NavigationController,
+                commit: { [weak controller] in
+                    let proceed: (Bool) -> Void = { waitForTopUp in
+                        completion?([peer.id])
+                        
+                        guard let controller, let navigationController = controller.navigationController as? NavigationController else {
+                            return
                         }
-                    } else {
-                        var foundController = false
-                        for controller in controllers.reversed() {
-                            if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
-                                chatController.hintPlayNextOutgoingGift()
-                                foundController = true
-                                break
+                        var controllers = navigationController.viewControllers
+                        controllers = controllers.filter { !($0 is ContactSelectionController) }
+                        
+                        if !isChannelGift {
+                            if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                                if let controller = context.sharedContext.makePeerInfoController(
+                                    context: context,
+                                    updatedPresentationData: nil,
+                                    peer: peer._asPeer(),
+                                    mode: .gifts,
+                                    avatarInitiallyExpanded: false,
+                                    fromChat: false,
+                                    requestsContext: nil
+                                ) {
+                                    controllers.append(controller)
+                                }
+                            } else {
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let chatController = controller as? ChatController, case .peer(id: peer.id) = chatController.chatLocation {
+                                        chatController.hintPlayNextOutgoingGift()
+                                        foundController = true
+                                        break
+                                    }
+                                }
+                                if !foundController {
+                                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    chatController.hintPlayNextOutgoingGift()
+                                    controllers.append(chatController)
+                                }
                             }
                         }
-                        if !foundController {
-                            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                            chatController.hintPlayNextOutgoingGift()
-                            controllers.append(chatController)
+                        navigationController.setViewControllers(controllers, animated: true)
+                        
+                        Queue.mainQueue().after(0.3) {
+                            let tooltipController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
+                                elevatedLayout: false,
+                                action: { _ in return true }
+                            )
+                            if let lastController = controllers.last as? ViewController {
+                                lastController.present(tooltipController, in: .window(.root))
+                            }
                         }
                     }
-                }
-                navigationController.setViewControllers(controllers, animated: true)
-                
-                Queue.mainQueue().after(0.3) {
-                    let tooltipController = UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .forward(savedMessages: false, text: presentationData.strings.Gift_Transfer_Success("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))", peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string),
-                        elevatedLayout: false,
-                        action: { _ in return true }
-                    )
-                    if let lastController = controllers.last as? ViewController {
-                        lastController.present(tooltipController, in: .window(.root))
+                    
+                    if transferStars > 0, let starsContext = context.starsContext, let starsState = starsContext.currentState {
+                        if starsState.balance < StarsAmount(value: transferStars, nanos: 0) {
+                            let _ = (optionsPromise.get()
+                            |> filter { $0 != nil }
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { [weak controller] options in
+                                let purchaseController = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options ?? [],
+                                    purpose: .transferStarGift(requiredStars: transferStars),
+                                    completion: { stars in
+                                        starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                        proceed(true)
+                                    }
+                                )
+                                controller?.push(purchaseController)
+                            })
+                        } else {
+                            proceed(false)
+                        }
+                    } else {
+                        proceed(false)
                     }
                 }
-            })
+            )
             controller.present(alertController, in: .window(.root))
         }
         
@@ -3493,6 +3552,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             controller.setHintWillBePresentedInPreviewingContext(true)
         }
         return controller
+    }
+    
+    public func makeAccountFreezeInfoScreen(context: AccountContext) -> ViewController {
+        return AccountFreezeInfoScreen(context: context)
     }
 }
 

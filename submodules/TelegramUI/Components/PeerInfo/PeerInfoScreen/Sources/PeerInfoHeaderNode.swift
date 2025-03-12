@@ -2289,6 +2289,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             if !buttonKeys.isEmpty {
                 backgroundDefaultHeight = 327.0
+                if metrics.isTablet {
+                    backgroundDefaultHeight += 60.0
+                }
             }
             hasBackground = true
         } else if let peer {
@@ -2308,6 +2311,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center.offsetBy(dx: bannerInset, dy: 0.0),
+                avatarSize: apparentAvatarFrame.size,
                 avatarScale: avatarScale,
                 defaultHeight: backgroundDefaultHeight,
                 gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),
@@ -2352,6 +2356,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     giftsContext: profileGiftsContext,
                     hasBackground: hasBackground,
                     avatarCenter: apparentAvatarFrame.center,
+                    avatarSize: apparentAvatarFrame.size,
                     defaultHeight: backgroundDefaultHeight,
                     avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
                     statusBarHeight: statusBarHeight,

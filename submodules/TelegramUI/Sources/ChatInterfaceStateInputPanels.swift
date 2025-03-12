@@ -21,6 +21,27 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         return (nil, nil)
     }
     
+    if context.isFrozen {
+        var isActuallyFrozen = true
+        let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        if let freezeAppealUrl = accountFreezeConfiguration.freezeAppealUrl {
+            let components = freezeAppealUrl.components(separatedBy: "/")
+            if let username = components.last, let peer = chatPresentationInterfaceState.renderedPeer?.peer, peer.addressName == username {
+                isActuallyFrozen = false
+            }
+        }
+        if isActuallyFrozen {
+            if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                return (currentPanel, nil)
+            } else {
+                let panel = ChatRestrictedInputPanelNode()
+                panel.context = context
+                panel.interfaceInteraction = interfaceInteraction
+                return (panel, nil)
+            }
+        }
+    }
+    
     if let _ = chatPresentationInterfaceState.search {
         var selectionPanel: ChatMessageSelectionInputPanelNode?
         if let selectionState = chatPresentationInterfaceState.interfaceState.selectionState {
