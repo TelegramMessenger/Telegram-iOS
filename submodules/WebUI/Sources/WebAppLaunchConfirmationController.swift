@@ -218,8 +218,16 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - 32.0, height: size.height))
         var totalWidth = titleSize.width
         
-        if self.peer.isVerified {
-            let statusContent: EmojiStatusComponent.Content = .verified(fillColor: self.presentationTheme.list.itemCheckColors.fillColor, foregroundColor: self.presentationTheme.list.itemCheckColors.foregroundColor, sizeType: .large)
+        var statusContent: EmojiStatusComponent.Content?
+        if self.peer.isScam {
+            statusContent = .text(color: self.presentationTheme.list.itemDestructiveColor, string: self.strings.Message_ScamAccount.uppercased())
+        } else if self.peer.isFake {
+            statusContent = .text(color: self.presentationTheme.list.itemDestructiveColor, string: self.strings.Message_FakeAccount.uppercased())
+        } else if self.peer.isVerified {
+            statusContent = .verified(fillColor: self.presentationTheme.list.itemCheckColors.fillColor, foregroundColor: self.presentationTheme.list.itemCheckColors.foregroundColor, sizeType: .large)
+        }
+        
+        if let statusContent {
             let titleCredibilityIconTransition: ComponentTransition = .immediate
             
             let titleCredibilityIconView: ComponentHostView<Empty>
@@ -247,7 +255,6 @@ private final class WebAppLaunchConfirmationAlertContentNode: AlertContentNode {
             )
             
             totalWidth += titleIconSize.width + 2.0
-            
             titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x:floorToScreenPixels((size.width - totalWidth) / 2.0) + titleSize.width + 2.0, y: origin.y), size: titleIconSize))
         }
         

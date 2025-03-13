@@ -379,7 +379,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 414.0 ? 5 : 3
+            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 480.0 ? 5 : 3
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
