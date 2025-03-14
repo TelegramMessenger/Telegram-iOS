@@ -62,7 +62,19 @@ private func cancelOtherGestures(gesture: ContextGesture, view: UIView) {
     }
 }
 
-public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDelegate {
+/// Since apple intelligence was release, users have been complaining about a "stuck" scrolling issue. The issue is triggered by having a gesture recognizer that is delegate of itself.
+/// see here: https://github.com/TelegramMessenger/Telegram-iOS/issues/1570
+public final class ContextGestureRecognizerProxyDelegate: NSObject, UIGestureRecognizerDelegate {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return false
+        }
+        return true
+    }
+}
+
+public final class ContextGesture: UIGestureRecognizer {
+    private let proxyDelegate = ContextGestureRecognizerProxyDelegate()
     public var beginDelay: Double = 0.12
     public var activateOnTap: Bool = false
     private var currentProgress: CGFloat = 0.0
@@ -82,7 +94,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
-        self.delegate = self
+        self.delegate = proxyDelegate
     }
     
     override public func reset() {
@@ -99,13 +111,6 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         self.animator?.invalidate()
         self.animator = nil
         self.wasActivated = false
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if otherGestureRecognizer is UIPanGestureRecognizer {
-            return false
-        }
-        return true
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
