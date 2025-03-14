@@ -323,6 +323,7 @@ public final class AccountContextImpl: AccountContext {
             }
         })
         self.animationRenderer = MultiAnimationRendererImpl()
+        (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = sharedContext.immediateExperimentalUISettings.compressedEmojiCache
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in
@@ -467,6 +468,17 @@ public final class AccountContextImpl: AccountContext {
                 return
             }
             self.isFrozen = isFrozen
+        })
+        
+        self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            guard let self else {
+                return
+            }
+            guard let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) else {
+                return
+            }
+            (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = settings.compressedEmojiCache
         })
     }
     

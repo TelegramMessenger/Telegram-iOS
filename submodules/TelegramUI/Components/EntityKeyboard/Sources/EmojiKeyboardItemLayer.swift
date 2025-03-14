@@ -10,6 +10,7 @@ import AccountContext
 import TelegramPresentationData
 import EmojiTextAttachmentView
 import EmojiStatusComponent
+import CoreVideo
 
 final class EmojiKeyboardCloneItemLayer: SimpleLayer {
 }
@@ -79,7 +80,20 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
     }
     
     override public var contents: Any? {
-        didSet {
+        get {
+            return super.contents
+        } set(value) {
+            #if targetEnvironment(simulator)
+            if let value, CFGetTypeID(value as CFTypeRef) == CVPixelBufferGetTypeID() {
+                let pixelBuffer = value as! CVPixelBuffer
+                super.contents = CVPixelBufferGetIOSurface(pixelBuffer)
+            } else {
+                super.contents = value
+            }
+            #else
+            super.contents = value
+            #endif
+            
             self.onContentsUpdate()
             if let cloneLayer = self.cloneLayer {
                 cloneLayer.contents = self.contents

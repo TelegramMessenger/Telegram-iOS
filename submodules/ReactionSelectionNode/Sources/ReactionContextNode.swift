@@ -499,6 +499,7 @@ public final class ReactionContextNode: ASDisplayNode, ASScrollViewDelegate {
         
         self.animationCache = animationCache
         self.animationRenderer = MultiAnimationRendererImpl()
+        (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = context.sharedContext.immediateExperimentalUISettings.compressedEmojiCache
         
         self.backgroundMaskNode = ASDisplayNode()
         self.backgroundNode = ReactionContextBackgroundNode(largeCircleSize: largeCircleSize, smallCircleSize: smallCircleSize, maskNode: self.backgroundMaskNode)
