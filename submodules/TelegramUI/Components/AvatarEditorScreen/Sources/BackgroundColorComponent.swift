@@ -131,7 +131,7 @@ final class BackgroundColorComponent: Component {
                                 background: values[i].0,
                                 isCustom: values[i].1,
                                 isSelected: component.selectedValue == values[i].0,
-                                isLocked: i >= 7 && !values[i].1,
+                                isLocked: i >= 7 && !values[i].1 && !component.isPremium,
                                 action: {
                                     if let value = values[i].0, component.selectedValue != value {
                                         component.updateValue(value)

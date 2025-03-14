@@ -379,7 +379,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 414.0 ? 5 : 3
+            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 480.0 ? 5 : 3
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
@@ -518,15 +518,36 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             },
                                             transferGift: { [weak self] prepaid, peerId in
                                                 guard let self, let reference = product.reference else {
-                                                    return
+                                                    return .complete()
                                                 }
-                                                self.profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+                                                return self.profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
                                             },
                                             upgradeGift: { [weak self] formId, keepOriginalInfo in
                                                 guard let self, let reference = product.reference else {
                                                     return .never()
                                                 }
                                                 return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
+                                            },
+                                            togglePinnedToTop: { [weak self] pinnedToTop in
+                                                guard let self else {
+                                                    return false
+                                                }
+                                                if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                                                    return false
+                                                }
+                                                if let reference = product.reference {
+                                                    self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
+                                                    
+                                                    if pinnedToTop {
+                                                        let _ = self.scrollToTop()
+                                                        Queue.mainQueue().after(0.35) {
+                                                            let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
+                                                            let toastText = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
+                                                            self.parentController?.present(UndoOverlayController(presentationData: params.presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                                        }
+                                                    }
+                                                }
+                                                return true
                                             },
                                             shareStory: { [weak self] uniqueGift in
                                                 guard let self, let parentController = self.parentController else {
@@ -977,7 +998,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         let pinnedToTop = !gift.pinnedToTop
                         
                         if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             return
                         }
                         
@@ -989,10 +1010,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         let toastText: String
                         if !pinnedToTop {
                             toastTitle = nil
-                            toastText = presentationData.strings.PeerInfo_Gifts_ToastUnpinned_Text
+                            toastText = strings.PeerInfo_Gifts_ToastUnpinned_Text
                         } else {
-                            toastTitle = presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
-                            toastText = presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
+                            toastTitle = strings.PeerInfo_Gifts_ToastPinned_Title
+                            toastText = strings.PeerInfo_Gifts_ToastPinned_Text
                         }
                         self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: !pinnedToTop ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })
@@ -1200,14 +1221,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             let transferStars = gift.transferStars ?? 0
                             let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, uniqueGift, transferStars, gift.canExportDate, showSelf), completion: { [weak self] peerIds in
                                 guard let self, let peerId = peerIds.first else {
-                                    return
+                                    return .complete()
                                 }
-                                self.profileGifts.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
-                                Queue.mainQueue().after(1.0, {
+                                Queue.mainQueue().after(1.5, {
                                     if transferStars > 0 {
                                         context.starsContext?.load(force: true)
                                     }
                                 })
+                                return self.profileGifts.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
                             })
                             self.parentController?.push(controller)
                         })

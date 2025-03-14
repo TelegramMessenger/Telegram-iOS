@@ -372,7 +372,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                     arguments.dismissInput()
                 })
             case let .rankInfo(_, text, trimBottomInset):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, trimBottomInset: trimBottomInset)
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, additionalOuterInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: trimBottomInset ? -44.0 : 0.0, right: 0.0))
             case let .adminRights(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, type: .regular, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateAdminRights(value)

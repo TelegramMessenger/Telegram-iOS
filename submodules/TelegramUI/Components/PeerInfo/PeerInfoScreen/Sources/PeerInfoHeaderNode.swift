@@ -2326,9 +2326,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
             if additive {
-                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
             } else {
-                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
             }
             if backgroundCoverAnimateIn {
                 if !self.isAvatarExpanded {

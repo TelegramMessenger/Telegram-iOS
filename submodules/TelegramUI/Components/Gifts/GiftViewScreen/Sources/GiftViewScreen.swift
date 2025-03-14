@@ -1454,9 +1454,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     effectAlignment: .center,
                                     action: {
                                         component.transferGift()
-                                        Queue.mainQueue().after(0.6, {
-                                            component.cancel(false)
-                                        })
                                     }
                                 ),
                                 environment: {},
@@ -2418,7 +2415,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         case upgradePreview([StarGift.UniqueGift.Attribute], String)
         case wearPreview(StarGift.UniqueGift)
         
-        var arguments: (peerId: EnginePeer.Id?, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, reference: StarGiftReference?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?, upgradeMessageId: Int32?)? {
+        var arguments: (peerId: EnginePeer.Id?, fromPeerId: EnginePeer.Id?, fromPeerName: String?, messageId: EngineMessage.Id?, reference: StarGiftReference?, incoming: Bool, gift: StarGift, date: Int32, convertStars: Int64?, text: String?, entities: [MessageTextEntity]?, nameHidden: Bool, savedToProfile: Bool, pinnedToTop: Bool?, converted: Bool, upgraded: Bool, canUpgrade: Bool, upgradeStars: Int64?, transferStars: Int64?, canExportDate: Int32?, upgradeMessageId: Int32?)? {
             switch self {
             case let .message(message):
                 if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction {
@@ -2430,7 +2427,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         } else {
                             reference = .message(messageId: message.id)
                         }
-                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
+                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, message.flags.contains(.Incoming), gift, message.timestamp, convertStars, text, entities, nameHidden, savedToProfile, nil, converted, upgraded, canUpgrade, upgradeStars, nil, nil, upgradeMessageId)
                     case let .starGiftUnique(gift, isUpgrade, isTransferred, savedToProfile, canExportDate, transferStars, _, peerId, senderId, savedId):
                         var reference: StarGiftReference
                         if let peerId, let savedId {
@@ -2450,19 +2447,19 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                         } else {
                             incoming = message.flags.contains(.Incoming)
                         }
-                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, false, false, false, nil, transferStars, canExportDate, nil)
+                        return (message.id.peerId, senderId ?? message.author?.id, message.author?.compactDisplayTitle, message.id, reference, incoming, gift, message.timestamp, nil, nil, nil, false, savedToProfile, nil, false, false, false, nil, transferStars, canExportDate, nil)
                     default:
                         return nil
                     }
                 }
             case let .uniqueGift(gift), let .wearPreview(gift):
-                return (nil, nil, nil, nil, nil, false, .unique(gift), 0, nil, nil, nil, false, false, false, false, false, nil, nil, nil, nil)
+                return (nil, nil, nil, nil, nil, false, .unique(gift), 0, nil, nil, nil, false, false, nil, false, false, false, nil, nil, nil, nil)
             case let .profileGift(peerId, gift):
                 var messageId: EngineMessage.Id?
                 if case let .message(messageIdValue) = gift.reference {
                     messageId = messageIdValue
                 }
-                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, messageId, gift.reference, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, false, false, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate, nil)
+                return (peerId, gift.fromPeer?.id, gift.fromPeer?.compactDisplayTitle, messageId, gift.reference, false, gift.gift, gift.date, gift.convertStars, gift.text, gift.entities, gift.nameHidden, gift.savedToProfile, gift.pinnedToTop, false, false, gift.canUpgrade, gift.upgradeStars, gift.transferStars, gift.canExportDate, nil)
             case .soldOutGift:
                 return nil
             case .upgradePreview:
@@ -2491,8 +2488,9 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         forceDark: Bool = false,
         updateSavedToProfile: ((StarGiftReference, Bool) -> Void)? = nil,
         convertToStars: (() -> Void)? = nil,
-        transferGift: ((Bool, EnginePeer.Id) -> Void)? = nil,
+        transferGift: ((Bool, EnginePeer.Id) -> Signal<Never, TransferStarGiftError>)? = nil,
         upgradeGift: ((Int64?, Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError>)? = nil,
+        togglePinnedToTop: ((Bool) -> Bool)? = nil,
         shareStory: ((StarGift.UniqueGift) -> Void)? = nil
     ) {
         self.context = context
@@ -2825,19 +2823,19 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 }
                 let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, gift, transferStars, arguments.canExportDate, showSelf), completion: { peerIds in
                     guard let peerId = peerIds.first else {
-                        return
+                        return .complete()
                     }
-                    if let transferGift {
-                        transferGift(transferStars == 0, peerId)
-                    } else {
-                        let _ = (context.engine.payments.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
-                        |> deliverOnMainQueue).start()
-                    }
-                    Queue.mainQueue().after(1.0, {
+                    Queue.mainQueue().after(1.5, {
                         if transferStars > 0 {
                             context.starsContext?.load(force: true)
                         }
                     })
+                    if let transferGift {
+                        return transferGift(transferStars == 0, peerId)
+                    } else {
+                        return (context.engine.payments.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
+                        |> deliverOnMainQueue)
+                    }
                 })
                 navigationController.pushViewController(controller)
             })
@@ -2982,6 +2980,37 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                     return
                 }
                 var items: [ContextMenuItem] = []
+                let strings = presentationData.strings
+                
+                if let _ = arguments.reference, case .unique = arguments.gift, let togglePinnedToTop, let pinnedToTop = arguments.pinnedToTop {
+                    items.append(.action(ContextMenuActionItem(text: pinnedToTop ? strings.PeerInfo_Gifts_Context_Unpin  : strings.PeerInfo_Gifts_Context_Pin , icon: { theme in generateTintedImage(image: UIImage(bundleImageName: pinnedToTop ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
+                        c?.dismiss(completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            let pinnedToTop = !pinnedToTop
+                            if togglePinnedToTop(pinnedToTop) {
+                                if pinnedToTop {
+                                    self.dismissAnimated()
+                                } else {
+                                    let toastText = strings.PeerInfo_Gifts_ToastUnpinned_Text
+                                    self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastunpin", scale: 0.06, colors: [:], title: nil, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    if case let .profileGift(peerId, gift) = self.subject {
+                                        self.subject = .profileGift(peerId, gift.withPinnedToTop(false))
+                                    }
+                                }
+                            } else {
+                                var maxPinnedCount: Int = 6
+                                if let value = context.currentAppConfiguration.with({ $0 }).data?["stargifts_pinned_to_top_limit"] as? Double {
+                                    maxPinnedCount = Int(value)
+                                }
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            }
+                        })
+                    })))
+                }
+                
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Gift_View_Context_CopyLink, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in

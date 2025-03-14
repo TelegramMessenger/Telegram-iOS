@@ -1425,6 +1425,42 @@ public extension Api {
     }
 }
 public extension Api {
+    enum DisallowedStarGiftsSettings: TypeConstructorDescription {
+        case disallowedStarGiftsSettings(flags: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .disallowedStarGiftsSettings(let flags):
+                    if boxed {
+                        buffer.appendInt32(1653721450)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .disallowedStarGiftsSettings(let flags):
+                return ("disallowedStarGiftsSettings", [("flags", flags as Any)])
+    }
+    }
+    
+        public static func parse_disallowedStarGiftsSettings(_ reader: BufferReader) -> DisallowedStarGiftsSettings? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.DisallowedStarGiftsSettings.disallowedStarGiftsSettings(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum Document: TypeConstructorDescription {
         case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int64, thumbs: [Api.PhotoSize]?, videoThumbs: [Api.VideoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
         case documentEmpty(id: Int64)

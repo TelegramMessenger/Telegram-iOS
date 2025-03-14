@@ -13,6 +13,7 @@ import AvatarNode
 import Markdown
 import GiftItemComponent
 import ChatMessagePaymentAlertController
+import ActivityIndicator
 
 private final class GiftTransferAlertContentNode: AlertContentNode {
     private let context: AccountContext
@@ -31,8 +32,18 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
+    
+    private var activityIndicator: ActivityIndicator?
         
     private var validLayout: CGSize?
+    
+    var inProgress = false {
+        didSet {
+            if let size = self.validLayout {
+                let _ = self.updateLayout(size: size, transition: .immediate)
+            }
+        }
+    }
     
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
@@ -248,6 +259,23 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
             nodeIndex += 1
         }
         
+        if self.inProgress {
+            let activityIndicator: ActivityIndicator
+            if let current = self.activityIndicator {
+                activityIndicator = current
+            } else {
+                activityIndicator = ActivityIndicator(type: .custom(self.presentationTheme.list.freeInputField.controlColor, 18.0, 1.5, false))
+                self.addSubnode(activityIndicator)
+            }
+            
+            if let actionNode = self.actionNodes.first {
+                actionNode.isHidden = true
+                
+                let indicatorSize = CGSize(width: 22.0, height: 22.0)
+                transition.updateFrame(node: activityIndicator, frame: CGRect(origin: CGPoint(x: actionNode.frame.minX + floor((actionNode.frame.width - indicatorSize.width) / 2.0), y: actionNode.frame.minY + floor((actionNode.frame.height - indicatorSize.height) / 2.0)), size: indicatorSize))
+            }
+        }
+        
         return resultSize
     }
 }
@@ -274,17 +302,18 @@ public func giftTransferAlertController(
         buttonText = strings.Gift_Transfer_Confirmation_TransferFree
     }
     
+    var contentNode: GiftTransferAlertContentNode?
     var dismissImpl: ((Bool) -> Void)?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: buttonText, action: {
-        dismissImpl?(true)
+    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: buttonText, action: { [weak contentNode] in
+        contentNode?.inProgress = true
         commit()
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
     })]
     
-    let contentNode = GiftTransferAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, gift: gift, peer: peer, title: title, text: text, actions: actions)
+    contentNode = GiftTransferAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, gift: gift, peer: peer, title: title, text: text, actions: actions)
     
-    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode, navigationController: navigationController, showBalance: transferStars > 0)
+    let controller = ChatMessagePaymentAlertController(context: context, presentationData: presentationData, contentNode: contentNode!, navigationController: navigationController, showBalance: transferStars > 0)
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

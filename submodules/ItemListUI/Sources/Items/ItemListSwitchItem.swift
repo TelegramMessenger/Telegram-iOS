@@ -254,6 +254,11 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                 updatedTheme = item.presentationData.theme
             }
             
+            var updatedValue = false
+            if currentItem?.value != item.value {
+                updatedValue = true
+            }
+            
             var updateIcon = false
             if currentItem?.icon != item.icon {
                 updateIcon = true
@@ -504,6 +509,9 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                         if let _ = updatedTheme {
                             updateLockedIconImage = true
                         }
+                        if updatedValue {
+                            updateLockedIconImage = true
+                        }
                         
                         let lockedIconNode: ASImageNode
                         if let current = strongSelf.lockedIconNode {
@@ -516,14 +524,14 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.insertSubnode(lockedIconNode, aboveSubnode: strongSelf.switchNode)
                         }
                         
-                        if updateLockedIconImage, let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: item.presentationData.theme.list.itemSecondaryTextColor) {
+                        if updateLockedIconImage, let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: item.value ? item.presentationData.theme.list.itemSwitchColors.positiveColor : item.presentationData.theme.list.itemSecondaryTextColor) {
                             lockedIconNode.image = image
                         }
                         
                         let switchFrame = strongSelf.switchNode.frame
                         
                         if let icon = lockedIconNode.image {
-                            lockedIconTransition.updateFrame(node: lockedIconNode, frame: CGRect(origin: CGPoint(x: switchFrame.minX + 10.0 + UIScreenPixel, y: switchFrame.minY + 9.0), size: icon.size))
+                            lockedIconTransition.updateFrame(node: lockedIconNode, frame: CGRect(origin: CGPoint(x: item.value ? switchFrame.maxX - icon.size.width - 11.0 : switchFrame.minX + 11.0, y: switchFrame.minY + 9.0), size: icon.size))
                         }
                     } else if let lockedIconNode = strongSelf.lockedIconNode {
                         strongSelf.lockedIconNode = nil

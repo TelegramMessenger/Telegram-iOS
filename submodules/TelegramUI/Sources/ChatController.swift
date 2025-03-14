@@ -761,7 +761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false, alwaysShowGiftButton: false)
         
         if case let .customChatContents(customChatContents) = subject {
             switch customChatContents.kind {
@@ -6386,9 +6386,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
-                        var copyProtectionEnabled: Bool = false
+                        var copyProtectionEnabled = false
                         var businessIntro: TelegramBusinessIntro?
                         var sendPaidMessageStars: StarsAmount?
+                        var alwaysShowGiftButton = false
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
@@ -6396,6 +6397,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
+                                alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -6691,6 +6693,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedBusinessIntro(businessIntro)
                                     .updatedSendPaidMessageStars(sendPaidMessageStars)
+                                    .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         

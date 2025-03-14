@@ -14029,3 +14029,8 @@ Sorry for the inconvenience.";
 
 "Stars.AccountRevenue.Proceeds.Info" = "Stars from your total balance can be withdrawn as rewards 21 days after they are earned.";
 "Stars.AccountRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
+
+"Privacy.Gifts.PremiumToast.Text" = "Subscribe to **Telegram Premium** to use this setting.";
+"Privacy.Gifts.PremiumToast.Action" = "Open";
+
+"Gift.Send.ErrorDisallowed" = "**%@** doesn't accept this kind of gifts.";
