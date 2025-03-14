@@ -4855,9 +4855,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             },
                             transferGift: { [weak profileGifts] prepaid, peerId in
                                 guard let profileGifts, let reference = gift.reference else {
-                                    return
+                                    return .complete()
                                 }
-                                profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+                                return profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
                             },
                             upgradeGift: { [weak profileGifts] formId, keepOriginalInfo in
                                 guard let profileGifts, let reference = gift.reference else {

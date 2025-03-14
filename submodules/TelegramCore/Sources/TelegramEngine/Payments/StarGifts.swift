@@ -766,7 +766,7 @@ func _internal_updateStarGiftsPinnedToTop(account: Account, peerId: EnginePeer.I
 
 public enum TransferStarGiftError {
     case generic
-    case disallowed
+    case disallowedStarGift
 }
 
 func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
@@ -783,7 +783,10 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, reference: Star
         }
         if prepaid {
             return account.network.request(Api.functions.payments.transferStarGift(stargift: starGift, toId: inputPeer))
-            |> mapError { _ -> TransferStarGiftError in
+            |> mapError { error -> TransferStarGiftError in
+                if error.errorDescription == "USER_DISALLOWED_STARGIFTS" {
+                    return .disallowedStarGift
+                }
                 return .generic
             }
             |> mapToSignal { updates -> Signal<Void, TransferStarGiftError> in
@@ -798,6 +801,8 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, reference: Star
             |> `catch` { error -> Signal<BotPaymentForm?, TransferStarGiftError> in
                 if case .noPaymentNeeded = error {
                     return .single(nil)
+                } else if case .disallowedStarGift = error {
+                    return .fail(.disallowedStarGift)
                 }
                 return .fail(.generic)
             }
@@ -1335,16 +1340,15 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
-    func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
-        self.actionDisposable.set(
-            _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId).startStrict()
-        )
+    func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
         if let count = self.count {
             self.count = max(0, count - 1)
         }
         self.gifts.removeAll(where: { $0.reference == reference })
         self.filteredGifts.removeAll(where: { $0.reference == reference })
         self.pushState()
+        
+        return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
     }
     
     func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
@@ -1703,9 +1707,17 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
-        self.impl.with { impl in
-            impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+    public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
 

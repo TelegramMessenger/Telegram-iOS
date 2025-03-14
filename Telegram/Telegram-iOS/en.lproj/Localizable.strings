@@ -14032,3 +14032,5 @@ Sorry for the inconvenience.";
 
 "Privacy.Gifts.PremiumToast.Text" = "Subscribe to **Telegram Premium** to use this setting.";
 "Privacy.Gifts.PremiumToast.Action" = "Open";
+
+"Gift.Send.ErrorDisallowed" = "**%@** doesn't accept this kind of gifts.";

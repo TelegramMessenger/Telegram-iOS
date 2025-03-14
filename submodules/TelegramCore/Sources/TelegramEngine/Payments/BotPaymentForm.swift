@@ -177,6 +177,7 @@ public enum BotPaymentFormRequestError {
     case generic
     case alreadyActive
     case noPaymentNeeded
+    case disallowedStarGift
 }
 
 extension BotPaymentInvoice {
@@ -473,6 +474,8 @@ func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, netw
         |> `catch` { error -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             if error.errorDescription == "NO_PAYMENT_NEEDED" {
                 return .fail(.noPaymentNeeded)
+            } else if error.errorDescription == "USER_DISALLOWED_STARGIFTS" {
+                return .fail(.disallowedStarGift)
             }
             return .fail(.generic)
         }
@@ -635,6 +638,7 @@ public enum SendBotPaymentFormError {
     case paymentFailed
     case alreadyPaid
     case starGiftOutOfStock
+    case disallowedStarGift
 }
 
 public enum SendBotPaymentResult {

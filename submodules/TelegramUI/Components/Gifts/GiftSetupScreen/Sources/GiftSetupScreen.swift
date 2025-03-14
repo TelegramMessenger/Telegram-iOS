@@ -465,12 +465,14 @@ final class GiftSetupScreenComponent: Component {
                     switch error {
                     case .starGiftOutOfStock:
                         errorText = presentationData.strings.Gift_Send_ErrorOutOfStock
+                    case .disallowedStarGift:
+                        errorText = presentationData.strings.Gift_Send_ErrorDisallowed(self.peerMap[peerId]?.compactDisplayTitle ?? "").string
                     default:
                         errorText = presentationData.strings.Gift_Send_ErrorUnknown
                     }
                     
                     if let errorText = errorText {
-                        let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true)
                         controller.present(alertController, in: .window(.root))
                     }
                 })

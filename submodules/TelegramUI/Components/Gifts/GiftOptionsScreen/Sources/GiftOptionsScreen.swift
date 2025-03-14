@@ -513,6 +513,9 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             let context = component.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            var dismissAlertImpl: (() -> Void)?
             let alertController = giftTransferAlertController(
                 context: context,
                 gift: transferGift,
@@ -521,65 +524,102 @@ final class GiftOptionsScreenComponent: Component {
                 navigationController: mainController.navigationController as? NavigationController,
                 commit: { [weak self, weak mainController] in
                     let proceed: (Bool) -> Void = { waitForTopUp in
+                        var errorImpl: ((TransferStarGiftError) -> Void)?
+                        var completedImpl: (() -> Void)?
+                        
                         if waitForTopUp, let starsContext = context.starsContext {
                             let _ = (starsContext.onUpdate
                             |> deliverOnMainQueue).start(next: {
                                 let _ = (context.engine.payments.transferStarGift(prepaid: gift.transferStars == 0, reference: reference, peerId: peer.id)
-                                |> deliverOnMainQueue).start()
+                                |> deliverOnMainQueue).start(error: { error in
+                                    errorImpl?(error)
+                                }, completed: {
+                                    completedImpl?()
+                                })
                             })
                         } else {
                             let _ = (context.engine.payments.transferStarGift(prepaid: gift.transferStars == 0, reference: reference, peerId: peer.id)
-                            |> deliverOnMainQueue).start()
+                            |> deliverOnMainQueue).start(error: { error in
+                                errorImpl?(error)
+                            }, completed: {
+                                completedImpl?()
+                            })
                         }
                         
                         guard let controller = mainController, let navigationController = controller.navigationController as? NavigationController else {
                             return
                         }
                         
-                        if peer.id.namespace == Namespaces.Peer.CloudChannel {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let controller = controller as? PeerInfoScreen, controller.peerId == component.peerId {
-                                    foundController = true
-                                    break
+                        errorImpl = { [weak navigationController] error in
+                            guard let navigationController else {
+                                return
+                            }
+                            dismissAlertImpl?()
+                            
+                            var errorText: String?
+                            switch error {
+                            case .disallowedStarGift:
+                                errorText = presentationData.strings.Gift_Send_ErrorDisallowed(peer.compactDisplayTitle).string
+                            default:
+                                errorText = presentationData.strings.Gift_Send_ErrorUnknown
+                            }
+                            
+                            if let errorText = errorText {
+                                let alertController = textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true)
+                                if let lastController = navigationController.viewControllers.last as? ViewController {
+                                    lastController.present(alertController, in: .window(.root))
                                 }
                             }
-                            if !foundController {
-                                if let controller = context.sharedContext.makePeerInfoController(
-                                    context: context,
-                                    updatedPresentationData: nil,
-                                    peer: peer._asPeer(),
-                                    mode: .gifts,
-                                    avatarInitiallyExpanded: false,
-                                    fromChat: false,
-                                    requestsContext: nil
-                                ) {
-                                    controllers.append(controller)
-                                }
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
-                        } else {
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
-                            var foundController = false
-                            for controller in controllers.reversed() {
-                                if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
-                                    chatController.hintPlayNextOutgoingGift()
-                                    foundController = true
-                                    break
-                                }
-                            }
-                            if !foundController {
-                                let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
-                                chatController.hintPlayNextOutgoingGift()
-                                controllers.append(chatController)
-                            }
-                            navigationController.setViewControllers(controllers, animated: true)
                         }
-                        if let completion = component.completion {
-                            completion()
+                        
+                        completedImpl = {
+                            dismissAlertImpl?()
+                            
+                            if peer.id.namespace == Namespaces.Peer.CloudChannel {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let controller = controller as? PeerInfoScreen, controller.peerId == component.peerId {
+                                        foundController = true
+                                        break
+                                    }
+                                }
+                                if !foundController {
+                                    if let controller = context.sharedContext.makePeerInfoController(
+                                        context: context,
+                                        updatedPresentationData: nil,
+                                        peer: peer._asPeer(),
+                                        mode: .gifts,
+                                        avatarInitiallyExpanded: false,
+                                        fromChat: false,
+                                        requestsContext: nil
+                                    ) {
+                                        controllers.append(controller)
+                                    }
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
+                            } else {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) && !($0 is PeerInfoScreen) && !($0 is ContactSelectionController) }
+                                var foundController = false
+                                for controller in controllers.reversed() {
+                                    if let chatController = controller as? ChatController, case .peer(id: component.peerId) = chatController.chatLocation {
+                                        chatController.hintPlayNextOutgoingGift()
+                                        foundController = true
+                                        break
+                                    }
+                                }
+                                if !foundController {
+                                    let chatController = component.context.sharedContext.makeChatController(context: component.context, chatLocation: .peer(id: component.peerId), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    chatController.hintPlayNextOutgoingGift()
+                                    controllers.append(chatController)
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
+                            }
+                            if let completion = component.completion {
+                                completion()
+                            }
                         }
                     }
                     
@@ -610,6 +650,10 @@ final class GiftOptionsScreenComponent: Component {
                 }
             )
             controller.present(alertController, in: .window(.root))
+            
+            dismissAlertImpl = { [weak alertController] in
+                alertController?.dismissAnimated()
+            }
         }
         
         func update(component: GiftOptionsScreenComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
