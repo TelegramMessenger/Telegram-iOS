@@ -415,7 +415,20 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     }
     
     override public var contents: Any? {
-        didSet {
+        get {
+            return super.contents
+        } set(value) {
+            #if targetEnvironment(simulator)
+            if let value, CFGetTypeID(value as CFTypeRef) == CVPixelBufferGetTypeID() {
+                let pixelBuffer = value as! CVPixelBuffer
+                super.contents = CVPixelBufferGetIOSurface(pixelBuffer)
+            } else {
+                super.contents = value
+            }
+            #else
+            super.contents = value
+            #endif
+            
             if let mirrorLayer = self.mirrorLayer {
                 mirrorLayer.contents = self.contents
             }

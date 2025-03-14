@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Display
 import AnimationCache
 import Accelerate
+import IOSurface
 
 public protocol MultiAnimationRenderer: AnyObject {
     func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable
@@ -89,12 +90,21 @@ private final class LoadFrameGroupTask {
     }
 }
 
+private var yuvToRgbConversion: vImage_YpCbCrToARGB = {
+    var info = vImage_YpCbCrToARGB()
+    var pixelRange = vImage_YpCbCrPixelRange(Yp_bias: 16, CbCr_bias: 128, YpRangeMax: 235, CbCrRangeMax: 240, YpMax: 255, YpMin: 0, CbCrMax: 255, CbCrMin: 0)
+    vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0)
+    return info
+}()
+
 private final class ItemAnimationContext {
     fileprivate final class Frame {
         let frame: AnimationCacheItemFrame
         let duration: Double
-        let image: UIImage
-        let badgeImage: UIImage?
+        
+        let contentsAsImage: UIImage?
+        let contentsAsCVPixelBuffer: CVPixelBuffer?
+        
         let size: CGSize
         
         var remainingDuration: Double
@@ -120,11 +130,101 @@ private final class ItemAnimationContext {
                     return nil
                 }
                 
-                self.image = image
+                self.contentsAsImage = image
+                self.contentsAsCVPixelBuffer = nil
                 self.size = CGSize(width: CGFloat(width), height: CGFloat(height))
-                self.badgeImage = nil
-            default:
-                return nil
+            case let .yuva(y, u, v, a):
+                var pixelBuffer: CVPixelBuffer? = nil
+                let _ = CVPixelBufferCreate(kCFAllocatorDefault, y.width, y.height, kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar, [
+                    kCVPixelBufferIOSurfacePropertiesKey: NSDictionary()
+                ] as CFDictionary, &pixelBuffer)
+                guard let pixelBuffer else {
+                    return nil
+                }
+                
+                CVPixelBufferLockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+                defer {
+                    CVPixelBufferUnlockBaseAddress(pixelBuffer, CVPixelBufferLockFlags(rawValue: 0))
+                }
+                guard let baseAddressY = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0) else {
+                    return nil
+                }
+                guard let baseAddressCbCr = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1) else {
+                    return nil
+                }
+                guard let baseAddressA = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2) else {
+                    return nil
+                }
+                
+                let dstBufferY = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: baseAddressY), height: vImagePixelCount(y.height), width: vImagePixelCount(y.width), rowBytes: CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0))
+                let dstBufferCbCr = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: baseAddressCbCr), height: vImagePixelCount(y.height / 2), width: vImagePixelCount(y.width / 2), rowBytes: CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1))
+                let dstBufferA = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: baseAddressA), height: vImagePixelCount(y.height), width: vImagePixelCount(y.width), rowBytes: CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 2))
+
+                y.data.withUnsafeBytes { (yBytes: UnsafeRawBufferPointer) -> Void in
+                    if dstBufferY.rowBytes == y.bytesPerRow {
+                        memcpy(dstBufferY.data, yBytes.baseAddress!, yBytes.count)
+                    } else {
+                        for i in 0 ..< y.height {
+                            memcpy(dstBufferY.data.advanced(by: dstBufferY.rowBytes * i), yBytes.baseAddress!.advanced(by: y.bytesPerRow * i), y.bytesPerRow)
+                        }
+                    }
+                }
+                
+                a.data.withUnsafeBytes { (aBytes: UnsafeRawBufferPointer) -> Void in
+                    if dstBufferA.rowBytes == a.bytesPerRow {
+                        memcpy(dstBufferA.data, aBytes.baseAddress!, aBytes.count)
+                    } else {
+                        for i in 0 ..< y.height {
+                            memcpy(dstBufferA.data.advanced(by: dstBufferA.rowBytes * i), aBytes.baseAddress!.advanced(by: a.bytesPerRow * i), a.bytesPerRow)
+                        }
+                    }
+                }
+                
+                u.data.withUnsafeBytes { (uBytes: UnsafeRawBufferPointer) -> Void in
+                    v.data.withUnsafeBytes { (vBytes: UnsafeRawBufferPointer) -> Void in
+                        let sourceU = vImage_Buffer(
+                            data: UnsafeMutableRawPointer(mutating: uBytes.baseAddress!),
+                            height: vImagePixelCount(u.height),
+                            width: vImagePixelCount(u.width),
+                            rowBytes: u.bytesPerRow
+                        )
+                        let sourceV = vImage_Buffer(
+                            data: UnsafeMutableRawPointer(mutating: vBytes.baseAddress!),
+                            height: vImagePixelCount(v.height),
+                            width: vImagePixelCount(v.width),
+                            rowBytes: v.bytesPerRow
+                        )
+                        
+                        withUnsafePointer(to: sourceU, { sourceU in
+                            withUnsafePointer(to: sourceV, { sourceV in
+                                var srcPlanarBuffers: [
+                                    UnsafePointer<vImage_Buffer>?
+                                ] = [sourceU, sourceV]
+                                var destChannels: [UnsafeMutableRawPointer?] = [
+                                    dstBufferCbCr.data.advanced(by: 1),
+                                    dstBufferCbCr.data
+                                ]
+                                
+                                let channelCount = 2
+                                
+                                vImageConvert_PlanarToChunky8(
+                                    &srcPlanarBuffers,
+                                    &destChannels,
+                                    UInt32(channelCount),
+                                    MemoryLayout<Pixel_8>.stride * channelCount,
+                                    vImagePixelCount(u.width),
+                                    vImagePixelCount(u.height),
+                                    dstBufferCbCr.rowBytes,
+                                    vImage_Flags(kvImageDoNotTile)
+                                )
+                            })
+                        })
+                    }
+                }
+                
+                self.contentsAsImage = nil
+                self.contentsAsCVPixelBuffer = pixelBuffer
+                self.size = CGSize(width: CGFloat(y.width), height: CGFloat(y.height))
             }
         }
         
@@ -221,14 +321,171 @@ private final class ItemAnimationContext {
                 
                 self.blurredRepresentationValue = context.generateImage()
                 return self.blurredRepresentationValue
-            default:
-                return nil
+            case let .yuva(y, u, v, a):
+                let blurredWidth = 12
+                let blurredHeight = 12
+                let size = CGSize(width: blurredWidth, height: blurredHeight)
+                
+                var sourceY = vImage_Buffer(
+                    data: UnsafeMutableRawPointer(mutating: y.data.withUnsafeBytes { $0.baseAddress! }),
+                    height: vImagePixelCount(y.height),
+                    width: vImagePixelCount(y.width),
+                    rowBytes: y.bytesPerRow
+                )
+                
+                var sourceU = vImage_Buffer(
+                    data: UnsafeMutableRawPointer(mutating: u.data.withUnsafeBytes { $0.baseAddress! }),
+                    height: vImagePixelCount(u.height),
+                    width: vImagePixelCount(u.width),
+                    rowBytes: u.bytesPerRow
+                )
+                
+                var sourceV = vImage_Buffer(
+                    data: UnsafeMutableRawPointer(mutating: v.data.withUnsafeBytes { $0.baseAddress! }),
+                    height: vImagePixelCount(v.height),
+                    width: vImagePixelCount(v.width),
+                    rowBytes: v.bytesPerRow
+                )
+                
+                var sourceA = vImage_Buffer(
+                    data: UnsafeMutableRawPointer(mutating: a.data.withUnsafeBytes { $0.baseAddress! }),
+                    height: vImagePixelCount(a.height),
+                    width: vImagePixelCount(a.width),
+                    rowBytes: a.bytesPerRow
+                )
+                
+                let scaledYData = malloc(blurredWidth * blurredHeight)!
+                defer {
+                    free(scaledYData)
+                }
+
+                let scaledUData = malloc(blurredWidth * blurredHeight / 4)!
+                defer {
+                    free(scaledUData)
+                }
+
+                let scaledVData = malloc(blurredWidth * blurredHeight / 4)!
+                defer {
+                    free(scaledVData)
+                }
+
+                let scaledAData = malloc(blurredWidth * blurredHeight)!
+                defer {
+                    free(scaledAData)
+                }
+                
+                var scaledY = vImage_Buffer(
+                    data: scaledYData,
+                    height: vImagePixelCount(blurredHeight),
+                    width: vImagePixelCount(blurredWidth),
+                    rowBytes: blurredWidth
+                )
+                
+                var scaledU = vImage_Buffer(
+                    data: scaledUData,
+                    height: vImagePixelCount(blurredHeight / 2),
+                    width: vImagePixelCount(blurredWidth / 2),
+                    rowBytes: blurredWidth / 2
+                )
+                
+                var scaledV = vImage_Buffer(
+                    data: scaledVData,
+                    height: vImagePixelCount(blurredHeight / 2),
+                    width: vImagePixelCount(blurredWidth / 2),
+                    rowBytes: blurredWidth / 2
+                )
+                
+                var scaledA = vImage_Buffer(
+                    data: scaledAData,
+                    height: vImagePixelCount(blurredHeight),
+                    width: vImagePixelCount(blurredWidth),
+                    rowBytes: blurredWidth
+                )
+                
+                vImageScale_Planar8(&sourceY, &scaledY, nil, vImage_Flags(kvImageHighQualityResampling))
+                vImageScale_Planar8(&sourceU, &scaledU, nil, vImage_Flags(kvImageHighQualityResampling))
+                vImageScale_Planar8(&sourceV, &scaledV, nil, vImage_Flags(kvImageHighQualityResampling))
+                vImageScale_Planar8(&sourceA, &scaledA, nil, vImage_Flags(kvImageHighQualityResampling))
+
+                guard let context = DrawingContext(size: size, scale: 1.0, clear: true) else {
+                    return nil
+                }
+                
+                var destinationBuffer = vImage_Buffer(
+                    data: context.bytes,
+                    height: vImagePixelCount(blurredHeight),
+                    width: vImagePixelCount(blurredWidth),
+                    rowBytes: context.bytesPerRow
+                )
+
+                var result = kvImageNoError
+
+                var permuteMap: [UInt8] = [1, 2, 3, 0]
+                result = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&scaledY, &scaledU, &scaledV, &destinationBuffer, &yuvToRgbConversion, &permuteMap, 255, vImage_Flags(kvImageDoNotTile))
+                if result != kvImageNoError {
+                    return nil
+                }
+
+                result = vImageOverwriteChannels_ARGB8888(&scaledA, &destinationBuffer, &destinationBuffer, 1 << 0, vImage_Flags(kvImageDoNotTile));
+                if result != kvImageNoError {
+                    return nil
+                }
+                
+                vImageBoxConvolve_ARGB8888(&destinationBuffer,
+                                           &destinationBuffer,
+                                           nil,
+                                           0, 0,
+                                           UInt32(15),
+                                           UInt32(15),
+                                           nil,
+                                           vImage_Flags(kvImageTruncateKernel))
+                
+                let divisor: Int32 = 0x1000
+                
+                let rwgt: CGFloat = 0.3086
+                let gwgt: CGFloat = 0.6094
+                let bwgt: CGFloat = 0.0820
+                
+                let adjustSaturation: CGFloat = 1.7
+                
+                let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
+                let b = (1.0 - adjustSaturation) * rwgt
+                let c = (1.0 - adjustSaturation) * rwgt
+                let d = (1.0 - adjustSaturation) * gwgt
+                let e = (1.0 - adjustSaturation) * gwgt + adjustSaturation
+                let f = (1.0 - adjustSaturation) * gwgt
+                let g = (1.0 - adjustSaturation) * bwgt
+                let h = (1.0 - adjustSaturation) * bwgt
+                let i = (1.0 - adjustSaturation) * bwgt + adjustSaturation
+                
+                let satMatrix: [CGFloat] = [
+                    a, b, c, 0,
+                    d, e, f, 0,
+                    g, h, i, 0,
+                    0, 0, 0, 1
+                ]
+                
+                var matrix: [Int16] = satMatrix.map { value in
+                    return Int16(value * CGFloat(divisor))
+                }
+                
+                vImageMatrixMultiply_ARGB8888(&destinationBuffer, &destinationBuffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
+                
+                context.withFlippedContext { c in
+                    c.setFillColor((color ?? .white).withMultipliedAlpha(0.6).cgColor)
+                    c.fill(CGRect(origin: CGPoint(), size: size))
+                }
+                
+                self.blurredRepresentationValue = context.generateImage()
+                return self.blurredRepresentationValue
             }
         }
     }
     
     static let queue0 = Queue(name: "ItemAnimationContext-0", qos: .default)
     static let queue1 = Queue(name: "ItemAnimationContext-1", qos: .default)
+    
+    private let useYuvA: Bool
     
     private let cache: AnimationCache
     let queueAffinity: Int
@@ -253,9 +510,10 @@ private final class ItemAnimationContext {
     
     let targets = Bag<Weak<MultiAnimationRenderTarget>>()
     
-    init(cache: AnimationCache, queueAffinity: Int, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
+    init(cache: AnimationCache, queueAffinity: Int, itemId: String, size: CGSize, useYuvA: Bool, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable, stateUpdated: @escaping () -> Void) {
         self.cache = cache
         self.queueAffinity = queueAffinity
+        self.useYuvA = useYuvA
         self.stateUpdated = stateUpdated
         
         self.disposable = cache.get(sourceId: itemId, size: size, fetch: fetch).start(next: { [weak self] result in
@@ -300,7 +558,11 @@ private final class ItemAnimationContext {
                 
                 for target in self.targets.copyItems() {
                     if let target = target.value {
-                        target.transitionToContents(currentFrame.image.cgImage!, didLoop: false)
+                        if let image = currentFrame.contentsAsImage {
+                            target.transitionToContents(image.cgImage!, didLoop: false)
+                        } else if let pixelBuffer = currentFrame.contentsAsCVPixelBuffer {
+                            target.transitionToContents(pixelBuffer, didLoop: false)
+                        }
                         
                         if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                             blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -321,8 +583,14 @@ private final class ItemAnimationContext {
     
     func updateAddedTarget(target: MultiAnimationRenderTarget) {
         if let currentFrame = self.currentFrame {
-            if let cgImage = currentFrame.image.cgImage {
+            if let cgImage = currentFrame.contentsAsImage?.cgImage {
                 target.transitionToContents(cgImage, didLoop: false)
+                
+                if let blurredRepresentationTarget = target.blurredRepresentationTarget {
+                    blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
+                }
+            } else if let pixelBuffer = currentFrame.contentsAsCVPixelBuffer {
+                target.transitionToContents(pixelBuffer, didLoop: false)
                 
                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                     blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -388,12 +656,20 @@ private final class ItemAnimationContext {
             self.nextLoadingFrameTaskId += 1
             
             self.loadingFrameTaskId = taskId
+            let useYuvA = self.useYuvA
             
             return LoadFrameGroupTask(task: { [weak self] in
                 let currentFrame: (frame: Frame, didLoop: Bool)?
                 do {
                     if let (frame, didLoop) = try item.tryWith({ item -> (AnimationCacheItemFrame, Bool)? in
-                        if let result = item.advance(advance: frameAdvance, requestedFormat: .rgba) {
+                        let defaultFormat: AnimationCacheItemFrame.RequestedFormat
+                        if useYuvA {
+                            defaultFormat = .yuva(rowAlignment: 1)
+                        } else {
+                            defaultFormat = .rgba
+                        }
+                        
+                        if let result = item.advance(advance: frameAdvance, requestedFormat: defaultFormat) {
                             return (result.frame, result.didLoop)
                         } else {
                             return nil
@@ -423,7 +699,11 @@ private final class ItemAnimationContext {
                         strongSelf.currentFrame = currentFrame.frame
                         for target in strongSelf.targets.copyItems() {
                             if let target = target.value {
-                                target.transitionToContents(currentFrame.frame.image.cgImage!, didLoop: currentFrame.didLoop)
+                                if let image = currentFrame.frame.contentsAsImage {
+                                    target.transitionToContents(image.cgImage!, didLoop: currentFrame.didLoop)
+                                } else if let pixelBuffer = currentFrame.frame.contentsAsCVPixelBuffer {
+                                    target.transitionToContents(pixelBuffer, didLoop: currentFrame.didLoop)
+                                }
                                 
                                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                                     blurredRepresentationTarget.contents = currentFrame.frame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -476,7 +756,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.stateUpdated = stateUpdated
         }
         
-        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
+        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, useYuvA: Bool, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
             var uniqueId = 0
             if unique {
                 uniqueId = self.nextUniqueId
@@ -490,7 +770,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             } else {
                 let queueAffinity = self.nextQueueAffinity
                 self.nextQueueAffinity += 1
-                itemContext = ItemAnimationContext(cache: cache, queueAffinity: queueAffinity, itemId: itemId, size: size, fetch: fetch, stateUpdated: { [weak self] in
+                itemContext = ItemAnimationContext(cache: cache, queueAffinity: queueAffinity, itemId: itemId, size: size, useYuvA: useYuvA, fetch: fetch, stateUpdated: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
@@ -545,7 +825,11 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                     return false
                 }
                 
-                target.contents = loadedFrame.image.cgImage
+                if let image = loadedFrame.contentsAsImage {
+                    target.contents = image.cgImage
+                } else if let pixelBuffer = loadedFrame.contentsAsCVPixelBuffer {
+                    target.contents = pixelBuffer
+                }
                 target.numFrames = item.numFrames
                 
                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
@@ -584,11 +868,17 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                     }
                     target.numFrames = item.numFrames
                     if let loadedFrame = loadedFrame {
-                        if let cgImage = loadedFrame.image.cgImage {
+                        if let cgImage = loadedFrame.contentsAsImage?.cgImage {
                             if hadIntermediateUpdate {
                                 target.transitionToContents(cgImage, didLoop: false)
                             } else {
                                 target.contents = cgImage
+                            }
+                        } else if let pixelBuffer = loadedFrame.contentsAsCVPixelBuffer {
+                            if hadIntermediateUpdate {
+                                target.transitionToContents(pixelBuffer, didLoop: false)
+                            } else {
+                                target.contents = pixelBuffer
                             }
                         }
                         
@@ -622,8 +912,10 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                 
                 Queue.mainQueue().async {
                     if let loadedFrame = loadedFrame {
-                        if let cgImage = loadedFrame.image.cgImage {
+                        if let cgImage = loadedFrame.contentsAsImage?.cgImage {
                             completion(cgImage)
+                        } else {
+                            completion(nil)
                         }
                     } else {
                         completion(nil)
@@ -666,6 +958,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
     
     public static let firstFrameQueue = Queue(name: "MultiAnimationRenderer-FirstFrame", qos: .userInteractive)
     
+    public var useYuvA: Bool = false
     private var groupContext: GroupContext?
     private var frameSkip: Int
     private var displayTimer: Foundation.Timer?
@@ -728,7 +1021,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.groupContext = groupContext
         }
         
-        let disposable = groupContext.add(target: target, cache: cache, itemId: itemId, unique: unique, size: size, fetch: fetch)
+        let disposable = groupContext.add(target: target, cache: cache, itemId: itemId, unique: unique, size: size, useYuvA: self.useYuvA, fetch: fetch)
         
         return ActionDisposable {
             disposable.dispose()
