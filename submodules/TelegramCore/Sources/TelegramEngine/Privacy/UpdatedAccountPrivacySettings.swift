@@ -33,7 +33,7 @@ func _internal_updateGlobalPrivacySettings(account: Account) -> Signal<Never, No
                     nonContactChatsPrivacy = .everybody
                 }
                 
-                var disallowedGifts: DisallowedGifts = []
+                var disallowedGifts: TelegramDisallowedGifts = []
                 if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
                     if (giftFlags & (1 << 0)) != 0 {
                         disallowedGifts.insert(.unlimited)
@@ -255,7 +255,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 nonContactChatsPrivacy = .everybody
             }
             
-            var disallowedGifts: DisallowedGifts = []
+            var disallowedGifts: TelegramDisallowedGifts = []
             if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
                 if (giftFlags & (1 << 0)) != 0 {
                     disallowedGifts.insert(.unlimited)
@@ -396,9 +396,8 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
         noncontactPeersPaidStars = starsAmount.value
     }
     
-    var disallowedStargifts: Api.DisallowedStarGiftsSettings?
+    var giftFlags: Int32 = 0
     if !settings.disallowedGifts.isEmpty {
-        var giftFlags: Int32 = 0
         if settings.disallowedGifts.contains(.unlimited) {
             giftFlags |= 1 << 0
         }
@@ -408,9 +407,9 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
         if settings.disallowedGifts.contains(.unique) {
             giftFlags |= 1 << 2
         }
-        disallowedStargifts = .disallowedStarGiftsSettings(flags: giftFlags)
     }
     flags |= 1 << 6
+    let disallowedStargifts = Api.DisallowedStarGiftsSettings.disallowedStarGiftsSettings(flags: giftFlags)
     
     return account.network.request(Api.functions.account.setGlobalPrivacySettings(
         settings: .globalPrivacySettings(flags: flags, noncontactPeersPaidStars: noncontactPeersPaidStars, disallowedStargifts: disallowedStargifts)

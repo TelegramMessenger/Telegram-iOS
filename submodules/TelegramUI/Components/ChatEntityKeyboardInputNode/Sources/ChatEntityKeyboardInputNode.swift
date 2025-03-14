@@ -2560,7 +2560,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             replyMessage: nil,
             accountPeerColor: nil,
             businessIntro: nil,
-            starGiftsAvailable: false
+            starGiftsAvailable: false,
+            alwaysShowGiftButton: false
         )
 
         let _ = inputNode.updateLayout(

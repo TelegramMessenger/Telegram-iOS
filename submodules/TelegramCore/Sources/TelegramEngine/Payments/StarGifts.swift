@@ -766,6 +766,7 @@ func _internal_updateStarGiftsPinnedToTop(account: Account, peerId: EnginePeer.I
 
 public enum TransferStarGiftError {
     case generic
+    case disallowed
 }
 
 func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {

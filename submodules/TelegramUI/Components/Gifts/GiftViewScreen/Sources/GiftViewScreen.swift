@@ -1454,9 +1454,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                                     effectAlignment: .center,
                                     action: {
                                         component.transferGift()
-                                        Queue.mainQueue().after(0.6, {
-                                            component.cancel(false)
-                                        })
                                     }
                                 ),
                                 environment: {},

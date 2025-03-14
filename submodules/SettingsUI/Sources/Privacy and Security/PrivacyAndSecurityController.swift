@@ -1068,7 +1068,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .bio, current: info.bio, updated: { updated, _, updatedDiscoveryEnabled, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .bio, current: info.bio, updated: { updated, _, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -1091,7 +1091,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .birthday, current: info.birthday, updated: { updated, _, updatedDiscoveryEnabled, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .birthday, current: info.birthday, updated: { updated, _, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -1358,7 +1358,7 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .giftsAutoSave, current: info.giftsAutoSave, updated: { updated, _, updatedDiscoveryEnabled, _ in
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .giftsAutoSave, current: info.giftsAutoSave, globalSettings: info.globalSettings, updated: { updated, _, _, updatedGlobalSettings in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()
                         |> filter { $0 != nil }
@@ -1366,7 +1366,7 @@ public func privacyAndSecurityController(
                         |> deliverOnMainQueue
                         |> mapToSignal { value -> Signal<Void, NoError> in
                             if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, bio: value.bio, birthday: value.birthday, giftsAutoSave: updated, noPaidMessages: value.noPaidMessages, globalSettings: value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
+                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, bio: value.bio, birthday: value.birthday, giftsAutoSave: updated, noPaidMessages: value.noPaidMessages, globalSettings: updatedGlobalSettings ?? value.globalSettings, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: value.messageAutoremoveTimeout)))
                             }
                             return .complete()
                         }

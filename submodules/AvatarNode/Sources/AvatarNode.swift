@@ -336,7 +336,7 @@ public final class AvatarNode: ASDisplayNode {
         private var currentImage: UIImage?
         
         private var params: Params?
-        private var loadDisposable: Disposable?
+        private var loadDisposable = MetaDisposable()
         
         var clipStyle: AvatarNodeClipStyle {
             if let params = self.params {
@@ -412,7 +412,7 @@ public final class AvatarNode: ASDisplayNode {
         }
         
         deinit {
-            self.loadDisposable?.dispose()
+            self.loadDisposable.dispose()
         }
         
         override public func didLoad() {
@@ -686,12 +686,12 @@ public final class AvatarNode: ASDisplayNode {
                         self.imageNode.contents = image.cgImage
                     }
                     if let loadSignal = result.loadSignal {
-                        self.loadDisposable = (loadSignal |> deliverOnMainQueue).start(next: { [weak self] image in
+                        self.loadDisposable.set((loadSignal |> deliverOnMainQueue).start(next: { [weak self] image in
                             guard let self else {
                                 return
                             }
                             self.imageNode.contents = image?.cgImage
-                        }).strict()
+                        }).strict())
                     }
                 }
             }

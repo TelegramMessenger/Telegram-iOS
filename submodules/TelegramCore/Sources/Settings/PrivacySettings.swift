@@ -292,7 +292,7 @@ func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f:
     })
 }
 
-public struct DisallowedGifts: OptionSet, Codable {
+public struct TelegramDisallowedGifts: OptionSet, Codable {
     public var rawValue: Int32
     
     public init() {
@@ -303,14 +303,14 @@ public struct DisallowedGifts: OptionSet, Codable {
         self.rawValue = rawValue
     }
     
-    public static let unlimited = DisallowedGifts(rawValue: 1 << 0)
-    public static let limited = DisallowedGifts(rawValue: 1 << 1)
-    public static let unique = DisallowedGifts(rawValue: 1 << 2)
+    public static let unlimited = TelegramDisallowedGifts(rawValue: 1 << 0)
+    public static let limited = TelegramDisallowedGifts(rawValue: 1 << 1)
+    public static let unique = TelegramDisallowedGifts(rawValue: 1 << 2)
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         let value = try? container.decode(Int32.self, forKey: "v")
-        self = DisallowedGifts(rawValue: value ?? 0)
+        self = TelegramDisallowedGifts(rawValue: value ?? 0)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -370,7 +370,7 @@ public struct GlobalPrivacySettings: Equatable, Codable {
     public var keepArchivedFolders: Bool
     public var hideReadTime: Bool
     public var nonContactChatsPrivacy: NonContactChatsPrivacy
-    public var disallowedGifts: DisallowedGifts
+    public var disallowedGifts: TelegramDisallowedGifts
     public var displayGiftButton: Bool
 
     public init(
@@ -379,7 +379,7 @@ public struct GlobalPrivacySettings: Equatable, Codable {
         keepArchivedFolders: Bool,
         hideReadTime: Bool,
         nonContactChatsPrivacy: NonContactChatsPrivacy,
-        disallowedGifts: DisallowedGifts,
+        disallowedGifts: TelegramDisallowedGifts,
         displayGiftButton: Bool
     ) {
         self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts

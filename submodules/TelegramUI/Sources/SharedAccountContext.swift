@@ -2969,6 +2969,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             if let lastController = controllers.last as? ViewController {
                                 lastController.present(tooltipController, in: .window(.root))
                             }
+                            
+                            Queue.mainQueue().after(0.5) {
+                                var controllers = navigationController.viewControllers
+                                controllers = controllers.filter { !($0 is GiftViewScreen) }
+                                navigationController.setViewControllers(controllers, animated: false)
+                            }
                         }
                     }
                     

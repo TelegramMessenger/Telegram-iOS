@@ -1000,7 +1000,7 @@ public final class CachedUserData: CachedPeerData {
     public let starRefProgram: TelegramStarRefProgram?
     public let verification: PeerVerification?
     public let sendPaidMessageStars: StarsAmount?
-    public let disallowedGifts: DisallowedGifts
+    public let disallowedGifts: TelegramDisallowedGifts
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -1045,7 +1045,7 @@ public final class CachedUserData: CachedPeerData {
         self.disallowedGifts = []
     }
     
-    public init(about: String?, botInfo: BotInfo?, editableBotInfo: EditableBotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: CachedPeerProfilePhoto, personalPhoto: CachedPeerProfilePhoto, fallbackPhoto: CachedPeerProfilePhoto, voiceMessagesAvailable: Bool, wallpaper: TelegramWallpaper?, flags: CachedUserFlags, businessHours: TelegramBusinessHours?, businessLocation: TelegramBusinessLocation?, greetingMessage: TelegramBusinessGreetingMessage?, awayMessage: TelegramBusinessAwayMessage?, connectedBot: TelegramAccountConnectedBot?, businessIntro: CachedTelegramBusinessIntro, birthday: TelegramBirthday?, personalChannel: CachedTelegramPersonalChannel, botPreview: BotPreview?, starGiftsCount: Int32?, starRefProgram: TelegramStarRefProgram?, verification: PeerVerification?, sendPaidMessageStars: StarsAmount?, disallowedGifts: DisallowedGifts) {
+    public init(about: String?, botInfo: BotInfo?, editableBotInfo: EditableBotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: CachedPeerProfilePhoto, personalPhoto: CachedPeerProfilePhoto, fallbackPhoto: CachedPeerProfilePhoto, voiceMessagesAvailable: Bool, wallpaper: TelegramWallpaper?, flags: CachedUserFlags, businessHours: TelegramBusinessHours?, businessLocation: TelegramBusinessLocation?, greetingMessage: TelegramBusinessGreetingMessage?, awayMessage: TelegramBusinessAwayMessage?, connectedBot: TelegramAccountConnectedBot?, businessIntro: CachedTelegramBusinessIntro, birthday: TelegramBirthday?, personalChannel: CachedTelegramPersonalChannel, botPreview: BotPreview?, starGiftsCount: Int32?, starRefProgram: TelegramStarRefProgram?, verification: PeerVerification?, sendPaidMessageStars: StarsAmount?, disallowedGifts: TelegramDisallowedGifts) {
         self.about = about
         self.botInfo = botInfo
         self.editableBotInfo = editableBotInfo
@@ -1153,7 +1153,7 @@ public final class CachedUserData: CachedPeerData {
         
         self.sendPaidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "sendPaidMessageStars")
         
-        self.disallowedGifts = DisallowedGifts(rawValue: decoder.decodeInt32ForKey("disallowedGifts", orElse: 0))
+        self.disallowedGifts = TelegramDisallowedGifts(rawValue: decoder.decodeInt32ForKey("disallowedGifts", orElse: 0))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -1475,7 +1475,7 @@ public final class CachedUserData: CachedPeerData {
         return CachedUserData(about: self.about, botInfo: self.botInfo, editableBotInfo: self.editableBotInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, voiceCallsAvailable: self.voiceCallsAvailable, videoCallsAvailable: self.videoCallsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, themeEmoticon: self.themeEmoticon, photo: self.photo, personalPhoto: self.personalPhoto, fallbackPhoto: self.fallbackPhoto, voiceMessagesAvailable: self.voiceMessagesAvailable, wallpaper: self.wallpaper, flags: self.flags, businessHours: self.businessHours, businessLocation: self.businessLocation, greetingMessage: self.greetingMessage, awayMessage: self.awayMessage, connectedBot: self.connectedBot, businessIntro: self.businessIntro, birthday: self.birthday, personalChannel: self.personalChannel, botPreview: self.botPreview, starGiftsCount: self.starGiftsCount, starRefProgram: self.starRefProgram, verification: self.verification, sendPaidMessageStars: sendPaidMessageStars, disallowedGifts: self.disallowedGifts)
     }
     
-    public func withUpdatedDisallowedGifts(_ disallowedGifts: DisallowedGifts) -> CachedUserData {
+    public func withUpdatedDisallowedGifts(_ disallowedGifts: TelegramDisallowedGifts) -> CachedUserData {
         return CachedUserData(about: self.about, botInfo: self.botInfo, editableBotInfo: self.editableBotInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, voiceCallsAvailable: self.voiceCallsAvailable, videoCallsAvailable: self.videoCallsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, themeEmoticon: self.themeEmoticon, photo: self.photo, personalPhoto: self.personalPhoto, fallbackPhoto: self.fallbackPhoto, voiceMessagesAvailable: self.voiceMessagesAvailable, wallpaper: self.wallpaper, flags: self.flags, businessHours: self.businessHours, businessLocation: self.businessLocation, greetingMessage: self.greetingMessage, awayMessage: self.awayMessage, connectedBot: self.connectedBot, businessIntro: self.businessIntro, birthday: self.birthday, personalChannel: self.personalChannel, botPreview: self.botPreview, starGiftsCount: self.starGiftsCount, starRefProgram: self.starRefProgram, verification: self.verification, sendPaidMessageStars: self.sendPaidMessageStars, disallowedGifts: disallowedGifts)
     }
 }

@@ -369,7 +369,7 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
         case let .footer(_, text):
             return ItemListTextItem(presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat), text: .markdown(text), sectionId: 0, linkAction: { _ in
                 openTopAppsInfo()
-            }, style: .plain, textSize: .larger, textAlignment: .center, trimBottomInset: true, additionalInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
+            }, style: .plain, textSize: .larger, textAlignment: .center, additionalInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0), additionalOuterInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: -44.0, right: 0.0))
         }
     }
 }
