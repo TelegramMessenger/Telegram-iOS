@@ -474,7 +474,7 @@ public:
         _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                _audioTransports[i]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -673,6 +673,11 @@ public:
     }
     
     virtual ~WrappedChildAudioDeviceModule() {
+        if (_audioCallback) {
+            auto previousAudioCallback = _audioCallback;
+            _audioCallback = nullptr;
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, nullptr);
+        }
     }
     
     virtual int32_t RegisterAudioCallback(webrtc::AudioTransport *audioCallback) override {
