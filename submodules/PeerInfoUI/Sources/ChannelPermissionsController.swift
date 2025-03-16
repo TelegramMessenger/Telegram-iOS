@@ -721,7 +721,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         }
         
         if cachedData.flags.contains(.paidMessagesAvailable) && channel.hasPermission(.banMembers) {
-            let sendPaidMessageStars = state.modifiedStarsAmount?.value ?? (cachedData.sendPaidMessageStars?.value ?? 0)
+            let sendPaidMessageStars = state.modifiedStarsAmount?.value ?? (channel.sendPaidMessageStars?.value ?? 0)
             let chargeEnabled = sendPaidMessageStars > 0
             entries.append(.chargeForMessages(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessages, chargeEnabled))
             entries.append(.chargeForMessagesInfo(presentationData.theme, presentationData.strings.GroupInfo_Permissions_ChargeForMessagesInfo))

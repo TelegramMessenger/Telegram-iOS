@@ -223,6 +223,10 @@ public final class StoryContentContextImpl: StoryContentContext {
                             sendPaidMessageStars: cachedUserData.sendPaidMessageStars
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
+                        var sendPaidMessageStars: StarsAmount?
+                        if case let .channel(channel) = peer {
+                            sendPaidMessageStars = channel.sendPaidMessageStars
+                        }
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
@@ -232,7 +236,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: cachedChannelData.boostsToUnrestrict,
                             appliedBoosts: cachedChannelData.appliedBoosts,
-                            sendPaidMessageStars: cachedChannelData.sendPaidMessageStars
+                            sendPaidMessageStars: sendPaidMessageStars
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
@@ -2476,6 +2480,10 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             sendPaidMessageStars: cachedUserData.sendPaidMessageStars
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
+                        var sendPaidMessageStars: StarsAmount?
+                        if case let .channel(channel) = peer {
+                            sendPaidMessageStars = channel.sendPaidMessageStars
+                        }
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
                             isMuted: true,
                             areVoiceMessagesAvailable: true,
@@ -2485,7 +2493,7 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: cachedChannelData.boostsToUnrestrict,
                             appliedBoosts: cachedChannelData.appliedBoosts,
-                            sendPaidMessageStars: cachedChannelData.sendPaidMessageStars
+                            sendPaidMessageStars: sendPaidMessageStars
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(

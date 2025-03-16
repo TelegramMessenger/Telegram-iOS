@@ -75,15 +75,8 @@ func _internal_updateChannelPaidMessagesStars(account: Account, peerId: PeerId, 
                 return .complete()
             }
             account.stateManager.addUpdates(result)
-            return account.postbox.transaction { transaction -> Void in
-                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
-                    if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.withUpdatedSendPaidMessageStars(stars)
-                    }
-                    return cachedData
-                })
-            }
-            |> ignoreValues
+            
+            return .complete()
         }
     }
     |> switchToLatest

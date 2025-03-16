@@ -330,6 +330,30 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
         }
         
+        var customEntities: [MessageTextEntity] = []
+        if item.messages[0].id.peerId.isTelegramNotifications || item.messages[0].id.peerId.isVerificationCodes {
+            let regex: NSRegularExpression?
+            if item.messages[0].id.peerId.isTelegramNotifications {
+                regex = telegramCodeRegex
+            } else {
+                regex = loginCodeRegex
+            }
+            if let matches = regex?.matches(in: item.messages[0].text, options: [], range: NSMakeRange(0, (item.messages[0].text as NSString).length)) {
+                if let first = matches.first {
+                    customEntities.append(MessageTextEntity(range: first.range.location ..< first.range.location + first.range.length, type: .Spoiler))
+                }
+            }
+        }
+        
+        if !customEntities.isEmpty {
+            if messageEntities == nil {
+                messageEntities = customEntities
+            } else if var currentEntities = messageEntities {
+                currentEntities.append(contentsOf: customEntities)
+                messageEntities = customEntities
+            }
+        }
+        
         let textFont = compact ? Font.regular(15.0) : Font.regular(16.0)
         let textColor = presentationData.theme.inAppNotification.primaryTextColor
         var attributedMessageText: NSAttributedString
