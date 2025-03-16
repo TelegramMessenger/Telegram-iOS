@@ -1316,10 +1316,13 @@ private final class GiftViewSheetContent: CombinedComponent {
                             exported = true
                             
                             func formatAddress(_ str: String) -> String {
-                               var result = str
-                               let middleIndex = result.index(result.startIndex, offsetBy: str.count / 2)
-                               result.insert("\n", at: middleIndex)
-                               return result
+                                guard str.count == 48 && !str.hasSuffix(".ton") else {
+                                    return str
+                                }
+                                var result = str
+                                let middleIndex = result.index(result.startIndex, offsetBy: str.count / 2)
+                                result.insert("\n", at: middleIndex)
+                                return result
                             }
                             
                             tableItems.append(.init(
