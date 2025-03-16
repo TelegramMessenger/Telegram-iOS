@@ -54,7 +54,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let emptyResultsTitle = ComponentView<Empty>()
     private let emptyResultsAction = ComponentView<Empty>()
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -379,7 +379,16 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = params.size.width > params.size.height || params.size.width > 480.0 ? 5 : 3
+            let defaultItemsInRow: Int
+            if params.size.width > params.size.height || params.size.width > 480.0 {
+                if case .tablet = params.deviceMetrics.type {
+                    defaultItemsInRow = 4
+                } else {
+                    defaultItemsInRow = 5
+                }
+            } else {
+                defaultItemsInRow = 3
+            }
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
@@ -1230,7 +1239,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+        self.currentParams = (size, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
