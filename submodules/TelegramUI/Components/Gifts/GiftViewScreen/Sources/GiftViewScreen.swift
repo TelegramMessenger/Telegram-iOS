@@ -1907,7 +1907,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 var addressToOpen: String?
                 var descriptionText: String
-                if let uniqueGift, let address = uniqueGift.giftAddress {
+                if let uniqueGift, let address = uniqueGift.giftAddress, case .address = uniqueGift.owner {
                     addressToOpen = address
                     descriptionText = strings.Gift_View_TonGiftAddressInfo
                 } else if savedToProfile {
