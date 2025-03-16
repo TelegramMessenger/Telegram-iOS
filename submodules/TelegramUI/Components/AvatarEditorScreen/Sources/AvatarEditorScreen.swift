@@ -1370,15 +1370,21 @@ final class AvatarEditorScreenComponent: Component {
         }
         
         private func presentPremiumToast() {
-            guard let environment = self.environment, let component = self.component, let parentController = environment.controller() else {
+            guard let environment = self.environment, let component = self.component, let state = self.state, let parentController = environment.controller() else {
                 return
             }
             HapticFeedback().impact(.light)
             
+            var text: String = environment.strings.AvatarEditor_PremiumNeeded_Background
+            if let selectedFile = state.selectedFile {
+                if selectedFile.isSticker {
+                    text = environment.strings.AvatarEditor_PremiumNeeded_Sticker
+                }
+            }
             let controller = premiumAlertController(
                 context: component.context,
                 parentController: parentController,
-                text: environment.strings.AvatarEditor_PremiumNeeded_Background
+                text: text
             )
             parentController.present(controller, in: .window(.root))
         }
