@@ -38,7 +38,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var experimentalCompatibility: Bool
     public var enableDebugDataDisplay: Bool
     public var rippleEffect: Bool
-    public var inlineStickers: Bool
+    public var compressedEmojiCache: Bool
     public var localTranscription: Bool
     public var enableReactionOverrides: Bool
     public var browserExperiment: Bool
@@ -81,7 +81,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
             experimentalCompatibility: false,
             enableDebugDataDisplay: false,
             rippleEffect: false,
-            inlineStickers: false,
+            compressedEmojiCache: false,
             localTranscription: false,
             enableReactionOverrides: false,
             browserExperiment: false,
@@ -125,7 +125,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         experimentalCompatibility: Bool,
         enableDebugDataDisplay: Bool,
         rippleEffect: Bool,
-        inlineStickers: Bool,
+        compressedEmojiCache: Bool,
         localTranscription: Bool,
         enableReactionOverrides: Bool,
         browserExperiment: Bool,
@@ -166,7 +166,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = experimentalCompatibility
         self.enableDebugDataDisplay = enableDebugDataDisplay
         self.rippleEffect = rippleEffect
-        self.inlineStickers = inlineStickers
+        self.compressedEmojiCache = compressedEmojiCache
         self.localTranscription = localTranscription
         self.enableReactionOverrides = enableReactionOverrides
         self.browserExperiment = browserExperiment
@@ -211,7 +211,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalCompatibility = (try container.decodeIfPresent(Int32.self, forKey: "experimentalCompatibility") ?? 0) != 0
         self.enableDebugDataDisplay = (try container.decodeIfPresent(Int32.self, forKey: "enableDebugDataDisplay") ?? 0) != 0
         self.rippleEffect = (try container.decodeIfPresent(Int32.self, forKey: "rippleEffect") ?? 0) != 0
-        self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
+        self.compressedEmojiCache = (try container.decodeIfPresent(Int32.self, forKey: "compressedEmojiCache") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
         self.browserExperiment = try container.decodeIfPresent(Bool.self, forKey: "browserExperiment") ?? false
@@ -256,7 +256,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.experimentalCompatibility ? 1 : 0) as Int32, forKey: "experimentalCompatibility")
         try container.encode((self.enableDebugDataDisplay ? 1 : 0) as Int32, forKey: "enableDebugDataDisplay")
         try container.encode((self.rippleEffect ? 1 : 0) as Int32, forKey: "rippleEffect")
-        try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
+        try container.encode((self.compressedEmojiCache ? 1 : 0) as Int32, forKey: "compressedEmojiCache")
         try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
         try container.encode(self.enableReactionOverrides, forKey: "enableReactionOverrides")
         try container.encode(self.browserExperiment, forKey: "browserExperiment")
