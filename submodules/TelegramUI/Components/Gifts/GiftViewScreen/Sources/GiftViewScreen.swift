@@ -462,6 +462,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             let convertStars: Int64?
             let text: String?
             let entities: [MessageTextEntity]?
+            var limitRemains: Int32?
             let limitTotal: Int32?
             var incoming = false
             var savedToProfile = false
@@ -483,6 +484,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 stars = gift.price
                 text = nil
                 entities = nil
+                limitRemains = nil
                 limitTotal = gift.availability?.total
                 convertStars = nil
                 soldOut = true
@@ -494,6 +496,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     stars = gift.price
                     text = arguments.text
                     entities = arguments.entities
+                    limitRemains = gift.availability?.remains
                     limitTotal = gift.availability?.total
                     convertStars = arguments.convertStars
                     converted = arguments.converted
@@ -506,6 +509,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     stars = 0
                     text = nil
                     entities = nil
+                    limitRemains = nil
                     limitTotal = nil
                     convertStars = nil
                     uniqueGift = gift
@@ -1818,7 +1822,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     }
                                         
                     if let limitTotal {
-                        var remains: Int32 = 0
+                        var remains: Int32 = limitRemains ?? 0
                         if let gift = state.starGiftsMap[giftId], let availability = gift.availability {
                             remains = availability.remains
                         }
