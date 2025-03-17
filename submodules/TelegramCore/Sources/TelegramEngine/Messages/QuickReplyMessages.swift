@@ -1072,7 +1072,7 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
             flags |= 1 << 1
         }
         
-        return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, bot: mappedBot, recipients: mappedRecipients))
+        return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, rights: nil, bot: mappedBot, recipients: mappedRecipients))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

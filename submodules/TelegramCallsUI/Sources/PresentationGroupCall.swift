@@ -1134,7 +1134,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             if useSharedAudio {
-                let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
+                let sharedAudioContextValue = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration, defaultToSpeaker: true)
                 sharedAudioContext = sharedAudioContextValue
             }
         }

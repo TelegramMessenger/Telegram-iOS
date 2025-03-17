@@ -234,6 +234,8 @@ final class QuickReplySetupScreenComponent: Component {
                     openPhotoSetup: {
                     },
                     openAdInfo: { _ in
+                    },
+                    openAccountFreezeInfo: {
                     }
                 )
                 

@@ -105,3 +105,8 @@ load("@build_bazel_rules_apple//apple:apple.bzl", "provisioning_profile_reposito
 provisioning_profile_repository(
     name = "local_provisioning_profiles",
 )
+
+local_repository(
+    name = "build_configuration",
+    path = "build-input/configuration-repository",
+)

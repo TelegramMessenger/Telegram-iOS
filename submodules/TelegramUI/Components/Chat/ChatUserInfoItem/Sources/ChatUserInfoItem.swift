@@ -311,10 +311,10 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
                 } else {
                     var countryName = ""
                     let countriesConfiguration = item.context.currentCountriesConfiguration.with { $0 }
-                    if let country = countriesConfiguration.countries.first(where: { $0.id == phoneCountry }) {
-                        countryName = country.localizedName ?? country.name
-                    } else if phoneCountry == "FT" {
+                    if phoneCountry == "FT" {
                         countryName = item.presentationData.strings.Chat_NonContactUser_AnonymousNumber
+                    } else if let country = countriesConfiguration.countries.first(where: { $0.id == phoneCountry }) {
+                        countryName = country.localizedName ?? country.name
                     } else if phoneCountry == "TS" {
                         countryName = "Test"
                     }
@@ -393,7 +393,7 @@ public final class ChatUserInfoItemNode: ListViewItemNode, ASGestureRecognizerDe
             
             let disclaimerText: NSMutableAttributedString
             if let verification = item.verification {
-                disclaimerText = NSMutableAttributedString(string: " #   \(verification.description)", font: Font.regular(13.0), textColor: subtitleColor)
+                disclaimerText = NSMutableAttributedString(string: " #  \(verification.description)", font: Font.regular(13.0), textColor: subtitleColor)
                 if let range = disclaimerText.string.range(of: "#") {
                     disclaimerText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: verification.iconFileId, file: nil), range: NSRange(range, in: disclaimerText.string))
                     disclaimerText.addAttribute(.foregroundColor, value: subtitleColor, range: NSRange(range, in: disclaimerText.string))

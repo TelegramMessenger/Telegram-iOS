@@ -116,13 +116,14 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     if case let .search(search) = source {
                         switch search {
                         case .recentPeers:
-                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                            break
+                            /*items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                                 let _ = (context.engine.peers.removeRecentPeer(peerId: peerId)
                                 |> deliverOnMainQueue).startStandalone(completed: {
                                     f(.default)
                                 })
                             })))
-                            items.append(.separator)
+                            items.append(.separator)*/
                         case .recentSearch:
                             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                                 let _ = (context.engine.peers.removeRecentlySearchedPeer(peerId: peerId)
@@ -535,6 +536,23 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 }
                                 f(.default)
                             })))
+                        } else if case let .search(search) = source {
+                            switch search {
+                            case .recentPeers, .search:
+                                if peerGroup != nil {
+                                    if !items.isEmpty {
+                                        items.append(.separator)
+                                    }
+                                    items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                                        if let chatListController = chatListController {
+                                            chatListController.deletePeerChat(peerId: peerId, joined: joined)
+                                        }
+                                        f(.default)
+                                    })))
+                                }
+                            default:
+                                 break
+                            }
                         }
                     }
 

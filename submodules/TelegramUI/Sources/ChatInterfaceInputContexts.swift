@@ -179,13 +179,15 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                     var showPremiumGift = false
                     if !premiumConfiguration.isPremiumDisabled {
-                        if chatPresentationInterfaceState.hasBirthdayToday {
+                        if chatPresentationInterfaceState.alwaysShowGiftButton {
+                            showPremiumGift = true
+                        } else if chatPresentationInterfaceState.hasBirthdayToday {
                             showPremiumGift = true
                         } else if premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField {
                             showPremiumGift = true
                         }
                     }
-                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && chatPresentationInterfaceState.suggestPremiumGift {
+                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) { //&& chatPresentationInterfaceState.suggestPremiumGift {
                         accessoryItems.append(.gift)
                     }
                 }

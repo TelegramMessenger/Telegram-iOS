@@ -630,7 +630,7 @@ final class StarsTransactionsScreenComponent: Component {
             contentHeight += descriptionSize.height
             contentHeight += 29.0
             
-            let withdrawAvailable = self.revenueState?.balances.withdrawEnabled ?? false
+            let withdrawAvailable = (self.revenueState?.balances.overallRevenue.value ?? 0) > 0
                    
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             let balanceSize = self.balanceView.update(
@@ -656,26 +656,13 @@ final class StarsTransactionsScreenComponent: Component {
                                 }
                                 component.buy()
                             },
-                            secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Withdraw : nil,
-                            secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListRoundWithdrawIcon(environment.theme) : nil,
-                            secondaryActionCooldownUntilTimestamp: self.revenueState?.balances.nextWithdrawalTimestamp,
+                            secondaryActionTitle: withdrawAvailable ? environment.strings.Stars_Intro_Stats : nil,
+                            secondaryActionIcon: withdrawAvailable ? PresentationResourcesItemList.itemListStatsIcon(environment.theme) : nil,
                             secondaryAction: withdrawAvailable ? { [weak self] in
                                 guard let self, let component = self.component else {
                                     return
                                 }
-                                var remainingCooldownSeconds: Int32 = 0
-                                if let cooldownUntilTimestamp = self.revenueState?.balances.nextWithdrawalTimestamp {
-                                    remainingCooldownSeconds = cooldownUntilTimestamp - Int32(Date().timeIntervalSince1970)
-                                    remainingCooldownSeconds = max(0, remainingCooldownSeconds)
-                                    
-                                    if remainingCooldownSeconds > 0 {
-                                        component.showTimeoutTooltip(cooldownUntilTimestamp)
-                                    } else {
-                                        component.withdraw()
-                                    }
-                                } else {
-                                    component.withdraw()
-                                }
+                                component.withdraw()
                             } : nil,
                             additionalAction: (premiumConfiguration.starsGiftsPurchaseAvailable && !premiumConfiguration.isPremiumDisabled) ? AnyComponent(
                                 Button(
@@ -739,7 +726,7 @@ final class StarsTransactionsScreenComponent: Component {
                                         return
                                     }
                                     let _ = (component.context.sharedContext.makeAffiliateProgramSetupScreenInitialData(context: component.context, peerId: component.context.account.peerId, mode: .connectedPrograms)
-                                             |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] initialData in
                                         guard let self, let component = self.component else {
                                             return
                                         }
@@ -1236,48 +1223,52 @@ public final class StarsTransactionsScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
-            let _ = (context.engine.peers.checkStarsRevenueWithdrawalAvailability()
-            |> deliverOnMainQueue).start(error: { [weak self] error in
-                guard let self else {
-                    return
-                }
-                switch error {
-                case .serverProvided:
-                    return
-                case .requestPassword:
-                    let _ = (self.starsRevenueStatsContext.state
-                    |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak self] state in
-                        guard let self else {
-                            return
-                        }
-                        let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, completion: { [weak self] amount in
-                            guard let self else {
-                                return
-                            }
-                            let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
-                                self?.present(c, in: .window(.root))
-                            }, completion: { [weak self] url in
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
-                                
-                                Queue.mainQueue().after(2.0) {
-                                    self?.starsRevenueStatsContext.reload()
-                                }
-                            })
-                            self.present(controller, in: .window(.root))
-                        })
-                        self.push(controller)
-                    })
-                default:
-                    let controller = starsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: 0, initialError: error, present: { [weak self] c, a in
-                        self?.present(c, in: .window(.root))
-                    }, completion: { _ in
-                        
-                    })
-                    self.present(controller, in: .window(.root))
-                }
-            })
+            
+            let controller = self.context.sharedContext.makeStarsStatisticsScreen(context: context, peerId: context.account.peerId, revenueContext: self.starsRevenueStatsContext)
+            self.push(controller)
+            
+//            let _ = (context.engine.peers.checkStarsRevenueWithdrawalAvailability()
+//            |> deliverOnMainQueue).start(error: { [weak self] error in
+//                guard let self else {
+//                    return
+//                }
+//                switch error {
+//                case .serverProvided:
+//                    return
+//                case .requestPassword:
+//                    let _ = (self.starsRevenueStatsContext.state
+//                    |> take(1)
+//                    |> deliverOnMainQueue).start(next: { [weak self] state in
+//                        guard let self else {
+//                            return
+//                        }
+//                        let controller = self.context.sharedContext.makeStarsWithdrawalScreen(context: context, completion: { [weak self] amount in
+//                            guard let self else {
+//                                return
+//                            }
+//                            let controller = confirmStarsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: amount, present: { [weak self] c, a in
+//                                self?.present(c, in: .window(.root))
+//                            }, completion: { [weak self] url in
+//                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+//                                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+//                                
+//                                Queue.mainQueue().after(2.0) {
+//                                    self?.starsRevenueStatsContext.reload()
+//                                }
+//                            })
+//                            self.present(controller, in: .window(.root))
+//                        })
+//                        self.push(controller)
+//                    })
+//                default:
+//                    let controller = starsRevenueWithdrawalController(context: context, peerId: context.account.peerId, amount: 0, initialError: error, present: { [weak self] c, a in
+//                        self?.present(c, in: .window(.root))
+//                    }, completion: { _ in
+//                        
+//                    })
+//                    self.present(controller, in: .window(.root))
+//                }
+//            })
         }
         
         showTimeoutTooltipImpl = { [weak self] cooldownUntilTimestamp in

@@ -1411,7 +1411,7 @@ public final class InstantPage: PostboxCoding, Equatable {
         self.url = decoder.decodeStringForKey("url", orElse: "")
         self.views = decoder.decodeOptionalInt32ForKey("v")
         
-        #if DEBUG
+        #if DEBUG && false
         var builder = FlatBufferBuilder(initialSize: 1024)
         let offset = self.encodeToFlatBuffers(builder: &builder)
         builder.finish(offset: offset)

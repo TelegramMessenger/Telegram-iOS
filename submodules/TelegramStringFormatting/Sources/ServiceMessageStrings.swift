@@ -1148,7 +1148,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case let .starGiftUnique(gift, isUpgrade, _, _, _, _, _, peerId, senderId, _):
                 if case let .unique(gift) = gift {
                     if !forAdditionalServiceMessage && !"".isEmpty {
-                        attributedString = NSAttributedString(string: "\(gift.title) #\(gift.number)", font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: "\(gift.title) #\(presentationStringsFormattedNumber(gift.number, dateTimeFormat.groupingSeparator))", font: titleFont, textColor: primaryTextColor)
                     } else if let messagePeer = message.peers[message.id.peerId] {
                         var peerName = EnginePeer(messagePeer).compactDisplayTitle
                         var peerIds: [(Int, EnginePeer.Id?)] = [(0, messagePeer.id)]
@@ -1195,6 +1195,33 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                             }
                         }
                     }
+                }
+            case let .paidMessagesRefunded(_, stars):
+                let starsString = strings.Notification_PaidMessageRefund_Stars(Int32(stars))
+                if message.author?.id == accountPeerId, let messagePeer = message.peers[message.id.peerId] {
+                    let peerName = EnginePeer(messagePeer).compactDisplayTitle
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(1, messagePeer.id)])
+                    attributes[0] = boldAttributes
+                    let resultString = strings.Notification_PaidMessageRefundYou(starsString, peerName)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    let resultString = strings.Notification_PaidMessageRefund(peerName, starsString)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
+                }
+            case let .paidMessagesPriceEdited(stars):
+                let starsString = strings.Notification_PaidMessagePriceChanged_Stars(Int32(stars))
+                if message.author?.id == accountPeerId {
+                    let resultString = strings.Notification_PaidMessagePriceChangedYou(starsString)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                } else {
+                    let peerName = message.author?.compactDisplayTitle ?? ""
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    attributes[1] = boldAttributes
+                    let resultString = strings.Notification_PaidMessagePriceChanged(peerName, starsString)
+                    attributedString = addAttributesToStringWithRanges(resultString._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case .unknown:
                 attributedString = nil

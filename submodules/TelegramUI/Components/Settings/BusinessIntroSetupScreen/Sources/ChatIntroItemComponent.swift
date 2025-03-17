@@ -131,7 +131,8 @@ final class ChatIntroItemComponent: Component {
                 replyMessage: nil,
                 accountPeerColor: nil,
                 businessIntro: nil,
-                starGiftsAvailable: false
+                starGiftsAvailable: false,
+                alwaysShowGiftButton: false
             )
             
             transition.setFrame(view: emptyNode.view, frame: CGRect(origin: CGPoint(), size: size))

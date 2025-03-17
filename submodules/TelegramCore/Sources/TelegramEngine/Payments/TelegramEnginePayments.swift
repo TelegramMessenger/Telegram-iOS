@@ -39,11 +39,11 @@ public extension TelegramEngine {
         }
         
         public func sendAppStoreReceipt(receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
-            return _internal_sendAppStoreReceipt(account: self.account, receipt: receipt, purpose: purpose)
+            return _internal_sendAppStoreReceipt(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, receipt: receipt, purpose: purpose)
         }
         
         public func canPurchasePremium(purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
-            return _internal_canPurchasePremium(account: self.account, purpose: purpose)
+            return _internal_canPurchasePremium(postbox: self.account.postbox, network: self.account.network, purpose: purpose)
         }
         
         public func checkPremiumGiftCode(slug: String) -> Signal<PremiumGiftCodeInfo?, NoError> {
@@ -147,6 +147,24 @@ public extension TelegramEngine {
         
         public func toggleStarGiftsNotifications(peerId: EnginePeer.Id, enabled: Bool) -> Signal<Never, NoError> {
             return _internal_toggleStarGiftsNotifications(account: self.account, peerId: peerId, enabled: enabled)
+        }
+    }
+}
+
+public extension TelegramEngineUnauthorized {
+    final class Payments {
+        private let account: UnauthorizedAccount
+
+        init(account: UnauthorizedAccount) {
+            self.account = account
+        }
+
+        public func canPurchasePremium(purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
+            return _internal_canPurchasePremium(postbox: self.account.postbox, network: self.account.network, purpose: purpose)
+        }
+        
+        public func sendAppStoreReceipt(receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
+            return _internal_sendAppStoreReceipt(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, receipt: receipt, purpose: purpose)
         }
     }
 }

@@ -23,6 +23,7 @@ import AvatarNode
 import TelegramAudio
 import LegacyComponents
 import TooltipUI
+import BlurredBackgroundComponent
 
 extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
@@ -219,6 +220,9 @@ final class VideoChatScreenComponent: Component {
         let navigationLeftButton = ComponentView<Empty>()
         let navigationRightButton = ComponentView<Empty>()
         var navigationSidebarButton: ComponentView<Empty>?
+        var encryptionKeyBackground: ComponentView<Empty>?
+        var encryptionKey: ComponentView<Empty>?
+        var isEncryptionKeyExpanded: Bool = false
         
         let videoButton = ComponentView<Empty>()
         let leaveButton = ComponentView<Empty>()
@@ -406,6 +410,12 @@ final class VideoChatScreenComponent: Component {
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let encryptionKeyBackgroundView = self.encryptionKeyBackground?.view, let _ = encryptionKeyBackgroundView.hitTest(self.convert(point, to: encryptionKeyBackgroundView), with: event) {
+                if let encryptionKeyView = self.encryptionKey?.view {
+                    return encryptionKeyView
+                }
+            }
+            
             guard let result = super.hitTest(point, with: event) else {
                 return nil
             }
@@ -1744,7 +1754,7 @@ final class VideoChatScreenComponent: Component {
             
             let topInset: CGFloat = environment.statusBarHeight + 2.0
             let navigationBarHeight: CGFloat = 61.0
-            let navigationHeight = topInset + navigationBarHeight
+            var navigationHeight = topInset + navigationBarHeight
             
             let navigationButtonAreaWidth: CGFloat = 40.0
             let navigationButtonDiameter: CGFloat = 28.0
@@ -1948,6 +1958,52 @@ final class VideoChatScreenComponent: Component {
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
                 alphaTransition.setAlpha(view: titleView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
+            }
+            
+            var encryptionKeyFrame: CGRect?
+            if component.initialCall.accountContext.sharedContext.immediateExperimentalUISettings.conferenceDebug {
+                navigationHeight -= 2.0
+                let encryptionKey: ComponentView<Empty>
+                var encryptionKeyTransition = transition
+                if let current = self.encryptionKey {
+                    encryptionKey = current
+                } else {
+                    encryptionKeyTransition = encryptionKeyTransition.withAnimation(.none)
+                    encryptionKey = ComponentView()
+                    self.encryptionKey = encryptionKey
+                }
+                
+                let encryptionKeySize = encryptionKey.update(
+                    transition: encryptionKeyTransition,
+                    component: AnyComponent(VideoChatEncryptionKeyComponent(
+                        theme: environment.theme,
+                        strings: environment.strings,
+                        emoji: ["👌", "🧡", "🌹", "🤷"],
+                        isExpanded: self.isEncryptionKeyExpanded,
+                        tapAction: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.isEncryptionKeyExpanded = !self.isEncryptionKeyExpanded
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.4))
+                            }
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: min(400.0, availableSize.width - sideInset * 2.0 - 16.0 * 2.0), height: 10000.0)
+                )
+                let encryptionKeyFrameValue = CGRect(origin: CGPoint(x: floor((availableSize.width - encryptionKeySize.width) * 0.5), y: navigationHeight), size: encryptionKeySize)
+                encryptionKeyFrame = encryptionKeyFrameValue
+             
+                navigationHeight += encryptionKeySize.height
+                navigationHeight += 16.0
+            } else if let encryptionKey = self.encryptionKey {
+                self.encryptionKey = nil
+                encryptionKey.view?.removeFromSuperview()
+                
+                self.encryptionKeyBackground?.view?.removeFromSuperview()
+                self.encryptionKeyBackground = nil
             }
             
             let areButtonsCollapsed: Bool
@@ -2224,6 +2280,51 @@ final class VideoChatScreenComponent: Component {
                     participantsAlpha = 0.0
                 }
                 alphaTransition.setAlpha(view: participantsView, alpha: participantsAlpha)
+            }
+            
+            if let encryptionKeyView = self.encryptionKey?.view, let encryptionKeyFrame {
+                if encryptionKeyView.superview == nil {
+                    self.containerView.addSubview(encryptionKeyView)
+                }
+                transition.setFrame(view: encryptionKeyView, frame: encryptionKeyFrame)
+                alphaTransition.setAlpha(view: encryptionKeyView, alpha: self.isAnimatedOutFromPrivateCall ? 0.0 : 1.0)
+                
+                if self.isEncryptionKeyExpanded {
+                    let encryptionKeyBackground: ComponentView<Empty>
+                    var encryptionKeyBackgroundTransition = transition
+                    if let current = self.encryptionKeyBackground {
+                        encryptionKeyBackground = current
+                    } else {
+                        encryptionKeyBackgroundTransition = encryptionKeyBackgroundTransition.withAnimation(.none)
+                        encryptionKeyBackground = ComponentView()
+                        self.encryptionKeyBackground = encryptionKeyBackground
+                    }
+                    let _ = encryptionKeyBackground.update(
+                        transition: encryptionKeyBackgroundTransition,
+                        component: AnyComponent(BlurredBackgroundComponent(
+                            color: .clear,
+                            tintContainerView: nil,
+                            cornerRadius: 0.0
+                        )),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    if let encryptionKeyBackgroundView = encryptionKeyBackground.view {
+                        if encryptionKeyBackgroundView.superview == nil {
+                            self.containerView.insertSubview(encryptionKeyBackgroundView, belowSubview: encryptionKeyView)
+                            encryptionKeyBackgroundView.alpha = 0.0
+                        }
+                        alphaTransition.setAlpha(view: encryptionKeyBackgroundView, alpha: 1.0)
+                        encryptionKeyBackgroundTransition.setFrame(view: encryptionKeyBackgroundView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                    }
+                } else if let encryptionKeyBackground = self.encryptionKeyBackground {
+                    self.encryptionKeyBackground = nil
+                    if let encryptionKeyBackgroundView = encryptionKeyBackground.view {
+                        alphaTransition.setAlpha(view: encryptionKeyBackgroundView, alpha: 0.0, completion: { [weak encryptionKeyBackgroundView] _ in
+                            encryptionKeyBackgroundView?.removeFromSuperview()
+                        })
+                    }
+                }
             }
             
             if let callState = self.callState, let scheduleTimestamp = callState.scheduleTimestamp {

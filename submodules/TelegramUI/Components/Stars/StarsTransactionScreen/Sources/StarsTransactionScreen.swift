@@ -424,7 +424,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         isPaidMessage = true
                         titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
                         countOnTop = true
-                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(starrefCommissionPermille)).string
+                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(1000 - starrefCommissionPermille)).string
                     } else if transaction.starrefPeerId == nil {
                         titleText = strings.StarsTransaction_TitleCommission(formatPermille(starrefCommissionPermille)).string
                         countOnTop = false
@@ -1530,15 +1530,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
                 )
                 originY += button.size.height
+                originY += 7.0
             }
             
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
             )
             
-            let contentSize = CGSize(width: context.availableSize.width, height: originY + 5.0 + environment.safeInsets.bottom)
-        
-            return contentSize
+            let effectiveBottomInset: CGFloat = environment.metrics.isTablet ? 0.0 : environment.safeInsets.bottom
+            return CGSize(width: context.availableSize.width, height: originY + 5.0 + effectiveBottomInset)
         }
     }
 }

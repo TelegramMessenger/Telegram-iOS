@@ -403,6 +403,22 @@ public final class FFMpegFileReader {
     deinit {
     }
     
+    public func frameRate() -> Int {
+        if let stream = self.stream {
+            return Int(stream.info.fps.seconds)
+        } else {
+            return 0
+        }
+    }
+    
+    public func duration() -> CMTime {
+        if let stream = self.stream {
+            return stream.info.duration
+        } else {
+            return .zero
+        }
+    }
+    
     private func readPacketInternal() -> FFMpegPacket? {
         guard let avFormatContext = self.avFormatContext else {
             return nil
@@ -452,7 +468,7 @@ public final class FFMpegFileReader {
         return nil
     }
     
-    public func readFrame() -> ReadFrameResult {
+    public func readFrame(argb: Bool = false) -> ReadFrameResult {
         guard let stream = self.stream else {
             return .error
         }
@@ -461,7 +477,7 @@ public final class FFMpegFileReader {
             var result: MediaTrackFrame?
             switch stream.decoder {
             case let .video(decoder):
-                result = decoder.decode(ptsOffset: nil, forceARGB: false, unpremultiplyAlpha: false, displayImmediately: false)
+                result = decoder.decode(ptsOffset: nil, forceARGB: argb, unpremultiplyAlpha: false, displayImmediately: false)
             case let .videoPassthrough(decoder):
                 result = decoder.decode()
             case let .audio(decoder):

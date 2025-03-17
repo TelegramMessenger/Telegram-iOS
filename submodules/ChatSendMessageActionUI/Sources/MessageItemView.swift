@@ -309,7 +309,7 @@ final class MessageItemView: UIView {
             }
             let effectIconContent: ChatSendMessageScreenEffectIcon.Content
             if let staticIcon = effect.staticIcon {
-                effectIconContent = .file(staticIcon)
+                effectIconContent = .file(staticIcon._parse())
             } else {
                 effectIconContent = .text(effect.emoticon)
             }

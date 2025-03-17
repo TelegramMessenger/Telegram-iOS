@@ -1604,13 +1604,14 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func updateConnectedBot(flags: Int32, bot: Api.InputUser, recipients: Api.InputBusinessBotRecipients) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func updateConnectedBot(flags: Int32, rights: Api.BusinessBotRights?, bot: Api.InputUser, recipients: Api.InputBusinessBotRecipients) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1138250269)
+                    buffer.appendInt32(1721797758)
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {rights!.serialize(buffer, true)}
                     bot.serialize(buffer, true)
                     recipients.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.updateConnectedBot", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("recipients", String(describing: recipients))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "account.updateConnectedBot", parameters: [("flags", String(describing: flags)), ("rights", String(describing: rights)), ("bot", String(describing: bot)), ("recipients", String(describing: recipients))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -9063,11 +9064,11 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
-                static func canPurchasePremium(purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func canPurchaseStore(purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1614700874)
+                    buffer.appendInt32(1339842215)
                     purpose.serialize(buffer, true)
-                    return (FunctionDescription(name: "payments.canPurchasePremium", parameters: [("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "payments.canPurchaseStore", parameters: [("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

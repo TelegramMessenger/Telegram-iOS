@@ -902,13 +902,6 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         try container.encode(postboxEncoder.makeData(), forKey: .data)
     }
     
-    public func encodeToFlatBuffersData() -> Data {
-        var builder = FlatBufferBuilder(initialSize: 1024)
-        let value = self.encodeToFlatBuffers(builder: &builder)
-        builder.finish(offset: value)
-        return builder.data
-    }
-    
     public init(flatBuffersObject: TelegramCore_TelegramMediaFile) throws {
         self.fileId = MediaId(namespace: flatBuffersObject.fileId.namespace, id: flatBuffersObject.fileId.id)
         self.partialReference = try flatBuffersObject.partialReference.flatMap { try PartialMediaReference(flatBuffersObject: $0 ) }

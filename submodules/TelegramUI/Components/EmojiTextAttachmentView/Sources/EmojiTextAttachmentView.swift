@@ -82,18 +82,20 @@ public func generateTopicIcon(title: String, backgroundColors: [UIColor], stroke
     })
 }
 
-public enum AnimationCacheAnimationType {
+public enum AnimationCacheAnimationType: Equatable {
     case still
     case lottie
-    case video
+    case video(isVP9: Bool)
 }
 
 public extension AnimationCacheAnimationType {
     init(file: TelegramMediaFile) {
         if file.isVideoSticker || file.isVideoEmoji {
-            self = .video
+            self = .video(isVP9: true)
         } else if file.isAnimatedSticker {
             self = .lottie
+        } else if file.isVideo {
+            self = .video(isVP9: false)
         } else {
             self = .still
         }
@@ -122,8 +124,8 @@ public func animationCacheFetchFile(postbox: Postbox, userLocation: MediaResourc
             }
             
             switch type {
-            case .video:
-                cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case let .video(isVP9):
+                cacheVideoAnimation(path: result, hintVP9: isVP9, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
             case .lottie:
                 guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
                     options.writer.finish()
@@ -153,8 +155,8 @@ public func animationCacheLoadLocalFile(name: String, type: AnimationCacheAnimat
             }
             
             switch type {
-            case .video:
-                cacheVideoAnimation(path: result, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
+            case let .video(isVP9):
+                cacheVideoAnimation(path: result, hintVP9: isVP9, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, firstFrameOnly: options.firstFrameOnly, customColor: customColor)
             case .lottie:
                 guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
                     options.writer.finish()
@@ -415,7 +417,20 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     }
     
     override public var contents: Any? {
-        didSet {
+        get {
+            return super.contents
+        } set(value) {
+            #if targetEnvironment(simulator)
+            if let value, CFGetTypeID(value as CFTypeRef) == CVPixelBufferGetTypeID() {
+                let pixelBuffer = value as! CVPixelBuffer
+                super.contents = CVPixelBufferGetIOSurface(pixelBuffer)
+            } else {
+                super.contents = value
+            }
+            #else
+            super.contents = value
+            #endif
+            
             if let mirrorLayer = self.mirrorLayer {
                 mirrorLayer.contents = self.contents
             }

@@ -766,6 +766,7 @@ func _internal_updateStarGiftsPinnedToTop(account: Account, peerId: EnginePeer.I
 
 public enum TransferStarGiftError {
     case generic
+    case disallowedStarGift
 }
 
 func _internal_transferStarGift(account: Account, prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
@@ -782,7 +783,10 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, reference: Star
         }
         if prepaid {
             return account.network.request(Api.functions.payments.transferStarGift(stargift: starGift, toId: inputPeer))
-            |> mapError { _ -> TransferStarGiftError in
+            |> mapError { error -> TransferStarGiftError in
+                if error.errorDescription == "USER_DISALLOWED_STARGIFTS" {
+                    return .disallowedStarGift
+                }
                 return .generic
             }
             |> mapToSignal { updates -> Signal<Void, TransferStarGiftError> in
@@ -797,6 +801,8 @@ func _internal_transferStarGift(account: Account, prepaid: Bool, reference: Star
             |> `catch` { error -> Signal<BotPaymentForm?, TransferStarGiftError> in
                 if case .noPaymentNeeded = error {
                     return .single(nil)
+                } else if case .disallowedStarGift = error {
+                    return .fail(.disallowedStarGift)
                 }
                 return .fail(.generic)
             }
@@ -1016,7 +1022,10 @@ private final class ProfileGiftsContextImpl {
         let sorting = self.sorting
         
         let isFiltered = self.filter != .All || self.sorting != .date
-        
+        if !isFiltered {
+            self.filteredGifts = []
+            self.filteredCount = nil
+        }
         let dataState = isFiltered ? self.filteredDataState : self.dataState
         
         if case let .ready(true, initialNextOffset) = dataState {
@@ -1202,11 +1211,14 @@ private final class ProfileGiftsContextImpl {
             }
         }
         let existingGifts = Set(pinnedGifts.compactMap { $0.reference })
-        
         var updatedGifts: [ProfileGiftsContext.State.StarGift] = []
         for gift in self.gifts {
             if let reference = gift.reference, existingGifts.contains(reference) {
                 continue
+            }
+            var gift = gift
+            if gift.reference == reference {
+                gift = gift.withPinnedToTop(pinnedToTop)
             }
             updatedGifts.append(gift)
         }
@@ -1216,18 +1228,48 @@ private final class ProfileGiftsContextImpl {
         updatedGifts.insert(contentsOf: pinnedGifts, at: 0)
         self.gifts = updatedGifts
         
-        if let index = self.filteredGifts.firstIndex(where: { $0.reference == reference }) {
-            self.filteredGifts[index] = self.filteredGifts[index].withPinnedToTop(pinnedToTop)
+        var effectiveReferences = pinnedGifts.compactMap { $0.reference }
+        if !self.filteredGifts.isEmpty {
+            var filteredPinnedGifts = self.filteredGifts.filter { $0.pinnedToTop }
+            if var gift = self.filteredGifts.first(where: { $0.reference == reference }) {
+                gift = gift.withPinnedToTop(pinnedToTop)
+                if pinnedToTop {
+                    if !gift.savedToProfile {
+                        gift = gift.withSavedToProfile(true)
+                    }
+                    filteredPinnedGifts.append(gift)
+                } else {
+                    filteredPinnedGifts.removeAll(where: { $0.reference == reference })
+                }
+            }
+            let existingFilteredGifts = Set(filteredPinnedGifts.compactMap { $0.reference })
+            var updatedFilteredGifts: [ProfileGiftsContext.State.StarGift] = []
+            for gift in self.filteredGifts {
+                if let reference = gift.reference, existingFilteredGifts.contains(reference) {
+                    continue
+                }
+                var gift = gift
+                if gift.reference == reference {
+                    gift = gift.withPinnedToTop(pinnedToTop)
+                }
+                updatedFilteredGifts.append(gift)
+            }
+            updatedFilteredGifts.sort { lhs, rhs in
+                lhs.date > rhs.date
+            }
+            updatedFilteredGifts.insert(contentsOf: filteredPinnedGifts, at: 0)
+            self.filteredGifts = updatedFilteredGifts
+            
+            effectiveReferences = filteredPinnedGifts.compactMap { $0.reference }
         }
+
         self.pushState()
         
-        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: pinnedGifts.compactMap { $0.reference })
-        
+        var signal = _internal_updateStarGiftsPinnedToTop(account: self.account, peerId: self.peerId, references: effectiveReferences)
         if saveToProfile {
             signal = _internal_updateStarGiftAddedToProfile(account: self.account, reference: reference, added: true)
             |> then(signal)
         }
-        
         self.actionDisposable.set(
             (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
@@ -1279,7 +1321,6 @@ private final class ProfileGiftsContextImpl {
             |> ignoreValues
             |> then(signal)
         }
-        
         self.actionDisposable.set(
             (signal |> deliverOn(self.queue)).startStrict(completed: { [weak self] in
                 self?.reload()
@@ -1299,16 +1340,15 @@ private final class ProfileGiftsContextImpl {
         self.pushState()
     }
     
-    func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
-        self.actionDisposable.set(
-            _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId).startStrict()
-        )
+    func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
         if let count = self.count {
             self.count = max(0, count - 1)
         }
         self.gifts.removeAll(where: { $0.reference == reference })
         self.filteredGifts.removeAll(where: { $0.reference == reference })
         self.pushState()
+        
+        return _internal_transferStarGift(account: self.account, prepaid: prepaid, reference: reference, peerId: peerId)
     }
     
     func upgradeStarGift(formId: Int64?, reference: StarGiftReference, keepOriginalInfo: Bool) -> Signal<ProfileGiftsContext.State.StarGift, UpgradeStarGiftError> {
@@ -1349,6 +1389,9 @@ private final class ProfileGiftsContextImpl {
     }
     
     func updateFilter(_ filter: ProfileGiftsContext.Filters) {
+        guard self.filter != filter else {
+            return
+        }
         self.filter = filter
         self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()
@@ -1357,6 +1400,9 @@ private final class ProfileGiftsContextImpl {
     }
     
     func updateSorting(_ sorting: ProfileGiftsContext.Sorting) {
+        guard self.sorting != sorting else {
+            return
+        }
         self.sorting = sorting
         self.filteredDataState = .ready(canLoadMore: true, nextOffset: nil)
         self.pushState()
@@ -1661,9 +1707,17 @@ public final class ProfileGiftsContext {
         }
     }
     
-    public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) {
-        self.impl.with { impl in
-            impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+    public func transferStarGift(prepaid: Bool, reference: StarGiftReference, peerId: EnginePeer.Id) -> Signal<Never, TransferStarGiftError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
 

@@ -43,10 +43,10 @@ public final class EntityKeyboardAnimationData: Equatable {
         case gift(String)
     }
     
-    public enum ItemType {
+    public enum ItemType: Equatable {
         case still
         case lottie
-        case video
+        case video(isVP9: Bool)
         
         var animationCacheAnimationType: AnimationCacheAnimationType {
             switch self {
@@ -54,8 +54,8 @@ public final class EntityKeyboardAnimationData: Equatable {
                 return .still
             case .lottie:
                 return .lottie
-            case .video:
-                return .video
+            case let .video(isVP9):
+                return .video(isVP9: isVP9)
             }
         }
     }
@@ -65,12 +65,15 @@ public final class EntityKeyboardAnimationData: Equatable {
         case stickerPackThumbnail(id: Int64, accessHash: Int64, info: StickerPackCollectionInfo.Accessor)
         case file(PartialMediaReference?, TelegramMediaFile.Accessor)
         
-        func _parse() -> MediaResourceReference {
+        func _parse() -> MediaResourceReference? {
             switch self {
             case let .resource(resource):
                 return resource
             case let .stickerPackThumbnail(id, accessHash, info):
-                return .stickerPackThumbnail(stickerPack: .id(id: id, accessHash: accessHash), resource: info._parse().thumbnail!.resource)
+                guard let thumbnail = info._parse().thumbnail else {
+                    return nil
+                }
+                return .stickerPackThumbnail(stickerPack: .id(id: id, accessHash: accessHash), resource: thumbnail.resource)
             case let .file(partialReference, file):
                 let file = file._parse()
                 if let partialReference {
@@ -105,9 +108,11 @@ public final class EntityKeyboardAnimationData: Equatable {
     public convenience init(file: TelegramMediaFile.Accessor, isReaction: Bool = false, partialReference: PartialMediaReference? = nil) {
         let type: ItemType
         if file.isVideoSticker || file.isVideoEmoji {
-            type = .video
+            type = .video(isVP9: true)
         } else if file.isAnimatedSticker {
             type = .lottie
+        } else if file.isVideo {
+            type = .video(isVP9: false)
         } else {
             type = .still
         }
@@ -406,7 +411,7 @@ public final class EmojiPagerContentComponent: Component {
             case locked
             case premium
             case text(String)
-            case customFile(TelegramMediaFile)
+            case customFile(TelegramMediaFile.Accessor)
         }
         
         public enum TintMode: Equatable {
@@ -1740,7 +1745,9 @@ public final class EmojiPagerContentComponent: Component {
                         })
                     }
                     
-                    component.animationRenderer.setFrameIndex(itemId: animationData.resource._parse().resource.id.stringRepresentation, size: itemLayer.pixelSize, frameIndex: sourceItem.frameIndex, placeholder: sourceItem.placeholder)
+                    if let resource = animationData.resource._parse() {
+                        component.animationRenderer.setFrameIndex(itemId: resource.resource.id.stringRepresentation, size: itemLayer.pixelSize, frameIndex: sourceItem.frameIndex, placeholder: sourceItem.placeholder)
+                    }
                 } else {
                     let distance = itemLayer.position.y - itemLayout.frame(groupIndex: 0, itemIndex: 0).midY
                     let maxDistance = self.bounds.height

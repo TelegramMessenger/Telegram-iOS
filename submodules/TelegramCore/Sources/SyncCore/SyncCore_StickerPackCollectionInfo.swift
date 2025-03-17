@@ -104,7 +104,7 @@ public final class StickerPackCollectionInfo: ItemCollectionInfo, Equatable {
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
         encoder.encodeInt32(self.count, forKey: "n")
         
-        #if DEBUG
+        #if DEBUG && false
         var builder = FlatBufferBuilder(initialSize: 1024)
         let offset = self.encodeToFlatBuffers(builder: &builder)
         builder.finish(offset: offset)

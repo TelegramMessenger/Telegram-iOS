@@ -146,6 +146,9 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                 ))
             } else if chatSelection.disableChannels || chatSelection.disableBots {
                 var categories: ChatListFilterPeerCategories = [.contacts, .nonContacts, .groups, .bots, .channels]
+                if chatSelection.disableContacts {
+                    categories.remove(.contacts)
+                }
                 if chatSelection.disableChannels {
                     categories.remove(.channels)
                 }

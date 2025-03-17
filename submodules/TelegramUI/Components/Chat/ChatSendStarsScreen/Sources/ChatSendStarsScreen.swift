@@ -1171,6 +1171,11 @@ private final class ChatSendStarsScreenComponent: Component {
             if !self.bounds.contains(point) {
                 return nil
             }
+            
+            if let balanceView = self.balanceOverlay.view, let result = balanceView.hitTest(self.convert(point, to: balanceView), with: event) {
+                return result
+            }
+            
             if !self.backgroundLayer.frame.contains(point) {
                 return self.dimView
             }
@@ -1184,7 +1189,7 @@ private final class ChatSendStarsScreenComponent: Component {
                     return hitTestTarget
                 }
             }
-            
+
             let result = super.hitTest(point, with: event)
             return result
         }
@@ -1441,14 +1446,31 @@ private final class ChatSendStarsScreenComponent: Component {
             }
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
             
+            let context = component.context
             let balanceSize = self.balanceOverlay.update(
                 transition: .immediate,
                 component: AnyComponent(
                     StarsBalanceOverlayComponent(
                         context: component.context,
                         theme: environment.theme,
-                        action: {
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
+                                return
+                            }
+                            self.environment?.controller()?.dismiss()
                             
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
                         }
                     )
                 ),

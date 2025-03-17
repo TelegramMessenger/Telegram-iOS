@@ -208,6 +208,20 @@ public final class UnreadMessageCountsView: PostboxView {
         }
         return nil
     }
+    
+    public func countOrUnread(for item: UnreadMessageCountsItem) -> (Int32, Bool)? {
+        for entry in self.entries {
+            switch entry {
+            case .total, .totalInGroup:
+                break
+            case let .peer(peerId, state):
+                if case .peer(peerId, _) = item {
+                    return (state?.count ?? 0, state?.markedUnread ?? false)
+                }
+            }
+        }
+        return nil
+    }
 }
 
 final class MutableCombinedReadStateView: MutablePostboxView {

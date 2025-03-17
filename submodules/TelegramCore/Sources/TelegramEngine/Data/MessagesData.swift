@@ -226,6 +226,42 @@ public extension TelegramEngine.EngineData.Item {
                 return Int(view.count(for: .peer(id: self.id, handleThreads: true)) ?? 0)
             }
         }
+        
+        public struct PeerUnreadState: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public struct Result: Equatable {
+                public var count: Int
+                public var isMarkedUnread: Bool
+                
+                public init(count: Int, isMarkedUnread: Bool) {
+                    self.count = count
+                    self.isMarkedUnread = isMarkedUnread
+                }
+            }
+
+            fileprivate let id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            var key: PostboxViewKey {
+                return .unreadCounts(items: [.peer(id: self.id, handleThreads: true)])
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? UnreadMessageCountsView else {
+                    preconditionFailure()
+                }
+
+                if let (value, isUnread) = view.countOrUnread(for: .peer(id: self.id, handleThreads: true)) {
+                    return Result(count: Int(value), isMarkedUnread: isUnread)
+                }
+                return Result(count: 0, isMarkedUnread: false)
+            }
+        }
 
         public struct TotalReadCounters: TelegramEngineDataItem, PostboxViewDataItem {
             public typealias Result = EngineTotalReadCounters

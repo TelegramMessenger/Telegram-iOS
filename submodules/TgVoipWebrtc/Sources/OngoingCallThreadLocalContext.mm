@@ -1,4 +1,5 @@
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
+#include <cstdint>
 
 #import "MediaUtils.h"
 
@@ -6,7 +7,6 @@
 #import "InstanceImpl.h"
 #import "v2/InstanceV2Impl.h"
 #import "v2/InstanceV2ReferenceImpl.h"
-//#import "v2_4_0_0/InstanceV2_4_0_0Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -474,7 +474,7 @@ public:
         _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+                _audioTransports[i]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -507,8 +507,8 @@ public:
     ) override {
         _mutex.Lock();
         if (!_audioTransports.empty()) {
-            for (size_t i = _audioTransports.size() - 1; i < _audioTransports.size(); i++) {
-                _audioTransports[_audioTransports.size() - 1]->RecordedDataIsAvailable(
+            for (size_t i = 0; i < _audioTransports.size(); i++) {
+                _audioTransports[i]->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -542,16 +542,59 @@ public:
         
         int32_t result = 0;
         if (!_audioTransports.empty()) {
-            result = _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
-                nSamples,
-                nBytesPerSample,
-                nChannels,
-                samplesPerSec,
-                audioSamples,
-                nSamplesOut,
-                elapsed_time_ms,
-                ntp_time_ms
-            );
+            if (_audioTransports.size() > 1) {
+                size_t totalNumSamples = nSamples * nBytesPerSample * nChannels;
+                if (_mixAudioSamples.size() < totalNumSamples) {
+                    _mixAudioSamples.resize(totalNumSamples);
+                }
+                memset(audioSamples, 0, totalNumSamples);
+
+                int16_t *resultAudioSamples = (int16_t *)audioSamples;
+
+                for (size_t i = 0; i < _audioTransports.size(); i++) {
+                    int64_t localElapsedTimeMs = 0;
+                    int64_t localNtpTimeMs = 0;
+                    size_t localNSamplesOut = 0;
+                    
+                    _audioTransports[i]->NeedMorePlayData(
+                        nSamples,
+                        nBytesPerSample,
+                        nChannels,
+                        samplesPerSec,
+                        _mixAudioSamples.data(),
+                        localNSamplesOut,
+                        &localElapsedTimeMs,
+                        &localNtpTimeMs
+                    );
+
+                    for (size_t j = 0; j < localNSamplesOut; j++) {
+                        int32_t mixedSample = (int32_t)resultAudioSamples[j] + (int32_t)_mixAudioSamples[j];
+                        resultAudioSamples[j] = (int16_t)std::clamp(mixedSample, INT16_MIN, INT16_MAX);
+                    }
+                    
+                    if (i == _audioTransports.size() - 1) {
+                        nSamplesOut = localNSamplesOut;
+                        if (elapsed_time_ms) {
+                            *elapsed_time_ms = localElapsedTimeMs;
+                        }
+                        if (ntp_time_ms) {
+                            *ntp_time_ms = localNtpTimeMs;
+                        }
+                    }
+                }
+                nSamplesOut = nSamples;
+            } else {
+                result = _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
+                    nSamples,
+                    nBytesPerSample,
+                    nChannels,
+                    samplesPerSec,
+                    audioSamples,
+                    nSamplesOut,
+                    elapsed_time_ms,
+                    ntp_time_ms
+                );
+            }
         } else {
             nSamplesOut = 0;
         }
@@ -620,6 +663,7 @@ private:
     bool _isStarted = false;
     std::vector<webrtc::AudioTransport *> _audioTransports;
     webrtc::Mutex _mutex;
+    std::vector<int16_t> _mixAudioSamples;
 };
 
 class WrappedChildAudioDeviceModule : public tgcalls::DefaultWrappedAudioDeviceModule {
@@ -629,6 +673,11 @@ public:
     }
     
     virtual ~WrappedChildAudioDeviceModule() {
+        if (_audioCallback) {
+            auto previousAudioCallback = _audioCallback;
+            _audioCallback = nullptr;
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, nullptr);
+        }
     }
     
     virtual int32_t RegisterAudioCallback(webrtc::AudioTransport *audioCallback) override {

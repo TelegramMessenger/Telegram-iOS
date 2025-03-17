@@ -65,10 +65,10 @@ function tgBrowserHandleMutations(mutations) {
     if (mutation.addedNodes && mutation.addedNodes.length > 0) {
       mutation.addedNodes.forEach((newNode) => {
         if (newNode.tagName === 'VIDEO') {
-          disableWebkitEnterFullscreen(newNode);
+          tgBrowserDisableWebkitEnterFullscreen(newNode);
         }
         if (newNode.querySelectorAll) {
-          newNode.querySelectorAll('video').forEach(disableWebkitEnterFullscreen);
+          newNode.querySelectorAll('video').forEach(tgBrowserDisableWebkitEnterFullscreen);
         }
       });
     }

@@ -266,6 +266,9 @@ public final class AccountContextImpl: AccountContext {
     
     public private(set) var isPremium: Bool
     
+    private var isFrozenDisposable: Disposable?
+    public private(set) var isFrozen: Bool
+    
     public let imageCache: AnyObject?
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions, temp: Bool = false)
@@ -280,6 +283,7 @@ public final class AccountContextImpl: AccountContext {
         self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
         self.isPremium = false
+        self.isFrozen = false
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -294,7 +298,7 @@ public final class AccountContextImpl: AccountContext {
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
             self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
             
-            self.inAppPurchaseManager = InAppPurchaseManager(engine: self.engine)
+            self.inAppPurchaseManager = InAppPurchaseManager(engine: .authorized(self.engine))
             self.starsContext = self.engine.payments.peerStarsContext()
         } else {
             self.prefetchManager = nil
@@ -319,6 +323,7 @@ public final class AccountContextImpl: AccountContext {
             }
         })
         self.animationRenderer = MultiAnimationRendererImpl()
+        (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = sharedContext.immediateExperimentalUISettings.compressedEmojiCache
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in
@@ -354,10 +359,11 @@ public final class AccountContextImpl: AccountContext {
             let _ = currentAppConfiguration.swap(value)
         })
         
+        let langCode = sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
         if !temp {
             let currentCountriesConfiguration = self.currentCountriesConfiguration
-            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: langCode)
             |> deliverOnMainQueue).start(next: { value in
                 let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
             })
@@ -451,6 +457,29 @@ public final class AccountContextImpl: AccountContext {
             }
             self.audioTranscriptionTrial = audioTranscriptionTrial
         })
+        
+        self.isFrozenDisposable = (self.appConfiguration
+        |> map { appConfiguration in
+            return AccountFreezeConfiguration.with(appConfiguration: appConfiguration).freezeUntilDate != nil
+        }
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).startStrict(next: { [weak self] isFrozen in
+            guard let self = self else {
+                return
+            }
+            self.isFrozen = isFrozen
+        })
+        
+        self.experimentalUISettingsDisposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.experimentalUISettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            guard let self else {
+                return
+            }
+            guard let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) else {
+                return
+            }
+            (self.animationRenderer as? MultiAnimationRendererImpl)?.useYuvA = settings.compressedEmojiCache
+        })
     }
     
     deinit {
@@ -463,6 +492,7 @@ public final class AccountContextImpl: AccountContext {
         self.animatedEmojiStickersDisposable?.dispose()
         self.userLimitsConfigurationDisposable?.dispose()
         self.peerNameColorsConfigurationDisposable?.dispose()
+        self.isFrozenDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

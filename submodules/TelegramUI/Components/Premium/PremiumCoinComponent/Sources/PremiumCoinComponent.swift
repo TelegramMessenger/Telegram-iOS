@@ -48,6 +48,9 @@ public final class PremiumCoinComponent: Component {
     
     public final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
         public final class Tag {
+            public init() {
+                
+            }
         }
         
         public func matches(tag: Any) -> Bool {
@@ -58,7 +61,7 @@ public final class PremiumCoinComponent: Component {
         }
         
         private var _ready = Promise<Bool>()
-        var ready: Signal<Bool, NoError> {
+        public var ready: Signal<Bool, NoError> {
             return self._ready.get()
         }
         

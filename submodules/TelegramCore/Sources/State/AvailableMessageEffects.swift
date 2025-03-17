@@ -2,6 +2,8 @@ import Foundation
 import TelegramApi
 import Postbox
 import SwiftSignalKit
+import FlatBuffers
+import FlatSerialization
 
 public final class AvailableMessageEffects: Equatable, Codable {
     public final class MessageEffect: Equatable, Codable {
@@ -10,24 +12,27 @@ public final class AvailableMessageEffects: Equatable, Codable {
             case isPremium
             case emoticon
             case staticIcon
+            case staticIconData = "sid"
             case effectSticker
+            case effectStickerData = "esd"
             case effectAnimation
+            case effectAnimationData = "ead"
         }
         
         public let id: Int64
         public let isPremium: Bool
         public let emoticon: String
-        public let staticIcon: TelegramMediaFile?
-        public let effectSticker: TelegramMediaFile
-        public let effectAnimation: TelegramMediaFile?
+        public let staticIcon: TelegramMediaFile.Accessor?
+        public let effectSticker: TelegramMediaFile.Accessor
+        public let effectAnimation: TelegramMediaFile.Accessor?
         
         public init(
             id: Int64,
             isPremium: Bool,
             emoticon: String,
-            staticIcon: TelegramMediaFile?,
-            effectSticker: TelegramMediaFile,
-            effectAnimation: TelegramMediaFile?
+            staticIcon: TelegramMediaFile.Accessor?,
+            effectSticker: TelegramMediaFile.Accessor,
+            effectAnimation: TelegramMediaFile.Accessor?
         ) {
             self.id = id
             self.isPremium = isPremium
@@ -66,19 +71,28 @@ public final class AvailableMessageEffects: Equatable, Codable {
             self.isPremium = try container.decodeIfPresent(Bool.self, forKey: .isPremium) ?? false
             self.emoticon = try container.decode(String.self, forKey: .emoticon)
             
-            if let staticIconData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon) {
-                self.staticIcon = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data)))
+            if let staticIconData = try container.decodeIfPresent(Data.self, forKey: .staticIconData) {
+                var byteBuffer = ByteBuffer(data: staticIconData)
+                self.staticIcon = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, staticIconData)
+            } else if let staticIconData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon) {
+                self.staticIcon = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data))))
             } else {
                 self.staticIcon = nil
             }
             
-            do {
+            if let effectStickerData = try container.decodeIfPresent(Data.self, forKey: .effectStickerData) {
+                var byteBuffer = ByteBuffer(data: effectStickerData)
+                self.effectSticker = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, effectStickerData)
+            } else {
                 let effectStickerData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectSticker)
-                self.effectSticker = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectStickerData.data)))
+                self.effectSticker = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectStickerData.data))))
             }
             
-            if let effectAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation) {
-                self.effectAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data)))
+            if let effectAnimationData = try container.decodeIfPresent(Data.self, forKey: .effectAnimationData) {
+                var byteBuffer = ByteBuffer(data: effectAnimationData)
+                self.effectAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, effectAnimationData)
+            } else if let effectAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation) {
+                self.effectAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data))))
             } else {
                 self.effectAnimation = nil
             }
@@ -91,12 +105,26 @@ public final class AvailableMessageEffects: Equatable, Codable {
             try container.encode(self.emoticon, forKey: .emoticon)
             try container.encode(self.isPremium, forKey: .isPremium)
             
-            if let staticIcon = self.staticIcon {
-                try container.encode(PostboxEncoder().encodeObjectToRawData(staticIcon), forKey: .staticIcon)
+            let encodeFileItem: (TelegramMediaFile.Accessor, CodingKeys) throws -> Void = { file, key in
+                if let serializedFile = file._wrappedData {
+                    try container.encode(serializedFile, forKey: key)
+                } else if let file = file._wrappedFile {
+                    var builder = FlatBufferBuilder(initialSize: 1024)
+                    let value = file.encodeToFlatBuffers(builder: &builder)
+                    builder.finish(offset: value)
+                    let serializedFile = builder.data
+                    try container.encode(serializedFile, forKey: key)
+                } else {
+                    preconditionFailure()
+                }
             }
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.effectSticker), forKey: .effectSticker)
+            
+            if let staticIcon = self.staticIcon {
+                try encodeFileItem(staticIcon, .staticIconData)
+            }
+            try encodeFileItem(self.effectSticker, .effectStickerData)
             if let effectAnimation = self.effectAnimation {
-                try container.encode(PostboxEncoder().encodeObjectToRawData(effectAnimation), forKey: .effectAnimation)
+                try encodeFileItem(effectAnimation, .effectAnimationData)
             }
         }
     }
@@ -142,8 +170,6 @@ public final class AvailableMessageEffects: Equatable, Codable {
     }
 }
 
-//availableEffect flags:# premium_required:flags.2?true id:long emoticon:string static_icon_id:flags.0?long effect_sticker_id:long effect_animation_id:flags.1?long = AvailableEffect;
-
 private extension AvailableMessageEffects.MessageEffect {
     convenience init?(apiMessageEffect: Api.AvailableEffect, files: [Int64: TelegramMediaFile]) {
         switch apiMessageEffect {
@@ -157,9 +183,9 @@ private extension AvailableMessageEffects.MessageEffect {
                 id: id,
                 isPremium: isPremium,
                 emoticon: emoticon,
-                staticIcon: staticIconId.flatMap({ files[$0] }),
-                effectSticker: effectSticker,
-                effectAnimation: effectAnimationId.flatMap({ files[$0] })
+                staticIcon: staticIconId.flatMap({ files[$0].flatMap(TelegramMediaFile.Accessor.init) }),
+                effectSticker: TelegramMediaFile.Accessor(effectSticker),
+                effectAnimation: effectAnimationId.flatMap({ files[$0].flatMap(TelegramMediaFile.Accessor.init) })
             )
         }
     }
@@ -288,23 +314,4 @@ func managedSynchronizeAvailableMessageEffects(postbox: Postbox, network: Networ
     	)
     )
     |> restart
-}
-
-public extension Message {
-    func messageEffect(availableMessageEffects: AvailableMessageEffects?) -> AvailableMessageEffects.MessageEffect? {
-        guard let availableMessageEffects else {
-            return nil
-        }
-        for attribute in self.attributes {
-            if let attribute = attribute as? EffectMessageAttribute {
-                for effect in availableMessageEffects.messageEffects {
-                    if effect.id == attribute.id {
-                        return effect
-                    }
-                }
-                break
-            }
-        }
-        return nil
-    }
 }

@@ -465,12 +465,14 @@ final class GiftSetupScreenComponent: Component {
                     switch error {
                     case .starGiftOutOfStock:
                         errorText = presentationData.strings.Gift_Send_ErrorOutOfStock
+                    case .disallowedStarGift:
+                        errorText = presentationData.strings.Gift_Send_ErrorDisallowed(self.peerMap[peerId]?.compactDisplayTitle ?? "").string
                     default:
                         errorText = presentationData.strings.Gift_Send_ErrorUnknown
                     }
                     
                     if let errorText = errorText {
-                        let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                        let alertController = textAlertController(context: component.context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true)
                         controller.present(alertController, in: .window(.root))
                     }
                 })
@@ -498,16 +500,8 @@ final class GiftSetupScreenComponent: Component {
                             
                             starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
                             
-                            let _ = (starsContext.state
-                            |> take(until: { value in
-                                if let value {
-                                    if !value.flags.contains(.isPendingBalance) {
-                                        return SignalTakeAction(passthrough: true, complete: true)
-                                    }
-                                }
-                                return SignalTakeAction(passthrough: false, complete: false)
-                            })
-                            |> deliverOnMainQueue).start(next: { _ in
+                            let _ = (starsContext.onUpdate
+                            |> deliverOnMainQueue).start(next: {
                                 proceed()
                             })
                         }
@@ -1602,7 +1596,8 @@ final class GiftSetupScreenComponent: Component {
                     replyMessage: nil,
                     accountPeerColor: nil,
                     businessIntro: nil,
-                    starGiftsAvailable: false
+                    starGiftsAvailable: false,
+                    alwaysShowGiftButton: false
                 )
                 
                 self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor

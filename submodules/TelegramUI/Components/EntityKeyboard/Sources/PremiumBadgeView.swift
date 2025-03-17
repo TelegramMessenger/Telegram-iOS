@@ -81,7 +81,7 @@ final class PremiumBadgeView: UIView {
                         context: self.context,
                         userLocation: .other,
                         attemptSynchronousLoad: false,
-                        file: customFile,
+                        file: customFile._parse(),
                         cache: self.context.animationCache,
                         renderer: self.context.animationRenderer,
                         unique: false,

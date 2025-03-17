@@ -761,7 +761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil, accountPeerColor: nil, businessIntro: nil, starGiftsAvailable: false, alwaysShowGiftButton: false)
         
         if case let .customChatContents(customChatContents) = subject {
             switch customChatContents.kind {
@@ -3140,19 +3140,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetry, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                     }, action: { [weak self] _, f in
-                        if let strongSelf = self {
-                            let _ = resendMessages(account: strongSelf.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                        if let self {
+                            self.presentPaidMessageAlertIfNeeded(count: Int32(selectedGroup.count), alwaysAsk: true, completion: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                let _ = resendMessages(account: self.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                            })
+                            f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                         }
-                        f(.dismissWithoutContent)
                     })))
                     if totalGroupCount != 1 {
                         actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetryAll(totalGroupCount).string, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                         }, action: { [weak self] _, f in
-                            if let strongSelf = self {
-                                let _ = resendMessages(account: strongSelf.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                            if let self {
+                                self.presentPaidMessageAlertIfNeeded(count: Int32(messages.count), alwaysAsk: true, completion: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = resendMessages(account: self.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                                })
+                                f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                             }
-                            f(.dismissWithoutContent)
                         })))
                     }
                     actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
@@ -3389,42 +3399,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
         }, scheduleCurrentMessage: { [weak self] params in
-            if let strongSelf = self {
-                strongSelf.presentScheduleTimePicker(completion: { [weak self] time in
-                    if let strongSelf = self {
-                        if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                            strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: (params?.effect).flatMap {
-                                return ChatSendMessageEffect(id: $0.id)
-                            })
-                        } else {
-                            let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
-                            strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: (params?.effect).flatMap {
-                                return ChatSendMessageEffect(id: $0.id)
-                            }) { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
-                                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                                    })
-                                    
-                                    if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
-                                        strongSelf.openScheduledMessages()
-                                    }
+            guard let self else {
+                return
+            }
+            guard !self.presentAccountFrozenInfoIfNeeded() else {
+                return
+            }
+            self.presentScheduleTimePicker(completion: { [weak self] time in
+                if let strongSelf = self {
+                    if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
+                        strongSelf.sendMediaRecording(scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                            return ChatSendMessageEffect(id: $0.id)
+                        })
+                    } else {
+                        let silentPosting = strongSelf.presentationInterfaceState.interfaceState.silentPosting
+                        strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, scheduleTime: time, messageEffect: (params?.effect).flatMap {
+                            return ChatSendMessageEffect(id: $0.id)
+                        }) { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
+                                    $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
+                                })
+                                
+                                if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
+                                    strongSelf.openScheduledMessages()
                                 }
                             }
                         }
                     }
-                })
-            }
-        }, sendScheduledMessagesNow: { [weak self] messageIds in
-            if let strongSelf = self {
-                if let _ = strongSelf.presentationInterfaceState.slowmodeState {
-                    if let rect = strongSelf.chatDisplayNode.frameForInputActionButton() {
-                        strongSelf.interfaceInteraction?.displaySlowmodeTooltip(strongSelf.chatDisplayNode.view, rect)
-                    }
-                    return
-                } else {
-                    let _ = strongSelf.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).startStandalone()
                 }
+            })
+        }, sendScheduledMessagesNow: { [weak self] messageIds in
+            guard let self else {
+                return
+            }
+            guard !self.presentAccountFrozenInfoIfNeeded() else {
+                return
+            }
+            
+            if let _ = self.presentationInterfaceState.slowmodeState {
+                if let rect = self.chatDisplayNode.frameForInputActionButton() {
+                    self.interfaceInteraction?.displaySlowmodeTooltip(self.chatDisplayNode.view, rect)
+                }
+                return
+            } else {
+                let _ = self.context.engine.messages.sendScheduledMessageNowInteractively(messageId: messageIds.first!).startStandalone()
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
             if let strongSelf = self, let messageId = messageIds.first {
@@ -5776,7 +5795,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
-                                sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
+                                } else {
+                                    sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -6364,9 +6386,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
-                        var copyProtectionEnabled: Bool = false
+                        var copyProtectionEnabled = false
                         var businessIntro: TelegramBusinessIntro?
                         var sendPaidMessageStars: StarsAmount?
+                        var alwaysShowGiftButton = false
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
@@ -6374,6 +6397,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
+                                alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -6669,6 +6693,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedBusinessIntro(businessIntro)
                                     .updatedSendPaidMessageStars(sendPaidMessageStars)
+                                    .updatedAlwaysShowGiftButton(alwaysShowGiftButton)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         

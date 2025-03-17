@@ -19,13 +19,13 @@ import ListItemSliderSelectorComponent
 import ListActionItemComponent
 import Markdown
 import BlurredBackgroundComponent
-import PremiumUI
 import PresentationDataUtils
 import PeerListItemComponent
 import TelegramStringFormatting
 import ContextUI
 import BalancedTextComponent
 import AlertComponent
+import PremiumCoinComponent
 
 private func textForTimeout(value: Int32) -> String {
     if value < 3600 {

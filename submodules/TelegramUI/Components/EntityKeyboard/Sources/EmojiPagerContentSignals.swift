@@ -287,7 +287,9 @@ public extension EmojiPagerContentComponent {
                         if item.file.isAnimatedSticker {
                             type = .lottie
                         } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                            type = .video
+                            type = .video(isVP9: true)
+                        } else if item.file.isVideo {
+                            type = .video(isVP9: false)
                         } else {
                             type = .still
                         }
@@ -1390,7 +1392,9 @@ public extension EmojiPagerContentComponent {
                                     if item.file.isAnimatedSticker {
                                         type = .lottie
                                     } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                                        type = .video
+                                        type = .video(isVP9: true)
+                                    } else if item.file.isVideo {
+                                        type = .video(isVP9: false)
                                     } else {
                                         type = .still
                                     }
@@ -1477,7 +1481,9 @@ public extension EmojiPagerContentComponent {
                                     if item.file.isAnimatedSticker {
                                         type = .lottie
                                     } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                                        type = .video
+                                        type = .video(isVP9: true)
+                                    } else if item.file.isVideo {
+                                        type = .video(isVP9: false)
                                     } else {
                                         type = .still
                                     }
@@ -1774,7 +1780,9 @@ public extension EmojiPagerContentComponent {
                         if item.file.isAnimatedSticker {
                             type = .lottie
                         } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                            type = .video
+                            type = .video(isVP9: true)
+                        } else if item.file.isVideo {
+                            type = .video(isVP9: false)
                         } else {
                             type = .still
                         }
@@ -2011,7 +2019,9 @@ public extension EmojiPagerContentComponent {
                                 if item.file.isAnimatedSticker {
                                     type = .lottie
                                 } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                                    type = .video
+                                    type = .video(isVP9: true)
+                                } else if item.file.isVideo {
+                                    type = .video(isVP9: false)
                                 } else {
                                     type = .still
                                 }
@@ -2090,7 +2100,9 @@ public extension EmojiPagerContentComponent {
                             if item.file.isAnimatedSticker {
                                 type = .lottie
                             } else if item.file.isVideoEmoji || item.file.isVideoSticker {
-                                type = .video
+                                type = .video(isVP9: true)
+                            } else if item.file.isVideo {
+                                type = .video(isVP9: false)
                             } else {
                                 type = .still
                             }
@@ -2234,7 +2246,7 @@ public extension EmojiPagerContentComponent {
                             continue
                         }
                         
-                        let itemFile: TelegramMediaFile = item.effectSticker
+                        let itemFile = item.effectSticker
                         
                         var tintMode: Item.TintMode = .none
                         if itemFile.isCustomTemplateEmoji {
@@ -2258,11 +2270,11 @@ public extension EmojiPagerContentComponent {
                             }
                         }
                         
-                        let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile), partialReference: .none)
+                        let animationData = EntityKeyboardAnimationData(file: itemFile, partialReference: .none)
                         let resultItem = EmojiPagerContentComponent.Item(
                             animationData: animationData,
                             content: .animation(animationData),
-                            itemFile: TelegramMediaFile.Accessor(itemFile),
+                            itemFile: itemFile,
                             subgroupId: nil,
                             icon: icon,
                             tintMode: tintMode

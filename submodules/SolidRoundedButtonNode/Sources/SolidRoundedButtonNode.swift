@@ -1412,7 +1412,7 @@ public final class SolidRoundedButtonView: UIView {
         }
         
         self.titleNode.attributedText = titleText
-        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.medium(11.0), textColor: theme.foregroundColor.withAlphaComponent(0.7))
         
         self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: theme.foregroundColor)
         
@@ -1472,7 +1472,7 @@ public final class SolidRoundedButtonView: UIView {
         }
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
-        let spacingOffset: CGFloat = 9.0
+        let spacingOffset: CGFloat = 7.0
         let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
         let iconSpacing: CGFloat = self.iconSpacing
         let badgeSpacing: CGFloat = 6.0
@@ -1533,11 +1533,11 @@ public final class SolidRoundedButtonView: UIView {
         }
         
         if self.subtitle != self.subtitleNode.attributedText?.string {
-            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.medium(11.0), textColor: self.theme.foregroundColor.withAlphaComponent(0.7))
         }
         
         let subtitleSize = self.subtitleNode.updateLayout(buttonSize)
-        let subtitleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - subtitleSize.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - titleSize.height) / 2.0) + spacingOffset + 2.0), size: subtitleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - subtitleSize.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - titleSize.height) / 2.0) + spacingOffset + 7.0), size: subtitleSize)
         transition.updateFrame(view: self.subtitleNode, frame: subtitleFrame)
         
         if previousSubtitle == nil && self.subtitle != nil {

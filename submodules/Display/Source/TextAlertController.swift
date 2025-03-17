@@ -129,7 +129,7 @@ public final class TextAlertContentActionNode: HighlightableButtonNode {
         if let range = attributedString.string.range(of: "$") {
             attributedString.addAttribute(.attachment, value: UIImage(bundleImageName: "Item List/PremiumIcon")!, range: NSRange(range, in: attributedString.string))
             attributedString.addAttribute(.foregroundColor, value: color, range: NSRange(range, in: attributedString.string))
-            attributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: attributedString.string))
+            attributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: attributedString.string))
         }
         
         self.setAttributedTitle(attributedString, for: [])

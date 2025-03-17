@@ -98,7 +98,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case browserExperiment(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
-    case storiesExperiment(Bool)
+    case compressedEmojiCache(Bool)
     case storiesJpegExperiment(Bool)
     case conferenceDebug(Bool)
     case enableQuickReactionSwitch(Bool)
@@ -133,7 +133,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .conferenceDebug, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .conferenceDebug, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -236,7 +236,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 44
         case .resetTranslationStates:
             return 45
-        case .storiesExperiment:
+        case .compressedEmojiCache:
             return 46
         case .storiesJpegExperiment:
             return 47
@@ -1288,12 +1288,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .storiesExperiment(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Story Search Debug", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .compressedEmojiCache(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Compressed Emoji Cache", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.storiesExperiment = value
+                        settings.compressedEmojiCache = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1535,11 +1535,10 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.logTranslationRecognition(experimentalSettings.logLanguageRecognition))
         entries.append(.resetTranslationStates)
                 
-        if case .internal = sharedContext.applicationBindings.appBuildType {
-            entries.append(.storiesExperiment(experimentalSettings.storiesExperiment))
-            entries.append(.storiesJpegExperiment(experimentalSettings.storiesJpegExperiment))
-            entries.append(.disableReloginTokens(experimentalSettings.disableReloginTokens))
-        }
+        entries.append(.compressedEmojiCache(experimentalSettings.compressedEmojiCache))
+        entries.append(.storiesJpegExperiment(experimentalSettings.storiesJpegExperiment))
+        entries.append(.disableReloginTokens(experimentalSettings.disableReloginTokens))
+        
         entries.append(.conferenceDebug(experimentalSettings.conferenceDebug))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
         entries.append(.liveStreamV2(experimentalSettings.liveStreamV2))

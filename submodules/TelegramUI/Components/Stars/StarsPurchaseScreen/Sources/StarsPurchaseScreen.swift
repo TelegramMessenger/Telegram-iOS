@@ -241,6 +241,8 @@ private final class StarsPurchaseScreenContentComponent: CombinedComponent {
                 textString = strings.Stars_Purchase_StarGiftInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
             case .upgradeStarGift:
                 textString = strings.Stars_Purchase_UpgradeStarGiftInfo
+            case .transferStarGift:
+                textString = strings.Stars_Purchase_TransferStarGiftInfo
             case let .sendMessage(peerId, _):
                 if peerId.namespace == Namespaces.Peer.CloudUser {
                     textString = strings.Stars_Purchase_SendMessageInfo(component.peers.first?.value.compactDisplayTitle ?? "").string
@@ -828,7 +830,7 @@ private final class StarsPurchaseScreenComponent: CombinedComponent {
                 titleText = strings.Stars_Purchase_GetStars
             case .gift:
                 titleText = strings.Stars_Purchase_GiftStars
-            case let .topUp(requiredStars, _), let .transfer(_, requiredStars), let .reactions(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars), let .starGift(_, requiredStars), let .upgradeStarGift(requiredStars), let .sendMessage(_, requiredStars):
+            case let .topUp(requiredStars, _), let .transfer(_, requiredStars), let .reactions(_, requiredStars), let .subscription(_, requiredStars, _), let .unlockMedia(requiredStars), let .starGift(_, requiredStars), let .upgradeStarGift(requiredStars), let .transferStarGift(requiredStars), let .sendMessage(_, requiredStars):
                 titleText = strings.Stars_Purchase_StarsNeeded(Int32(requiredStars))
             }
             
@@ -1273,6 +1275,8 @@ private extension StarsPurchasePurpose {
         case let .starGift(_, requiredStars):
             return requiredStars
         case let .upgradeStarGift(requiredStars):
+            return requiredStars
+        case let .transferStarGift(requiredStars):
             return requiredStars
         case let .sendMessage(_, requiredStars):
             return requiredStars

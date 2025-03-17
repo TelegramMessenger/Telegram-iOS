@@ -20,6 +20,7 @@ import TelegramNotices
 import AuthenticationServices
 import Markdown
 import AlertUI
+import InAppPurchaseManager
 import ObjectiveC
 
 private var ObjCKey_Delegate: Int?
@@ -59,6 +60,8 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         return TelegramEngineUnauthorized(account: self.account)
     }
     
+    private var inAppPurchaseManager: InAppPurchaseManager!
+    
     public init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, otherAccountPhoneNumbers: ((String, AccountRecordId, Bool)?, [(String, AccountRecordId, Bool)]), presentationData: PresentationData, openUrl: @escaping (String) -> Void, apiId: Int32, apiHash: String, authorizationCompleted: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
@@ -78,6 +81,8 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
         }
         
         super.init(mode: .single, theme: NavigationControllerTheme(statusBar: navigationStatusBar, navigationBar: AuthorizationSequenceController.navigationBarTheme(presentationData.theme), emptyAreaColor: .black), isFlat: true)
+        
+        self.inAppPurchaseManager = InAppPurchaseManager(engine: .unauthorized(self.engine))
         
         self.stateDisposable = (self.engine.auth.state()
         |> map { state -> InnerState in
@@ -351,7 +356,7 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                             |> deliverOnMainQueue).startStrict(error: { [weak self] error in
                                 if let self, case .alreadyInProgress = error {
                                     let formattedNumber = formatPhoneNumber(number)
-                                    let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+                                    let title = NSAttributedString(string: self.presentationData.strings.Login_Email_PremiumRequiredTitle, font: Font.semibold(self.presentationData.listsFontSize.baseDisplaySize), textColor: self.presentationData.theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
                                     let text = parseMarkdownIntoAttributedString(self.presentationData.strings.Login_Email_PremiumRequiredText(formattedNumber).string, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                                     
                                     let alertController = textWithEntitiesAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_OK, action: { })])
@@ -755,6 +760,17 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
             }
         }
         controller.updateData(appleSignInAllowed: appleSignInAllowed)
+        return controller
+    }
+    
+    private func paymentController(number: String, phoneCodeHash: String, storeProduct: String) -> AuthorizationSequencePaymentScreen {
+        let controller = AuthorizationSequencePaymentScreen(sharedContext: self.sharedContext, engine: self.engine, presentationData: self.presentationData, inAppPurchaseManager: self.inAppPurchaseManager, phoneNumber: number, phoneCodeHash: phoneCodeHash, storeProduct: storeProduct, back: { [weak self] in
+            guard let self else {
+                return
+            }
+            let countryCode = AuthorizationSequenceController.defaultCountryCode()
+            let _ = self.engine.auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: self.account.testingEnvironment, masterDatacenterId: self.account.masterDatacenterId, contents: .phoneEntry(countryCode: countryCode, number: ""))).startStandalone()
+        })
         return controller
     }
     
@@ -1284,6 +1300,13 @@ public final class AuthorizationSequenceController: NavigationController, ASAuth
                         displayCancel = true
                     }
                     controllers.append(self.signUpController(firstName: firstName, lastName: lastName, termsOfService: termsOfService, displayCancel: displayCancel))
+                    self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
+                case let .payment(number, codeHash, storeProduct, _):
+                    var controllers: [ViewController] = []
+                    if !self.otherAccountPhoneNumbers.1.isEmpty {
+                        controllers.append(self.splashController())
+                    }
+                    controllers.append(self.paymentController(number: number, phoneCodeHash: codeHash, storeProduct: storeProduct))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
             }
         }

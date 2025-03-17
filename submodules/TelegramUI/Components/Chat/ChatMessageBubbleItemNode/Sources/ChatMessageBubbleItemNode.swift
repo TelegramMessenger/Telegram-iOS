@@ -130,7 +130,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((message, ChatMessageRestrictedBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 needReactions = false
                 break outer
-            } else if let _ = attribute as? PaidStarsMessageAttribute, !addedPriceInfo {
+            } else if let _ = attribute as? PaidStarsMessageAttribute, !addedPriceInfo, message.id.peerId.namespace == Namespaces.Peer.CloudUser {
                 result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 addedPriceInfo = true
             }
@@ -299,7 +299,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     }
                     
                     if isMediaInverted {
-                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: 0)
+                        result.insert((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)), at: addedPriceInfo ? 1 : 0)
                     } else {
                         result.append((message, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: isFile ? .condensed : .default)))
                         needReactions = false
@@ -327,7 +327,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     }
                     
                     if let attribute = message.attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute, attribute.leadingPreview {
-                        result.insert((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: 0)
+                        result.insert((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: addedPriceInfo ? 1 : 0)
                     } else {
                         result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                     }
@@ -362,7 +362,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             if result.isEmpty {
                 needReactions = false
             }
-            result.insert((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: 0)
+            result.insert((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)), at: addedPriceInfo ? 1 : 0)
         } else {
             result.append((messageWithCaptionToAdd, ChatMessageTextBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
             needReactions = false
@@ -2276,6 +2276,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                var starsCount: Int64?
                 var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeerId: item.context.account.peerId, accountPeer: item.associatedData.accountPeer, message: message)
                 if message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
                     dateReactionsAndPeers = ([], [])
@@ -2289,6 +2290,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
                             dateReplies = Int(attribute.count)
                         }
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute, item.message.id.peerId.namespace == Namespaces.Peer.CloudChannel {
+                        starsCount = attribute.stars.value
                     }
                 }
                 
@@ -2337,6 +2340,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     areReactionsTags: item.message.areReactionsTags(accountPeerId: item.context.account.peerId),
                     messageEffect: item.message.messageEffect(availableMessageEffects: item.associatedData.availableMessageEffects),
                     replyCount: dateReplies,
+                    starsCount: starsCount,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
                     canViewReactionList: canViewMessageReactionList(message: message),
@@ -2968,7 +2972,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             } else {
                 let contentProperties = contentPropertiesAndLayouts[i].3
                 
-                if i == 0 && !headerSize.height.isZero {
+                if (i == 0 || (i == 1 && detachedContentNodesHeight > 0)) && !headerSize.height.isZero {
                     if contentGroupId == nil {
                         contentNodesHeight += properties.headerSpacing
                     }
@@ -2981,7 +2985,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if !contentContainerNodeFrames.isEmpty {
                             overlapOffset = currentContainerGroupOverlap
                         }
-                        let containerFrame = CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight)
+                        var containerContentNodesOrigin = contentNodesHeight
+                        var containerContentNodesHeight = contentNodesHeight
+                        if detachedContentNodesHeight > 0 {
+                            if contentContainerNodeFrames.isEmpty {
+                                containerContentNodesHeight -= detachedContentNodesHeight - 4.0
+                                containerContentNodesOrigin -= detachedContentNodesHeight - 4.0
+                            }
+                        }
+                        let containerFrame = CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - containerContentNodesOrigin - overlapOffset, width: maxContentWidth, height: containerContentNodesHeight)
                         contentContainerNodeFrames.append((containerGroupId, containerFrame, currentItemSelection, currentContainerGroupOverlap))
                                                 
                         if !overlapOffset.isZero {
@@ -2997,7 +3009,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 
                 var contentNodeOriginY = contentNodesHeight
-                if detachedContentNodesHeight > 0 {
+                if detachedContentNodesHeight > 0, contentContainerNodeFrames.isEmpty {
                     contentNodeOriginY -= detachedContentNodesHeight - 4.0
                 }
                 
@@ -3025,7 +3037,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if !contentContainerNodeFrames.isEmpty {
                 overlapOffset = currentContainerGroupOverlap
             }
-            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - contentNodesHeight - overlapOffset, width: maxContentWidth, height: contentNodesHeight), currentItemSelection, currentContainerGroupOverlap))
+            var containerContentNodesOrigin = contentNodesHeight
+            var containerContentNodesHeight = contentNodesHeight
+            if detachedContentNodesHeight > 0 {
+                if contentContainerNodeFrames.isEmpty {
+                    containerContentNodesHeight -= detachedContentNodesHeight - 4.0
+                    containerContentNodesOrigin -= detachedContentNodesHeight - 4.0
+                }
+            }
+            contentContainerNodeFrames.append((containerGroupId, CGRect(x: 0.0, y: headerSize.height + totalContentNodesHeight - containerContentNodesOrigin - overlapOffset, width: maxContentWidth, height: containerContentNodesHeight), currentItemSelection, currentContainerGroupOverlap))
             if !overlapOffset.isZero {
                 totalContentNodesHeight -= currentContainerGroupOverlap
             }

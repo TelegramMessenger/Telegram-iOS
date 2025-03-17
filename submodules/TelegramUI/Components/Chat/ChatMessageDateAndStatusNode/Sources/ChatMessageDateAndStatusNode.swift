@@ -195,6 +195,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var areReactionsTags: Bool
         var messageEffect: AvailableMessageEffects.MessageEffect?
         var replyCount: Int
+        var starsCount: Int64?
         var isPinned: Bool
         var hasAutoremove: Bool
         var canViewReactionList: Bool
@@ -218,6 +219,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             areReactionsTags: Bool,
             messageEffect: AvailableMessageEffects.MessageEffect?,
             replyCount: Int,
+            starsCount: Int64?,
             isPinned: Bool,
             hasAutoremove: Bool,
             canViewReactionList: Bool,
@@ -240,6 +242,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.areReactionsTags = areReactionsTags
             self.messageEffect = messageEffect
             self.replyCount = replyCount
+            self.starsCount = starsCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
             self.canViewReactionList = canViewReactionList
@@ -262,7 +265,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var repliesIcon: ASImageNode?
     private var selfExpiringIcon: ASImageNode?
     private var replyCountNode: TextNode?
-    
+    private var starsIcon: ASImageNode?
+    private var starsCountNode: TextNode?
+
     private var type: ChatMessageDateAndStatusType?
     private var theme: ChatPresentationThemeData?
     private var layoutSize: CGSize?
@@ -316,12 +321,14 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
         var currentBackgroundNode = self.backgroundNode
         var currentImpressionIcon = self.impressionIcon
         var currentRepliesIcon = self.repliesIcon
-        
+        var currentStarsIcon = self.starsIcon
+
         let currentType = self.type
         let currentTheme = self.theme
 
         let makeReplyCountLayout = TextNode.asyncLayout(self.replyCountNode)
-        
+        let makeStarsCountLayout = TextNode.asyncLayout(self.starsCountNode)
+
         let reactionButtonsContainer = self.reactionButtonsContainer
         
         return { [weak self] arguments in
@@ -337,7 +344,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             let clockMinImage: UIImage?
             var impressionImage: UIImage?
             var repliesImage: UIImage?
-            
+            var starsImage: UIImage?
+
             let themeUpdated = arguments.presentationData.theme != currentTheme || arguments.type != currentType
             
             let graphics = PresentationResourcesChat.principalGraphics(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, bubbleCorners: arguments.presentationData.chatBubbleCorners)
@@ -404,6 +412,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else if arguments.isPinned {
                     repliesImage = graphics.incomingDateAndStatusPinnedIcon
                 }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.incomingDateAndStatusStarsIcon
+                }
             case let .BubbleOutgoing(status):
                 dateColor = arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                 outgoingStatus = status
@@ -419,6 +430,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.outgoingDateAndStatusRepliesIcon
                 } else if arguments.isPinned {
                     repliesImage = graphics.outgoingDateAndStatusPinnedIcon
+                }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.outgoingDateAndStatusStarsIcon
                 }
             case .ImageIncoming:
                 dateColor = arguments.presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
@@ -436,6 +450,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else if arguments.isPinned {
                     repliesImage = graphics.mediaPinnedIcon
                 }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.mediaStarsIcon
+                }
             case let .ImageOutgoing(status):
                 dateColor = arguments.presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor
                 outgoingStatus = status
@@ -452,6 +469,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.mediaRepliesIcon
                 } else if arguments.isPinned {
                     repliesImage = graphics.mediaPinnedIcon
+                }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.mediaStarsIcon
                 }
             case .FreeIncoming:
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
@@ -471,6 +491,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 } else if arguments.isPinned {
                     repliesImage = graphics.freePinnedIcon
                 }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.freeStarsIcon
+                }
             case let .FreeOutgoing(status):
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
                 dateColor = serviceColor.primaryText
@@ -488,6 +511,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                     repliesImage = graphics.freeRepliesIcon
                 } else if arguments.isPinned {
                     repliesImage = graphics.freePinnedIcon
+                }
+                if (arguments.starsCount ?? 0)  != 0 {
+                    starsImage = graphics.freeStarsIcon
                 }
             }
             
@@ -539,6 +565,20 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 repliesIconSize = repliesImage.size
             } else {
                 currentRepliesIcon = nil
+            }
+            
+            var starsIconSize = CGSize()
+            if let starsImage = starsImage {
+                if currentStarsIcon == nil {
+                    let iconNode = ASImageNode()
+                    iconNode.isLayerBacked = true
+                    iconNode.displayWithoutProcessing = true
+                    iconNode.displaysAsynchronously = false
+                    currentStarsIcon = iconNode
+                }
+                starsIconSize = starsImage.size
+            } else {
+                currentStarsIcon = nil
             }
             
             if let outgoingStatus = outgoingStatus {
@@ -652,7 +692,8 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
 
             var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
-            
+            var starsCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+
             let reactionSize: CGFloat = 8.0
             let reactionSpacing: CGFloat = 2.0
             let reactionTrailingSpacing: CGFloat = 6.0
@@ -671,9 +712,27 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 
                 let layoutAndApply = makeReplyCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
                 reactionInset += 14.0 + layoutAndApply.0.size.width + 4.0
+                if arguments.starsCount != nil {
+                    reactionInset += 3.0
+                }
                 replyCountLayoutAndApply = layoutAndApply
             } else if arguments.isPinned {
                 reactionInset += 12.0
+            }
+            
+            if let starsCount = arguments.starsCount, starsCount > 0 {
+                let countString: String
+                if starsCount > 1000000 {
+                    countString = "\(starsCount / 1000000)M"
+                } else if starsCount > 1000 {
+                    countString = "\(starsCount / 1000)K"
+                } else {
+                    countString = "\(starsCount)"
+                }
+                
+                let layoutAndApply = makeStarsCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: countString, font: dateFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                reactionInset += 14.0 + layoutAndApply.0.size.width + 4.0
+                starsCountLayoutAndApply = layoutAndApply
             }
             
             if arguments.messageEffect != nil {
@@ -1116,7 +1175,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 
                                 var centerAnimation: TelegramMediaFile?
                                 
-                                centerAnimation = messageEffect.staticIcon
+                                centerAnimation = messageEffect.staticIcon?._parse()
                                 
                                 node.update(
                                     context: arguments.context,
@@ -1227,6 +1286,9 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                             let replyCountFrame = CGRect(origin: CGPoint(x: reactionOffset + 4.0, y: backgroundInsets.top + 1.0 + offset + verticalInset), size: layout.size)
                             animation.animator.updateFrame(layer: node.layer, frame: replyCountFrame, completion: nil)
                             reactionOffset += 4.0 + layout.size.width
+                            if currentStarsIcon != nil {
+                                reactionOffset += 8.0
+                            }
                         } else if let replyCountNode = strongSelf.replyCountNode {
                             strongSelf.replyCountNode = nil
                             if animation.isAnimated {
@@ -1235,6 +1297,56 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 })
                             } else {
                                 replyCountNode.removeFromSupernode()
+                            }
+                        }
+                        
+                        if let currentStarsIcon = currentStarsIcon {
+                            currentStarsIcon.displaysAsynchronously = false
+                            if currentStarsIcon.image !== starsImage {
+                                currentStarsIcon.image = starsImage
+                            }
+                            if currentStarsIcon.supernode == nil {
+                                strongSelf.starsIcon = currentStarsIcon
+                                strongSelf.addSubnode(currentStarsIcon)
+                                if animation.isAnimated {
+                                    currentStarsIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                }
+                            }
+                            let starsIconFrame = CGRect(origin: CGPoint(x: reactionOffset - 2.0, y: backgroundInsets.top + offset + verticalInset + floor((date.size.height - starsIconSize.height) / 2.0)), size: starsIconSize)
+                            animation.animator.updateFrame(layer: currentStarsIcon.layer, frame: starsIconFrame, completion: nil)
+                            reactionOffset += 9.0
+                        } else if let starsIcon = strongSelf.starsIcon {
+                            strongSelf.starsIcon = nil
+                            if animation.isAnimated {
+                                starsIcon.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak starsIcon] _ in
+                                    starsIcon?.removeFromSupernode()
+                                })
+                            } else {
+                                starsIcon.removeFromSupernode()
+                            }
+                        }
+                        
+                        if let (layout, apply) = starsCountLayoutAndApply {
+                            let node = apply()
+                            if strongSelf.starsCountNode !== node {
+                                strongSelf.starsCountNode?.removeFromSupernode()
+                                strongSelf.addSubnode(node)
+                                strongSelf.starsCountNode = node
+                                if animation.isAnimated {
+                                    node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                }
+                            }
+                            let starsCountFrame = CGRect(origin: CGPoint(x: reactionOffset + 4.0, y: backgroundInsets.top + 1.0 + offset + verticalInset), size: layout.size)
+                            animation.animator.updateFrame(layer: node.layer, frame: starsCountFrame, completion: nil)
+                            reactionOffset += 4.0 + layout.size.width
+                        } else if let starsCountNode = strongSelf.starsCountNode {
+                            strongSelf.starsCountNode = nil
+                            if animation.isAnimated {
+                                starsCountNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak starsCountNode] _ in
+                                    starsCountNode?.removeFromSupernode()
+                                })
+                            } else {
+                                starsCountNode.removeFromSupernode()
                             }
                         }
                     }

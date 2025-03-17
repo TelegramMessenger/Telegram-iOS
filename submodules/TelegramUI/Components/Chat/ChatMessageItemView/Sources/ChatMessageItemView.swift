@@ -938,13 +938,13 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         }
         self.playedEffectAnimation = true
         
-        if let effectAnimation = effect.effectAnimation {
+        if let effectAnimation = effect.effectAnimation?._parse() {
             self.playEffectAnimation(resource: effectAnimation.resource)
             if self.fetchEffectDisposable == nil {
                 self.fetchEffectDisposable = freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .other, fileReference: .standalone(media: effectAnimation), resource: effectAnimation.resource).startStrict()
             }
         } else {
-            let effectSticker = effect.effectSticker
+            let effectSticker = effect.effectSticker._parse()
             if let effectFile = effectSticker.videoThumbnails.first {
                 self.playEffectAnimation(resource: effectFile.resource)
                 if self.fetchEffectDisposable == nil {

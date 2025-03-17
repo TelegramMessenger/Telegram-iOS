@@ -54,7 +54,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let emptyResultsTitle = ComponentView<Empty>()
     private let emptyResultsAction = ComponentView<Empty>()
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private var theme: PresentationTheme?
     private let presentationDataPromise = Promise<PresentationData>()
@@ -240,6 +240,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func beginReordering() {
+        self.profileGifts.updateFilter(.All)
+        self.profileGifts.updateSorting(.date)
+        
         if let parentController = self.parentController as? PeerInfoScreen {
             parentController.togglePaneIsReordering(isReordering: true)
         } else {
@@ -376,7 +379,16 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let optionSpacing: CGFloat = 10.0
             let itemsSideInset = params.sideInset + 16.0
             
-            let defaultItemsInRow = params.size.width > params.size.height ? 5 : 3
+            let defaultItemsInRow: Int
+            if params.size.width > params.size.height || params.size.width > 480.0 {
+                if case .tablet = params.deviceMetrics.type {
+                    defaultItemsInRow = 4
+                } else {
+                    defaultItemsInRow = 5
+                }
+            } else {
+                defaultItemsInRow = 3
+            }
             let itemsInRow = max(1, min(starsProducts.count, defaultItemsInRow))
             let defaultOptionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(defaultItemsInRow - 1)) / CGFloat(defaultItemsInRow)
             let optionWidth = (params.size.width - itemsSideInset * 2.0 - optionSpacing * CGFloat(itemsInRow - 1)) / CGFloat(itemsInRow)
@@ -469,7 +481,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                         return
                                     }
                                     if self.isReordering {
-                                        if !product.pinnedToTop, let reference = product.reference, let items = self.starsProducts {
+                                        if case .unique = product.gift, !product.pinnedToTop, let reference = product.reference, let items = self.starsProducts {
                                             if self.pinnedReferences.count >= self.maxPinnedCount {
                                                 self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                                                 return
@@ -515,15 +527,36 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             },
                                             transferGift: { [weak self] prepaid, peerId in
                                                 guard let self, let reference = product.reference else {
-                                                    return
+                                                    return .complete()
                                                 }
-                                                self.profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
+                                                return self.profileGifts.transferStarGift(prepaid: prepaid, reference: reference, peerId: peerId)
                                             },
                                             upgradeGift: { [weak self] formId, keepOriginalInfo in
                                                 guard let self, let reference = product.reference else {
                                                     return .never()
                                                 }
                                                 return self.profileGifts.upgradeStarGift(formId: formId, reference: reference, keepOriginalInfo: keepOriginalInfo)
+                                            },
+                                            togglePinnedToTop: { [weak self] pinnedToTop in
+                                                guard let self else {
+                                                    return false
+                                                }
+                                                if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                                                    return false
+                                                }
+                                                if let reference = product.reference {
+                                                    self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
+                                                    
+                                                    if pinnedToTop {
+                                                        let _ = self.scrollToTop()
+                                                        Queue.mainQueue().after(0.35) {
+                                                            let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
+                                                            let toastText = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
+                                                            self.parentController?.present(UndoOverlayController(presentationData: params.presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                                        }
+                                                    }
+                                                }
+                                                return true
                                             },
                                             shareStory: { [weak self] uniqueGift in
                                                 guard let self, let parentController = self.parentController else {
@@ -564,7 +597,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             itemFrame = itemFrame.size.centered(around: reorderingItem.position)
                             isReordering = true
                         }
-                        if itemView.layer.animation(forKey: "position") != nil && !isReordering {
+                        if self.isReordering, itemView.layer.animation(forKey: "position") != nil && !isReordering {
                         } else {
                             itemTransition.setFrame(view: itemView, frame: itemFrame)
                         }
@@ -610,9 +643,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             }
             
             var bottomScrollInset: CGFloat = 0.0
-            var contentHeight = ceil(CGFloat(starsProducts.count) / 3.0) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
-            
-            let transition = ComponentTransition.immediate
+            var contentHeight = ceil(CGFloat(starsProducts.count) / CGFloat(defaultItemsInRow)) * (starsOptionSize.height + optionSpacing) - optionSpacing + topInset + 16.0
             
             let size = params.size
             let sideInset = params.sideInset
@@ -676,13 +707,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             
             let buttonSideInset = sideInset + 16.0
             let buttonSize = CGSize(width: size.width - buttonSideInset * 2.0, height: 50.0)
-            var bottomPanelHeight = max(8.0, bottomInset) + buttonSize.height + 8.0
+            let effectiveBottomInset = max(8.0, bottomInset)
+            var bottomPanelHeight = effectiveBottomInset + buttonSize.height + 8.0
             if params.visibleHeight < 110.0 {
                 scrollOffset -= bottomPanelHeight
             }
             
-            transition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - bottomInset - buttonSize.height - scrollOffset), size: buttonSize))
-            transition.setAlpha(view: panelButton.view, alpha: panelAlpha)
+            let panelTransition = ComponentTransition.immediate
+            panelTransition.setFrame(view: panelButton.view, frame: CGRect(origin: CGPoint(x: buttonSideInset, y: size.height - effectiveBottomInset - buttonSize.height - scrollOffset), size: buttonSize))
+            panelTransition.setAlpha(view: panelButton.view, alpha: panelAlpha)
             let _ = panelButton.updateLayout(width: buttonSize.width, transition: .immediate)
             
             if self.canManage {
@@ -752,17 +785,17 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     if panelCheckView.superview == nil {
                         self.view.addSubview(panelCheckView)
                     }
-                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - bottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
-                    transition.setAlpha(view: panelCheckView, alpha: panelAlpha)
+                    panelCheckView.frame = CGRect(origin: CGPoint(x: floor((size.width - panelCheckSize.width) / 2.0), y: size.height - effectiveBottomInset - panelCheckSize.height - 11.0 - scrollOffset), size: panelCheckSize)
+                    panelTransition.setAlpha(view: panelCheckView, alpha: panelAlpha)
                 }
                 panelButton.isHidden = true
             }
             
-            transition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
-            transition.setAlpha(view: panelBackground.view, alpha: panelAlpha)
+            panelTransition.setFrame(view: panelBackground.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: bottomPanelHeight))
+            panelTransition.setAlpha(view: panelBackground.view, alpha: panelAlpha)
             panelBackground.update(size: CGSize(width: size.width, height: bottomPanelHeight), transition: transition.containedViewLayoutTransition)
-            transition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
-            transition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
+            panelTransition.setFrame(view: panelSeparator.view, frame: CGRect(x: 0.0, y: size.height - bottomPanelHeight - scrollOffset, width: size.width, height: UIScreenPixel))
+            panelTransition.setAlpha(view: panelSeparator.view, alpha: panelAlpha)
             
             let fadeTransition = ComponentTransition.easeInOut(duration: 0.25)
             if self.resultsAreEmpty {
@@ -776,8 +809,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 
                 self.emptyResultsClippingView.isHidden = false
                                 
-                transition.setFrame(view: self.emptyResultsClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
-                transition.setBounds(view: self.emptyResultsClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                panelTransition.setFrame(view: self.emptyResultsClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
+                panelTransition.setBounds(view: self.emptyResultsClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 48.0), size: self.scrollNode.frame.size))
                 
                 let emptyResultsTitleSize = self.emptyResultsTitle.update(
                     transition: .immediate,
@@ -840,7 +873,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         view.playOnce()
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsAnimationFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsAnimationFrame.center)
                 }
                 if let view = self.emptyResultsTitle.view {
                     if view.superview == nil {
@@ -849,7 +882,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsTitleFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsTitleFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsTitleFrame.center)
                 }
                 if let view = self.emptyResultsAction.view {
                     if view.superview == nil {
@@ -858,7 +891,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.emptyResultsClippingView.addSubview(view)
                     }
                     view.bounds = CGRect(origin: .zero, size: emptyResultsActionFrame.size)
-                    transition.setPosition(view: view, position: emptyResultsActionFrame.center)
+                    panelTransition.setPosition(view: view, position: emptyResultsActionFrame.center)
                 }
             } else {
                 if let view = self.emptyResultsAnimation.view {
@@ -879,7 +912,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
             }
             
-            if self.peerId == self.context.account.peerId {
+            if self.peerId == self.context.account.peerId, !self.resultsAreEmpty {
                 let footerText: ComponentView<Empty>
                 if let current = self.footerText {
                     footerText = current
@@ -941,21 +974,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 self.chatControllerInteraction.navigationController()?.pushViewController(controller)
             })
         } else {
-            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Birthday(id: self.peerId))
-            |> deliverOnMainQueue).start(next: { birthday in
-                var hasBirthday = false
-                if let birthday {
-                    hasBirthday = hasBirthdayToday(birthday: birthday)
-                }
-                let controller = self.context.sharedContext.makeGiftOptionsController(
-                    context: self.context,
-                    peerId: self.peerId,
-                    premiumOptions: [],
-                    hasBirthday: hasBirthday,
-                    completion: nil
-                )
-                self.chatControllerInteraction.navigationController()?.pushViewController(controller)
-            })
+            self.chatControllerInteraction.sendGift(self.peerId)
         }
     }
     
@@ -988,7 +1007,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         let pinnedToTop = !gift.pinnedToTop
                         
                         if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                             return
                         }
                         
@@ -1000,17 +1019,17 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         let toastText: String
                         if !pinnedToTop {
                             toastTitle = nil
-                            toastText = presentationData.strings.PeerInfo_Gifts_ToastUnpinned_Text
+                            toastText = strings.PeerInfo_Gifts_ToastUnpinned_Text
                         } else {
-                            toastTitle = presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
-                            toastText = presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
+                            toastTitle = strings.PeerInfo_Gifts_ToastPinned_Title
+                            toastText = strings.PeerInfo_Gifts_ToastPinned_Text
                         }
                         self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: !pinnedToTop ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })
                 })))
             }
             
-            if canReorder {
+            if case .unique = gift.gift, canReorder {
                 items.append(.action(ContextMenuActionItem(text: strings.PeerInfo_Gifts_Context_Reorder, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ReorderItems"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, f in
                     c?.dismiss(completion: { [weak self] in
                         guard let self else {
@@ -1027,7 +1046,26 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         guard let self else {
                             return
                         }
-                        let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        if self.context.isPremium {
+                            let _ = self.context.engine.accountData.setStarGiftStatus(starGift: uniqueGift, expirationDate: nil).startStandalone()
+                        } else {
+                            let text = strings.Gift_View_TooltipPremiumWearing
+                            let tooltipController = UndoOverlayController(
+                                presentationData: presentationData,
+                                content: .premiumPaywall(title: nil, text: text, customUndoText: nil, timeout: nil, linkAction: nil),
+                                position: .bottom,
+                                animateInAsReplacement: false,
+                                appearance: UndoOverlayController.Appearance(sideInset: 16.0, bottomInset: 62.0),
+                                action: { [weak self] action in
+                                    if let self, case .info = action {
+                                        let premiumController = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .messageEffects, forceDark: false, dismissed: nil)
+                                        self.parentController?.push(premiumController)
+                                    }
+                                    return false
+                                }
+                            )
+                            self.parentController?.present(tooltipController, in: .current)
+                        }
                     })
                 })))
             }
@@ -1192,14 +1230,14 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             let transferStars = gift.transferStars ?? 0
                             let controller = context.sharedContext.makePremiumGiftController(context: context, source: .starGiftTransfer(birthdays, reference, uniqueGift, transferStars, gift.canExportDate, showSelf), completion: { [weak self] peerIds in
                                 guard let self, let peerId = peerIds.first else {
-                                    return
+                                    return .complete()
                                 }
-                                self.profileGifts.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
-                                Queue.mainQueue().after(1.0, {
+                                Queue.mainQueue().after(1.5, {
                                     if transferStars > 0 {
                                         context.starsContext?.load(force: true)
                                     }
                                 })
+                                return self.profileGifts.transferStarGift(prepaid: transferStars == 0, reference: reference, peerId: peerId)
                             })
                             self.parentController?.push(controller)
                         })
@@ -1222,7 +1260,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     public func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, deviceMetrics: DeviceMetrics, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, navigationHeight: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+        self.currentParams = (size, sideInset, bottomInset, deviceMetrics, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         self.presentationDataPromise.set(.single(presentationData))
         
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor

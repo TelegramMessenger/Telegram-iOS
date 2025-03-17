@@ -21,10 +21,21 @@ private let cloudSoundMapping: [Int32: Int64] = [
     108: 5078299559046677216,
     109: 5078299559046677217,
     110: 5078299559046677218,
-    111: 5078299559046677219
+    111: 5078299559046677219,
+    200: 5032932652722685163,
+    201: 5032932652722685160,
+    202: 5032932652722685159,
+    203: 5032932652722685158,
+    204: 5032932652722685168,
+    205: 5032932652722685167,
+    206: 5032932652722685166,
+    207: 5032932652722685165,
+    208: 5032932652722685164,
+    209: 5032932652722685162,
+    210: 5032932652722685161
 ]
 
-public let defaultCloudPeerNotificationSound: PeerMessageSound = .cloud(fileId: cloudSoundMapping[100]!)
+public let defaultCloudPeerNotificationSound: PeerMessageSound = .cloud(fileId: cloudSoundMapping[200]!)
 
 public enum CloudSoundBuiltinCategory {
     case modern

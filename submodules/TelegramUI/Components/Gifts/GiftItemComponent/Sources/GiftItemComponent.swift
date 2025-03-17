@@ -293,7 +293,8 @@ public final class GiftItemComponent: Component {
                 cornerRadius = 10.0
             case .profile:
                 size = availableSize
-                iconSize = CGSize(width: 88.0, height: 88.0)
+                let side = floor(88.0 * availableSize.width / 116.0)
+                iconSize = CGSize(width: side, height: side)
                 cornerRadius = 10.0
             case .thumbnail:
                 size = CGSize(width: availableSize.width, height: availableSize.width)

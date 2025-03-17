@@ -467,8 +467,9 @@ public final class MessageInputPanelComponent: Component {
         private let gradientView: UIImageView
         private let bottomGradientView: UIView
         
-        private let placeholder = ComponentView<Empty>()
-        private let vibrancyPlaceholder = ComponentView<Empty>()
+        private var currentPlaceholderType: Bool?
+        private var placeholder = ComponentView<Empty>()
+        private var vibrancyPlaceholder = ComponentView<Empty>()
         
         private let counter = ComponentView<Empty>()
         private var header: ComponentView<Empty>?
@@ -681,7 +682,7 @@ public final class MessageInputPanelComponent: Component {
             if self.contextQueryPeer == nil, let peerId = component.chatLocation?.peerId {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self, peer?.addressName != nil else {
+                    guard let self, let peer, case .channel = peer, peer.addressName != nil else {
                         return
                     }
                     self.contextQueryPeer = peer
@@ -868,7 +869,17 @@ public final class MessageInputPanelComponent: Component {
             
             let placeholderTransition: ComponentTransition = (previousPlaceholder != nil && previousPlaceholder != component.placeholder) ? ComponentTransition(animation: .curve(duration: 0.3, curve: .spring)) : .immediate
             let placeholderSize: CGSize
+            
             if case let .plain(string) = component.placeholder, string.contains("#") {
+                let placeholderType = false
+                if let currentPlaceholderType = self.currentPlaceholderType, currentPlaceholderType != placeholderType {
+                    self.placeholder.view?.removeFromSuperview()
+                    self.placeholder = ComponentView()
+                    
+                    self.vibrancyPlaceholder.view?.removeFromSuperview()
+                    self.vibrancyPlaceholder = ComponentView()
+                }
+                
                 let attributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.4))
                 if let range = attributedPlaceholder.string.range(of: "#") {
                     attributedPlaceholder.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(component.theme)!, range: NSRange(range, in: attributedPlaceholder.string))
@@ -897,6 +908,15 @@ public final class MessageInputPanelComponent: Component {
                     containerSize: availableTextFieldSize
                 )
             } else {
+                let placeholderType = true
+                if let currentPlaceholderType = self.currentPlaceholderType, currentPlaceholderType != placeholderType {
+                    self.placeholder.view?.removeFromSuperview()
+                    self.placeholder = ComponentView()
+                    
+                    self.vibrancyPlaceholder.view?.removeFromSuperview()
+                    self.vibrancyPlaceholder = ComponentView()
+                }
+                
                 var placeholderItems: [AnimatedTextComponent.Item] = []
                 switch component.placeholder {
                 case let .plain(string):

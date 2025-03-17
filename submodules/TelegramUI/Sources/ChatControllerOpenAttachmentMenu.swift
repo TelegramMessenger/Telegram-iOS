@@ -213,12 +213,16 @@ extension ChatControllerImpl {
         
         var showPremiumGift = false
         if !premiumConfiguration.isPremiumDisabled {
-            if premiumConfiguration.showPremiumGiftInAttachMenu || self.presentationInterfaceState.hasBirthdayToday {
+            if self.presentationInterfaceState.alwaysShowGiftButton {
+                showPremiumGift = true
+            } else if self.presentationInterfaceState.hasBirthdayToday {
+                showPremiumGift = true
+            } else if premiumConfiguration.showPremiumGiftInAttachMenu || premiumConfiguration.showPremiumGiftInTextField {
                 showPremiumGift = true
             }
         }
         
-        if let peer = self.presentationInterfaceState.renderedPeer?.peer, showPremiumGift, let user = peer as? TelegramUser, !user.isPremium && !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
+        if let peer = self.presentationInterfaceState.renderedPeer?.peer, showPremiumGift, let user = peer as? TelegramUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
             premiumGiftOptions = self.presentationInterfaceState.premiumGiftOptions
         } else {
             premiumGiftOptions = []
@@ -620,7 +624,7 @@ extension ChatControllerImpl {
                     if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer, let starsContext = context.starsContext {
                         let premiumGiftOptions = strongSelf.presentationInterfaceState.premiumGiftOptions
                         if !premiumGiftOptions.isEmpty {
-                            let controller = PremiumGiftAttachmentScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumGiftOptions, hasBirthday: true, completion: { [weak self] in
+                            let controller = PremiumGiftAttachmentScreen(context: context, starsContext: starsContext, peerId: peer.id, premiumOptions: premiumGiftOptions, hasBirthday: strongSelf.presentationInterfaceState.hasBirthdayToday, completion: { [weak self] in
                                 guard let self else {
                                     return
                                 }

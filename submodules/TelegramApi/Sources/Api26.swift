@@ -1103,6 +1103,7 @@ public extension Api {
         case updateSavedGifs
         case updateSavedReactionTags
         case updateSavedRingtones
+        case updateSentPhoneCode(sentCode: Api.auth.SentCode)
         case updateSentStoryReaction(peer: Api.Peer, storyId: Int32, reaction: Api.Reaction)
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateSmsJob(jobId: String)
@@ -2199,6 +2200,12 @@ public extension Api {
                     }
                     
                     break
+                case .updateSentPhoneCode(let sentCode):
+                    if boxed {
+                        buffer.appendInt32(1347068303)
+                    }
+                    sentCode.serialize(buffer, true)
+                    break
                 case .updateSentStoryReaction(let peer, let storyId, let reaction):
                     if boxed {
                         buffer.appendInt32(2103604867)
@@ -2602,6 +2609,8 @@ public extension Api {
                 return ("updateSavedReactionTags", [])
                 case .updateSavedRingtones:
                 return ("updateSavedRingtones", [])
+                case .updateSentPhoneCode(let sentCode):
+                return ("updateSentPhoneCode", [("sentCode", sentCode as Any)])
                 case .updateSentStoryReaction(let peer, let storyId, let reaction):
                 return ("updateSentStoryReaction", [("peer", peer as Any), ("storyId", storyId as Any), ("reaction", reaction as Any)])
                 case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
@@ -4802,6 +4811,19 @@ public extension Api {
         }
         public static func parse_updateSavedRingtones(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedRingtones
+        }
+        public static func parse_updateSentPhoneCode(_ reader: BufferReader) -> Update? {
+            var _1: Api.auth.SentCode?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.auth.SentCode
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateSentPhoneCode(sentCode: _1!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_updateSentStoryReaction(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?

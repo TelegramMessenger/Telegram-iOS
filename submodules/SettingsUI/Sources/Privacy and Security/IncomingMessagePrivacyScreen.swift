@@ -149,7 +149,7 @@ private enum GlobalAutoremoveEntry: ItemListNodeEntry {
         case .priceHeader:
             return ItemListSectionHeaderItem(presentationData: presentationData, text: presentationData.strings.Privacy_Messages_MessagePrice, sectionId: self.section)
         case let .price(value, maxValue, price, isEnabled):
-            return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: isEnabled, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value in
+            return MessagePriceItem(theme: presentationData.theme, strings: presentationData.strings, isEnabled: isEnabled, minValue: 1, maxValue: maxValue, value: value, price: price, sectionId: self.section, updated: { value, _ in
                 arguments.updateValue(.paidMessages(StarsAmount(value: value, nanos: 0)))
             }, openPremiumInfo: {
                 arguments.openPremiumInfo()
@@ -281,8 +281,9 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                     chatListFilters: nil,
                     onlyUsers: false,
                     disableChannels: true,
-                    disableBots: false
-                )), filters: [.excludeSelf]))
+                    disableBots: true,
+                    disableContacts: true
+                ))))
                 addPeerDisposable.set((controller.result
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak controller] result in
@@ -342,7 +343,7 @@ public func incomingMessagePrivacyScreen(context: AccountContext, value: GlobalP
                 controller.navigationPresentation = .modal
                 pushControllerImpl?(controller)
             } else {
-                let controller = selectivePrivacyPeersController(context: context, title: presentationData.strings.Privacy_Messages_Exceptions_Title, footer: presentationData.strings.Privacy_Messages_RemoveFeeInfo, initialPeers: peerIds, initialEnableForPremium: false, displayPremiumCategory: false, initialEnableForBots: false, displayBotsCategory: false, updated: { updatedPeerIds, _, _ in
+                let controller = selectivePrivacyPeersController(context: context, title: presentationData.strings.Privacy_Messages_Exceptions_Title, footer: presentationData.strings.Privacy_Messages_RemoveFeeInfo, hideContacts: true, initialPeers: peerIds, initialEnableForPremium: false, displayPremiumCategory: false, initialEnableForBots: false, displayBotsCategory: false, updated: { updatedPeerIds, _, _ in
                     updateState { state in
                         var updatedState = state
                         updatedState.disableFor = updatedPeerIds

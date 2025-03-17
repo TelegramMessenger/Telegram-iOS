@@ -315,7 +315,6 @@ class BazelCommandLine:
         print(subprocess.list2cmdline(combined_arguments))
         call_executable(combined_arguments)
 
-
     def invoke_test(self):
         combined_arguments = [
             self.build_environment.bazel_path
@@ -351,6 +350,44 @@ class BazelCommandLine:
             ]
 
         combined_arguments += self.configuration_args
+
+        print('TelegramBuild: running')
+        print(subprocess.list2cmdline(combined_arguments))
+        call_executable(combined_arguments)
+
+    def invoke_query(self, query_args):
+        combined_arguments = [
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += ['aquery']
+
+        if self.configuration_path is None:
+            raise Exception('configuration_path is not defined')
+
+        combined_arguments += [
+            '--override_repository=build_configuration={}'.format(self.configuration_path)
+        ]
+
+        combined_arguments += [
+            '-c', 'dbg',
+            '--ios_multi_cpus=sim_arm64',
+        ]
+
+        combined_arguments += self.get_define_arguments()
+
+        if self.remote_cache is not None:
+            combined_arguments += [
+                '--remote_cache={}'.format(self.remote_cache),
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
+            ]
+        elif self.cache_dir is not None:
+            combined_arguments += [
+                '--disk_cache={path}'.format(path=self.cache_dir)
+            ]
+
+        # Add user-provided query arguments
+        combined_arguments += query_args
 
         print('TelegramBuild: running')
         print(subprocess.list2cmdline(combined_arguments))
@@ -611,6 +648,36 @@ def test(bazel, arguments):
     bazel_command_line.set_build_number('10000')
 
     bazel_command_line.invoke_test()
+
+
+def query(bazel, arguments):
+    bazel_command_line = BazelCommandLine(
+        bazel=bazel,
+        override_bazel_version=arguments.overrideBazelVersion,
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
+    )
+
+    if arguments.cacheDir is not None:
+        bazel_command_line.add_cache_dir(arguments.cacheDir)
+    elif arguments.cacheHost is not None:
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
+
+    # Resolve configuration if needed
+    if arguments.configurationPath is not None:
+        resolve_configuration(
+            base_path=os.getcwd(),
+            bazel_command_line=bazel_command_line,
+            arguments=arguments,
+            additional_codesigning_output_path=None
+        )
+
+    # Parse the query arguments
+    query_args = []
+    if arguments.queryArgs:
+        query_args = shlex.split(arguments.queryArgs)
+
+    bazel_command_line.invoke_query(query_args)
 
 
 def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
@@ -971,6 +1038,73 @@ if __name__ == '__main__':
         help='Path to IPA 2 file.'
     )
 
+    query_parser = subparsers.add_parser('query', help='Run arbitrary bazel queries')
+    # Configuration is optional for queries
+    query_parser.add_argument(
+        '--configurationPath',
+        required=False,
+        help='''
+            Path to a json containing build configuration.
+            See build-system/appstore-configuration.json for an example.
+            ''',
+        metavar='path'
+    )
+    # Codesigning arguments are optional for queries
+    query_parser.add_argument(
+        '--gitCodesigningRepository',
+        required=False,
+        help='''
+            If specified, certificates and provisioning profiles will be loaded from git.
+            TELEGRAM_CODESIGNING_GIT_PASSWORD environment variable must be set.
+            ''',
+        metavar='path'
+    )
+    query_parser.add_argument(
+        '--codesigningInformationPath',
+        required=False,
+        help='''
+            Use signing certificates and provisioning profiles from a local directory.
+            ''',
+        metavar='command'
+    )
+    query_parser.add_argument(
+        '--xcodeManagedCodesigning',
+        action='store_true',
+        help='''
+            Let Xcode manage your certificates and provisioning profiles.
+            ''',
+    )
+    query_parser.add_argument(
+        '--gitCodesigningType',
+        choices=[
+            'development',
+            'adhoc',
+            'appstore',
+            'enterprise'
+        ],
+        required=False,
+        help='''
+            The name of the folder to use inside "profiles" folder in the git repository.
+            Required if gitCodesigningRepository is specified.
+            ''',
+        metavar='type'
+    )
+    query_parser.add_argument(
+        '--gitCodesigningUseCurrent',
+        action='store_true',
+        required=False,
+        default=False,
+        help='''
+            Always refresh codesigning repository.
+            '''
+    )
+    query_parser.add_argument(
+        '--queryArgs',
+        required=True,
+        help='The query command and arguments to pass to bazel.',
+        metavar='query_string'
+    )
+
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -1077,6 +1211,8 @@ if __name__ == '__main__':
             )
         elif args.commandName == 'test':
             test(bazel=bazel_path, arguments=args)
+        elif args.commandName == 'query':
+            query(bazel=bazel_path, arguments=args)
         else:
             raise Exception('Unknown command')
     except KeyboardInterrupt:

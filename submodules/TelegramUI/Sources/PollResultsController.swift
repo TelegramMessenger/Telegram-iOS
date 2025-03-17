@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -218,7 +219,7 @@ private enum PollResultsEntry: ItemListNodeEntry {
                 adjustQuoteFontSize: false,
                 cachedMessageSyntaxHighlight: nil
             )
-            return ItemListTextItem(presentationData: presentationData, text: .custom(context: arguments.context, string: attributedText), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .custom(context: arguments.context, string: attributedText), sectionId: self.section, additionalInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: -6.0, right: 0.0), additionalOuterInsets: UIEdgeInsets(top: 14.0, left: 0.0, bottom: 0.0, right: 0.0))
         case let .solutionHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .solutionText(text, entities):

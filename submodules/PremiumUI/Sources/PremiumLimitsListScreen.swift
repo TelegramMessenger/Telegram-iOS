@@ -16,6 +16,7 @@ import BundleIconComponent
 import Markdown
 import SolidRoundedButtonNode
 import BlurredBackgroundComponent
+import PremiumCoinComponent
 
 public class PremiumLimitsListScreen: ViewController {
     final class Node: ViewControllerTracingNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {

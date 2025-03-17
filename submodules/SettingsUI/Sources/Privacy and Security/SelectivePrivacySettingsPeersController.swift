@@ -315,14 +315,14 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
         entries.append(.footerItem(footer))
     }
     
-    if !peers.isEmpty {
+    if !peers.isEmpty || state.enableForPremium || state.enableForBots {
         entries.append(.deleteItem(presentationData.strings.Privacy_Exceptions_DeleteAllExceptions))
     }
     
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, footer: String? = nil, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, initialEnableForBots: Bool, displayBotsCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool, Bool) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContext, title: String, footer: String? = nil, hideContacts: Bool = false, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, initialEnableForBots: Bool, displayBotsCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool, Bool) -> Void) -> ViewController {
     let initialState = SelectivePrivacyPeersControllerState(enableForPremium: initialEnableForPremium, enableForBots: initialEnableForBots, editing: false, peerIdWithRevealedOptions: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -428,7 +428,8 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             chatListFilters: nil,
             onlyUsers: false,
             disableChannels: true,
-            disableBots: false
+            disableBots: hideContacts,
+            disableContacts: hideContacts
         )), alwaysEnabled: true))
         addPeerDisposable.set((controller.result
         |> take(1)

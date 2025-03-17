@@ -10,6 +10,7 @@ import AccountContext
 import TelegramPresentationData
 import EmojiTextAttachmentView
 import EmojiStatusComponent
+import CoreVideo
 
 final class EmojiKeyboardCloneItemLayer: SimpleLayer {
 }
@@ -33,7 +34,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         case locked
         case featured
         case text(String)
-        case customFile(TelegramMediaFile)
+        case customFile(TelegramMediaFile.Accessor)
     }
     
     public let item: EmojiPagerContentComponent.Item
@@ -79,7 +80,20 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
     }
     
     override public var contents: Any? {
-        didSet {
+        get {
+            return super.contents
+        } set(value) {
+            #if targetEnvironment(simulator)
+            if let value, CFGetTypeID(value as CFTypeRef) == CVPixelBufferGetTypeID() {
+                let pixelBuffer = value as! CVPixelBuffer
+                super.contents = CVPixelBufferGetIOSurface(pixelBuffer)
+            } else {
+                super.contents = value
+            }
+            #else
+            super.contents = value
+            #endif
+            
             self.onContentsUpdate()
             if let cloneLayer = self.cloneLayer {
                 cloneLayer.contents = self.contents
@@ -177,7 +191,9 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         
         switch content {
         case let .animation(animationData):
-            let animationDataResource = animationData.resource._parse()
+            guard let animationDataResource = animationData.resource._parse() else {
+                return
+            }
             
             let loadAnimation: () -> Void = { [weak self] in
                 guard let strongSelf = self else {

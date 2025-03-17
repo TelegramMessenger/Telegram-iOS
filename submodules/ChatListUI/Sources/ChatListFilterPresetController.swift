@@ -544,6 +544,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
 }
 
 private struct ChatListFilterPresetControllerState: Equatable {
+    var isExisting: Bool
     var name: ChatFolderTitle
     var changedName: Bool
     var nameInputMode: ListComposePollOptionComponent.InputMode = .keyboard
@@ -562,6 +563,10 @@ private struct ChatListFilterPresetControllerState: Equatable {
     var isComplete: Bool {
         if self.name.text.isEmpty {
             return false
+        }
+        
+        if self.isExisting {
+            return true
         }
         
         let defaultCategories: ChatListFilterPeerCategories = .all
@@ -1280,7 +1285,8 @@ private final class ChatListFilterPresetController: ItemListController {
                 replyMessage: nil,
                 accountPeerColor: nil,
                 businessIntro: nil,
-                starGiftsAvailable: false
+                starGiftsAvailable: false,
+                alwaysShowGiftButton: false
             )
             
             self.inputMediaNodeBackground.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.cgColor
@@ -1388,6 +1394,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset initi
         initialName = ChatFolderTitle(text: "", entities: [], enableAnimations: true)
     }
     var initialState = ChatListFilterPresetControllerState(
+        isExisting: initialPreset?.id != nil,
         name: initialName,
         changedName: initialPreset != nil,
         color: initialPreset?.data?.color,

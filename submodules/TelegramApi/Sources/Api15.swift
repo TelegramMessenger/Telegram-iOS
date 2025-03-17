@@ -363,6 +363,8 @@ public extension Api {
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int64])
+        case messageActionPaidMessagesPrice(stars: Int64)
+        case messageActionPaidMessagesRefunded(count: Int32, stars: Int64)
         case messageActionPaymentRefunded(flags: Int32, peer: Api.Peer, currency: String, totalAmount: Int64, payload: Buffer?, charge: Api.PaymentCharge)
         case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?, subscriptionUntilDate: Int32?)
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge, subscriptionUntilDate: Int32?)
@@ -594,6 +596,19 @@ public extension Api {
                     for item in users {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
+                    break
+                case .messageActionPaidMessagesPrice(let stars):
+                    if boxed {
+                        buffer.appendInt32(-1126755303)
+                    }
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    break
+                case .messageActionPaidMessagesRefunded(let count, let stars):
+                    if boxed {
+                        buffer.appendInt32(-1407246387)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
                     break
                 case .messageActionPaymentRefunded(let flags, let peer, let currency, let totalAmount, let payload, let charge):
                     if boxed {
@@ -847,6 +862,10 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
                 return ("messageActionInviteToGroupCall", [("call", call as Any), ("users", users as Any)])
+                case .messageActionPaidMessagesPrice(let stars):
+                return ("messageActionPaidMessagesPrice", [("stars", stars as Any)])
+                case .messageActionPaidMessagesRefunded(let count, let stars):
+                return ("messageActionPaidMessagesRefunded", [("count", count as Any), ("stars", stars as Any)])
                 case .messageActionPaymentRefunded(let flags, let peer, let currency, let totalAmount, let payload, let charge):
                 return ("messageActionPaymentRefunded", [("flags", flags as Any), ("peer", peer as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("payload", payload as Any), ("charge", charge as Any)])
                 case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug, let subscriptionUntilDate):
@@ -1272,6 +1291,31 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.MessageAction.messageActionInviteToGroupCall(call: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionPaidMessagesPrice(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionPaidMessagesPrice(stars: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionPaidMessagesRefunded(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageAction.messageActionPaidMessagesRefunded(count: _1!, stars: _2!)
             }
             else {
                 return nil
