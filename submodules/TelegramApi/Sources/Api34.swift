@@ -1,4 +1,62 @@
 public extension Api.messages {
+    enum SavedReactionTags: TypeConstructorDescription {
+        case savedReactionTags(tags: [Api.SavedReactionTag], hash: Int64)
+        case savedReactionTagsNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .savedReactionTags(let tags, let hash):
+                    if boxed {
+                        buffer.appendInt32(844731658)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(tags.count))
+                    for item in tags {
+                        item.serialize(buffer, true)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    break
+                case .savedReactionTagsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-2003084817)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .savedReactionTags(let tags, let hash):
+                return ("savedReactionTags", [("tags", tags as Any), ("hash", hash as Any)])
+                case .savedReactionTagsNotModified:
+                return ("savedReactionTagsNotModified", [])
+    }
+    }
+    
+        public static func parse_savedReactionTags(_ reader: BufferReader) -> SavedReactionTags? {
+            var _1: [Api.SavedReactionTag]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SavedReactionTag.self)
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.SavedReactionTags.savedReactionTags(tags: _1!, hash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_savedReactionTagsNotModified(_ reader: BufferReader) -> SavedReactionTags? {
+            return Api.messages.SavedReactionTags.savedReactionTagsNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum SearchCounter: TypeConstructorDescription {
         case searchCounter(flags: Int32, filter: Api.MessagesFilter, count: Int32)
     
@@ -1536,48 +1594,6 @@ public extension Api.payments {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.payments.PaymentResult.paymentVerificationNeeded(url: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.payments {
-    enum SavedInfo: TypeConstructorDescription {
-        case savedInfo(flags: Int32, savedInfo: Api.PaymentRequestedInfo?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .savedInfo(let flags, let savedInfo):
-                    if boxed {
-                        buffer.appendInt32(-74456004)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {savedInfo!.serialize(buffer, true)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .savedInfo(let flags, let savedInfo):
-                return ("savedInfo", [("flags", flags as Any), ("savedInfo", savedInfo as Any)])
-    }
-    }
-    
-        public static func parse_savedInfo(_ reader: BufferReader) -> SavedInfo? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.PaymentRequestedInfo?
-            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.PaymentRequestedInfo
-            } }
-            let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            if _c1 && _c2 {
-                return Api.payments.SavedInfo.savedInfo(flags: _1!, savedInfo: _2)
             }
             else {
                 return nil

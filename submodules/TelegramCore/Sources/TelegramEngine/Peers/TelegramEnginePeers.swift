@@ -1522,6 +1522,10 @@ public extension TelegramEngine {
             return _internal_requestRecommendedBots(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
         }
                 
+        public func searchAdPeers(query: String) -> Signal<[AdPeer], NoError> {
+            return _internal_searchAdPeers(account: self.account, query: query)
+        }
+        
         public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id: RequirementToContact], NoError> {
             return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
         }

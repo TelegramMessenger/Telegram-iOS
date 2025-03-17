@@ -879,6 +879,7 @@ public final class MessageInputPanelComponent: Component {
                     self.vibrancyPlaceholder.view?.removeFromSuperview()
                     self.vibrancyPlaceholder = ComponentView()
                 }
+                self.currentPlaceholderType = placeholderType
                 
                 let attributedPlaceholder = NSMutableAttributedString(string: string, font:Font.regular(17.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.4))
                 if let range = attributedPlaceholder.string.range(of: "#") {
@@ -916,6 +917,7 @@ public final class MessageInputPanelComponent: Component {
                     self.vibrancyPlaceholder.view?.removeFromSuperview()
                     self.vibrancyPlaceholder = ComponentView()
                 }
+                self.currentPlaceholderType = placeholderType
                 
                 var placeholderItems: [AnimatedTextComponent.Item] = []
                 switch component.placeholder {

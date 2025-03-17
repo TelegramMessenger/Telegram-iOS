@@ -4246,6 +4246,21 @@ public extension Api.functions.contacts {
                 }
 }
 public extension Api.functions.contacts {
+                static func getSponsoredPeers(q: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.SponsoredPeers>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1228356717)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.getSponsoredPeers", parameters: [("q", String(describing: q))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.contacts.SponsoredPeers? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.contacts.SponsoredPeers?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.contacts.SponsoredPeers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.contacts {
                 static func getStatuses() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.ContactStatus]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-995929106)
@@ -5124,13 +5139,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func clickSponsoredMessage(flags: Int32, peer: Api.InputPeer, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func clickSponsoredMessage(flags: Int32, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(252261477)
+                    buffer.appendInt32(-2110454402)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.clickSponsoredMessage", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.clickSponsoredMessage", parameters: [("flags", String(describing: flags)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -7636,13 +7650,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func reportSponsoredMessage(peer: Api.InputPeer, randomId: Buffer, option: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.SponsoredMessageReportResult>) {
+                static func reportSponsoredMessage(randomId: Buffer, option: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.channels.SponsoredMessageReportResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(452189112)
-                    peer.serialize(buffer, true)
+                    buffer.appendInt32(315355332)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
                     serializeBytes(option, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.reportSponsoredMessage", parameters: [("peer", String(describing: peer)), ("randomId", String(describing: randomId)), ("option", String(describing: option))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.SponsoredMessageReportResult? in
+                    return (FunctionDescription(name: "messages.reportSponsoredMessage", parameters: [("randomId", String(describing: randomId)), ("option", String(describing: option))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.channels.SponsoredMessageReportResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.channels.SponsoredMessageReportResult?
                         if let signature = reader.readInt32() {
@@ -8984,12 +8997,11 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func viewSponsoredMessage(peer: Api.InputPeer, randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func viewSponsoredMessage(randomId: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1731909873)
-                    peer.serialize(buffer, true)
+                    buffer.appendInt32(647902787)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.viewSponsoredMessage", parameters: [("peer", String(describing: peer)), ("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.viewSponsoredMessage", parameters: [("randomId", String(describing: randomId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

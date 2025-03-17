@@ -11,14 +11,16 @@ public final class BundleIconComponent: Component {
     public let scaleFactor: CGFloat
     public let shadowColor: UIColor?
     public let shadowBlur: CGFloat
+    public let flipVertically: Bool
     
-    public init(name: String, tintColor: UIColor?, maxSize: CGSize? = nil, scaleFactor: CGFloat = 1.0, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0) {
+    public init(name: String, tintColor: UIColor?, maxSize: CGSize? = nil, scaleFactor: CGFloat = 1.0, shadowColor: UIColor? = nil, shadowBlur: CGFloat = 0.0, flipVertically: Bool = false) {
         self.name = name
         self.tintColor = tintColor
         self.maxSize = maxSize
         self.scaleFactor = scaleFactor
         self.shadowColor = shadowColor
         self.shadowBlur = shadowBlur
+        self.flipVertically = flipVertically
     }
     
     public static func ==(lhs: BundleIconComponent, rhs: BundleIconComponent) -> Bool {
@@ -40,6 +42,9 @@ public final class BundleIconComponent: Component {
         if lhs.shadowBlur != rhs.shadowBlur {
             return false
         }
+        if lhs.flipVertically != rhs.flipVertically {
+            return false
+        }
         return true
     }
     
@@ -55,7 +60,7 @@ public final class BundleIconComponent: Component {
         }
         
         func update(component: BundleIconComponent, availableSize: CGSize, transition: ComponentTransition) -> CGSize {
-            if self.component?.name != component.name || self.component?.tintColor != component.tintColor || self.component?.shadowColor != component.shadowColor || self.component?.shadowBlur != component.shadowBlur {
+            if self.component?.name != component.name || self.component?.tintColor != component.tintColor || self.component?.shadowColor != component.shadowColor || self.component?.shadowBlur != component.shadowBlur || self.component?.flipVertically != component.flipVertically {
                 var image: UIImage?
                 if let tintColor = component.tintColor {
                     image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
@@ -72,7 +77,11 @@ public final class BundleIconComponent: Component {
                         }
                     })
                 }
-                self.image = image
+                if component.flipVertically, let cgImage = image?.cgImage {
+                    self.image = UIImage(cgImage: cgImage, scale: image?.scale ?? 0.0, orientation: .down)
+                } else {
+                    self.image = image
+                }
             }
             self.component = component
             

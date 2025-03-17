@@ -1,4 +1,56 @@
 public extension Api {
+    enum StarsGiftOption: TypeConstructorDescription {
+        case starsGiftOption(flags: Int32, stars: Int64, storeProduct: String?, currency: String, amount: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .starsGiftOption(let flags, let stars, let storeProduct, let currency, let amount):
+                    if boxed {
+                        buffer.appendInt32(1577421297)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(stars, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(storeProduct!, buffer: buffer, boxed: false)}
+                    serializeString(currency, buffer: buffer, boxed: false)
+                    serializeInt64(amount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .starsGiftOption(let flags, let stars, let storeProduct, let currency, let amount):
+                return ("starsGiftOption", [("flags", flags as Any), ("stars", stars as Any), ("storeProduct", storeProduct as Any), ("currency", currency as Any), ("amount", amount as Any)])
+    }
+    }
+    
+        public static func parse_starsGiftOption(_ reader: BufferReader) -> StarsGiftOption? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            _5 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.StarsGiftOption.starsGiftOption(flags: _1!, stars: _2!, storeProduct: _3, currency: _4!, amount: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StarsGiveawayOption: TypeConstructorDescription {
         case starsGiveawayOption(flags: Int32, stars: Int64, yearlyBoosts: Int32, storeProduct: String?, currency: String, amount: Int64, winners: [Api.StarsGiveawayWinnersOption])
     

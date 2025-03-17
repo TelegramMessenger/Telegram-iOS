@@ -764,6 +764,59 @@ extension TelegramBusinessIntro {
     }
 }
 
+extension TelegramBusinessBotRights {
+    init(apiValue: Api.BusinessBotRights) {
+        var value: TelegramBusinessBotRights = []
+        switch apiValue {
+        case let .businessBotRights(flags):
+            if (flags & (1 << 0)) != 0 {
+                value.insert(.reply)
+            }
+            if (flags & (1 << 1)) != 0 {
+                value.insert(.readMessages)
+            }
+            if (flags & (1 << 2)) != 0 {
+                value.insert(.deleteSentMessages)
+            }
+            if (flags & (1 << 3)) != 0 {
+                value.insert(.deleteReceivedMessages)
+            }
+            
+            if (flags & (1 << 4)) != 0 {
+                value.insert(.editName)
+            }
+            if (flags & (1 << 5)) != 0 {
+                value.insert(.editBio)
+            }
+            if (flags & (1 << 6)) != 0 {
+                value.insert(.editProfilePhoto)
+            }
+            if (flags & (1 << 7)) != 0 {
+                value.insert(.editUsername)
+            }
+            if (flags & (1 << 8)) != 0 {
+                value.insert(.viewGifts)
+            }
+            if (flags & (1 << 9)) != 0 {
+                value.insert(.sellGifts)
+            }
+            if (flags & (1 << 10)) != 0 {
+                value.insert(.changeGiftSettings)
+            }
+            if (flags & (1 << 11)) != 0 {
+                value.insert(.transferAndUpgradeGifts)
+            }
+            if (flags & (1 << 12)) != 0 {
+                value.insert(.transferStars)
+            }
+            if (flags & (1 << 13)) != 0 {
+                value.insert(.manageStories)
+            }
+        }
+        self = value
+    }
+}
+
 extension TelegramBusinessRecipients {
     convenience init(apiValue: Api.BusinessRecipients) {
         switch apiValue {
@@ -1021,12 +1074,12 @@ func _internal_updateBusinessIntro(account: Account, intro: TelegramBusinessIntr
 public final class TelegramAccountConnectedBot: Codable, Equatable {
     public let id: PeerId
     public let recipients: TelegramBusinessRecipients
-    public let canReply: Bool
+    public let rights: TelegramBusinessBotRights
     
-    public init(id: PeerId, recipients: TelegramBusinessRecipients, canReply: Bool) {
+    public init(id: PeerId, recipients: TelegramBusinessRecipients, rights: TelegramBusinessBotRights) {
         self.id = id
         self.recipients = recipients
-        self.canReply = canReply
+        self.rights = rights
     }
     
     public static func ==(lhs: TelegramAccountConnectedBot, rhs: TelegramAccountConnectedBot) -> Bool {
@@ -1039,10 +1092,48 @@ public final class TelegramAccountConnectedBot: Codable, Equatable {
         if lhs.recipients != rhs.recipients {
             return false
         }
-        if lhs.canReply != rhs.canReply {
+        if lhs.rights != rhs.rights {
             return false
         }
         return true
+    }
+}
+
+public struct TelegramBusinessBotRights: OptionSet, Codable {
+    public var rawValue: Int32
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let reply = TelegramBusinessBotRights(rawValue: 1 << 0)
+    public static let readMessages = TelegramBusinessBotRights(rawValue: 1 << 1)
+    public static let deleteSentMessages = TelegramBusinessBotRights(rawValue: 1 << 2)
+    public static let deleteReceivedMessages = TelegramBusinessBotRights(rawValue: 1 << 3)
+    public static let editName = TelegramBusinessBotRights(rawValue: 1 << 4)
+    public static let editBio = TelegramBusinessBotRights(rawValue: 1 << 5)
+    public static let editProfilePhoto = TelegramBusinessBotRights(rawValue: 1 << 6)
+    public static let editUsername = TelegramBusinessBotRights(rawValue: 1 << 7)
+    public static let viewGifts = TelegramBusinessBotRights(rawValue: 1 << 8)
+    public static let sellGifts = TelegramBusinessBotRights(rawValue: 1 << 9)
+    public static let changeGiftSettings = TelegramBusinessBotRights(rawValue: 1 << 10)
+    public static let transferAndUpgradeGifts = TelegramBusinessBotRights(rawValue: 1 << 11)
+    public static let transferStars = TelegramBusinessBotRights(rawValue: 1 << 12)
+    public static let manageStories = TelegramBusinessBotRights(rawValue: 1 << 13)
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        let value = try? container.decode(Int32.self, forKey: "v")
+        self = TelegramBusinessBotRights(rawValue: value ?? 0)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        try container.encode(self.rawValue, forKey: "v")
     }
 }
 
@@ -1059,20 +1150,65 @@ public func _internal_setAccountConnectedBot(account: Account, bot: TelegramAcco
     }
     |> mapToSignal { botUser, additionalPeers, excludePeers in
         var flags: Int32 = 0
+        var mappedRights: Api.BusinessBotRights?
         var mappedBot: Api.InputUser = .inputUserEmpty
         var mappedRecipients: Api.InputBusinessBotRecipients = .inputBusinessBotRecipients(flags: 0, users: nil, excludeUsers: nil)
         
         if let bot, let inputBotUser = botUser.flatMap(apiInputUser) {
             mappedBot = inputBotUser
-            if bot.canReply {
-                flags |= 1 << 0
+            
+            flags |= 1 << 0
+            
+            var rightsFlags: Int32 = 0
+            if bot.rights.contains(.reply) {
+                rightsFlags |= (1 << 0)
             }
+            if bot.rights.contains(.readMessages) {
+                rightsFlags |= (1 << 1)
+            }
+            if bot.rights.contains(.deleteSentMessages) {
+                rightsFlags |= (1 << 2)
+            }
+            if bot.rights.contains(.deleteReceivedMessages) {
+                rightsFlags |= (1 << 3)
+            }
+            if bot.rights.contains(.editName) {
+                rightsFlags |= (1 << 4)
+            }
+            if bot.rights.contains(.editBio) {
+                rightsFlags |= (1 << 5)
+            }
+            if bot.rights.contains(.editProfilePhoto) {
+                rightsFlags |= (1 << 6)
+            }
+            if bot.rights.contains(.editUsername) {
+                rightsFlags |= (1 << 7)
+            }
+            if bot.rights.contains(.viewGifts) {
+                rightsFlags |= (1 << 8)
+            }
+            if bot.rights.contains(.sellGifts) {
+                rightsFlags |= (1 << 9)
+            }
+            if bot.rights.contains(.changeGiftSettings) {
+                rightsFlags |= (1 << 10)
+            }
+            if bot.rights.contains(.transferAndUpgradeGifts) {
+                rightsFlags |= (1 << 11)
+            }
+            if bot.rights.contains(.transferStars) {
+                rightsFlags |= (1 << 12)
+            }
+            if bot.rights.contains(.manageStories) {
+                rightsFlags |= (1 << 13)
+            }
+            mappedRights = .businessBotRights(flags: rightsFlags)
             mappedRecipients = bot.recipients.apiInputBotValue(additionalPeers: additionalPeers, excludePeers: excludePeers)
         } else {
             flags |= 1 << 1
         }
         
-        return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, rights: nil, bot: mappedBot, recipients: mappedRecipients))
+        return account.network.request(Api.functions.account.updateConnectedBot(flags: flags, rights: mappedRights, bot: mappedBot, recipients: mappedRecipients))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

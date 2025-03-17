@@ -1,4 +1,62 @@
 public extension Api.messages {
+    enum AllStickers: TypeConstructorDescription {
+        case allStickers(hash: Int64, sets: [Api.StickerSet])
+        case allStickersNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .allStickers(let hash, let sets):
+                    if boxed {
+                        buffer.appendInt32(-843329861)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(sets.count))
+                    for item in sets {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .allStickersNotModified:
+                    if boxed {
+                        buffer.appendInt32(-395967805)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .allStickers(let hash, let sets):
+                return ("allStickers", [("hash", hash as Any), ("sets", sets as Any)])
+                case .allStickersNotModified:
+                return ("allStickersNotModified", [])
+    }
+    }
+    
+        public static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.StickerSet]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerSet.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.AllStickers.allStickers(hash: _1!, sets: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
+            return Api.messages.AllStickers.allStickersNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum ArchivedStickers: TypeConstructorDescription {
         case archivedStickers(count: Int32, sets: [Api.StickerSetCovered])
     
@@ -1346,90 +1404,6 @@ public extension Api.messages {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.messages.FeaturedStickers.featuredStickersNotModified(count: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.messages {
-    enum ForumTopics: TypeConstructorDescription {
-        case forumTopics(flags: Int32, count: Int32, topics: [Api.ForumTopic], messages: [Api.Message], chats: [Api.Chat], users: [Api.User], pts: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .forumTopics(let flags, let count, let topics, let messages, let chats, let users, let pts):
-                    if boxed {
-                        buffer.appendInt32(913709011)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(count, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topics.count))
-                    for item in topics {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(messages.count))
-                    for item in messages {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .forumTopics(let flags, let count, let topics, let messages, let chats, let users, let pts):
-                return ("forumTopics", [("flags", flags as Any), ("count", count as Any), ("topics", topics as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any), ("pts", pts as Any)])
-    }
-    }
-    
-        public static func parse_forumTopics(_ reader: BufferReader) -> ForumTopics? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: [Api.ForumTopic]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ForumTopic.self)
-            }
-            var _4: [Api.Message]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
-            }
-            var _5: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _6: [Api.User]?
-            if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            var _7: Int32?
-            _7 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.messages.ForumTopics.forumTopics(flags: _1!, count: _2!, topics: _3!, messages: _4!, chats: _5!, users: _6!, pts: _7!)
             }
             else {
                 return nil

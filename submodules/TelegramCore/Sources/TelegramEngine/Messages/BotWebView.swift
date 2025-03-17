@@ -565,7 +565,7 @@ func _internal_removeChatManagingBot(account: Account, chatId: EnginePeer.Id) ->
                         excludePeers: excludePeers,
                         exclude: connectedBot.recipients.exclude
                     ),
-                    canReply: connectedBot.canReply
+                    rights: connectedBot.rights
                 ))
             } else {
                 return current

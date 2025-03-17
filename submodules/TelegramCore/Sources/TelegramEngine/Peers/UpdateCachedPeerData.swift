@@ -246,11 +246,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     
                                     if let apiBot = connectedBots.first {
                                         switch apiBot {
-                                        case let .connectedBot(flags, botId, recipients, _):
+                                        case let .connectedBot(_, botId, recipients, rights):
                                             mappedConnectedBot = TelegramAccountConnectedBot(
                                                 id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)),
                                                 recipients: TelegramBusinessRecipients(apiValue: recipients),
-                                                canReply: (flags & (1 << 0)) != 0
+                                                rights: TelegramBusinessBotRights(apiValue: rights)
                                             )
                                         }
                                     }
