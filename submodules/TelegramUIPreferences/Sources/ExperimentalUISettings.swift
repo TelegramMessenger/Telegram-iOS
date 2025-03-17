@@ -65,6 +65,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var devRequests: Bool
     public var fakeAds: Bool
     public var conferenceDebug: Bool
+    public var checkSerializedData: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -107,7 +108,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             playerV2: false,
             devRequests: false,
             fakeAds: false,
-            conferenceDebug: false
+            conferenceDebug: false,
+            checkSerializedData: false
         )
     }
     
@@ -151,7 +153,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         playerV2: Bool,
         devRequests: Bool,
         fakeAds: Bool,
-        conferenceDebug: Bool
+        conferenceDebug: Bool,
+        checkSerializedData: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -193,6 +196,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.devRequests = devRequests
         self.fakeAds = fakeAds
         self.conferenceDebug = conferenceDebug
+        self.checkSerializedData = checkSerializedData
     }
     
     public init(from decoder: Decoder) throws {
@@ -238,6 +242,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.devRequests = try container.decodeIfPresent(Bool.self, forKey: "devRequests") ?? false
         self.fakeAds = try container.decodeIfPresent(Bool.self, forKey: "fakeAds") ?? false
         self.conferenceDebug = try container.decodeIfPresent(Bool.self, forKey: "conferenceDebug") ?? false
+        self.checkSerializedData = try container.decodeIfPresent(Bool.self, forKey: "checkSerializedData") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -283,6 +288,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encodeIfPresent(self.devRequests, forKey: "devRequests")
         try container.encodeIfPresent(self.fakeAds, forKey: "fakeAds")
         try container.encodeIfPresent(self.conferenceDebug, forKey: "conferenceDebug")
+        try container.encodeIfPresent(self.checkSerializedData, forKey: "checkSerializedData")
     }
 }
 

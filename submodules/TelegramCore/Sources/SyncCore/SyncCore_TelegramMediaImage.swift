@@ -219,16 +219,16 @@ public final class TelegramMediaImage: Media, Equatable, Codable {
             switch flatBuffersObject.contentType {
             case .emojimarkupContentEmoji:
                 guard let value = flatBuffersObject.content(type: TelegramCore_EmojiMarkup_Content_Emoji.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                    throw FlatBuffersError.missingRequiredField()
                 }
                 self.content = .emoji(fileId: value.fileId)
             case .emojimarkupContentSticker:
                 guard let value = flatBuffersObject.content(type: TelegramCore_EmojiMarkup_Content_Sticker.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                    throw FlatBuffersError.missingRequiredField()
                 }
                 self.content = .sticker(packReference: try StickerPackReference(flatBuffersObject: value.packReference), fileId: value.fileId)
             case .none_:
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             
             self.backgroundColors = flatBuffersObject.backgroundColors

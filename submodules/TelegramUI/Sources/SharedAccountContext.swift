@@ -472,6 +472,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         |> deliverOnMainQueue).start(next: { sharedData in
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
+                
+                flatBuffers_checkedGet = immediateExperimentalUISettingsValue.checkSerializedData
             }
         })
         

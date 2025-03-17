@@ -302,79 +302,79 @@ extension RichText {
             self = .empty
         case .richtextPlain:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Plain.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .plain(value.text)
         case .richtextBold:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Bold.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .bold(try RichText(flatBuffersObject: value.text))
         case .richtextItalic:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Italic.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .italic(try RichText(flatBuffersObject: value.text))
         case .richtextUnderline:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Underline.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .underline(try RichText(flatBuffersObject: value.text))
         case .richtextStrikethrough:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Strikethrough.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .strikethrough(try RichText(flatBuffersObject: value.text))
         case .richtextFixed:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Fixed.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .fixed(try RichText(flatBuffersObject: value.text))
         case .richtextUrl:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Url.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .url(text: try RichText(flatBuffersObject: value.text), url: value.url, webpageId: value.webpageId.flatMap { MediaId($0) })
         case .richtextEmail:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Email.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .email(text: try RichText(flatBuffersObject: value.text), 
                          email: value.email)
         case .richtextConcat:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Concat.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .concat(try (0..<value.textsCount).map { try RichText(flatBuffersObject: value.texts(at: $0)!) })
         case .richtextSubscript:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Subscript.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .subscript(try RichText(flatBuffersObject: value.text))
         case .richtextSuperscript:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Superscript.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .superscript(try RichText(flatBuffersObject: value.text))
         case .richtextMarked:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Marked.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .marked(try RichText(flatBuffersObject: value.text))
         case .richtextPhone:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Phone.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .phone(text: try RichText(flatBuffersObject: value.text), 
                          phone: value.phone)
         case .richtextImage:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Image.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .image(id: MediaId(value.id), dimensions: PixelDimensions(value.dimensions))
         case .richtextAnchor:
             guard let value = flatBuffersObject.value(type: TelegramCore_RichText_Anchor.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .anchor(text: try RichText(flatBuffersObject: value.text), 
                           name: value.name)

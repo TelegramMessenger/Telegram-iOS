@@ -47,18 +47,18 @@ public enum TelegramGroupRole: Equatable, PostboxCoding {
         switch flatBuffersObject.valueType {
         case .telegramgrouproleCreator:
             guard let creator = flatBuffersObject.value(type: TelegramCore_TelegramGroupRole_Creator.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .creator(rank: creator.rank)
         case .telegramgrouproleAdmin:
             guard let admin = flatBuffersObject.value(type: TelegramCore_TelegramGroupRole_Admin.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .admin(try TelegramChatAdminRights(flatBuffersObject: admin.rights), rank: admin.rank)
         case .telegramgrouproleMember:
             self = .member
         case .none_:
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
     }
     
@@ -250,7 +250,7 @@ public final class TelegramGroup: Peer, Equatable {
         self.participantCount = Int(flatBuffersObject.participantCount)
         
         guard let role = flatBuffersObject.role else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         self.role = try TelegramGroupRole(flatBuffersObject: role)
         

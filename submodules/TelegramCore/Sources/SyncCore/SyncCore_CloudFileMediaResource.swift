@@ -970,7 +970,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
     switch flatBuffersObject.valueType {
     case .telegrammediaresourceCloudfilemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudFileMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return CloudFileMediaResource(
             datacenterId: Int(value.datacenterId),
@@ -982,7 +982,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceClouddocumentsizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return CloudDocumentSizeMediaResource(
             datacenterId: value.datacenterId,
@@ -993,7 +993,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudphotosizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return CloudPhotoSizeMediaResource(
             datacenterId: value.datacenterId,
@@ -1005,7 +1005,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudpeerphotosizemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         let sizeSpec: CloudPeerPhotoSizeSpec
         switch value.sizeSpec {
@@ -1023,7 +1023,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceCloudstickerpackthumbnailmediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return CloudStickerPackThumbnailMediaResource(
             datacenterId: value.datacenterId,
@@ -1033,7 +1033,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceClouddocumentmediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return CloudDocumentMediaResource(
             datacenterId: Int(value.datacenterId),
@@ -1045,7 +1045,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
         )
     case .telegrammediaresourceLocalfilemediaresource:
         guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_LocalFileMediaResource.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return LocalFileMediaResource(
             fileId: value.fileId,
@@ -1053,7 +1053,7 @@ public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_Telegram
             isSecretRelated: value.isSecretRelated
         )
     case .none_:
-        throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        throw FlatBuffersError.missingRequiredField()
     }
 }
 
