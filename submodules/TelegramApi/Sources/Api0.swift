@@ -926,6 +926,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-425595208] = { return Api.SmsJob.parse_smsJob($0) }
     dict[1301522832] = { return Api.SponsoredMessage.parse_sponsoredMessage($0) }
     dict[1124938064] = { return Api.SponsoredMessageReportOption.parse_sponsoredMessageReportOption($0) }
+    dict[-963180333] = { return Api.SponsoredPeer.parse_sponsoredPeer($0) }
     dict[46953416] = { return Api.StarGift.parse_starGift($0) }
     dict[1549979985] = { return Api.StarGift.parse_starGiftUnique($0) }
     dict[-1809377438] = { return Api.StarGiftAttribute.parse_starGiftAttributeBackdrop($0) }
@@ -1260,6 +1261,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[2010127419] = { return Api.contacts.ImportedContacts.parse_importedContacts($0) }
     dict[2131196633] = { return Api.contacts.ResolvedPeer.parse_resolvedPeer($0) }
+    dict[-352114556] = { return Api.contacts.SponsoredPeers.parse_sponsoredPeers($0) }
+    dict[-365775695] = { return Api.contacts.SponsoredPeers.parse_sponsoredPeersEmpty($0) }
     dict[1891070632] = { return Api.contacts.TopPeers.parse_topPeers($0) }
     dict[-1255369827] = { return Api.contacts.TopPeers.parse_topPeersDisabled($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
@@ -2102,6 +2105,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SponsoredMessageReportOption:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SponsoredPeer:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StarGift:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StarGiftAttribute:
@@ -2311,6 +2316,8 @@ public extension Api {
             case let _1 as Api.contacts.ImportedContacts:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.ResolvedPeer:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.contacts.SponsoredPeers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.TopPeers:
                 _1.serialize(buffer, boxed)

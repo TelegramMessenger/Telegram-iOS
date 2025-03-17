@@ -83,10 +83,16 @@ public final class ListActionItemComponent: Component {
     public enum LeftIcon: Equatable {
         public final class Check: Equatable {
             public let isSelected: Bool
+            public let isEnabled: Bool
             public let toggle: (() -> Void)?
             
-            public init(isSelected: Bool, toggle: (() -> Void)?) {
+            public init(
+                isSelected: Bool,
+                isEnabled: Bool = true,
+                toggle: (() -> Void)?
+            ) {
                 self.isSelected = isSelected
+                self.isEnabled = isEnabled
                 self.toggle = toggle
             }
             
@@ -95,6 +101,9 @@ public final class ListActionItemComponent: Component {
                     return true
                 }
                 if lhs.isSelected != rhs.isSelected {
+                    return false
+                }
+                if lhs.isEnabled != rhs.isEnabled {
                     return false
                 }
                 if (lhs.toggle == nil) != (rhs.toggle == nil) {
@@ -491,6 +500,7 @@ public final class ListActionItemComponent: Component {
                     }
                     
                     leftCheckView.isUserInteractionEnabled = check.toggle != nil
+                    leftCheckView.alpha = check.isEnabled ? 1.0 : 0.3
                     
                     let checkSize = CGSize(width: 22.0, height: 22.0)
                     let checkFrame = CGRect(origin: CGPoint(x: floor((contentLeftInset - checkSize.width) * 0.5), y: floor((contentHeight - checkSize.height) * 0.5)), size: checkSize)
