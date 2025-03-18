@@ -306,6 +306,14 @@ public struct TelegramDisallowedGifts: OptionSet, Codable {
     public static let unlimited = TelegramDisallowedGifts(rawValue: 1 << 0)
     public static let limited = TelegramDisallowedGifts(rawValue: 1 << 1)
     public static let unique = TelegramDisallowedGifts(rawValue: 1 << 2)
+    public static let premium = TelegramDisallowedGifts(rawValue: 1 << 3)
+    
+    public static let All: TelegramDisallowedGifts = [
+        .unlimited,
+        .limited,
+        .unique,
+        .premium
+    ]
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)

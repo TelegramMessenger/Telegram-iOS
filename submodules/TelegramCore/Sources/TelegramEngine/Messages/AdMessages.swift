@@ -526,7 +526,7 @@ private class AdMessagesHistoryContextImpl {
     }
     
     func markAction(opaqueId: Data, media: Bool, fullscreen: Bool) {
-        _internal_markAdAction(account: self.account, peerId: self.peerId, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
+        _internal_markAdAction(account: self.account, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
     }
     
     func remove(opaqueId: Data) {
@@ -601,7 +601,7 @@ public class AdMessagesHistoryContext {
 }
 
 
-func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: Data, media: Bool, fullscreen: Bool) {
+func _internal_markAdAction(account: Account, opaqueId: Data, media: Bool, fullscreen: Bool) {
     var flags: Int32 = 0
     if media {
         flags |= (1 << 0)
@@ -615,4 +615,15 @@ func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: D
     }
     |> ignoreValues
     let _ = signal.start()
+}
+
+
+
+
+func _internal_markAsSeen(account: Account, opaqueId: Data) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.messages.viewSponsoredMessage(randomId: Buffer(data: opaqueId)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
 }

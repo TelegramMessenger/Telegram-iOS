@@ -1125,6 +1125,23 @@ public struct TelegramBusinessBotRights: OptionSet, Codable {
     public static let transferStars = TelegramBusinessBotRights(rawValue: 1 << 12)
     public static let manageStories = TelegramBusinessBotRights(rawValue: 1 << 13)
     
+    public static let All: TelegramBusinessBotRights = [
+        .reply,
+        .readMessages,
+        .deleteSentMessages,
+        .deleteReceivedMessages,
+        .editName,
+        .editBio,
+        .editProfilePhoto,
+        .editUsername,
+        .viewGifts,
+        .sellGifts,
+        .changeGiftSettings,
+        .transferAndUpgradeGifts,
+        .transferStars,
+        .manageStories
+    ]
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
         let value = try? container.decode(Int32.self, forKey: "v")

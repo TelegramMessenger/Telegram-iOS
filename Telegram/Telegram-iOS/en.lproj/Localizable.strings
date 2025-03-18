@@ -14034,3 +14034,26 @@ Sorry for the inconvenience.";
 "Privacy.Gifts.PremiumToast.Action" = "Open";
 
 "Gift.Send.ErrorDisallowed" = "**%@** doesn't accept this kind of gifts.";
+
+"ChatbotSetup.Rights.ManageMessages" = "Manage Messages";
+"ChatbotSetup.Rights.ReadMessages" = "Read Messages";
+"ChatbotSetup.Rights.ReplyToMessages" = "Reply to Messages";
+"ChatbotSetup.Rights.MarkAsRead" = "Mark Messages as Read";
+"ChatbotSetup.Rights.DeleteSentMessages" = "Delete Sent Messages";
+"ChatbotSetup.Rights.DeleteReceivedMessages" = "Delete Received Messages";
+
+"ChatbotSetup.Rights.ManageProfile" = "Manage Profile";
+"ChatbotSetup.Rights.EditName" = "Edit Name";
+"ChatbotSetup.Rights.EditBio" = "Edit Bio";
+"ChatbotSetup.Rights.EditProfilePhoto" = "Edit Profile Photo";
+"ChatbotSetup.Rights.EditUsername" = "Edit Username";
+
+"ChatbotSetup.Rights.ManageGiftsAndStars" = "Manage Gifts and Stars";
+"ChatbotSetup.Rights.ViewGifts" = "View Gifts";
+"ChatbotSetup.Rights.SellGifts" = "Sell Gifts";
+"ChatbotSetup.Rights.ChangeGiftSettings" = "Change Gift Settings";
+"ChatbotSetup.Rights.TransferAndUpgradeGifts" = "Transfer and Upgrade Gifts";
+"ChatbotSetup.Rights.TransferStars" = "Transfer Stars";
+"ChatbotSetup.Rights.ManageStories" = "Manage Stories";
+
+"Gift.Send.Upgrade.ForcedInfo" = "%1$@ accepts only unique gifts. [Learn More >]()";

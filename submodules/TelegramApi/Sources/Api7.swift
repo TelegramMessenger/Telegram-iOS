@@ -946,25 +946,25 @@ public extension Api {
 }
 public extension Api {
     enum GlobalPrivacySettings: TypeConstructorDescription {
-        case globalPrivacySettings(flags: Int32, noncontactPeersPaidStars: Int64?, disallowedStargifts: Api.DisallowedStarGiftsSettings?)
+        case globalPrivacySettings(flags: Int32, noncontactPeersPaidStars: Int64?, disallowedGifts: Api.DisallowedGiftsSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars, let disallowedStargifts):
+                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars, let disallowedGifts):
                     if boxed {
-                        buffer.appendInt32(-715184062)
+                        buffer.appendInt32(-29248689)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 5) != 0 {serializeInt64(noncontactPeersPaidStars!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 6) != 0 {disallowedStargifts!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {disallowedGifts!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars, let disallowedStargifts):
-                return ("globalPrivacySettings", [("flags", flags as Any), ("noncontactPeersPaidStars", noncontactPeersPaidStars as Any), ("disallowedStargifts", disallowedStargifts as Any)])
+                case .globalPrivacySettings(let flags, let noncontactPeersPaidStars, let disallowedGifts):
+                return ("globalPrivacySettings", [("flags", flags as Any), ("noncontactPeersPaidStars", noncontactPeersPaidStars as Any), ("disallowedGifts", disallowedGifts as Any)])
     }
     }
     
@@ -973,15 +973,15 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int64?
             if Int(_1!) & Int(1 << 5) != 0 {_2 = reader.readInt64() }
-            var _3: Api.DisallowedStarGiftsSettings?
+            var _3: Api.DisallowedGiftsSettings?
             if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.DisallowedStarGiftsSettings
+                _3 = Api.parse(reader, signature: signature) as? Api.DisallowedGiftsSettings
             } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 5) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 6) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, noncontactPeersPaidStars: _2, disallowedStargifts: _3)
+                return Api.GlobalPrivacySettings.globalPrivacySettings(flags: _1!, noncontactPeersPaidStars: _2, disallowedGifts: _3)
             }
             else {
                 return nil

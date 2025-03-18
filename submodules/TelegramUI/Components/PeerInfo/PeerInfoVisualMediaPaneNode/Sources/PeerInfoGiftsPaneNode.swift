@@ -33,6 +33,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     private let peerId: PeerId
     private let profileGifts: ProfileGiftsContext
     private let canManage: Bool
+    private let canGift: Bool
     
     private var dataDisposable: Disposable?
     
@@ -101,12 +102,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     
     private let maxPinnedCount: Int
     
-    public init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, profileGifts: ProfileGiftsContext, canManage: Bool) {
+    public init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, profileGifts: ProfileGiftsContext, canManage: Bool, canGift: Bool) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
         self.profileGifts = profileGifts
         self.canManage = canManage
+        self.canGift = canGift
         
         self.backgroundNode = ASDisplayNode()
         self.scrollNode = ASScrollNode()
@@ -434,6 +436,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                     
                     let ribbonText: String?
                     var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
+                    var ribbonFont: GiftItemComponent.Ribbon.Font = .generic
                     switch product.gift {
                     case let .generic(gift):
                         if let availability = gift.availability {
@@ -442,7 +445,8 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             ribbonText = nil
                         }
                     case let .unique(gift):
-                        ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.issued), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
+                        ribbonFont = .monospaced
+                        ribbonText = "#\(gift.number)"
                         for attribute in gift.attributes {
                             if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
                                 ribbonColor = .custom(outerColor, innerColor)
@@ -471,7 +475,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 strings: params.presentationData.strings,
                                 peer: peer,
                                 subject: subject,
-                                ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, color: ribbonColor) },
+                                ribbon: ribbonText.flatMap { GiftItemComponent.Ribbon(text: $0, font: ribbonFont, color: ribbonColor) },
                                 isHidden: !product.savedToProfile,
                                 isPinned: product.pinnedToTop,
                                 isEditing: self.isReordering,
@@ -542,6 +546,19 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                     return false
                                                 }
                                                 if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                                                    if let gifts = self.profileGifts.currentState?.gifts.filter({ $0.pinnedToTop }) {
+                                                        let controller = GiftUnpinScreen(
+                                                            context: context,
+                                                            gifts: gifts,
+                                                            completion: { [weak self] reference in
+                                                                guard let self else {
+                                                                    return
+                                                                }
+                                                                self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: false)
+                                                            }
+                                                        )
+                                                        self.parentController?.push(controller)
+                                                    }
                                                     return false
                                                 }
                                                 if let reference = product.reference {
@@ -657,7 +674,10 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
             let panelSeparator: ASDisplayNode
             let panelButton: SolidRoundedButtonNode
             
-            let panelAlpha = params.expandProgress
+            var panelAlpha = params.expandProgress
+            if !self.canGift {
+                panelAlpha = 0.0
+            }
             
             if let current = self.panelBackground {
                 panelBackground = current
