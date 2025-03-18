@@ -1061,11 +1061,16 @@ final class ChatbotSetupScreenComponent: Component {
                     )
                     
                     if let subpermissions = permission.subpermissions {
-                        value = false
+                        value = true
                         var selectedCount = 0
                         for subpermission in subpermissions {
-                            if subpermission.value == true {
-                                value = true
+                            if let key = subpermission.key {
+                                if self.botRights.contains(key) {
+                                    selectedCount += 1
+                                } else {
+                                    value = false
+                                }
+                            } else if subpermission.value == true {
                                 selectedCount += 1
                             }
                         }
@@ -1138,8 +1143,10 @@ final class ChatbotSetupScreenComponent: Component {
                     if let subpermissions = permission.subpermissions, permission.expanded == true {
                         for subpermission in subpermissions {
                             var value = false
-                            if let key = permission.key {
+                            if let key = subpermission.key {
                                 value = self.botRights.contains(key)
+                            } else if subpermission.value == true {
+                                value = true
                             }
                             
                             permissionsItems.append(

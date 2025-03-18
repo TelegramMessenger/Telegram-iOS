@@ -6139,7 +6139,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let context = self.context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        //TODO:localize
         var actions: [ContextMenuItem] = []
         if adPeer.sponsorInfo != nil || adPeer.additionalInfo != nil {
             actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AdSponsorInfo, textColor: .primary, icon: { theme in
@@ -6191,7 +6190,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })))
         }
         
-        actions.append(.action(ContextMenuActionItem(text: "About These Ads", textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
+        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_ContextMenu_AboutAd, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { [weak self] _, f in
             f(.default)

@@ -111,7 +111,7 @@ private final class SheetContent: CombinedComponent {
                         
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Your Account is Frozen", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.FrozenAccount_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1
@@ -125,15 +125,14 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += title.size.height
             contentSize.height += spacing - 2.0
             
-            //TODO:localize
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
                 AnyComponentWithIdentity(
-                    id: "ads",
+                    id: "violation",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Violation of Terms",
+                        title: strings.FrozenAccount_Violation_Title,
                         titleColor: textColor,
-                        text: "Your account was frozen for breaking Telegram's Terms and Conditions.",
+                        text: strings.FrozenAccount_Violation_Text,
                         textColor: secondaryTextColor,
                         iconName: "Account Freeze/Violation",
                         iconColor: linkColor
@@ -142,11 +141,11 @@ private final class SheetContent: CombinedComponent {
             )
             items.append(
                 AnyComponentWithIdentity(
-                    id: "split",
+                    id: "readOnly",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Read-Only Mode",
+                        title: strings.FrozenAccount_ReadOnly_Title,
                         titleColor: textColor,
-                        text: "You can access your account but can't send messages or take actions.",
+                        text: strings.FrozenAccount_ReadOnly_Text,
                         textColor: secondaryTextColor,
                         iconName: "Ads/Privacy",
                         iconColor: linkColor
@@ -156,19 +155,17 @@ private final class SheetContent: CombinedComponent {
             let dateString = stringForFullDate(timestamp: component.configuration.freezeUntilDate ?? 0, strings: strings, dateTimeFormat: environment.dateTimeFormat)
             items.append(
                 AnyComponentWithIdentity(
-                    id: "withdrawal",
+                    id: "appeal",
                     component: AnyComponent(ParagraphComponent(
-                        title: "Appeal Before Deactivation",
+                        title: strings.FrozenAccount_Appeal_Title,
                         titleColor: textColor,
-                        text: "Appeal via [@SpamBot]() before \(dateString), or your account will be deleted.",
+                        text: strings.FrozenAccount_Appeal_Text(dateString).string,
                         textColor: secondaryTextColor,
                         iconName: "Account Freeze/Appeal",
                         iconColor: linkColor,
                         action: {
+                            component.submitAppeal()
                             component.dismiss()
-                            Queue.mainQueue().after(0.5) {
-                                component.submitAppeal()
-                            }
                         }
                     ))
                 )
@@ -185,7 +182,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += list.size.height
             contentSize.height += spacing + 2.0
             
-            let buttonAttributedString = NSMutableAttributedString(string: "Submit an Appeal", font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
+            let buttonAttributedString = NSMutableAttributedString(string: strings.FrozenAccount_SubmitAppeal, font: Font.semibold(17.0), textColor: environment.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
             let actionButton = actionButton.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -201,10 +198,8 @@ private final class SheetContent: CombinedComponent {
                     isEnabled: true,
                     displaysProgress: false,
                     action: {
+                        component.submitAppeal()
                         component.dismiss()
-                        Queue.mainQueue().after(0.5) {
-                            component.submitAppeal()
-                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -217,7 +212,7 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += actionButton.size.height
             contentSize.height += 8.0
             
-            let closeAttributedString = NSMutableAttributedString(string: "Understood", font: Font.regular(17.0), textColor: environment.theme.list.itemCheckColors.fillColor, paragraphAlignment: .center)
+            let closeAttributedString = NSMutableAttributedString(string: strings.FrozenAccount_Understood, font: Font.regular(17.0), textColor: environment.theme.list.itemCheckColors.fillColor, paragraphAlignment: .center)
             let closeButton = closeButton.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -390,10 +385,12 @@ public final class AccountFreezeInfoScreen: ViewControllerComponentContainer {
         self.navigationPresentation = .flatModal
                              
         submitAppealImpl = { [weak self] in
-            guard let self, let url = configuration.freezeAppealUrl else {
+            guard let self, let navigationController = self.navigationController as? NavigationController, let url = configuration.freezeAppealUrl else {
                 return
             }
-            context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: self.navigationController as? NavigationController, dismissInput: {})
+            Queue.mainQueue().after(0.4) {
+                context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: {})
+            }
         }
     }
     

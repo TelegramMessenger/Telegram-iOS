@@ -289,9 +289,8 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
                 textString = NSAttributedString(string: item.strings.ChatList_AddPhoto_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
                 avatarPeer = accountPeer
             case .accountFreeze:
-                //TODO:localize
-                titleString = NSAttributedString(string: "Your account is frozen", font: titleFont, textColor: item.theme.list.itemDestructiveColor)
-                textString = NSAttributedString(string: "Tap to view details and submit an appeal.", font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                titleString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Title, font: titleFont, textColor: item.theme.list.itemDestructiveColor)
+                textString = NSAttributedString(string: item.strings.ChatList_FrozenAccount_Text, font: smallTextFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
             }
             
             var leftInset: CGFloat = sideInset

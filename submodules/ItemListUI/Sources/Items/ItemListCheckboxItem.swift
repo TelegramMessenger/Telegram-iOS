@@ -36,12 +36,13 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let color: ItemListCheckboxItemColor
     let textColor: TextColor
     let checked: Bool
+    let enabled: Bool
     let zeroSeparatorInsets: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     let deleteAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, subtitle: String? = nil, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, subtitle: String? = nil, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, enabled: Bool = true, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
@@ -52,6 +53,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
         self.color = color
         self.textColor = textColor
         self.checked = checked
+        self.enabled = enabled
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
         self.action = action
@@ -95,7 +97,9 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     
     public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
-        self.action()
+        if self.enabled {
+            self.action()
+        }
     }
 }
 
@@ -209,13 +213,16 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
-            let titleColor: UIColor
+            var titleColor: UIColor
             let subtitleColor: UIColor = item.presentationData.theme.list.itemSecondaryTextColor
             switch item.textColor {
             case .primary:
                 titleColor = item.presentationData.theme.list.itemPrimaryTextColor
             case .accent:
                 titleColor = item.presentationData.theme.list.itemAccentColor
+            }
+            if !item.enabled {
+                titleColor = item.presentationData.theme.list.itemDisabledTextColor
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 28.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -239,12 +246,16 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                 updatedTheme = item.presentationData.theme
             }
             
-            if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.color != item.color {
-                switch item.color {
-                case .accent:
-                    updateCheckImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
-                case .secondary:
-                    updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.presentationData.theme)
+            if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.color != item.color || currentItem?.enabled != item.enabled {
+                if !item.enabled {
+                    updateCheckImage = PresentationResourcesItemList.disabledCheckIconImage(item.presentationData.theme)
+                } else {
+                    switch item.color {
+                    case .accent:
+                        updateCheckImage = PresentationResourcesItemList.checkIconImage(item.presentationData.theme)
+                    case .secondary:
+                        updateCheckImage = PresentationResourcesItemList.secondaryCheckIconImage(item.presentationData.theme)
+                    }
                 }
             }
 
@@ -260,6 +271,11 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.activateArea.accessibilityValue = "Selected"
                     } else {
                         strongSelf.activateArea.accessibilityValue = ""
+                    }
+                    if item.enabled {
+                        strongSelf.activateArea.accessibilityTraits = []
+                    } else {
+                        strongSelf.activateArea.accessibilityTraits = [.notEnabled]
                     }
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
@@ -368,7 +384,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
         
-        if highlighted {
+        if highlighted && (self.item?.enabled ?? false) {
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 var anchorNode: ASDisplayNode?

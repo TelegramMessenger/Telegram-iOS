@@ -390,8 +390,13 @@ final class GiftSetupScreenComponent: Component {
                 let completion = component.completion
                 
                 let signal = BotCheckoutController.InputData.fetch(context: component.context, source: source)
-                |> `catch` { _ -> Signal<BotCheckoutController.InputData, SendBotPaymentFormError> in
-                    return .fail(.generic)
+                |> `catch` { error -> Signal<BotCheckoutController.InputData, SendBotPaymentFormError> in
+                    switch error {
+                    case .disallowedStarGifts:
+                        return .fail(.disallowedStarGift)
+                    default:
+                        return .fail(.generic)
+                    }
                 }
                 |> mapToSignal { inputData -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
                     return component.context.engine.payments.sendStarsPaymentForm(formId: inputData.form.id, source: source)

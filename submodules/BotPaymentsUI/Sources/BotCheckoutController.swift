@@ -11,6 +11,7 @@ public final class BotCheckoutController: ViewController {
     public final class InputData {
         public enum FetchError {
             case generic
+            case disallowedStarGifts
         }
 
         public let form: BotPaymentForm
@@ -53,8 +54,13 @@ public final class BotCheckoutController: ViewController {
             }
 
             return context.engine.payments.fetchBotPaymentForm(source: source, themeParams: themeParams)
-            |> mapError { _ -> FetchError in
-                return .generic
+            |> mapError { error -> FetchError in
+                switch error {
+                case .disallowedStarGift:
+                    return .disallowedStarGifts
+                default:
+                    return .generic
+                }
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
                 let botPeer: Signal<EnginePeer?, FetchError>

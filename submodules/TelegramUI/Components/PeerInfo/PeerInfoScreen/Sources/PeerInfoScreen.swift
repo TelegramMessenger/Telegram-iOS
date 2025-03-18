@@ -14363,7 +14363,7 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
                         action: nil
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 28.0, height: 28.0)
+                    containerSize: CGSize(width: 24.0, height: 24.0)
                 )
                 if let view = self.emojiStatusView.view {
                     if view.superview == nil {

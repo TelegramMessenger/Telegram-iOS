@@ -1000,7 +1000,7 @@ public final class CachedUserData: CachedPeerData {
     public let starRefProgram: TelegramStarRefProgram?
     public let verification: PeerVerification?
     public let sendPaidMessageStars: StarsAmount?
-    public let disallowedGifts: TelegramDisallowedGifts
+    public let disallowedGifts: TelegramDisallowedGifts?
     
     public let peerIds: Set<PeerId>
     public let messageIds: Set<MessageId>
@@ -1042,10 +1042,10 @@ public final class CachedUserData: CachedPeerData {
         self.starRefProgram = nil
         self.verification = nil
         self.sendPaidMessageStars = nil
-        self.disallowedGifts = []
+        self.disallowedGifts = nil
     }
     
-    public init(about: String?, botInfo: BotInfo?, editableBotInfo: EditableBotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: CachedPeerProfilePhoto, personalPhoto: CachedPeerProfilePhoto, fallbackPhoto: CachedPeerProfilePhoto, voiceMessagesAvailable: Bool, wallpaper: TelegramWallpaper?, flags: CachedUserFlags, businessHours: TelegramBusinessHours?, businessLocation: TelegramBusinessLocation?, greetingMessage: TelegramBusinessGreetingMessage?, awayMessage: TelegramBusinessAwayMessage?, connectedBot: TelegramAccountConnectedBot?, businessIntro: CachedTelegramBusinessIntro, birthday: TelegramBirthday?, personalChannel: CachedTelegramPersonalChannel, botPreview: BotPreview?, starGiftsCount: Int32?, starRefProgram: TelegramStarRefProgram?, verification: PeerVerification?, sendPaidMessageStars: StarsAmount?, disallowedGifts: TelegramDisallowedGifts) {
+    public init(about: String?, botInfo: BotInfo?, editableBotInfo: EditableBotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: CachedPeerProfilePhoto, personalPhoto: CachedPeerProfilePhoto, fallbackPhoto: CachedPeerProfilePhoto, voiceMessagesAvailable: Bool, wallpaper: TelegramWallpaper?, flags: CachedUserFlags, businessHours: TelegramBusinessHours?, businessLocation: TelegramBusinessLocation?, greetingMessage: TelegramBusinessGreetingMessage?, awayMessage: TelegramBusinessAwayMessage?, connectedBot: TelegramAccountConnectedBot?, businessIntro: CachedTelegramBusinessIntro, birthday: TelegramBirthday?, personalChannel: CachedTelegramPersonalChannel, botPreview: BotPreview?, starGiftsCount: Int32?, starRefProgram: TelegramStarRefProgram?, verification: PeerVerification?, sendPaidMessageStars: StarsAmount?, disallowedGifts: TelegramDisallowedGifts?) {
         self.about = about
         self.botInfo = botInfo
         self.editableBotInfo = editableBotInfo
@@ -1153,7 +1153,7 @@ public final class CachedUserData: CachedPeerData {
         
         self.sendPaidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "sendPaidMessageStars")
         
-        self.disallowedGifts = TelegramDisallowedGifts(rawValue: decoder.decodeInt32ForKey("disallowedGifts", orElse: 0))
+        self.disallowedGifts = decoder.decodeOptionalInt32ForKey("disallowedGifts").flatMap { TelegramDisallowedGifts(rawValue: $0) }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -1283,7 +1283,11 @@ public final class CachedUserData: CachedPeerData {
             encoder.encodeNil(forKey: "sendPaidMessageStars")
         }
         
-        encoder.encodeInt32(self.disallowedGifts.rawValue, forKey: "disallowedGifts")
+        if let disallowedGifts = self.disallowedGifts {
+            encoder.encodeInt32(disallowedGifts.rawValue, forKey: "disallowedGifts")
+        } else {
+            encoder.encodeNil(forKey: "disallowedGifts")
+        }
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {

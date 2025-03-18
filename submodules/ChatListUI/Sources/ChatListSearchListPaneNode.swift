@@ -855,6 +855,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                             
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .generalSearch(isSavedMessages: false), peer: .peer(peer: peer.peer, chatPeer: peer.peer), status: .addressName(suffixString), badge: nil, requiresPremiumForMessaging: false, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, searchQuery: nil, isAd: true, action: { _ in
                     interaction.peerSelected(peer.peer, nil, nil, nil, false)
+                    context.engine.messages.markAdAction(opaqueId: peer.opaqueId, media: false, fullscreen: false)
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(peer.peer, nil, .generic)
                 }, contextAction: peerContextAction.flatMap { peerContextAction in

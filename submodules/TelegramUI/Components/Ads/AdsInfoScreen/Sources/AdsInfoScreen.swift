@@ -193,10 +193,9 @@ private final class ScrollContent: CombinedComponent {
                 adsText =  strings.AdsInfo_Bot_Ads_Text
                 infoRawText = strings.AdsInfo_Bot_Launch_Text
             case .search:
-                //TODO:localize
-                respectText = "Ads like this do not use your personal information and are based on the search query you entered."
-                adsText = strings.AdsInfo_Bot_Ads_Text
-                infoRawText = "Anyone can create an ad to display in search results for any query. Check out the Telegram Ad Platform for details. [Learn More >]()"
+                respectText = strings.AdsInfo_Search_Respect_Text
+                adsText = strings.AdsInfo_Search_Ads_Text
+                infoRawText = strings.AdsInfo_Search_Launch_Text
             }
             
             var items: [AnyComponentWithIdentity<Empty>] = []

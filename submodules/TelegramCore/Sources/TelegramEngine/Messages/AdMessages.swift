@@ -617,9 +617,6 @@ func _internal_markAdAction(account: Account, opaqueId: Data, media: Bool, fulls
     let _ = signal.start()
 }
 
-
-
-
 func _internal_markAsSeen(account: Account, opaqueId: Data) -> Signal<Never, NoError> {
     return account.network.request(Api.functions.messages.viewSponsoredMessage(randomId: Buffer(data: opaqueId)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
