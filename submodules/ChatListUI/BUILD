@@ -114,6 +114,7 @@ swift_library(
         "//submodules/TelegramUI/Components/LottieComponent",
         "//submodules/TelegramUI/Components/AvatarUploadToastScreen",
         "//submodules/TelegramUI/Components/Ads/AdsInfoScreen",
+        "//submodules/TelegramUI/Components/Ads/AdsReportScreen",
     ],
     visibility = [
         "//visibility:public",

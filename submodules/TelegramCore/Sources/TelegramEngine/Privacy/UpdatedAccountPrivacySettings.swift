@@ -34,7 +34,7 @@ func _internal_updateGlobalPrivacySettings(account: Account) -> Signal<Never, No
                 }
                 
                 var disallowedGifts: TelegramDisallowedGifts = []
-                if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
+                if case let .disallowedGiftsSettings(giftFlags) = disallowedStarGifts {
                     if (giftFlags & (1 << 0)) != 0 {
                         disallowedGifts.insert(.unlimited)
                     }
@@ -43,6 +43,9 @@ func _internal_updateGlobalPrivacySettings(account: Account) -> Signal<Never, No
                     }
                     if (giftFlags & (1 << 2)) != 0 {
                         disallowedGifts.insert(.unique)
+                    }
+                    if (giftFlags & (1 << 3)) != 0 {
+                        disallowedGifts.insert(.premium)
                     }
                 }
                 
@@ -256,7 +259,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             }
             
             var disallowedGifts: TelegramDisallowedGifts = []
-            if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
+            if case let .disallowedGiftsSettings(giftFlags) = disallowedStarGifts {
                 if (giftFlags & (1 << 0)) != 0 {
                     disallowedGifts.insert(.unlimited)
                 }
@@ -265,6 +268,9 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 }
                 if (giftFlags & (1 << 2)) != 0 {
                     disallowedGifts.insert(.unique)
+                }
+                if (giftFlags & (1 << 3)) != 0 {
+                    disallowedGifts.insert(.premium)
                 }
             }
             
@@ -409,10 +415,10 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
         }
     }
     flags |= 1 << 6
-    let disallowedStargifts = Api.DisallowedStarGiftsSettings.disallowedStarGiftsSettings(flags: giftFlags)
+    let disallowedStargifts = Api.DisallowedGiftsSettings.disallowedGiftsSettings(flags: giftFlags)
     
     return account.network.request(Api.functions.account.setGlobalPrivacySettings(
-        settings: .globalPrivacySettings(flags: flags, noncontactPeersPaidStars: noncontactPeersPaidStars, disallowedStargifts: disallowedStargifts)
+        settings: .globalPrivacySettings(flags: flags, noncontactPeersPaidStars: noncontactPeersPaidStars, disallowedGifts: disallowedStargifts)
     ))
     |> retryRequest
     |> ignoreValues

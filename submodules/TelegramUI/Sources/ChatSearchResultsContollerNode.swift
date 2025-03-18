@@ -295,7 +295,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, ASScrollViewDe
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {
-        }, openAdInfo: { _ in
+        }, openAdInfo: { _, _ in
         }, openAccountFreezeInfo: {
         })
         interaction.searchTextHighightState = searchQuery

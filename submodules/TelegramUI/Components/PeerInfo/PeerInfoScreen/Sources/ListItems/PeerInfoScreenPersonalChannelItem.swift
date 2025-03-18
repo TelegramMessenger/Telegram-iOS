@@ -187,7 +187,7 @@ public final class LoadingOverlayNode: ASDisplayNode {
             }, editPeer: { _ in
             }, openWebApp: { _ in
             }, openPhotoSetup: {
-            }, openAdInfo: { _ in
+            }, openAdInfo: { _, _ in
             }, openAccountFreezeInfo: {
             })
             
@@ -548,7 +548,7 @@ private final class PeerInfoScreenPersonalChannelItemNode: PeerInfoScreenItemNod
             },
             openPhotoSetup: {
             },
-            openAdInfo: { _ in
+            openAdInfo: { _, _ in
             },
             openAccountFreezeInfo: {
             }

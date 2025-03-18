@@ -174,8 +174,9 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case disallowedGiftsUnlimited(PresentationTheme, String, Bool, Bool)
     case disallowedGiftsLimited(PresentationTheme, String, Bool, Bool)
     case disallowedGiftsUnique(PresentationTheme, String, Bool, Bool)
+    case disallowedGiftsPremium(PresentationTheme, String, Bool, Bool)
     case disallowedGiftsInfo(PresentationTheme, String)
-    case showGiftButton(PresentationTheme, String, Bool, Bool)
+    case showGiftButton(PresentationTheme, String, Bool, Bool, Bool)
     case showGiftButtonInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -202,7 +203,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.hideReadTime.rawValue
             case .subscribeToPremium, .subscribeToPremiumInfo:
                 return SelectivePrivacySettingsSection.premium.rawValue
-            case .disallowedGiftsHeader, .disallowedGiftsUnlimited, .disallowedGiftsLimited, .disallowedGiftsUnique, .disallowedGiftsInfo:
+            case .disallowedGiftsHeader, .disallowedGiftsUnlimited, .disallowedGiftsLimited, .disallowedGiftsUnique, .disallowedGiftsPremium, .disallowedGiftsInfo:
                 return SelectivePrivacySettingsSection.disallowedGifts.rawValue
             case .showGiftButton, .showGiftButtonInfo:
                 return SelectivePrivacySettingsSection.giftButton.rawValue
@@ -285,12 +286,14 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return 35
             case .disallowedGiftsUnique:
                 return 36
-            case .disallowedGiftsInfo:
+            case .disallowedGiftsPremium:
                 return 37
-            case .showGiftButton:
+            case .disallowedGiftsInfo:
                 return 38
-            case .showGiftButtonInfo:
+            case .showGiftButton:
                 return 39
+            case .showGiftButtonInfo:
+                return 40
         }
     }
     
@@ -518,14 +521,20 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .disallowedGiftsPremium(lhsTheme, lhsText, lhsEnabled, lhsValue):
+            if case let .disallowedGiftsPremium(rhsTheme, rhsText, rhsEnabled, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
         case let .disallowedGiftsInfo(lhsTheme, lhsText):
             if case let .disallowedGiftsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
             } else {
                 return false
             }
-        case let .showGiftButton(lhsTheme, lhsText, lhsEnabled, lhsValue):
-            if case let .showGiftButton(rhsTheme, rhsText, rhsEnabled, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled, lhsValue == rhsValue {
+        case let .showGiftButton(lhsTheme, lhsText, lhsEnabled, lhsValue, lhsAvailable):
+            if case let .showGiftButton(rhsTheme, rhsText, rhsEnabled, rhsValue, rhsAvailable) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEnabled == rhsEnabled, lhsValue == rhsValue, lhsAvailable == rhsAvailable {
                 return true
             } else {
                 return false
@@ -696,13 +705,23 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 }, activatedWhileDisabled: {
                     arguments.displayLockedGiftsInfo()
                 })
-            case let .disallowedGiftsInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .showGiftButton(_, text, isLocked, value):
+            case let .disallowedGiftsPremium(_, text, isLocked, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: !isLocked, enabled: true, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { updatedValue in
                     if !isLocked {
-                        arguments.updateShowGiftButton?(updatedValue)
+                        arguments.updateDisallowedGifts?(.premium, !updatedValue)
                     } else {
+                        arguments.displayLockedGiftsInfo()
+                    }
+                }, activatedWhileDisabled: {
+                    arguments.displayLockedGiftsInfo()
+                })
+            case let .disallowedGiftsInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .showGiftButton(_, text, isLocked, value, available):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: !isLocked, enabled: available, displayLocked: isLocked, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                    if !isLocked {
+                        arguments.updateShowGiftButton?(updatedValue)
+                    } else if available {
                         arguments.displayLockedGiftsInfo()
                     }
                 }, activatedWhileDisabled: {
@@ -1125,8 +1144,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.disallowedGiftsUnlimited(presentationData.theme, "Unlimited", !isPremium, !(state.disallowedGifts?.contains(.unlimited) ?? false)))
         entries.append(.disallowedGiftsLimited(presentationData.theme, "Limited-Edition", !isPremium, !(state.disallowedGifts?.contains(.limited) ?? false)))
         entries.append(.disallowedGiftsUnique(presentationData.theme, "Unique", !isPremium, !(state.disallowedGifts?.contains(.unique) ?? false)))
+        entries.append(.disallowedGiftsPremium(presentationData.theme, "Premium Subscriptions", !isPremium, !(state.disallowedGifts?.contains(.premium) ?? false)))
         entries.append(.disallowedGiftsInfo(presentationData.theme, "Choose the types of gifts that you allow others to send you."))
-        entries.append(.showGiftButton(presentationData.theme, "Show Gift Icon in Chats", !isPremium, state.showGiftButton == true))
+        entries.append(.showGiftButton(presentationData.theme, "Show Gift Icon in Chats", !isPremium, state.showGiftButton == true && state.disallowedGifts != TelegramDisallowedGifts.All, state.disallowedGifts != TelegramDisallowedGifts.All))
         entries.append(.showGiftButtonInfo(presentationData.theme, "Display the  # Gift icon in the message input field for both participants in all chats."))
     }
     
@@ -1603,6 +1623,12 @@ public func selectivePrivacySettingsController(
                 } else {
                     updatedDisallowedGifts.remove(.unique)
                 }
+            case .premium:
+                if value {
+                    updatedDisallowedGifts.insert(.premium)
+                } else {
+                    updatedDisallowedGifts.remove(.premium)
+                }
             default:
                 break
             }
@@ -1713,7 +1739,11 @@ public func selectivePrivacySettingsController(
                     disallowedGifts = value
                 }
                 if let value = state.showGiftButton {
-                    showGiftButton = value
+                    if disallowedGifts != TelegramDisallowedGifts.All {
+                        showGiftButton = value
+                    } else {
+                        showGiftButton = false
+                    }
                 }
             }
             

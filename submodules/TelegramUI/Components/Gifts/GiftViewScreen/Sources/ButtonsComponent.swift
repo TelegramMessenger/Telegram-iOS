@@ -141,3 +141,24 @@ private func generateCloseButtonImage() -> UIImage? {
         context.strokePath()
     })?.withRenderingMode(.alwaysTemplate)
 }
+
+func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(backgroundColor.cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(foregroundColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
+}

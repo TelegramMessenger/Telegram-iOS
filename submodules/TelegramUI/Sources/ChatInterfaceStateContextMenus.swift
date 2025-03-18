@@ -559,13 +559,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }, iconSource: nil, action: { _, f in
                 f(.default)
                 
-                let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                let _ = (context.engine.messages.reportAdMessage(opaqueId: adAttribute.opaqueId, option: nil)
                 |> deliverOnMainQueue).start(next: { result in
                     if case let .options(title, options) = result {
                         controllerInteraction.navigationController()?.pushViewController(
                             AdsReportScreen(
                                 context: context,
-                                peerId: message.id.peerId,
                                 opaqueId: adAttribute.opaqueId,
                                 title: title,
                                 options: options,

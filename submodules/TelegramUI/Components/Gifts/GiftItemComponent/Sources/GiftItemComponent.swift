@@ -69,11 +69,19 @@ public final class GiftItemComponent: Component {
                 }
             }
         }
+        
+        public enum Font {
+            case generic
+            case monospaced
+        }
+        
         public let text: String
+        public let font: Font
         public let color: Color
         
-        public init(text: String, color: Color) {
+        public init(text: String, font: Font = .generic, color: Color) {
             self.text = text
+            self.font = font
             self.color = color
         }
     }
@@ -593,11 +601,19 @@ public final class GiftItemComponent: Component {
                 } else {
                     ribbonFontSize = 10.0
                 }
+                let ribbonFont: UIFont
+                switch ribbon.font {
+                case .generic:
+                    ribbonFont = Font.semibold(ribbonFontSize)
+                case .monospaced:
+                    ribbonFont = Font.with(size: 10.0, design: .monospace, weight: .semibold)
+                }
+                
                 let ribbonTextSize = self.ribbonText.update(
                     transition: transition,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: ribbon.text, font: Font.semibold(ribbonFontSize), textColor: .white)),
+                            text: .plain(NSAttributedString(string: ribbon.text, font: ribbonFont, textColor: .white)),
                             horizontalAlignment: .center
                         )
                     ),
@@ -778,7 +794,11 @@ public final class GiftItemComponent: Component {
                     } else {
                         selectionLayer = SimpleShapeLayer()
                         self.selectionLayer = selectionLayer
-                        self.layer.addSublayer(selectionLayer)
+                        if self.ribbon.layer.superlayer != nil {
+                            self.layer.insertSublayer(selectionLayer, below: self.ribbon.layer)
+                        } else {
+                            self.layer.addSublayer(selectionLayer)
+                        }
                         
                         selectionLayer.fillColor = UIColor.clear.cgColor
                         selectionLayer.strokeColor = UIColor.white.cgColor

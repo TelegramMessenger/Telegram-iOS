@@ -114,7 +114,7 @@ public final class ChatListNodeInteraction {
     let editPeer: (ChatListItem) -> Void
     let openWebApp: (TelegramUser) -> Void
     let openPhotoSetup: () -> Void
-    let openAdInfo: (ASDisplayNode) -> Void
+    let openAdInfo: (ASDisplayNode, AdPeer) -> Void
     let openAccountFreezeInfo: () -> Void
     
     public var searchTextHighightState: String?
@@ -174,7 +174,7 @@ public final class ChatListNodeInteraction {
         editPeer: @escaping (ChatListItem) -> Void,
         openWebApp: @escaping (TelegramUser) -> Void,
         openPhotoSetup: @escaping () -> Void,
-        openAdInfo: @escaping (ASDisplayNode) -> Void,
+        openAdInfo: @escaping (ASDisplayNode, AdPeer) -> Void,
         openAccountFreezeInfo: @escaping () -> Void
     ) {
         self.activateSearch = activateSearch
@@ -1245,7 +1245,7 @@ public final class ChatListNode: ListView {
     public var openStarsTopup: ((Int64?) -> Void)?
     public var openWebApp: ((TelegramUser) -> Void)?
     public var openPhotoSetup: (() -> Void)?
-    public var openAdInfo: ((ASDisplayNode) -> Void)?
+    public var openAdInfo: ((ASDisplayNode, AdPeer) -> Void)?
     public var openAccountFreezeInfo: (() -> Void)?
     
     private var theme: PresentationTheme
@@ -1905,8 +1905,8 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openPhotoSetup?()
-        }, openAdInfo: { [weak self] node in
-            self?.openAdInfo?(node)
+        }, openAdInfo: { [weak self] node, adPeer in
+            self?.openAdInfo?(node, adPeer)
         }, openAccountFreezeInfo: { [weak self] in
             self?.openAccountFreezeInfo?()
         })

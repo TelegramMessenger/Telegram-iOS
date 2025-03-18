@@ -1277,22 +1277,19 @@ public class AdsInfoScreen: ViewController {
                     guard let navigationController = self?.controller?.navigationController as? NavigationController else {
                         return
                     }
-                    
-                    self?.controller?.dismiss(animated: true)
-                                        
-                    let _ = (context.engine.messages.reportAdMessage(peerId: message.id.peerId, opaqueId: adAttribute.opaqueId, option: nil)
+                                                            
+                    let _ = (context.engine.messages.reportAdMessage(opaqueId: adAttribute.opaqueId, option: nil)
                     |> deliverOnMainQueue).start(next: { [weak navigationController] result in
                         if case let .options(title, options) = result {
                             Queue.mainQueue().after(0.2) {
                                 navigationController?.pushViewController(
                                     AdsReportScreen(
                                         context: context,
-                                        peerId: message.id.peerId,
                                         opaqueId: adAttribute.opaqueId,
                                         title: title,
                                         options: options,
                                         completed: {
-                                            removeAd?(adAttribute.opaqueId)
+                                           // removeAd?(adAttribute.opaqueId)
                                         }
                                     )
                                 )

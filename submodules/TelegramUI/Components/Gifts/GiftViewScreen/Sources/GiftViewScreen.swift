@@ -3007,12 +3007,6 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                         self.subject = .profileGift(peerId, gift.withPinnedToTop(false))
                                     }
                                 }
-                            } else {
-                                var maxPinnedCount: Int = 6
-                                if let value = context.currentAppConfiguration.with({ $0 }).data?["stargifts_pinned_to_top_limit"] as? Double {
-                                    maxPinnedCount = Int(value)
-                                }
-                                self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }
                         })
                     })))

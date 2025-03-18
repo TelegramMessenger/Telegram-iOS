@@ -397,7 +397,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let sendPaidMessageStars = sendPaidMessageStars.flatMap { StarsAmount(value: $0, nanos: 0) }
                                     
                                         var disallowedGifts: TelegramDisallowedGifts = []
-                                        if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
+                                        if case let .disallowedGiftsSettings(giftFlags) = disallowedStarGifts {
                                             if (giftFlags & (1 << 0)) != 0 {
                                                 disallowedGifts.insert(.unlimited)
                                             }
@@ -406,6 +406,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             if (giftFlags & (1 << 2)) != 0 {
                                                 disallowedGifts.insert(.unique)
+                                            }
+                                            if (giftFlags & (1 << 3)) != 0 {
+                                                disallowedGifts.insert(.premium)
                                             }
                                         }
                                     

@@ -526,7 +526,7 @@ private class AdMessagesHistoryContextImpl {
     }
     
     func markAction(opaqueId: Data, media: Bool, fullscreen: Bool) {
-        _internal_markAdAction(account: self.account, peerId: self.peerId, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
+        _internal_markAdAction(account: self.account, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
     }
     
     func remove(opaqueId: Data) {
@@ -601,7 +601,7 @@ public class AdMessagesHistoryContext {
 }
 
 
-func _internal_markAdAction(account: Account, peerId: EnginePeer.Id, opaqueId: Data, media: Bool, fullscreen: Bool) {
+func _internal_markAdAction(account: Account, opaqueId: Data, media: Bool, fullscreen: Bool) {
     var flags: Int32 = 0
     if media {
         flags |= (1 << 0)

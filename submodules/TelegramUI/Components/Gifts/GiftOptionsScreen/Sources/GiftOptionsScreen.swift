@@ -430,10 +430,15 @@ final class GiftOptionsScreenComponent: Component {
                                                         )
                                                         mainController.push(giftController)
                                                     } else {
+                                                        var forceUnique = false
+                                                        if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts.contains(.limited) && !disallowedGifts.contains(.unique) {
+                                                            forceUnique = true
+                                                        }
+                                                        
                                                         let giftController = GiftSetupScreen(
                                                             context: component.context,
                                                             peerId: component.peerId,
-                                                            subject: .starGift(gift),
+                                                            subject: .starGift(gift, forceUnique),
                                                             completion: component.completion
                                                         )
                                                         mainController.push(giftController)
@@ -714,7 +719,7 @@ final class GiftOptionsScreenComponent: Component {
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
-            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled || state.disallowedGifts?.contains(.premium) == true
             let isSelfGift = component.peerId == component.context.account.peerId
             let isChannelGift = component.peerId.namespace == Namespaces.Peer.CloudChannel
             
@@ -1425,7 +1430,11 @@ final class GiftOptionsScreenComponent: Component {
                             }
                             if disallowedGifts.contains(.limited) {
                                 if gift.availability != nil {
-                                    return false
+                                    if !disallowedGifts.contains(.unique) && gift.upgradeStars != nil {
+                                        
+                                    } else {
+                                        return false
+                                    }
                                 }
                             }
                         }
