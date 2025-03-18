@@ -53,7 +53,7 @@ func _internal_searchAdPeers(account: Account, query: String) -> Signal<[AdPeer]
                 for peer in peers {
                     switch peer {
                     case let .sponsoredPeer(_, randomId, apiPeer, sponsorInfo, additionalInfo):
-                        guard let peer = parsedPeers.peers[apiPeer.peerId] else {
+                        guard let peer = parsedPeers.get(apiPeer.peerId) else {
                             continue
                         }
                         result.append(
@@ -72,4 +72,16 @@ func _internal_searchAdPeers(account: Account, query: String) -> Signal<[AdPeer]
             }
         }
     }
+}
+
+
+func _internal_markAsSeen(account: Account, opaqueId: Data) -> Signal<Never, NoError> {
+    let signal: Signal<Never, NoError> = account.network.request(Api.functions.messages.viewSponsoredMessage(randomId: Buffer(data: opaqueId)))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
+    
+    
+    return signal
 }
