@@ -514,6 +514,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                             }
                                         }
                                     } else {
+                                        var dismissImpl: (() -> Void)?
                                         let controller = GiftViewScreen(
                                             context: self.context,
                                             subject: .profileGift(self.peerId, product),
@@ -550,11 +551,36 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                         let controller = GiftUnpinScreen(
                                                             context: context,
                                                             gifts: gifts,
-                                                            completion: { [weak self] reference in
+                                                            completion: { [weak self] unpinnedReference in
                                                                 guard let self else {
                                                                     return
                                                                 }
-                                                                self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: false)
+                                                                dismissImpl?()
+                                                                
+                                                                var replacingTitle = ""
+                                                                for gift in gifts {
+                                                                    if gift.reference == unpinnedReference, case let .unique(uniqueGift) = gift.gift {
+                                                                        replacingTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, params.presentationData.dateTimeFormat.groupingSeparator))"
+                                                                    }
+                                                                }
+                                                                
+                                                                var updatedPinnedGifts = self.pinnedReferences
+                                                                if let index = updatedPinnedGifts.firstIndex(of: unpinnedReference), let reference = product.reference {
+                                                                    updatedPinnedGifts[index] = reference
+                                                                }
+                                                                self.profileGifts.updatePinnedToTopStarGifts(references: updatedPinnedGifts)
+                                                                
+                                                                var title = ""
+                                                                if case let .unique(uniqueGift) = product.gift {
+                                                                    title = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, params.presentationData.dateTimeFormat.groupingSeparator))"
+                                                                }
+                                                                                                       
+                                                                let _ = self.scrollToTop()
+                                                                Queue.mainQueue().after(0.35) {
+                                                                    let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_TitleNew(title).string
+                                                                    let toastText = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_ReplacingText(replacingTitle).string
+                                                                    self.parentController?.present(UndoOverlayController(presentationData: params.presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                                                                }
                                                             }
                                                         )
                                                         self.parentController?.push(controller)
@@ -564,10 +590,15 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 if let reference = product.reference {
                                                     self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
                                                     
+                                                    var title = ""
+                                                    if case let .unique(uniqueGift) = product.gift {
+                                                        title = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, params.presentationData.dateTimeFormat.groupingSeparator))"
+                                                    }
+                                                    
                                                     if pinnedToTop {
                                                         let _ = self.scrollToTop()
                                                         Queue.mainQueue().after(0.35) {
-                                                            let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Title
+                                                            let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_TitleNew(title).string
                                                             let toastText = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_Text
                                                             self.parentController?.present(UndoOverlayController(presentationData: params.presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                                                         }
@@ -585,6 +616,9 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 }
                                             }
                                         )
+                                        dismissImpl = { [weak controller] in
+                                            controller?.dismissAnimated()
+                                        }
                                         self.parentController?.push(controller)
                                     }
                                 },
@@ -1041,7 +1075,11 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             toastTitle = nil
                             toastText = strings.PeerInfo_Gifts_ToastUnpinned_Text
                         } else {
-                            toastTitle = strings.PeerInfo_Gifts_ToastPinned_Title
+                            var title = ""
+                            if case let .unique(uniqueGift) = gift.gift {
+                                title = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
+                            }
+                            toastTitle = strings.PeerInfo_Gifts_ToastPinned_TitleNew(title).string
                             toastText = strings.PeerInfo_Gifts_ToastPinned_Text
                         }
                         self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: !pinnedToTop ? "anim_toastunpin" : "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))

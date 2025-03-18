@@ -13961,6 +13961,8 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.ToastUnpinned.Text" = "Gift Unpinned.";
 "PeerInfo.Gifts.ToastPinned.Title" = "Gift Pinned";
 "PeerInfo.Gifts.ToastPinned.Text" = "Now it will always be shown on the top.";
+"PeerInfo.Gifts.ToastPinned.TitleNew" = "%@ Pinned";
+"PeerInfo.Gifts.ToastPinned.ReplacingText" = "replacing %@.";
 
 "Chat.PaidMessage.Confirm.Title" = "Confirm Payment";
 "Chat.PaidMessage.Confirm.DontAskAgain" = "Don't ask again";

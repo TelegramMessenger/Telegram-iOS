@@ -6397,7 +6397,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
-                                alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                if cachedData.disallowedGifts != .All {
+                                    alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
