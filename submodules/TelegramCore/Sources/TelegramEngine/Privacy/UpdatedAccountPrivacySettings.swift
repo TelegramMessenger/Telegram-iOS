@@ -413,6 +413,9 @@ func _internal_updateGlobalPrivacySettings(account: Account, settings: GlobalPri
         if settings.disallowedGifts.contains(.unique) {
             giftFlags |= 1 << 2
         }
+        if settings.disallowedGifts.contains(.premium) {
+            giftFlags |= 1 << 3
+        }
     }
     flags |= 1 << 6
     let disallowedStargifts = Api.DisallowedGiftsSettings.disallowedGiftsSettings(flags: giftFlags)
