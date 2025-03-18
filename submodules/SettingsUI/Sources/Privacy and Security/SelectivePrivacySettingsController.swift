@@ -212,87 +212,87 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .forwardsPreviewHeader:
-                return 0
-            case .forwardsPreview:
-                return 1
-            case .birthdayHeader:
-                return 2
-            case .settingHeader:
-                return 3
-            case .everybody:
-                return 4
-            case .contacts:
-                return 5
-            case .nobody:
-                return 6
-            case .settingInfo:
-                return 7
-            case .phoneDiscoveryHeader:
-                return 8
-            case .phoneDiscoveryEverybody:
-                return 9
-            case .phoneDiscoveryMyContacts:
-                return 10
-            case .phoneDiscoveryInfo:
-                return 11
-            case .exceptionsHeader:
-                return 12
-            case .disableFor:
-                return 13
-            case .enableFor:
-                return 14
-            case .peersInfo:
-                return 15
-            case .callsP2PHeader:
-                return 16
-            case .callsP2PAlways:
-                return 17
-            case .callsP2PContacts:
-                return 18
-            case .callsP2PNever:
-                return 19
-            case .callsP2PInfo:
-                return 20
-            case .callsP2PDisableFor:
-                return 21
-            case .callsP2PEnableFor:
-                return 22
-            case .callsP2PPeersInfo:
-                return 23
-            case .callsIntegrationEnabled:
-                return 24
-            case .callsIntegrationInfo:
-                return 25
-            case .setPublicPhoto:
-                return 26
-            case .removePublicPhoto:
-                return 27
-            case .publicPhotoInfo:
-                return 28
-            case .hideReadTime:
-                return 29
-            case .hideReadTimeInfo:
-                return 30
-            case .subscribeToPremium:
-                return 31
-            case .subscribeToPremiumInfo:
-                return 32
-            case .disallowedGiftsHeader:
-                return 33
-            case .disallowedGiftsUnlimited:
-                return 34
-            case .disallowedGiftsLimited:
-                return 35
-            case .disallowedGiftsUnique:
-                return 36
-            case .disallowedGiftsPremium:
-                return 37
-            case .disallowedGiftsInfo:
-                return 38
             case .showGiftButton:
-                return 39
+                return 0
             case .showGiftButtonInfo:
+                return 1
+            case .forwardsPreviewHeader:
+                return 2
+            case .forwardsPreview:
+                return 3
+            case .birthdayHeader:
+                return 4
+            case .settingHeader:
+                return 5
+            case .everybody:
+                return 6
+            case .contacts:
+                return 7
+            case .nobody:
+                return 8
+            case .settingInfo:
+                return 9
+            case .phoneDiscoveryHeader:
+                return 10
+            case .phoneDiscoveryEverybody:
+                return 11
+            case .phoneDiscoveryMyContacts:
+                return 12
+            case .phoneDiscoveryInfo:
+                return 13
+            case .exceptionsHeader:
+                return 14
+            case .disableFor:
+                return 15
+            case .enableFor:
+                return 16
+            case .peersInfo:
+                return 17
+            case .callsP2PHeader:
+                return 18
+            case .callsP2PAlways:
+                return 19
+            case .callsP2PContacts:
+                return 20
+            case .callsP2PNever:
+                return 21
+            case .callsP2PInfo:
+                return 22
+            case .callsP2PDisableFor:
+                return 23
+            case .callsP2PEnableFor:
+                return 24
+            case .callsP2PPeersInfo:
+                return 25
+            case .callsIntegrationEnabled:
+                return 26
+            case .callsIntegrationInfo:
+                return 27
+            case .setPublicPhoto:
+                return 28
+            case .removePublicPhoto:
+                return 29
+            case .publicPhotoInfo:
+                return 30
+            case .hideReadTime:
+                return 31
+            case .hideReadTimeInfo:
+                return 32
+            case .subscribeToPremium:
+                return 33
+            case .subscribeToPremiumInfo:
+                return 34
+            case .disallowedGiftsHeader:
+                return 35
+            case .disallowedGiftsUnlimited:
+                return 36
+            case .disallowedGiftsLimited:
+                return 37
+            case .disallowedGiftsUnique:
+                return 38
+            case .disallowedGiftsPremium:
+                return 39
+            case .disallowedGiftsInfo:
                 return 40
         }
     }
@@ -725,7 +725,9 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                         arguments.displayLockedGiftsInfo()
                     }
                 }, activatedWhileDisabled: {
-                    arguments.displayLockedGiftsInfo()
+                    if available {
+                        arguments.displayLockedGiftsInfo()
+                    }
                 })
             case let .showGiftButtonInfo(_, text):
                 let attributedString = NSMutableAttributedString(string: text, font: Font.regular(presentationData.fontSize.itemListBaseHeaderFontSize), textColor: presentationData.theme.list.freeTextColor)
@@ -998,6 +1000,11 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
     }
     
+    if case .giftsAutoSave = kind {
+        entries.append(.showGiftButton(presentationData.theme, "Show Gift Icon in Chats", !isPremium, state.showGiftButton == true && state.disallowedGifts != TelegramDisallowedGifts.All, state.disallowedGifts != TelegramDisallowedGifts.All))
+        entries.append(.showGiftButtonInfo(presentationData.theme, "Display the  # Gift icon in the message input field for both participants in all chats."))
+    }
+    
     if case .forwards = kind {
         let linkEnabled: Bool
         let tootipText: String
@@ -1146,8 +1153,6 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.disallowedGiftsUnique(presentationData.theme, "Unique", !isPremium, !(state.disallowedGifts?.contains(.unique) ?? false)))
         entries.append(.disallowedGiftsPremium(presentationData.theme, "Premium Subscriptions", !isPremium, !(state.disallowedGifts?.contains(.premium) ?? false)))
         entries.append(.disallowedGiftsInfo(presentationData.theme, "Choose the types of gifts that you allow others to send you."))
-        entries.append(.showGiftButton(presentationData.theme, "Show Gift Icon in Chats", !isPremium, state.showGiftButton == true && state.disallowedGifts != TelegramDisallowedGifts.All, state.disallowedGifts != TelegramDisallowedGifts.All))
-        entries.append(.showGiftButtonInfo(presentationData.theme, "Display the  # Gift icon in the message input field for both participants in all chats."))
     }
     
     return entries
