@@ -129,8 +129,11 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
     }
     
     return network.request(Api.functions.messages.getPinnedDialogs(folderId: groupId.rawValue))
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> mapToSignal { dialogs -> Signal<Void, NoError> in
+        guard let dialogs else {
+            return .complete()
+        }
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             var storeMessages: [StoreMessage] = []
             var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]

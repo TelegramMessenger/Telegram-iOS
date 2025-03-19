@@ -22,25 +22,28 @@ public struct WebAuthorization : Equatable {
 
 func webSessions(network: Network) -> Signal<([WebAuthorization], [PeerId: Peer]), NoError> {
     return network.request(Api.functions.account.getWebAuthorizations())
-        |> retryRequest
-        |> map { result -> ([WebAuthorization], [PeerId : Peer]) in
-            var sessions: [WebAuthorization] = []
-            var peers:[PeerId : Peer] = [:]
-            switch result {
-            case let .webAuthorizations(authorizations, users):
-                for authorization in authorizations {
-                    switch authorization {
-                    case let .webAuthorization(hash, botId, domain, browser, platform, dateCreated, dateActive, ip, region):
-                        sessions.append(WebAuthorization(hash: hash, botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), domain: domain, browser: browser, platform: platform, dateCreated: dateCreated, dateActive: dateActive, ip: ip, region: region))
-                        
-                    }
-                }
-                for user in users {
-                    let peer = TelegramUser(user: user)
-                    peers[peer.id] = peer
+    |> retryRequestIfNotFrozen
+    |> map { result -> ([WebAuthorization], [PeerId : Peer]) in
+        guard let result else {
+            return ([], [:])
+        }
+        var sessions: [WebAuthorization] = []
+        var peers:[PeerId : Peer] = [:]
+        switch result {
+        case let .webAuthorizations(authorizations, users):
+            for authorization in authorizations {
+                switch authorization {
+                case let .webAuthorization(hash, botId, domain, browser, platform, dateCreated, dateActive, ip, region):
+                    sessions.append(WebAuthorization(hash: hash, botId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), domain: domain, browser: browser, platform: platform, dateCreated: dateCreated, dateActive: dateActive, ip: ip, region: region))
+                    
                 }
             }
-            return (sessions, peers)
+            for user in users {
+                let peer = TelegramUser(user: user)
+                peers[peer.id] = peer
+            }
+        }
+        return (sessions, peers)
     }
 }
 

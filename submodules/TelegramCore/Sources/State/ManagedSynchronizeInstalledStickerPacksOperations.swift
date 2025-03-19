@@ -479,10 +479,13 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
     }
     
     let sequence = request
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> mapError { _ -> SynchronizeInstalledStickerPacksError in
     }
     |> mapToSignal { result -> Signal<Void, SynchronizeInstalledStickerPacksError> in
+        guard let result else {
+            return .complete()
+        }
         return postbox.transaction { transaction -> Signal<Void, SynchronizeInstalledStickerPacksError> in
             let checkLocalCollectionInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
             if checkLocalCollectionInfos != localCollectionInfos {

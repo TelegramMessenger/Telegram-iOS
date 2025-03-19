@@ -114,8 +114,11 @@ func _internal_updateBirthday(account: Account, birthday: TelegramBirthday?) -> 
 
 func managedContactBirthdays(stateManager: AccountStateManager) -> Signal<Never, NoError> {
     let poll = stateManager.network.request(Api.functions.contacts.getBirthdays())
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> mapToSignal { result -> Signal<Never, NoError> in
+        guard let result else {
+            return .complete()
+        }
         return stateManager.postbox.transaction { transaction -> Void in
             if case let .contactBirthdays(contactBirthdays, users) = result {
                 updatePeers(transaction: transaction, accountPeerId: stateManager.accountPeerId, peers: AccumulatedPeers(users: users))

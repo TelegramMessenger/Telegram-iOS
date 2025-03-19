@@ -8,8 +8,11 @@ import MtProtoKit
 func managedAutodownloadSettingsUpdates(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         return (network.request(Api.functions.account.getAutoDownloadSettings())
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<Void, NoError> in
+            guard let result else {
+                return .complete()
+            }
             return updateAutodownloadSettingsInteractively(accountManager: accountManager, { _ -> AutodownloadSettings in
                 return AutodownloadSettings(apiAutodownloadSettings: result)
             })
