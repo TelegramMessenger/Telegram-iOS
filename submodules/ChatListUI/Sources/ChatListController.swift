@@ -3936,13 +3936,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             if resetCurrentEntry {
-                strongSelf.selectTab(id: selectedEntryId)
+                strongSelf.selectTab(id: selectedEntryId, switchToChatsIfNeeded: false)
             }
         }))
     }
     
-    private func selectTab(id: ChatListFilterTabEntryId) {
-        if self.parent == nil {
+    private func selectTab(id: ChatListFilterTabEntryId, switchToChatsIfNeeded: Bool = true) {
+        if self.parent == nil, switchToChatsIfNeeded {
             if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
                 for controller in navigationController.viewControllers {
                     if let controller = controller as? TabBarController {
@@ -6308,6 +6308,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     var isStoryPostingAvailable: Bool {
+        guard !self.context.isFrozen else {
+            return false
+        }
         switch self.storyPostingAvailability {
         case .enabled:
             return true

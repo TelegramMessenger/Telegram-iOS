@@ -78,8 +78,11 @@ public final class BlockedPeersContext {
         }
         
         self.disposable.set((self.account.network.request(Api.functions.contacts.getBlocked(flags: flags, offset: Int32(self._state.peers.count), limit: limit))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<(peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?), NoError> in
+            guard let result else {
+                return .single((peers: [], canLoadMore: false, totalCount: 0))
+            }
             return postbox.transaction { transaction -> (peers: [RenderedPeer], canLoadMore: Bool, totalCount: Int?) in
                 switch result {
                     case let .blocked(blocked, chats, users):

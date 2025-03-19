@@ -333,7 +333,7 @@ extension ChatControllerImpl {
                     }
                     
                     controller?.dismissWithoutContent()
-                    guard !self.presentAccountFrozenInfoIfNeeded() else {
+                    guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                         return
                     }
                     self.presentTagPremiumPaywall()
@@ -344,7 +344,7 @@ extension ChatControllerImpl {
                         return
                     }
                     
-                    guard !self.presentAccountFrozenInfoIfNeeded() else {
+                    guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                         controller?.dismiss(completion: {})
                         return
                     }

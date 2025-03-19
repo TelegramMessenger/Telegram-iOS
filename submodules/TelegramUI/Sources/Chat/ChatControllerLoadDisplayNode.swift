@@ -1866,7 +1866,7 @@ extension ChatControllerImpl {
                 return
             }
             
-            guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
+            guard !strongSelf.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 completion(.immediate, {})
                 return
             }
@@ -2120,7 +2120,7 @@ extension ChatControllerImpl {
             })
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {
-                guard !strongSelf.presentAccountFrozenInfoIfNeeded() else {
+                guard !strongSelf.presentAccountFrozenInfoIfNeeded(delay: true) else {
                     completion(.default)
                     return
                 }
@@ -2192,6 +2192,10 @@ extension ChatControllerImpl {
             }
         }, forwardMessages: { [weak self] messages in
             if let strongSelf = self, !messages.isEmpty {
+                guard !strongSelf.presentAccountFrozenInfoIfNeeded(delay: true) else {
+                    return
+                }
+                
                 strongSelf.commitPurposefulAction()
                 let forwardMessageIds = messages.map { $0.id }.sorted()
                 strongSelf.forwardMessages(messageIds: forwardMessageIds)
@@ -3229,6 +3233,11 @@ extension ChatControllerImpl {
             self?.unblockPeer()
         }, pinMessage: { [weak self] messageId, contextController in
             if let strongSelf = self, let currentPeerId = strongSelf.chatLocation.peerId {
+                guard !strongSelf.presentAccountFrozenInfoIfNeeded(delay: true) else {
+                    contextController?.dismiss(completion: nil)
+                    return
+                }
+                
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     if strongSelf.canManagePin() {
                         let pinAction: (Bool, Bool) -> Void = { notify, forThisPeerOnlyIfPossible in

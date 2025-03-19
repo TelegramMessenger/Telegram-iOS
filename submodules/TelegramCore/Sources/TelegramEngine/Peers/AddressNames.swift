@@ -548,8 +548,11 @@ func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChann
     let accountPeerId = account.peerId
     
     return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> mapToSignal { result -> Signal<[TelegramAdminedPublicChannel], NoError> in
+        guard let result else {
+            return .single([])
+        }
         return account.postbox.transaction { transaction -> [TelegramAdminedPublicChannel] in
             let chats: [Api.Chat]
             var subscriberCounts: [PeerId: Int] = [:]
@@ -675,8 +678,11 @@ func _internal_channelsForPublicReaction(account: Account, useLocalCache: Bool) 
     }
     |> mapToSignal { cachedPeers in
         let remote: Signal<[Peer], NoError> = account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: 0))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[Peer], NoError> in
+            guard let result else {
+                return .single([])
+            }
             return account.postbox.transaction { transaction -> [Peer] in
                 let chats: [Api.Chat]
                 let parsedPeers: AccumulatedPeers

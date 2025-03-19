@@ -3402,7 +3402,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            guard !self.presentAccountFrozenInfoIfNeeded() else {
+            guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 return
             }
             self.presentScheduleTimePicker(completion: { [weak self] time in
@@ -3433,7 +3433,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            guard !self.presentAccountFrozenInfoIfNeeded() else {
+            guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 return
             }
             
