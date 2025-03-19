@@ -78,6 +78,8 @@ import AffiliateProgramSetupScreen
 import GalleryUI
 import ShareController
 import AccountFreezeInfoScreen
+import JoinSubjectScreen
+import OldChannelsController
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -473,6 +475,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         |> deliverOnMainQueue).start(next: { sharedData in
             if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings]?.get(ExperimentalUISettings.self) {
                 let _ = immediateExperimentalUISettingsValue.swap(settings)
+                
+                flatBuffers_checkedGet = settings.checkSerializedData
             }
         })
         
@@ -3582,6 +3586,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, revenuePerUser: Double, mode: JoinAffiliateProgramScreenMode) -> ViewController {
         return JoinAffiliateProgramScreen(context: context, sourcePeer: sourcePeer, commissionPermille: commissionPermille, programDuration: programDuration, revenuePerUser: revenuePerUser, mode: mode)
+    }
+    
+    public func makeJoinSubjectScreen(context: AccountContext, mode: JoinSubjectScreenMode) -> ViewController {
+        return JoinSubjectScreen(context: context, mode: mode)
+    }
+    
+    public func makeOldChannelsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void) -> ViewController {
+        return oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: intent, completed: completed)
     }
     
     public func makeGalleryController(context: AccountContext, source: GalleryControllerItemSource, streamSingleVideo: Bool, isPreview: Bool) -> ViewController {

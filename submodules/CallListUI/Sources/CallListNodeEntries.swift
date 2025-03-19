@@ -25,6 +25,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     enum SortIndex: Comparable {
         case displayTab
         case displayTabInfo
+        case createGroupCall
         case groupCall(EnginePeer.Id, String)
         case message(EngineMessage.Index)
         case hole(EngineMessage.Index)
@@ -40,9 +41,16 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 default:
                     return false
                 }
-            case let .groupCall(lhsPeerId, lhsTitle):
+            case .createGroupCall:
                 switch rhs {
                 case .displayTab, .displayTabInfo:
+                    return false
+                default:
+                    return true
+                }
+            case let .groupCall(lhsPeerId, lhsTitle):
+                switch rhs {
+                case .displayTab, .displayTabInfo, .createGroupCall:
                     return false
                 case let .groupCall(rhsPeerId, rhsTitle):
                     if lhsTitle == rhsTitle {
@@ -55,7 +63,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .hole(lhsIndex):
                 switch rhs {
-                case .displayTab, .displayTabInfo, .groupCall:
+                case .displayTab, .displayTabInfo, .groupCall, .createGroupCall:
                     return false
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
@@ -64,7 +72,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
                 }
             case let .message(lhsIndex):
                 switch rhs {
-                case .displayTab, .displayTabInfo, .groupCall:
+                case .displayTab, .displayTabInfo, .groupCall, .createGroupCall:
                     return false
                 case let .hole(rhsIndex):
                     return lhsIndex < rhsIndex
@@ -78,6 +86,7 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     case displayTab(PresentationTheme, String, Bool)
     case displayTabInfo(PresentationTheme, String)
+    case createGroupCall
     case groupCall(peer: EnginePeer, editing: Bool, isActive: Bool)
     case messageEntry(topMessage: EngineMessage, messages: [EngineMessage], theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, editing: Bool, hasActiveRevealControls: Bool, displayHeader: Bool, missed: Bool)
     case holeEntry(index: EngineMessage.Index, theme: PresentationTheme)
@@ -88,6 +97,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .displayTab
         case .displayTabInfo:
             return .displayTabInfo
+        case .createGroupCall:
+            return .createGroupCall
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id, peer.compactDisplayTitle)
         case let .messageEntry(message, _, _, _, _, _, _, _, _):
@@ -103,6 +114,8 @@ enum CallListNodeEntry: Comparable, Identifiable {
             return .setting(0)
         case .displayTabInfo:
             return .setting(1)
+        case .createGroupCall:
+            return .setting(2)
         case let .groupCall(peer, _, _):
             return .groupCall(peer.id)
         case let .messageEntry(message, _, _, _, _, _, _, _, _):
@@ -118,82 +131,88 @@ enum CallListNodeEntry: Comparable, Identifiable {
     
     static func ==(lhs: CallListNodeEntry, rhs: CallListNodeEntry) -> Bool {
         switch lhs {
-            case let .displayTab(lhsTheme, lhsText, lhsValue):
-                if case let .displayTab(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
+        case let .displayTab(lhsTheme, lhsText, lhsValue):
+            if case let .displayTab(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .displayTabInfo(lhsTheme, lhsText):
+            if case let .displayTabInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case .createGroupCall:
+            if case .createGroupCall = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .groupCall(lhsPeer, lhsEditing, lhsIsActive):
+            if case let .groupCall(rhsPeer, rhsEditing, rhsIsActive) = rhs {
+                if lhsPeer != rhsPeer {
                     return false
                 }
-            case let .displayTabInfo(lhsTheme, lhsText):
-                if case let .displayTabInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
+                if lhsEditing != rhsEditing {
                     return false
                 }
-            case let .groupCall(lhsPeer, lhsEditing, lhsIsActive):
-                if case let .groupCall(rhsPeer, rhsEditing, rhsIsActive) = rhs {
-                    if lhsPeer != rhsPeer {
-                        return false
-                    }
-                    if lhsEditing != rhsEditing {
-                        return false
-                    }
-                    if lhsIsActive != rhsIsActive {
-                        return false
-                    }
-                    return true
-                } else {
+                if lhsIsActive != rhsIsActive {
                     return false
                 }
-            case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls, lhsDisplayHeader, lhsMissed):
-                if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls, rhsDisplayHeader, rhsMissed) = rhs {
-                    if lhsTheme !== rhsTheme {
-                        return false
-                    }
-                    if lhsStrings !== rhsStrings {
-                        return false
-                    }
-                    if lhsDateTimeFormat != rhsDateTimeFormat {
-                        return false
-                    }
-                    if lhsMissed != rhsMissed {
-                        return false
-                    }
-                    if lhsEditing != rhsEditing {
-                        return false
-                    }
-                    if lhsHasRevealControls != rhsHasRevealControls {
-                        return false
-                    }
-                    if lhsDisplayHeader != rhsDisplayHeader {
-                        return false
-                    }
-                    if !areMessagesEqual(lhsMessage, rhsMessage) {
-                        return false
-                    }
-                    if lhsMessages.count != rhsMessages.count {
-                        return false
-                    }
-                    for i in 0 ..< lhsMessages.count {
-                        if !areMessagesEqual(lhsMessages[i], rhsMessages[i]) {
-                            return false
-                        }
-                    }
-                    return true
-                } else {
+                return true
+            } else {
+                return false
+            }
+        case let .messageEntry(lhsMessage, lhsMessages, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsEditing, lhsHasRevealControls, lhsDisplayHeader, lhsMissed):
+            if case let .messageEntry(rhsMessage, rhsMessages, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsEditing, rhsHasRevealControls, rhsDisplayHeader, rhsMissed) = rhs {
+                if lhsTheme !== rhsTheme {
                     return false
                 }
-            case let .holeEntry(lhsIndex, lhsTheme):
-                if case let .holeEntry(rhsIndex, rhsTheme) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme {
-                    return true
-                } else {
+                if lhsStrings !== rhsStrings {
                     return false
                 }
+                if lhsDateTimeFormat != rhsDateTimeFormat {
+                    return false
+                }
+                if lhsMissed != rhsMissed {
+                    return false
+                }
+                if lhsEditing != rhsEditing {
+                    return false
+                }
+                if lhsHasRevealControls != rhsHasRevealControls {
+                    return false
+                }
+                if lhsDisplayHeader != rhsDisplayHeader {
+                    return false
+                }
+                if !areMessagesEqual(lhsMessage, rhsMessage) {
+                    return false
+                }
+                if lhsMessages.count != rhsMessages.count {
+                    return false
+                }
+                for i in 0 ..< lhsMessages.count {
+                    if !areMessagesEqual(lhsMessages[i], rhsMessages[i]) {
+                        return false
+                    }
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .holeEntry(lhsIndex, lhsTheme):
+            if case let .holeEntry(rhsIndex, rhsTheme) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
 
-func callListNodeEntriesForView(view: EngineCallList, groupCalls: [EnginePeer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: EnginePeer.Id?) -> [CallListNodeEntry] {
+func callListNodeEntriesForView(view: EngineCallList, canCreateGroupCall: Bool, groupCalls: [EnginePeer], state: CallListNodeState, showSettings: Bool, showCallsTab: Bool, isRecentCalls: Bool, currentGroupCallPeerId: EnginePeer.Id?) -> [CallListNodeEntry] {
     var result: [CallListNodeEntry] = []
     for entry in view.items {
         switch entry {
@@ -216,6 +235,10 @@ func callListNodeEntriesForView(view: EngineCallList, groupCalls: [EnginePeer], 
             }).reversed() {
                 result.append(.groupCall(peer: peer, editing: state.editing, isActive: currentGroupCallPeerId == peer.id))
             }
+        }
+
+        if canCreateGroupCall {
+            result.append(.createGroupCall)
         }
         
         if showSettings {

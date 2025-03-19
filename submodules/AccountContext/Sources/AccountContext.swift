@@ -301,6 +301,7 @@ public enum ResolvedUrl {
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
+    case joinCall(String)
     case localization(String)
     case confirmationCode(Int)
     case cancelAccountReset(phone: String, hash: String)
@@ -920,6 +921,61 @@ public enum JoinAffiliateProgramScreenMode {
     case active(Active)
 }
 
+public enum JoinSubjectScreenMode {
+    public final class Group {
+        public enum VerificationStatus {
+            case fake
+            case scam
+            case verified
+        }
+
+        public let link: String
+        public let isGroup: Bool
+        public let isPublic: Bool
+        public let isRequest: Bool
+        public let verificationStatus: VerificationStatus?
+        public let image: TelegramMediaImageRepresentation?
+        public let title: String
+        public let about: String?
+        public let memberCount: Int32
+        public let members: [EnginePeer]
+        
+        public init(link: String, isGroup: Bool, isPublic: Bool, isRequest: Bool, verificationStatus: VerificationStatus?, image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, members: [EnginePeer]) {
+            self.link = link
+            self.isGroup = isGroup
+            self.isPublic = isPublic
+            self.isRequest = isRequest
+            self.verificationStatus = verificationStatus
+            self.image = image
+            self.title = title
+            self.about = about
+            self.memberCount = memberCount
+            self.members = members
+        }
+    }
+    
+    public final class GroupCall {
+        public let inviter: EnginePeer?
+        public let members: [EnginePeer]
+        public let totalMemberCount: Int
+        
+        public init(inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+            self.inviter = inviter
+            self.members = members
+            self.totalMemberCount = totalMemberCount
+        }
+    }
+    
+    case group(Group)
+    case groupCall(GroupCall)
+}
+
+public enum OldChannelsControllerIntent {
+    case join
+    case create
+    case upgrade
+}
+
 public protocol SharedAccountContext: AnyObject {
     var sharedContainerPath: String { get }
     var basePath: String { get }
@@ -1126,8 +1182,11 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeAffiliateProgramSetupScreenInitialData(context: AccountContext, peerId: EnginePeer.Id, mode: AffiliateProgramSetupScreenMode) -> Signal<AffiliateProgramSetupScreenInitialData, NoError>
     func makeAffiliateProgramSetupScreen(context: AccountContext, initialData: AffiliateProgramSetupScreenInitialData) -> ViewController
-    
     func makeAffiliateProgramJoinScreen(context: AccountContext, sourcePeer: EnginePeer, commissionPermille: Int32, programDuration: Int32?, revenuePerUser: Double, mode: JoinAffiliateProgramScreenMode) -> ViewController
+    
+    func makeJoinSubjectScreen(context: AccountContext, mode: JoinSubjectScreenMode) -> ViewController
+    
+    func makeOldChannelsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void) -> ViewController
     
     func makeGalleryController(context: AccountContext, source: GalleryControllerItemSource, streamSingleVideo: Bool, isPreview: Bool) -> ViewController
     

@@ -72,7 +72,18 @@ public enum TapLongTapOrDoubleTapGestureRecognizerAction {
     case keepWithSingleTap
 }
 
+private final class InternalGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return false
+        }
+        return false
+    }
+}
+
 public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    private let internalDelegate = InternalGestureRecognizerDelegate()
+    
     private var touchLocationAndTimestamp: (CGPoint, Double)?
     private var touchCount: Int = 0
     private var tapCount: Int = 0
@@ -96,14 +107,7 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
-        self.delegate = self
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if otherGestureRecognizer is UIPanGestureRecognizer {
-            return false
-        }
-        return false
+        self.delegate = self.internalDelegate
     }
     
     override public func reset() {

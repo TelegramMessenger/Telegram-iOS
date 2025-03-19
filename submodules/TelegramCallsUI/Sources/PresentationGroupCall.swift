@@ -539,6 +539,7 @@ private final class ScreencastInProcessIPCContext: ScreencastIPCContext {
                     onMutedSpeechActivityDetected: { _ in },
                     encryptionKey: nil,
                     isConference: self.isConference,
+                    audioIsActiveByDefault: true,
                     isStream: false,
                     sharedAudioDevice: nil
                 )
@@ -1937,6 +1938,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     } else {
                         contextAudioSessionActive = self.audioSessionActive.get()
                     }
+                    
+                    var audioIsActiveByDefault = true
+                    if self.isConference && self.conferenceSourceId != nil {
+                        audioIsActiveByDefault = false
+                    }
 
                     genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: contextAudioSessionActive, video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
@@ -1963,7 +1969,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             }
                             self.onMutedSpeechActivityDetected?(value)
                         }
-                    }, encryptionKey: encryptionKey, isConference: self.isConference, isStream: self.isStream, sharedAudioDevice: self.sharedAudioContext?.audioDevice))
+                    }, encryptionKey: encryptionKey, isConference: self.isConference, audioIsActiveByDefault: audioIsActiveByDefault, isStream: self.isStream, sharedAudioDevice: self.sharedAudioContext?.audioDevice))
                 }
 
                 self.genericCallContext = genericCallContext
@@ -2756,6 +2762,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func activateIncomingAudioIfNeeded() {
         if let genericCallContext = self.genericCallContext, case let .call(groupCall) = genericCallContext {
             groupCall.activateIncomingAudio()
+            if let pendingDisconnedUpgradedConferenceCall = self.pendingDisconnedUpgradedConferenceCall {
+                pendingDisconnedUpgradedConferenceCall.deactivateIncomingAudio()
+            }
         }
     }
     

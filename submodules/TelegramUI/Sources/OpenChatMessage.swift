@@ -255,7 +255,10 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                                 subject = .document(file: .message(message: MessageReference(params.message), media: file), canShare: canShare)
                             }
                             let controller = BrowserScreen(context: params.context, subject: subject)
-                            controller.openDocument = { file, canShare in
+                            controller.openDocument = { [weak controller] file, canShare in
+                                guard let controller else {
+                                    return
+                                }
                                 controller.dismiss()
                                 
                                 presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file, canShare: canShare)

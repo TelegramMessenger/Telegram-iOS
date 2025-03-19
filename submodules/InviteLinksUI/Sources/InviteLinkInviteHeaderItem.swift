@@ -59,8 +59,8 @@ class InviteLinkInviteHeaderItem: ListViewItem, ItemListItem {
     }
 }
 
-private let titleFont = Font.medium(23.0)
-private let textFont = Font.regular(13.0)
+private let titleFont = Font.bold(24.0)
+private let textFont = Font.regular(15.0)
 
 class InviteLinkInviteHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
@@ -102,8 +102,8 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let leftInset: CGFloat = 40.0 + params.leftInset
             let topInset: CGFloat = 98.0
-            let spacing: CGFloat = 8.0
-            let bottomInset: CGFloat = 24.0
+            let spacing: CGFloat = 10.0
+            let bottomInset: CGFloat = 13.0
             
             var updatedTheme: PresentationTheme?
             if currentItem?.theme !== item.theme {
@@ -113,7 +113,7 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
             let titleAttributedText = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let attributedText = NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.freeTextColor)
+            let attributedText = NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + spacing + textLayout.size.height + bottomInset)
@@ -131,14 +131,14 @@ class InviteLinkInviteHeaderItemNode: ListViewItemNode {
                     }
                                         
                     let iconSize = CGSize(width: 92.0, height: 92.0)
-                    strongSelf.iconBackgroundNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
-                    strongSelf.iconNode.frame = strongSelf.iconBackgroundNode.frame
+                    strongSelf.iconBackgroundNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -18.0), size: iconSize)
+                    strongSelf.iconNode.frame = strongSelf.iconBackgroundNode.frame.insetBy(dx: 8.0, dy: 8.0)
                     
                     let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 8.0), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: topInset + 10.0), size: titleLayout.size)
                     
                     let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: topInset + 8.0 + titleLayout.size.height + spacing), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: topInset + 10.0 + titleLayout.size.height + spacing), size: textLayout.size)
                 }
             })
         }

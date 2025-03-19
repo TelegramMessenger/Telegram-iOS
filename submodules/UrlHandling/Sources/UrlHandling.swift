@@ -91,6 +91,7 @@ public enum ParsedInternalUrl {
     case stickerPack(name: String, type: StickerPackUrlType)
     case invoice(String)
     case join(String)
+    case joinCall(String)
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case internalInstantView(url: String)
@@ -400,6 +401,12 @@ public func parseInternalUrl(sharedContext: SharedAccountContext, context: Accou
                     return .invoice(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
                     return .join(pathComponents[1])
+                } else if pathComponents[0] == "call" {
+                    var callHash = pathComponents[1]
+                    if callHash.hasPrefix("+") {
+                        callHash = String(callHash.dropFirst())
+                    }
+                    return .joinCall(callHash)
                 } else if pathComponents[0] == "setlanguage" {
                     return .localization(pathComponents[1])
                 } else if pathComponents[0] == "login" {
@@ -1036,6 +1043,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             })
         case let .join(link):
             return .single(.result(.join(link)))
+        case let .joinCall(link):
+            return .single(.result(.joinCall(link)))
         case let .localization(identifier):
             return .single(.result(.localization(identifier)))
         case let .proxy(host, port, username, password, secret):

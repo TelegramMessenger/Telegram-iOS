@@ -82,7 +82,19 @@ private enum Knob {
     case right
 }
 
+private final class InternalGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive press: UIPress) -> Bool {
+        return true
+    }
+}
+
 private final class RecognizedTextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    private let internalDelegate = InternalGestureRecognizerDelegate()
+    
     private var longTapTimer: Timer?
     private var movingKnob: (Knob, CGPoint, CGPoint)?
     private var currentLocation: CGPoint?
@@ -96,7 +108,7 @@ private final class RecognizedTextSelectionGestureRecognizer: UIGestureRecognize
     override init(target: Any?, action: Selector?) {
         super.init(target: nil, action: nil)
         
-        self.delegate = self
+        self.delegate = self.internalDelegate
     }
     
     override public func reset() {
@@ -178,15 +190,6 @@ private final class RecognizedTextSelectionGestureRecognizer: UIGestureRecognize
             self.beginSelection?(currentLocation)
             self.state = .ended
         }
-    }
-    
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-        return true
-    }
-    
-    @available(iOS 9.0, *)
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive press: UIPress) -> Bool {
-        return true
     }
 }
 

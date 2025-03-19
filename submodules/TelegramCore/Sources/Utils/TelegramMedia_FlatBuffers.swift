@@ -8,16 +8,16 @@ public func TelegramMedia_parse(flatBuffersObject: TelegramCore_Media) throws ->
     switch flatBuffersObject.valueType {
     case .mediaTelegrammediafile:
         guard let value = flatBuffersObject.value(type: TelegramCore_Media_TelegramMediaFile.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return try TelegramMediaFile(flatBuffersObject: value.file)
     case .mediaTelegrammediaimage:
         guard let value = flatBuffersObject.value(type: TelegramCore_Media_TelegramMediaImage.self) else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         return try TelegramMediaImage(flatBuffersObject: value.image)
     case .none_:
-        throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        throw FlatBuffersError.missingRequiredField()
     }
 }
 

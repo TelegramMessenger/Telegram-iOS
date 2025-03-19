@@ -337,13 +337,13 @@ public struct PeerEmojiStatus: Equatable, Codable {
             switch flatBuffersObject.valueType {
             case .peeremojistatuscontentemoji:
                 guard let emoji = flatBuffersObject.value(type: TelegramCore_PeerEmojiStatusContentEmoji.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                    throw FlatBuffersError.missingRequiredField()
                 }
                 self = .emoji(fileId: emoji.fileId)
                 
             case .peeremojistatuscontentstargift:
                 guard let starGift = flatBuffersObject.value(type: TelegramCore_PeerEmojiStatusContentStarGift.self) else {
-                    throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                    throw FlatBuffersError.missingRequiredField()
                 }
                 self = .starGift(
                     id: starGift.id,
@@ -358,7 +358,7 @@ public struct PeerEmojiStatus: Equatable, Codable {
                 )
                 
             case .none_:
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
         }
 
