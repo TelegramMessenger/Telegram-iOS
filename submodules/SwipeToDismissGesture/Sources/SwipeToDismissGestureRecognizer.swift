@@ -15,23 +15,34 @@ private func traceScrollView(view: UIView, point: CGPoint) -> UIScrollView? {
     return nil
 }
 
+private final class InternalGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+}
+
 public class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    private let internalDelegate = InternalGestureRecognizerDelegate()
+    
     private var beginPosition = CGPoint()
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
-        self.delegate = self
+        self.delegate = self.internalDelegate
     }
     
     override public func reset() {
         super.reset()
         
         self.state = .possible
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -100,12 +111,5 @@ public class SwipeToDismissGestureRecognizer: UIGestureRecognizer, UIGestureReco
         super.touchesEnded(touches, with: event)
         
         self.state = .failed
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if otherGestureRecognizer is UIPanGestureRecognizer {
-            return true
-        }
-        return false
     }
 }

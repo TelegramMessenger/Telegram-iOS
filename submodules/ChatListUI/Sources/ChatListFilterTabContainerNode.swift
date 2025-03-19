@@ -1038,7 +1038,19 @@ private class ReorderingGestureRecognizerTimerTarget: NSObject {
     }
 }
 
+private final class InternalGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 private final class ReorderingGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    private let internalDelegate = InternalGestureRecognizerDelegate()
+    
     private let shouldBegin: (CGPoint) -> Bool
     private let began: (CGPoint) -> Void
     private let ended: () -> Void
@@ -1057,7 +1069,7 @@ private final class ReorderingGestureRecognizer: UIGestureRecognizer, UIGestureR
         
         super.init(target: nil, action: nil)
         
-        self.delegate = self
+        self.delegate = self.internalDelegate
     }
     
     override func reset() {
@@ -1067,14 +1079,6 @@ private final class ReorderingGestureRecognizer: UIGestureRecognizer, UIGestureR
         self.delayTimer?.invalidate()
         self.delayTimer = nil
         self.currentLocation = nil
-    }
-    
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if otherGestureRecognizer is UIPanGestureRecognizer {
-            return true
-        } else {
-            return false
-        }
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {

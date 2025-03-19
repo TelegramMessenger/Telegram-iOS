@@ -34,7 +34,33 @@ private func traceScrollViewUp(view: UIView) -> UIScrollView? {
     }
 }
 
+private final class InternalGestureRecognizerDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer.view as? PagerExpandableScrollView {
+            return true
+        }
+        
+        if let _ = gestureRecognizer as? PagerPanGestureRecognizer {
+            return true
+        }
+        
+        return true
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer.view as? PagerExpandableScrollView {
+            return true
+        }
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+}
+
 private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    private let internalDelegate = InternalGestureRecognizerDelegate()
+    
     enum LockDirection {
         case up
         case down
@@ -49,7 +75,7 @@ private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecogn
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
-        self.delegate = self
+        self.delegate = self.internalDelegate
     }
     
     override public func reset() {
@@ -57,28 +83,6 @@ private final class ExpansionPanRecognizer: UIGestureRecognizer, UIGestureRecogn
         
         self.state = .possible
         self.currentTranslation = CGPoint()
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let _ = otherGestureRecognizer.view as? PagerExpandableScrollView {
-            return true
-        }
-        
-        if let _ = gestureRecognizer as? PagerPanGestureRecognizer {
-            return true
-        }
-        
-        return true
-    }
-    
-    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        if let _ = otherGestureRecognizer.view as? PagerExpandableScrollView {
-            return true
-        }
-        if otherGestureRecognizer is UIPanGestureRecognizer {
-            return true
-        }
-        return false
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
