@@ -837,6 +837,10 @@ public extension TelegramEngine {
         public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
             return _internal_joinLinkInformation(hash, account: self.account)
         }
+        
+        public func joinCallLinkInformation(_ hash: String) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
+            return _internal_joinCallLinkInformation(hash, account: self.account)
+        }
 
         public func updatePeerTitle(peerId: PeerId, title: String) -> Signal<Void, UpdatePeerTitleError> {
             return _internal_updatePeerTitle(account: self.account, peerId: peerId, title: title)

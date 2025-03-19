@@ -141,3 +141,43 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
         }
     }
 }
+
+public final class JoinCallLinkInformation {
+    public let inviter: EnginePeer?
+    public let members: [EnginePeer]
+    public let totalMemberCount: Int
+    
+    public init(inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+        self.inviter = inviter
+        self.members = members
+        self.totalMemberCount = totalMemberCount
+    }
+}
+
+func _internal_joinCallLinkInformation(_ hash: String, account: Account) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
+    //TODO:release
+    
+    let invite: Signal<Api.ChatInvite?, JoinLinkInfoError> = account.network.request(Api.functions.messages.checkChatInvite(hash: hash), automaticFloodWait: false)
+    |> map(Optional.init)
+    |> `catch` { error -> Signal<Api.ChatInvite?, JoinLinkInfoError> in
+        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .fail(.flood)
+        } else {
+            return .single(nil)
+        }
+    }
+    
+    return invite
+    |> mapToSignal { result -> Signal<JoinCallLinkInformation, JoinLinkInfoError> in
+        if let result {
+            switch result {
+            case let .chatInvite(_, _, _, _, participantsCount, participants, _, _, _, _):
+                return .single(JoinCallLinkInformation(inviter: nil, members: participants?.map({ EnginePeer(TelegramUser(user: $0)) }) ?? [], totalMemberCount: Int(participantsCount)))
+            default:
+                return .fail(.generic)
+            }
+        } else {
+            return .fail(.generic)
+        }
+    }
+}
