@@ -34,8 +34,11 @@ public final class ChatThemes: Codable, Equatable {
 func _internal_getChatThemes(accountManager: AccountManager<TelegramAccountManagerTypes>, network: Network, forceUpdate: Bool = false, onlyCached: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int64?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         return network.request(Api.functions.account.getChatThemes(hash: hash ?? 0))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[TelegramTheme], NoError> in
+            guard let result else {
+                return .complete()
+            }
             switch result {
                 case let .themes(hash, apiThemes):
                     let result = apiThemes.compactMap { TelegramTheme(apiTheme: $0) }

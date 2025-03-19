@@ -540,14 +540,18 @@ private final class PeerInfoPendingPane {
         switch key {
         case .gifts:
             var canManage = false
+            var canGift = true
             if let peer = data.peer {
+                if let cachedUserData = data.cachedData as? CachedUserData, cachedUserData.disallowedGifts == .All {
+                    canGift = false
+                }
                 if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                     if channel.hasPermission(.sendSomething) {
                         canManage = true
                     }
                 }
             }
-            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, profileGifts: data.profileGiftsContext!, canManage: canManage)
+            paneNode = PeerInfoGiftsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, profileGifts: data.profileGiftsContext!, canManage: canManage, canGift: canGift)
         case .stories, .storyArchive, .botPreview:
             var canManage = false
             if let peer = data.peer {

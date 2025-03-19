@@ -1530,6 +1530,10 @@ public extension TelegramEngine {
             return _internal_searchAdPeers(account: self.account, query: query)
         }
         
+        public func markAsSeen(ad opaqueId: Data) -> Signal<Never, NoError> {
+            return _internal_markAsSeen(account: self.account, opaqueId: opaqueId)
+        }
+        
         public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id: RequirementToContact], NoError> {
             return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
         }

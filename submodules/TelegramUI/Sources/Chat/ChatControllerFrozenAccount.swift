@@ -15,7 +15,7 @@ import TelegramPresentationData
 import TelegramNotices
 
 extension ChatControllerImpl {
-    func presentAccountFrozenInfoIfNeeded() -> Bool {
+    func presentAccountFrozenInfoIfNeeded(delay: Bool = false) -> Bool {
         if self.context.isFrozen {
             let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
             if let freezeAppealUrl = accountFreezeConfiguration.freezeAppealUrl {
@@ -24,7 +24,16 @@ extension ChatControllerImpl {
                     return false
                 }
             }
-            self.push(self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context))
+            let present = {
+                self.push(self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context))
+            }
+            if delay {
+                Queue.mainQueue().after(0.3) {
+                    present()
+                }
+            } else {
+                present()
+            }
             return true
         }
         return false

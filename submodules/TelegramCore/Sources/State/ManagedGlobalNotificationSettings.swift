@@ -21,7 +21,7 @@ public func updateGlobalNotificationSettingsInteractively(postbox: Postbox, _ f:
 
 public func resetPeerNotificationSettings(network: Network) -> Signal<Void, NoError> {
     return network.request(Api.functions.account.resetNotifySettings())
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { _ in return Signal<Void, NoError>.complete() }
 }
 
@@ -113,8 +113,11 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     let reactions = network.request(Api.functions.account.getReactionsNotifySettings())
     
     return combineLatest(chats, users, channels, contactsJoinedMuted, reactions)
-    |> retryRequest
-    |> map { chats, users, channels, contactsJoinedMuted, reactions in
+    |> retryRequestIfNotFrozen
+    |> mapToSignal { data in
+        guard let (chats, users, channels, contactsJoinedMuted, reactions) = data else {
+            return .complete()
+        }
         let chatsSettings: MessageNotificationSettings
         switch chats {
         case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound, storiesMuted, storiesHideSender, storiesIosSound, _, storiesDesktopSound):
@@ -306,7 +309,7 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
             )
         }
         
-        return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, reactionSettings: reactionSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
+        return .single(GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, reactionSettings: reactionSettings, contactsJoined: contactsJoinedMuted == .boolFalse))
     }
 }
 

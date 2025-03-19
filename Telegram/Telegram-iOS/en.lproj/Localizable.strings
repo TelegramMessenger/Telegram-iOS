@@ -13961,6 +13961,8 @@ Sorry for the inconvenience.";
 "PeerInfo.Gifts.ToastUnpinned.Text" = "Gift Unpinned.";
 "PeerInfo.Gifts.ToastPinned.Title" = "Gift Pinned";
 "PeerInfo.Gifts.ToastPinned.Text" = "Now it will always be shown on the top.";
+"PeerInfo.Gifts.ToastPinned.TitleNew" = "%@ Pinned";
+"PeerInfo.Gifts.ToastPinned.ReplacingText" = "replacing %@.";
 
 "Chat.PaidMessage.Confirm.Title" = "Confirm Payment";
 "Chat.PaidMessage.Confirm.DontAskAgain" = "Don't ask again";
@@ -14034,3 +14036,56 @@ Sorry for the inconvenience.";
 "Privacy.Gifts.PremiumToast.Action" = "Open";
 
 "Gift.Send.ErrorDisallowed" = "**%@** doesn't accept this kind of gifts.";
+
+"ChatbotSetup.Rights.ManageMessages" = "Manage Messages";
+"ChatbotSetup.Rights.ReadMessages" = "Read Messages";
+"ChatbotSetup.Rights.ReplyToMessages" = "Reply to Messages";
+"ChatbotSetup.Rights.MarkAsRead" = "Mark Messages as Read";
+"ChatbotSetup.Rights.DeleteSentMessages" = "Delete Sent Messages";
+"ChatbotSetup.Rights.DeleteReceivedMessages" = "Delete Received Messages";
+
+"ChatbotSetup.Rights.ManageProfile" = "Manage Profile";
+"ChatbotSetup.Rights.EditName" = "Edit Name";
+"ChatbotSetup.Rights.EditBio" = "Edit Bio";
+"ChatbotSetup.Rights.EditProfilePhoto" = "Edit Profile Photo";
+"ChatbotSetup.Rights.EditUsername" = "Edit Username";
+
+"ChatbotSetup.Rights.ManageGiftsAndStars" = "Manage Gifts and Stars";
+"ChatbotSetup.Rights.ViewGifts" = "View Gifts";
+"ChatbotSetup.Rights.SellGifts" = "Sell Gifts";
+"ChatbotSetup.Rights.ChangeGiftSettings" = "Change Gift Settings";
+"ChatbotSetup.Rights.TransferAndUpgradeGifts" = "Transfer and Upgrade Gifts";
+"ChatbotSetup.Rights.TransferStars" = "Transfer Stars";
+"ChatbotSetup.Rights.ManageStories" = "Manage Stories";
+
+"Gift.Send.Upgrade.ForcedInfo" = "%1$@ accepts only unique gifts. [Learn More >]()";
+
+"Privacy.Gifts.ShowGiftButton" = "Show Gift Icon in Chats";
+"Privacy.Gifts.ShowGiftButtonInfo" = "Display the #Gift icon in the message input field for both participants in all chats.";
+
+"Privacy.Gifts.AcceptedTypes" = "ACCEPTED GIFT TYPES";
+"Privacy.Gifts.AcceptedTypes.Unlimited" = "Unlimited";
+"Privacy.Gifts.AcceptedTypes.Limited" = "Limited-Edition";
+"Privacy.Gifts.AcceptedTypes.Unique" = "Unique";
+"Privacy.Gifts.AcceptedTypes.Premium" = "Premium Subscriptions";
+"Privacy.Gifts.AcceptedTypes.Info" = "Choose the types of gifts that you allow others to send you.";
+
+"Chat.PanelFrozenAccount.Title" = "You account is frozen";
+"Chat.PanelFrozenAccount.Text" = "Tap to view details";
+
+"FrozenAccount.Title" = "Your Account is Frozen";
+"FrozenAccount.Violation.Title" = "Violation of Terms";
+"FrozenAccount.Violation.Text" = "Your account was frozen for breaking Telegram's Terms and Conditions.";
+"FrozenAccount.ReadOnly.Title" = "Read-Only Mode";
+"FrozenAccount.ReadOnly.Text" = "You can access your account but can't send messages or take actions.";
+"FrozenAccount.Appeal.Title" = "Appeal Before Deactivation";
+"FrozenAccount.Appeal.Text" = "Appeal via [@SpamBot]() before %@, or your account will be deleted.";
+"FrozenAccount.SubmitAppeal" = "Submit an Appeal";
+"FrozenAccount.Understood" = "Understood";
+
+"AdsInfo.Search.Respect.Text" = "Ads like this do not use your personal information and are based on the search query you entered.";
+"AdsInfo.Search.Ads.Text" = "You can turn off ads by subscribing to [Telegram Premium]().";
+"AdsInfo.Search.Launch.Text" = "Anyone can create an ad to display in search results for any query. Check out the Telegram Ad Platform for details. [Learn More >]()";
+
+"ChatList.FrozenAccount.Title" = "Your account is frozen";
+"ChatList.FrozenAccount.Text" = "Tap to view details and submit an appeal.";

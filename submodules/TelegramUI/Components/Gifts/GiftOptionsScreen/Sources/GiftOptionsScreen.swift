@@ -430,10 +430,15 @@ final class GiftOptionsScreenComponent: Component {
                                                         )
                                                         mainController.push(giftController)
                                                     } else {
+                                                        var forceUnique = false
+                                                        if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts.contains(.limited) && !disallowedGifts.contains(.unique) {
+                                                            forceUnique = true
+                                                        }
+                                                        
                                                         let giftController = GiftSetupScreen(
                                                             context: component.context,
                                                             peerId: component.peerId,
-                                                            subject: .starGift(gift),
+                                                            subject: .starGift(gift, forceUnique),
                                                             completion: component.completion
                                                         )
                                                         mainController.push(giftController)
@@ -687,6 +692,10 @@ final class GiftOptionsScreenComponent: Component {
             }
             self.component = component
             
+            if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts == .All {
+                controller()?.dismiss()
+            }
+            
             if (state.starGifts ?? []).isEmpty && !(state.transferStarGifts ?? []).isEmpty {
                 self.starsFilter = .transfer
             }
@@ -714,7 +723,7 @@ final class GiftOptionsScreenComponent: Component {
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
             
-            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled || state.disallowedGifts?.contains(.premium) == true
             let isSelfGift = component.peerId == component.context.account.peerId
             let isChannelGift = component.peerId.namespace == Namespaces.Peer.CloudChannel
             
@@ -1339,19 +1348,26 @@ final class GiftOptionsScreenComponent: Component {
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer.init(id: peerId),
+                    TelegramEngine.EngineData.Item.Peer.Peer.init(id: peerId)
+                ),
+                context.engine.data.subscribe(
                     TelegramEngine.EngineData.Item.Peer.DisallowedGifts(id: peerId)
                 ),
                 availableProducts,
                 context.engine.payments.cachedStarGifts(),
                 self.starGiftsContext.state
-            ).start(next: { [weak self] data, availableProducts, starGifts, profileGiftsState in
+            ).start(next: { [weak self] peer, disallowedGifts, availableProducts, starGifts, profileGiftsState in
                 guard let self else {
                     return
                 }
-                self.peer = data.0
-                self.disallowedGifts = data.1 ?? []
                 
+                if disallowedGifts == nil && self.peer == nil, case .user = peer {
+                    let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peerId).startStandalone()
+                }
+                
+                self.peer = peer
+                self.disallowedGifts = disallowedGifts ?? []
+                                
                 if peerId != context.account.peerId {
                     if availableProducts.isEmpty {
                         var premiumProducts: [PremiumGiftProduct] = []
@@ -1425,7 +1441,11 @@ final class GiftOptionsScreenComponent: Component {
                             }
                             if disallowedGifts.contains(.limited) {
                                 if gift.availability != nil {
-                                    return false
+                                    if !disallowedGifts.contains(.unique) && gift.upgradeStars != nil {
+                                        
+                                    } else {
+                                        return false
+                                    }
                                 }
                             }
                         }

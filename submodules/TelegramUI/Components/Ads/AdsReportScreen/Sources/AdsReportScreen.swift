@@ -250,7 +250,6 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peerId: EnginePeer.Id
     let opaqueId: Data
     let title: String
     let options: [ReportAdMessageResult.Option]
@@ -262,7 +261,6 @@ private final class SheetContent: CombinedComponent {
     
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
         opaqueId: Data,
         title: String,
         options: [ReportAdMessageResult.Option],
@@ -273,7 +271,6 @@ private final class SheetContent: CombinedComponent {
         update: @escaping (ComponentTransition) -> Void
     ) {
         self.context = context
-        self.peerId = peerId
         self.opaqueId = opaqueId
         self.title = title
         self.options = options
@@ -286,9 +283,6 @@ private final class SheetContent: CombinedComponent {
     
     static func ==(lhs: SheetContent, rhs: SheetContent) -> Bool {
         if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.peerId != rhs.peerId {
             return false
         }
         if lhs.opaqueId != rhs.opaqueId {
@@ -329,7 +323,6 @@ private final class SheetContent: CombinedComponent {
             let update = component.update
             
             let accountContext = component.context
-            let peerId = component.peerId
             let opaqueId = component.opaqueId
             let complete = component.complete
             let action: (SheetPageContent.Item) -> Void = { [weak state] item in
@@ -337,7 +330,7 @@ private final class SheetContent: CombinedComponent {
                     return
                 }
                 state.disposable.set(
-                    (accountContext.engine.messages.reportAdMessage(peerId: peerId, opaqueId: opaqueId, option: item.option)
+                    (accountContext.engine.messages.reportAdMessage(opaqueId: opaqueId, option: item.option)
                     |> deliverOnMainQueue).start(next: { [weak state] result in
                         switch result {
                         case let .options(title, options):
@@ -423,7 +416,6 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let peerId: EnginePeer.Id
     let opaqueId: Data
     let title: String
     let options: [ReportAdMessageResult.Option]
@@ -432,7 +424,6 @@ private final class SheetContainerComponent: CombinedComponent {
     
     init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
         opaqueId: Data,
         title: String,
         options: [ReportAdMessageResult.Option],
@@ -440,7 +431,6 @@ private final class SheetContainerComponent: CombinedComponent {
         complete: @escaping (ReportResult) -> Void
     ) {
         self.context = context
-        self.peerId = peerId
         self.opaqueId = opaqueId
         self.title = title
         self.options = options
@@ -450,9 +440,6 @@ private final class SheetContainerComponent: CombinedComponent {
     
     static func ==(lhs: SheetContainerComponent, rhs: SheetContainerComponent) -> Bool {
         if lhs.context !== rhs.context {
-            return false
-        }
-        if lhs.peerId != rhs.peerId {
             return false
         }
         if lhs.opaqueId != rhs.opaqueId {
@@ -490,7 +477,6 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        peerId: context.component.peerId,
                         opaqueId: context.component.opaqueId,
                         title: context.component.title,
                         options: context.component.options,
@@ -571,7 +557,6 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
         
     public init(
         context: AccountContext,
-        peerId: EnginePeer.Id,
         opaqueId: Data,
         title: String,
         options: [ReportAdMessageResult.Option],
@@ -585,7 +570,6 @@ public final class AdsReportScreen: ViewControllerComponentContainer {
             context: context,
             component: SheetContainerComponent(
                 context: context,
-                peerId: peerId,
                 opaqueId: opaqueId,
                 title: title,
                 options: options,

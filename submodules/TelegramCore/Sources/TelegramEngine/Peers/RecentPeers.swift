@@ -151,7 +151,7 @@ func _internal_updateRecentPeersEnabled(postbox: Postbox, network: Network, enab
 
 func _internal_managedRecentlyUsedInlineBots(postbox: Postbox, network: Network, accountPeerId: PeerId) -> Signal<Void, NoError> {
     let remotePeers = network.request(Api.functions.contacts.getTopPeers(flags: 1 << 2, offset: 0, limit: 16, hash: 0))
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> map { result -> (AccumulatedPeers, [(PeerId, Double)])? in
         switch result {
         case .topPeersDisabled:
@@ -173,6 +173,8 @@ func _internal_managedRecentlyUsedInlineBots(postbox: Postbox, network: Network,
             }
             return (parsedPeers, peersWithRating)
         case .topPeersNotModified:
+            break
+        default:
             break
         }
         return (AccumulatedPeers(), [])

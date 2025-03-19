@@ -1684,8 +1684,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         contentNode.dismissSearch = { [weak self] in
             self?.dismissSearch?()
         }
-        contentNode.openAdInfo = { [weak self] node in
-            self?.controller?.openAdInfo(node)
+        contentNode.openAdInfo = { [weak self] node, adPeer in
+            self?.controller?.openAdInfo(node: node, adPeer: adPeer)
         }
         
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: contentNode, cancel: { [weak self] in

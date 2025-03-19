@@ -9,7 +9,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
     let poll = Signal<Void, NoError> { subscriber in
         return (combineLatest(
             network.request(Api.functions.help.getConfig()) |> retryRequest,
-            network.request(Api.functions.messages.getDefaultHistoryTTL()) |> retryRequest
+            network.request(Api.functions.messages.getDefaultHistoryTTL()) |> retryRequestIfNotFrozen
         )
         |> mapToSignal { result, defaultHistoryTtl -> Signal<Void, NoError> in
             return postbox.transaction { transaction -> Signal<Void, NoError> in
@@ -83,6 +83,8 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                         } else {
                             messageAutoremoveSeconds = nil
                         }
+                    default:
+                        messageAutoremoveSeconds = nil
                     }
                     updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
                         var settings = settings

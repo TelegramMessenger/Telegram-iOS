@@ -1425,14 +1425,14 @@ public extension Api {
     }
 }
 public extension Api {
-    enum DisallowedStarGiftsSettings: TypeConstructorDescription {
-        case disallowedStarGiftsSettings(flags: Int32)
+    enum DisallowedGiftsSettings: TypeConstructorDescription {
+        case disallowedGiftsSettings(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .disallowedStarGiftsSettings(let flags):
+                case .disallowedGiftsSettings(let flags):
                     if boxed {
-                        buffer.appendInt32(1653721450)
+                        buffer.appendInt32(1911715524)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     break
@@ -1441,17 +1441,17 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .disallowedStarGiftsSettings(let flags):
-                return ("disallowedStarGiftsSettings", [("flags", flags as Any)])
+                case .disallowedGiftsSettings(let flags):
+                return ("disallowedGiftsSettings", [("flags", flags as Any)])
     }
     }
     
-        public static func parse_disallowedStarGiftsSettings(_ reader: BufferReader) -> DisallowedStarGiftsSettings? {
+        public static func parse_disallowedGiftsSettings(_ reader: BufferReader) -> DisallowedGiftsSettings? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
             if _c1 {
-                return Api.DisallowedStarGiftsSettings.disallowedStarGiftsSettings(flags: _1!)
+                return Api.DisallowedGiftsSettings.disallowedGiftsSettings(flags: _1!)
             }
             else {
                 return nil

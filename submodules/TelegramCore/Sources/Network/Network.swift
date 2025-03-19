@@ -1224,6 +1224,20 @@ public func retryRequest<T>(signal: Signal<T, MTRpcError>) -> Signal<T, NoError>
     |> retry(0.2, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
+public func retryRequestIfNotFrozen<T>(signal: Signal<T, MTRpcError>) -> Signal<T?, NoError> {
+    return signal
+    |> retry(retryOnError: { error in
+        if error.errorDescription == "FROZEN_METHOD_INVALID" {
+            return false
+        }
+        return true
+    }, delayIncrement: 0.2, maxDelay: 5.0, maxRetries: nil, onQueue: .concurrentDefaultQueue())
+    |> map(Optional.init)
+    |> `catch` { _ in
+        return .single(nil)
+    }
+}
+
 class Keychain: NSObject, MTKeychain {
     let get: (String) -> Data?
     let set: (String, Data) -> Void

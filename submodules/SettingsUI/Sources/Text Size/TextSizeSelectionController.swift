@@ -232,7 +232,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, ASScrollView
         }, editPeer: { _ in
         }, openWebApp: { _ in
         }, openPhotoSetup: {
-        }, openAdInfo: { _ in
+        }, openAdInfo: { _, _ in
         }, openAccountFreezeInfo: {
         })
 

@@ -6435,15 +6435,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     
                     if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser, !user.isDeleted && user.botInfo == nil && !user.flags.contains(.isSupport) {
-                        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Profile_SendGift, icon: { theme in
-                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.dismissWithoutContent)
-                            
-                            if let self {
-                                self.openPremiumGift()
-                            }
-                        })))
+                        if let cachedData = data.cachedData as? CachedUserData, cachedData.disallowedGifts == .All {
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Profile_SendGift, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Gift"), color: theme.contextMenu.primaryColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                if let self {
+                                    self.openPremiumGift()
+                                }
+                            })))
+                        }
                     }
                     
                     if let cachedData = data.cachedData as? CachedUserData, cachedData.flags.contains(.translationHidden) {
@@ -14360,7 +14363,7 @@ private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustom
                         action: nil
                     )),
                     environment: {},
-                    containerSize: CGSize(width: 28.0, height: 28.0)
+                    containerSize: CGSize(width: 24.0, height: 24.0)
                 )
                 if let view = self.emojiStatusView.view {
                     if view.superview == nil {

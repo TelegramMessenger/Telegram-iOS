@@ -27,8 +27,11 @@ func _internal_notificationExceptionsList(accountPeerId: PeerId, postbox: Postbo
     }
     
     return network.request(Api.functions.account.getNotifyExceptions(flags: flags, peer: nil))
-    |> retryRequest
+    |> retryRequestIfNotFrozen
     |> mapToSignal { result -> Signal<NotificationExceptionsList, NoError> in
+        guard let result else {
+            return .single(NotificationExceptionsList(peers: [:], settings: [:]))
+        }
         return postbox.transaction { transaction -> NotificationExceptionsList in
             switch result {
             case let .updates(updates, users, chats, _, _):

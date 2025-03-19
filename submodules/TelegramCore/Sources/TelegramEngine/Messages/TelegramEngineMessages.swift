@@ -1504,8 +1504,8 @@ public extension TelegramEngine {
             }).startStandalone()
         }
         
-        public func reportAdMessage(peerId: EnginePeer.Id, opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
-            return _internal_reportAdMessage(account: self.account, peerId: peerId, opaqueId: opaqueId, option: option)
+        public func reportAdMessage(opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
+            return _internal_reportAdMessage(account: self.account, opaqueId: opaqueId, option: option)
         }
         
         public func reportContent(subject: ReportContentSubject, option: Data?, message: String?) -> Signal<ReportContentResult, ReportContentError> {
@@ -1516,8 +1516,8 @@ public extension TelegramEngine {
             return _internal_updateExtendedMedia(account: self.account, messageIds: messageIds)
         }
         
-        public func markAdAction(peerId: EnginePeer.Id, opaqueId: Data, media: Bool, fullscreen: Bool) {
-            _internal_markAdAction(account: self.account, peerId: peerId, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
+        public func markAdAction(opaqueId: Data, media: Bool, fullscreen: Bool) {
+            _internal_markAdAction(account: self.account, opaqueId: opaqueId, media: media, fullscreen: fullscreen)
         }
         
         public func getAllLocalChannels(count: Int) -> Signal<[EnginePeer.Id], NoError> {

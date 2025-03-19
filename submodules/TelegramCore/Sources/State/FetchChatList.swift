@@ -241,8 +241,7 @@ func fetchChatList(accountPeerId: PeerId, postbox: Postbox, network: Network, lo
                         folderId = groupId.rawValue
                 }
                 additionalPinnedChats = network.request(Api.functions.messages.getPinnedDialogs(folderId: folderId))
-                |> retryRequest
-                |> map(Optional.init)
+                |> retryRequestIfNotFrozen
             } else {
                 additionalPinnedChats = .single(nil)
             }

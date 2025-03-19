@@ -76,8 +76,11 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                 }
             } else if let inputPeer = apiInputPeer(peer) {
                 return network.request(Api.functions.messages.getPeerSettings(peer: inputPeer))
-                |> retryRequest
+                |> retryRequestIfNotFrozen
                 |> mapToSignal { peerSettings -> Signal<Bool, NoError> in
+                    guard let peerSettings else {
+                        return .single(false)
+                    }
                     return postbox.transaction { transaction -> Bool in
                         let parsedPeers: AccumulatedPeers
                         
@@ -397,7 +400,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         let sendPaidMessageStars = sendPaidMessageStars.flatMap { StarsAmount(value: $0, nanos: 0) }
                                     
                                         var disallowedGifts: TelegramDisallowedGifts = []
-                                        if case let .disallowedStarGiftsSettings(giftFlags) = disallowedStarGifts {
+                                        if case let .disallowedGiftsSettings(giftFlags) = disallowedStarGifts {
                                             if (giftFlags & (1 << 0)) != 0 {
                                                 disallowedGifts.insert(.unlimited)
                                             }
@@ -406,6 +409,9 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             if (giftFlags & (1 << 2)) != 0 {
                                                 disallowedGifts.insert(.unique)
+                                            }
+                                            if (giftFlags & (1 << 3)) != 0 {
+                                                disallowedGifts.insert(.premium)
                                             }
                                         }
                                     
@@ -451,8 +457,11 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                 }
             } else if peerId.namespace == Namespaces.Peer.CloudGroup {
                 return network.request(Api.functions.messages.getFullChat(chatId: peerId.id._internalGetInt64Value()))
-                |> retryRequest
+                |> retryRequestIfNotFrozen
                 |> mapToSignal { result -> Signal<Bool, NoError> in
+                    guard let result else {
+                        return .single(false)
+                    }
                     return postbox.transaction { transaction -> Bool in
                         switch result {
                         case let .chatFull(fullChat, chats, users):

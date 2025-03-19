@@ -89,10 +89,9 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
         if let context = self.context {
             accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         }
-        //TODO:localize
         if let _ = accountFreezeConfiguration?.freezeUntilDate {
-            self.textNode.attributedText = NSAttributedString(string: "You account is frozen", font: Font.semibold(15.0), textColor: interfaceState.theme.list.itemDestructiveColor)
-            self.subtitleNode.attributedText = NSAttributedString(string: "Tap to view details", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+            self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelFrozenAccount_Title, font: Font.semibold(15.0), textColor: interfaceState.theme.list.itemDestructiveColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelFrozenAccount_Text, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             isUserInteractionEnabled = true
         } else if case let .replyThread(message) = interfaceState.chatLocation, message.peerId == self.context?.account.peerId {
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Chat_PanelStatusAuthorHidden, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)

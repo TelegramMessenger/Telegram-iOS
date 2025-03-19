@@ -172,10 +172,14 @@ private func requestStarsRevenueStats(postbox: Postbox, network: Network, peerId
         }
         
         return network.request(Api.functions.payments.getStarsRevenueStats(flags: flags, peer: inputPeer))
+        |> retryRequestIfNotFrozen
         |> map { result -> StarsRevenueStats? in
+            guard let result else {
+                return nil
+            }
             return StarsRevenueStats(apiStarsRevenueStats: result, peerId: peerId)
         }
-        |> retryRequest
+        
     }
 }
 

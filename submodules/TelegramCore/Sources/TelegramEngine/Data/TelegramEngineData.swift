@@ -569,6 +569,75 @@ public extension TelegramEngine {
                 )
             }
         }
+        
+        public func subscribe<
+            T0: TelegramEngineDataItem,
+            T1: TelegramEngineDataItem,
+            T2: TelegramEngineDataItem,
+            T3: TelegramEngineDataItem,
+            T4: TelegramEngineDataItem,
+            T5: TelegramEngineDataItem,
+            T6: TelegramEngineDataItem,
+            T7: TelegramEngineDataItem,
+            T8: TelegramEngineDataItem,
+            T9: TelegramEngineDataItem,
+            T10: TelegramEngineDataItem
+        >(
+            _ t0: T0,
+            _ t1: T1,
+            _ t2: T2,
+            _ t3: T3,
+            _ t4: T4,
+            _ t5: T5,
+            _ t6: T6,
+            _ t7: T7,
+            _ t8: T8,
+            _ t9: T9,
+            _ t10: T10
+        ) -> Signal<
+            (
+                T0.Result,
+                T1.Result,
+                T2.Result,
+                T3.Result,
+                T4.Result,
+                T5.Result,
+                T6.Result,
+                T7.Result,
+                T8.Result,
+                T9.Result,
+                T10.Result
+            ),
+        NoError> {
+            return self._subscribe(items: [
+                t0 as! AnyPostboxViewDataItem,
+                t1 as! AnyPostboxViewDataItem,
+                t2 as! AnyPostboxViewDataItem,
+                t3 as! AnyPostboxViewDataItem,
+                t4 as! AnyPostboxViewDataItem,
+                t5 as! AnyPostboxViewDataItem,
+                t6 as! AnyPostboxViewDataItem,
+                t7 as! AnyPostboxViewDataItem,
+                t8 as! AnyPostboxViewDataItem,
+                t9 as! AnyPostboxViewDataItem,
+                t10 as! AnyPostboxViewDataItem
+            ])
+            |> map { results -> (T0.Result, T1.Result, T2.Result, T3.Result, T4.Result, T5.Result, T6.Result, T7.Result, T8.Result, T9.Result, T10.Result) in
+                return (
+                    results[0] as! T0.Result,
+                    results[1] as! T1.Result,
+                    results[2] as! T2.Result,
+                    results[3] as! T3.Result,
+                    results[4] as! T4.Result,
+                    results[5] as! T5.Result,
+                    results[6] as! T6.Result,
+                    results[7] as! T7.Result,
+                    results[8] as! T8.Result,
+                    results[9] as! T9.Result,
+                    results[10] as! T10.Result
+                )
+            }
+        }
 
         
         public func get<

@@ -3402,7 +3402,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            guard !self.presentAccountFrozenInfoIfNeeded() else {
+            guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 return
             }
             self.presentScheduleTimePicker(completion: { [weak self] time in
@@ -3433,7 +3433,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            guard !self.presentAccountFrozenInfoIfNeeded() else {
+            guard !self.presentAccountFrozenInfoIfNeeded(delay: true) else {
                 return
             }
             
@@ -6397,7 +6397,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
-                                alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                if cachedData.disallowedGifts != .All {
+                                    alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                }
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -9265,8 +9267,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         if let value = value {
             self.present(UndoOverlayController(presentationData: self.presentationData, content: .dice(dice: dice, context: self.context, text: value, action: canSendMessagesToChat(self.presentationInterfaceState) ? self.presentationData.strings.Conversation_SendDice : nil), elevatedLayout: false, action: { [weak self] action in
-                if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState), action == .undo {
-                    strongSelf.sendMessages([.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), threadId: strongSelf.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                if let self, canSendMessagesToChat(self.presentationInterfaceState), action == .undo {
+                    self.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessages([.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: dice.emoji)), threadId: self.chatLocation.threadId, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])], postpone: postpone)
+                    })
                 }
                 return false
             }), in: .current)

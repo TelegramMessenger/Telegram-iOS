@@ -19,7 +19,7 @@ public enum ReportAdMessageError {
     case premiumRequired
 }
 
-func _internal_reportAdMessage(account: Account, peerId: EnginePeer.Id, opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
+func _internal_reportAdMessage(account: Account, opaqueId: Data, option: Data?) -> Signal<ReportAdMessageResult, ReportAdMessageError> {
     return account.network.request(Api.functions.messages.reportSponsoredMessage(randomId: Buffer(data: opaqueId), option: Buffer(data: option)))
     |> mapError { error -> ReportAdMessageError in
         if error.errorDescription == "PREMIUM_ACCOUNT_REQUIRED" {

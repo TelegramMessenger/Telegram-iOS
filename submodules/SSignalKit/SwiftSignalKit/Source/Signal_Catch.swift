@@ -139,7 +139,7 @@ public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queu
     }
 }
 
-public func retry<T, E>(retryOnError: @escaping (E) -> Bool, delayIncrement: Double, maxDelay: Double, maxRetries: Int, onQueue queue: Queue) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
+public func retry<T, E>(retryOnError: @escaping (E) -> Bool, delayIncrement: Double, maxDelay: Double, maxRetries: Int?, onQueue queue: Queue) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal { subscriber in
             let shouldRetry = Atomic(value: true)
@@ -161,7 +161,7 @@ public func retry<T, E>(retryOnError: @escaping (E) -> Bool, delayIncrement: Dou
                                 return (min(maxDelay, value + delayIncrement), count + 1)
                             }
                             
-                            if count >= maxRetries {
+                            if let maxRetries, count >= maxRetries {
                                 subscriber.putError(error)
                             } else {
                                 let time: DispatchTime = DispatchTime.now() + Double(delay)

@@ -45,8 +45,11 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
 func managedRecentStickers(postbox: Postbox, network: Network, forceFetch: Bool = false) -> Signal<Void, NoError> {
     return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStickers, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: forceFetch, fetch: { hash in
         return network.request(Api.functions.messages.getRecentStickers(flags: 0, hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
                 case .recentStickersNotModified:
                     return .single(nil)
@@ -68,8 +71,11 @@ func managedRecentStickers(postbox: Postbox, network: Network, forceFetch: Bool 
 func managedRecentGifs(postbox: Postbox, network: Network, forceFetch: Bool = false) -> Signal<Void, NoError> {
     return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentGifs, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: forceFetch, fetch: { hash in
         return network.request(Api.functions.messages.getSavedGifs(hash: hash))
-            |> retryRequest
+            |> retryRequestIfNotFrozen
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+                guard let result else {
+                    return .single(nil)
+                }
                 switch result {
                     case .savedGifsNotModified:
                         return .single(nil)
@@ -91,8 +97,11 @@ func managedRecentGifs(postbox: Postbox, network: Network, forceFetch: Bool = fa
 func managedSavedStickers(postbox: Postbox, network: Network, forceFetch: Bool = false) -> Signal<Void, NoError> {
     return managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudSavedStickers, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: true, forceFetch: forceFetch, fetch: { hash in
         return network.request(Api.functions.messages.getFavedStickers(hash: hash))
-            |> retryRequest
+            |> retryRequestIfNotFrozen
             |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+                guard let result else {
+                    return .single(nil)
+                }
                 switch result {
                     case .favedStickersNotModified:
                         return .single(nil)
@@ -133,8 +142,11 @@ func managedSavedStickers(postbox: Postbox, network: Network, forceFetch: Bool =
 func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudGreetingStickers, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getStickers(emoticon: "👋⭐️", hash: 0))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
                 case .stickersNotModified:
                     return .single(nil)
@@ -157,8 +169,11 @@ func managedGreetingStickers(postbox: Postbox, network: Network) -> Signal<Void,
 func managedPremiumStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudPremiumStickers, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getStickers(emoticon: "⭐️⭐️", hash: 0))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
                 case .stickersNotModified:
                     return .single(nil)
@@ -181,8 +196,11 @@ func managedPremiumStickers(postbox: Postbox, network: Network) -> Signal<Void, 
 func managedAllPremiumStickers(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudAllPremiumStickers, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getStickers(emoticon: "📂⭐️", hash: 0))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
                 case .stickersNotModified:
                     return .single(nil)
@@ -205,8 +223,11 @@ func managedAllPremiumStickers(postbox: Postbox, network: Network) -> Signal<Voi
 func managedRecentStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getRecentEmojiStatuses(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiStatusesNotModified:
                 return .single(nil)
@@ -235,8 +256,11 @@ func managedRecentStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void
 func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultEmojiStatuses(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiStatusesNotModified:
                 return .single(nil)
@@ -265,8 +289,11 @@ func managedFeaturedStatusEmoji(postbox: Postbox, network: Network) -> Signal<Vo
 func managedFeaturedChannelStatusEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedChannelStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getChannelDefaultEmojiStatuses(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiStatusesNotModified:
                 return .single(nil)
@@ -295,8 +322,11 @@ func managedFeaturedChannelStatusEmoji(postbox: Postbox, network: Network) -> Si
 func managedUniqueStarGifts(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudUniqueStarGifts, extractItemId: { RecentStarGiftItemId($0).id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getCollectibleEmojiStatuses(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiStatusesNotModified:
                 return .single(nil)
@@ -345,8 +375,11 @@ func managedUniqueStarGifts(accountPeerId: PeerId, postbox: Postbox, network: Ne
 func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedProfilePhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultProfilePhotoEmojis(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiListNotModified:
                 return .single(nil)
@@ -373,8 +406,11 @@ func managedProfilePhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void
 func managedGroupPhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedGroupPhotoEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultGroupPhotoEmojis(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiListNotModified:
                 return .single(nil)
@@ -401,8 +437,11 @@ func managedGroupPhotoEmoji(postbox: Postbox, network: Network) -> Signal<Void, 
 func managedBackgroundIconEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudFeaturedBackgroundIconEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getDefaultBackgroundEmojis(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiListNotModified:
                 return .single(nil)
@@ -429,8 +468,11 @@ func managedBackgroundIconEmoji(postbox: Postbox, network: Network) -> Signal<Vo
 func managedDisabledChannelStatusIconEmoji(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let poll = managedRecentMedia(postbox: postbox, network: network, collectionId: Namespaces.OrderedItemList.CloudDisabledChannelStatusEmoji, extractItemId: { RecentMediaItemId($0).mediaId.id }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.account.getChannelRestrictedStatusEmojis(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .emojiListNotModified:
                 return .single(nil)
@@ -466,8 +508,11 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getRecentReactions(limit: 100, hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .reactionsNotModified:
                 return .single(nil)
@@ -523,8 +568,11 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getTopReactions(limit: 32, hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .reactionsNotModified:
                 return .single(nil)
@@ -580,8 +628,11 @@ func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Vo
         }
     }, reverseHashOrder: false, forceFetch: false, fetch: { hash in
         return network.request(Api.functions.messages.getDefaultTagReactions(hash: hash))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> mapToSignal { result -> Signal<[OrderedItemListEntry]?, NoError> in
+            guard let result else {
+                return .single(nil)
+            }
             switch result {
             case .reactionsNotModified:
                 return .single(nil)

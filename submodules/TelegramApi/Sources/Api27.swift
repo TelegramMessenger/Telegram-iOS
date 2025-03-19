@@ -614,13 +614,13 @@ public extension Api {
 }
 public extension Api {
     enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, flags2: Int32, id: Int64, about: String?, settings: Api.PeerSettings, personalPhoto: Api.Photo?, profilePhoto: Api.Photo?, fallbackPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, wallpaper: Api.WallPaper?, stories: Api.PeerStories?, businessWorkHours: Api.BusinessWorkHours?, businessLocation: Api.BusinessLocation?, businessGreetingMessage: Api.BusinessGreetingMessage?, businessAwayMessage: Api.BusinessAwayMessage?, businessIntro: Api.BusinessIntro?, birthday: Api.Birthday?, personalChannelId: Int64?, personalChannelMessage: Int32?, stargiftsCount: Int32?, starrefProgram: Api.StarRefProgram?, botVerification: Api.BotVerification?, sendPaidMessagesStars: Int64?, disallowedStargifts: Api.DisallowedStarGiftsSettings?)
+        case userFull(flags: Int32, flags2: Int32, id: Int64, about: String?, settings: Api.PeerSettings, personalPhoto: Api.Photo?, profilePhoto: Api.Photo?, fallbackPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, ttlPeriod: Int32?, themeEmoticon: String?, privateForwardName: String?, botGroupAdminRights: Api.ChatAdminRights?, botBroadcastAdminRights: Api.ChatAdminRights?, wallpaper: Api.WallPaper?, stories: Api.PeerStories?, businessWorkHours: Api.BusinessWorkHours?, businessLocation: Api.BusinessLocation?, businessGreetingMessage: Api.BusinessGreetingMessage?, businessAwayMessage: Api.BusinessAwayMessage?, businessIntro: Api.BusinessIntro?, birthday: Api.Birthday?, personalChannelId: Int64?, personalChannelMessage: Int32?, stargiftsCount: Int32?, starrefProgram: Api.StarRefProgram?, botVerification: Api.BotVerification?, sendPaidMessagesStars: Int64?, disallowedGifts: Api.DisallowedGiftsSettings?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage, let businessIntro, let birthday, let personalChannelId, let personalChannelMessage, let stargiftsCount, let starrefProgram, let botVerification, let sendPaidMessagesStars, let disallowedStargifts):
+                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage, let businessIntro, let birthday, let personalChannelId, let personalChannelMessage, let stargiftsCount, let starrefProgram, let botVerification, let sendPaidMessagesStars, let disallowedGifts):
                     if boxed {
-                        buffer.appendInt32(791719153)
+                        buffer.appendInt32(-1712881595)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -654,15 +654,15 @@ public extension Api {
                     if Int(flags2) & Int(1 << 11) != 0 {starrefProgram!.serialize(buffer, true)}
                     if Int(flags2) & Int(1 << 12) != 0 {botVerification!.serialize(buffer, true)}
                     if Int(flags2) & Int(1 << 14) != 0 {serializeInt64(sendPaidMessagesStars!, buffer: buffer, boxed: false)}
-                    if Int(flags2) & Int(1 << 15) != 0 {disallowedStargifts!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 15) != 0 {disallowedGifts!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage, let businessIntro, let birthday, let personalChannelId, let personalChannelMessage, let stargiftsCount, let starrefProgram, let botVerification, let sendPaidMessagesStars, let disallowedStargifts):
-                return ("userFull", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("about", about as Any), ("settings", settings as Any), ("personalPhoto", personalPhoto as Any), ("profilePhoto", profilePhoto as Any), ("fallbackPhoto", fallbackPhoto as Any), ("notifySettings", notifySettings as Any), ("botInfo", botInfo as Any), ("pinnedMsgId", pinnedMsgId as Any), ("commonChatsCount", commonChatsCount as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any), ("themeEmoticon", themeEmoticon as Any), ("privateForwardName", privateForwardName as Any), ("botGroupAdminRights", botGroupAdminRights as Any), ("botBroadcastAdminRights", botBroadcastAdminRights as Any), ("wallpaper", wallpaper as Any), ("stories", stories as Any), ("businessWorkHours", businessWorkHours as Any), ("businessLocation", businessLocation as Any), ("businessGreetingMessage", businessGreetingMessage as Any), ("businessAwayMessage", businessAwayMessage as Any), ("businessIntro", businessIntro as Any), ("birthday", birthday as Any), ("personalChannelId", personalChannelId as Any), ("personalChannelMessage", personalChannelMessage as Any), ("stargiftsCount", stargiftsCount as Any), ("starrefProgram", starrefProgram as Any), ("botVerification", botVerification as Any), ("sendPaidMessagesStars", sendPaidMessagesStars as Any), ("disallowedStargifts", disallowedStargifts as Any)])
+                case .userFull(let flags, let flags2, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let wallpaper, let stories, let businessWorkHours, let businessLocation, let businessGreetingMessage, let businessAwayMessage, let businessIntro, let birthday, let personalChannelId, let personalChannelMessage, let stargiftsCount, let starrefProgram, let botVerification, let sendPaidMessagesStars, let disallowedGifts):
+                return ("userFull", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("about", about as Any), ("settings", settings as Any), ("personalPhoto", personalPhoto as Any), ("profilePhoto", profilePhoto as Any), ("fallbackPhoto", fallbackPhoto as Any), ("notifySettings", notifySettings as Any), ("botInfo", botInfo as Any), ("pinnedMsgId", pinnedMsgId as Any), ("commonChatsCount", commonChatsCount as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any), ("themeEmoticon", themeEmoticon as Any), ("privateForwardName", privateForwardName as Any), ("botGroupAdminRights", botGroupAdminRights as Any), ("botBroadcastAdminRights", botBroadcastAdminRights as Any), ("wallpaper", wallpaper as Any), ("stories", stories as Any), ("businessWorkHours", businessWorkHours as Any), ("businessLocation", businessLocation as Any), ("businessGreetingMessage", businessGreetingMessage as Any), ("businessAwayMessage", businessAwayMessage as Any), ("businessIntro", businessIntro as Any), ("birthday", birthday as Any), ("personalChannelId", personalChannelId as Any), ("personalChannelMessage", personalChannelMessage as Any), ("stargiftsCount", stargiftsCount as Any), ("starrefProgram", starrefProgram as Any), ("botVerification", botVerification as Any), ("sendPaidMessagesStars", sendPaidMessagesStars as Any), ("disallowedGifts", disallowedGifts as Any)])
     }
     }
     
@@ -767,9 +767,9 @@ public extension Api {
             } }
             var _32: Int64?
             if Int(_2!) & Int(1 << 14) != 0 {_32 = reader.readInt64() }
-            var _33: Api.DisallowedStarGiftsSettings?
+            var _33: Api.DisallowedGiftsSettings?
             if Int(_2!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
-                _33 = Api.parse(reader, signature: signature) as? Api.DisallowedStarGiftsSettings
+                _33 = Api.parse(reader, signature: signature) as? Api.DisallowedGiftsSettings
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -805,7 +805,7 @@ public extension Api {
             let _c32 = (Int(_2!) & Int(1 << 14) == 0) || _32 != nil
             let _c33 = (Int(_2!) & Int(1 << 15) == 0) || _33 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 {
-                return Api.UserFull.userFull(flags: _1!, flags2: _2!, id: _3!, about: _4, settings: _5!, personalPhoto: _6, profilePhoto: _7, fallbackPhoto: _8, notifySettings: _9!, botInfo: _10, pinnedMsgId: _11, commonChatsCount: _12!, folderId: _13, ttlPeriod: _14, themeEmoticon: _15, privateForwardName: _16, botGroupAdminRights: _17, botBroadcastAdminRights: _18, wallpaper: _19, stories: _20, businessWorkHours: _21, businessLocation: _22, businessGreetingMessage: _23, businessAwayMessage: _24, businessIntro: _25, birthday: _26, personalChannelId: _27, personalChannelMessage: _28, stargiftsCount: _29, starrefProgram: _30, botVerification: _31, sendPaidMessagesStars: _32, disallowedStargifts: _33)
+                return Api.UserFull.userFull(flags: _1!, flags2: _2!, id: _3!, about: _4, settings: _5!, personalPhoto: _6, profilePhoto: _7, fallbackPhoto: _8, notifySettings: _9!, botInfo: _10, pinnedMsgId: _11, commonChatsCount: _12!, folderId: _13, ttlPeriod: _14, themeEmoticon: _15, privateForwardName: _16, botGroupAdminRights: _17, botBroadcastAdminRights: _18, wallpaper: _19, stories: _20, businessWorkHours: _21, businessLocation: _22, businessGreetingMessage: _23, businessAwayMessage: _24, businessIntro: _25, birthday: _26, personalChannelId: _27, personalChannelMessage: _28, stargiftsCount: _29, starrefProgram: _30, botVerification: _31, sendPaidMessagesStars: _32, disallowedGifts: _33)
             }
             else {
                 return nil

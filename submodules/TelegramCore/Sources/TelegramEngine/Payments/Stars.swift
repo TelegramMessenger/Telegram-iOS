@@ -445,9 +445,12 @@ private func _internal_requestStarsSubscriptions(account: Account, peerId: Engin
             flags |= (1 << 0)
         }
         return account.network.request(Api.functions.payments.getStarsSubscriptions(flags: flags, peer: inputPeer, offset: offset))
-        |> retryRequest
+        |> retryRequestIfNotFrozen
         |> castError(RequestStarsSubscriptionsError.self)
         |> mapToSignal { result -> Signal<InternalStarsStatus, RequestStarsSubscriptionsError> in
+            guard let result else {
+                return .single(InternalStarsStatus(balance: .zero, subscriptionsMissingBalance: nil, subscriptions: [], nextSubscriptionsOffset: nil, transactions: [], nextTransactionsOffset: nil))
+            }
             return account.postbox.transaction { transaction -> InternalStarsStatus in
                 switch result {
                 case let .starsStatus(_, balance, subscriptions, subscriptionsNextOffset, subscriptionsMissingBalance, _, _, chats, users):

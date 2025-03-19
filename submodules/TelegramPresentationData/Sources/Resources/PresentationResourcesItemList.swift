@@ -57,6 +57,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func disabledCheckIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListDisabledCheckIcon.rawValue, { theme in
+            return generateItemListCheckIcon(color: theme.list.itemDisabledTextColor)
+        })
+    }
+    
     public static func plusIconImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListPlusIcon.rawValue, { theme in
             return generateItemListPlusIcon(theme.list.itemAccentColor)
