@@ -582,35 +582,35 @@ public class BrowserScreen: ViewController, MinimizableController {
                     }
                     let shareController = ShareController(context: self.context, subject: subject)
                     shareController.completed = { [weak self] peerIds in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        let _ = (strongSelf.context.engine.data.get(
+                        let _ = (self.context.engine.data.get(
                             EngineDataList(
                                 peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                             )
                         )
                         |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
-                            guard let strongSelf = self else {
+                            guard let self else {
                                 return
                             }
                             
                             let peers = peerList.compactMap { $0 }
-                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                             
                             let text: String
                             var savedMessages = false
-                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId && !isDocument {
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == self.context.account.peerId && !isDocument {
                                 text = presentationData.strings.WebBrowser_LinkAddedToBookmarks
                                 savedMessages = true
                             } else {
                                 if peers.count == 1, let peer = peers.first {
-                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let peerName = peer.id == self.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = isDocument ? presentationData.strings.WebBrowser_FileForwardTooltip_Chat_One(peerName).string : presentationData.strings.WebBrowser_LinkForwardTooltip_Chat_One(peerName).string
-                                    savedMessages = peer.id == strongSelf.context.account.peerId
+                                    savedMessages = peer.id == self.context.account.peerId
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let firstPeerName = firstPeer.id == self.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == self.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = isDocument ? presentationData.strings.WebBrowser_FileForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string : presentationData.strings.WebBrowser_LinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
                                     let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -620,7 +620,7 @@ public class BrowserScreen: ViewController, MinimizableController {
                                 }
                             }
                             
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                            self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
                                 if savedMessages, let self, action == .info {
                                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
                                              |> deliverOnMainQueue).start(next: { [weak self] peer in
