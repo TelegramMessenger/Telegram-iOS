@@ -121,16 +121,16 @@ public enum TelegramChannelInfo: Equatable {
         switch flatBuffersObject.valueType {
         case .telegramchannelinfoBroadcast:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramChannelInfo_Broadcast.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .broadcast(TelegramChannelBroadcastInfo(flags: TelegramChannelBroadcastFlags(rawValue: value.flags)))
         case .telegramchannelinfoGroup:
             guard let value = flatBuffersObject.value(type: TelegramCore_TelegramChannelInfo_Group.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .group(TelegramChannelGroupInfo(flags: TelegramChannelGroupFlags(rawValue: value.flags)))
         case .none_:
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
     }
     
@@ -599,7 +599,7 @@ public final class TelegramChannel: Peer, Equatable {
         self.participationStatus = TelegramChannelParticipationStatus(rawValue: flatBuffersObject.participationStatus)
         
         guard let infoObj = flatBuffersObject.info else {
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
         self.info = try TelegramChannelInfo(flatBuffersObject: infoObj)
         

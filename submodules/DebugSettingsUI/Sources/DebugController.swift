@@ -101,6 +101,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case compressedEmojiCache(Bool)
     case storiesJpegExperiment(Bool)
     case conferenceDebug(Bool)
+    case checkSerializedData(Bool)
     case enableQuickReactionSwitch(Bool)
     case disableReloginTokens(Bool)
     case liveStreamV2(Bool)
@@ -133,7 +134,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .conferenceDebug, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
+        case .clearTips, .resetNotifications, .crash, .fillLocalSavedMessageCache, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .resetTagHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .compressedEmojiCache, .storiesJpegExperiment, .conferenceDebug, .checkSerializedData, .enableQuickReactionSwitch, .experimentalCompatibility, .enableDebugDataDisplay, .rippleEffect, .browserExperiment, .localTranscription, .enableReactionOverrides, .restorePurchases, .disableReloginTokens, .liveStreamV2, .experimentalCallMute, .playerV2, .devRequests, .fakeAds, .enableLocalTranslation:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -244,12 +245,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 48
         case .conferenceDebug:
             return 49
-        case .enableQuickReactionSwitch:
+        case .checkSerializedData:
             return 50
-        case .liveStreamV2:
+        case .enableQuickReactionSwitch:
             return 51
-        case .experimentalCallMute:
+        case .liveStreamV2:
             return 52
+        case .experimentalCallMute:
+            return 53
         case .playerV2:
             return 54
         case .devRequests:
@@ -1318,6 +1321,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .checkSerializedData(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Check Serialized Data", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.checkSerializedData = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .enableQuickReactionSwitch(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Enable Quick Reaction", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1540,6 +1553,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.disableReloginTokens(experimentalSettings.disableReloginTokens))
         
         entries.append(.conferenceDebug(experimentalSettings.conferenceDebug))
+        entries.append(.checkSerializedData(experimentalSettings.checkSerializedData))
         entries.append(.enableQuickReactionSwitch(!experimentalSettings.disableQuickReaction))
         entries.append(.liveStreamV2(experimentalSettings.liveStreamV2))
         entries.append(.experimentalCallMute(experimentalSettings.experimentalCallMute))

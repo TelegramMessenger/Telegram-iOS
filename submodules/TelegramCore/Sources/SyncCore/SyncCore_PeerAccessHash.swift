@@ -19,16 +19,16 @@ public enum TelegramPeerAccessHash: Hashable {
         switch flatBuffersObject.valueType {
         case .telegrampeeraccesshashPersonal:
             guard let personal = flatBuffersObject.value(type: TelegramCore_TelegramPeerAccessHash_Personal.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .personal(personal.accessHash)
         case .telegrampeeraccesshashGenericpublic:
             guard let genericPublic = flatBuffersObject.value(type: TelegramCore_TelegramPeerAccessHash_GenericPublic.self) else {
-                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+                throw FlatBuffersError.missingRequiredField()
             }
             self = .genericPublic(genericPublic.accessHash)
         case .none_:
-            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            throw FlatBuffersError.missingRequiredField()
         }
     }
     
