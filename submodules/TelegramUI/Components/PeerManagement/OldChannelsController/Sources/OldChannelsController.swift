@@ -235,13 +235,6 @@ private func oldChannelsEntries(presentationData: PresentationData, state: OldCh
     return entries
 }
 
-
-public enum OldChannelsControllerIntent {
-    case join
-    case create
-    case upgrade
-}
-
 public func oldChannelsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, intent: OldChannelsControllerIntent, completed: @escaping (Bool) -> Void = { _ in }) -> ViewController {
     let initialState = OldChannelsState()
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

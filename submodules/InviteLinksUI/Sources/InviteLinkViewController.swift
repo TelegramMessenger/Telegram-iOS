@@ -538,7 +538,7 @@ public final class InviteLinkViewController: ViewController {
             self.headerNode.clipsToBounds = true
             
             self.headerBackgroundNode = ASDisplayNode()
-            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
             self.headerBackgroundNode.cornerRadius = 16.0
             
             self.titleNode = ImmediateTextNode()
@@ -1025,8 +1025,8 @@ public final class InviteLinkViewController: ViewController {
             self.presentationData = presentationData
             self.presentationDataPromise.set(.single(presentationData))
             
-            self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.historyBackgroundContentNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
+            self.headerBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
             self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: titleFont, textColor: self.presentationData.theme.actionSheet.primaryTextColor)
             self.subtitleNode.attributedText = NSAttributedString(string: self.subtitleNode.attributedText?.string ?? "", font: subtitleFont, textColor: self.presentationData.theme.list.itemSecondaryTextColor)
             

@@ -286,6 +286,7 @@ private protocol OngoingCallThreadLocalContextProtocol: AnyObject {
     func nativeGetDerivedState() -> Data
     func addExternalAudioData(data: Data)
     func nativeSetIsAudioSessionActive(isActive: Bool)
+    func nativeDeactivateIncomingAudio()
 }
 
 private final class OngoingCallThreadLocalContextHolder {
@@ -690,6 +691,10 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
 
     func addExternalAudioData(data: Data) {
         self.addExternalAudioData(data)
+    }
+    
+    func nativeDeactivateIncomingAudio() {
+        self.deactivateIncomingAudio()
     }
     
     func nativeSetIsAudioSessionActive(isActive: Bool) {
@@ -1392,6 +1397,12 @@ public final class OngoingCallContext {
             }
             
             strongSelf.callSessionManager.sendSignalingData(internalId: strongSelf.internalId, data: data)
+        }
+    }
+    
+    public func deactivateIncomingAudio() {
+        self.withContext { context in
+            context.nativeDeactivateIncomingAudio()
         }
     }
 }

@@ -315,6 +315,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 - (void)switchAudioOutput:(NSString * _Nonnull)deviceId;
 - (void)switchAudioInput:(NSString * _Nonnull)deviceId;
 - (void)addExternalAudioData:(NSData * _Nonnull)data;
+- (void)deactivateIncomingAudio;
 
 @end
 
@@ -452,7 +453,8 @@ statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
 encryptionKey:(NSData * _Nullable)encryptionKey
-isConference:(bool)isConference;
+isConference:(bool)isConference
+isActiveByDefault:(bool)isActiveByDefault;
 
 - (void)stop:(void (^ _Nullable)())completion;
 

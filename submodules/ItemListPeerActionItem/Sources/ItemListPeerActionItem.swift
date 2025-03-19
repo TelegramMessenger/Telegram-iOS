@@ -30,10 +30,11 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let editing: Bool
     let height: ItemListPeerActionItemHeight
     let color: ItemListPeerActionItemColor
+    let noInsets: Bool
     public let sectionId: ItemListSectionId
     public let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, iconSignal: Signal<UIImage?, NoError>? = nil, title: String, additionalBadgeIcon: UIImage? = nil, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool = false, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, iconSignal: Signal<UIImage?, NoError>? = nil, title: String, additionalBadgeIcon: UIImage? = nil, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, noInsets: Bool = false, editing: Bool = false, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSignal = iconSignal
@@ -43,6 +44,7 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
         self.hasSeparator = hasSeparator
         self.editing = editing
         self.height = height
+        self.noInsets = noInsets
         self.color = color
         self.sectionId = sectionId
         self.action = action
@@ -217,7 +219,11 @@ public final class ItemListPeerActionItemNode: ListViewItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors, params)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
+            if item.noInsets {
+                insets.top = 0.0
+                insets.bottom = 0.0
+            }
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset * 2.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)

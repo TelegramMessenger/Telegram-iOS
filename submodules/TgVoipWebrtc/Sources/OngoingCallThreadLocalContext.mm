@@ -127,7 +127,7 @@ public:
     
 public:
     virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> audioDeviceModule() = 0;
-    virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule() = 0;
+    virtual rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule(bool isActive) = 0;
     virtual void start() = 0;
 };
 
@@ -147,17 +147,29 @@ public:
         return 0;
     }
     
-    void UpdateAudioCallback(webrtc::AudioTransport *previousAudioCallback, webrtc::AudioTransport *audioCallback) {
+    void UpdateAudioCallback(webrtc::AudioTransport *previousAudioCallback, webrtc::AudioTransport *audioCallback, bool isActive) {
         _mutex.Lock();
         
         if (audioCallback) {
-            _audioTransports.push_back(audioCallback);
+            _audioTransports.push_back(std::make_pair(audioCallback, isActive));
         } else if (previousAudioCallback) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                if (_audioTransports[i] == previousAudioCallback) {
+                if (_audioTransports[i].first == previousAudioCallback) {
                     _audioTransports.erase(_audioTransports.begin() + i);
                     break;
                 }
+            }
+        }
+        
+        _mutex.Unlock();
+    }
+    
+    void UpdateAudioCallbackIsActive(webrtc::AudioTransport *audioCallback, bool isActive) {
+        _mutex.Lock();
+        
+        for (auto &it : _audioTransports) {
+            if (it.first == audioCallback) {
+                it.second = isActive;
             }
         }
         
@@ -474,7 +486,7 @@ public:
         _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                _audioTransports[i]->RecordedDataIsAvailable(
+                _audioTransports[i].first->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -508,7 +520,7 @@ public:
         _mutex.Lock();
         if (!_audioTransports.empty()) {
             for (size_t i = 0; i < _audioTransports.size(); i++) {
-                _audioTransports[i]->RecordedDataIsAvailable(
+                _audioTransports[i].first->RecordedDataIsAvailable(
                     audioSamples,
                     nSamples,
                     nBytesPerSample,
@@ -552,11 +564,14 @@ public:
                 int16_t *resultAudioSamples = (int16_t *)audioSamples;
 
                 for (size_t i = 0; i < _audioTransports.size(); i++) {
+                    if (!_audioTransports[i].second) {
+                        continue;
+                    }
                     int64_t localElapsedTimeMs = 0;
                     int64_t localNtpTimeMs = 0;
                     size_t localNSamplesOut = 0;
                     
-                    _audioTransports[i]->NeedMorePlayData(
+                    _audioTransports[i].first->NeedMorePlayData(
                         nSamples,
                         nBytesPerSample,
                         nChannels,
@@ -584,7 +599,7 @@ public:
                 }
                 nSamplesOut = nSamples;
             } else {
-                result = _audioTransports[_audioTransports.size() - 1]->NeedMorePlayData(
+                result = _audioTransports[_audioTransports.size() - 1].first->NeedMorePlayData(
                     nSamples,
                     nBytesPerSample,
                     nChannels,
@@ -616,7 +631,7 @@ public:
         _mutex.Lock();
         
         if (!_audioTransports.empty()) {
-            _audioTransports[_audioTransports.size() - 1]->PullRenderData(
+            _audioTransports[_audioTransports.size() - 1].first->PullRenderData(
                 bits_per_sample,
                 sample_rate,
                 number_of_channels,
@@ -650,6 +665,9 @@ public:
     virtual void Stop() override {
     }
     
+    virtual void setIsActive(bool isActive) override {
+    }
+    
     virtual void ActualStop() {
         if (_isStarted) {
             _isStarted = false;
@@ -661,22 +679,23 @@ public:
     
 private:
     bool _isStarted = false;
-    std::vector<webrtc::AudioTransport *> _audioTransports;
+    std::vector<std::pair<webrtc::AudioTransport *, bool>> _audioTransports;
     webrtc::Mutex _mutex;
     std::vector<int16_t> _mixAudioSamples;
 };
 
 class WrappedChildAudioDeviceModule : public tgcalls::DefaultWrappedAudioDeviceModule {
 public:
-    WrappedChildAudioDeviceModule(webrtc::scoped_refptr<WrappedAudioDeviceModuleIOS> impl) :
-    tgcalls::DefaultWrappedAudioDeviceModule(impl) {
+    WrappedChildAudioDeviceModule(webrtc::scoped_refptr<WrappedAudioDeviceModuleIOS> impl, bool isActive) :
+    tgcalls::DefaultWrappedAudioDeviceModule(impl),
+    _isActive(isActive) {
     }
     
     virtual ~WrappedChildAudioDeviceModule() {
         if (_audioCallback) {
             auto previousAudioCallback = _audioCallback;
             _audioCallback = nullptr;
-            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, nullptr);
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, nullptr, false);
         }
     }
     
@@ -685,21 +704,20 @@ public:
         _audioCallback = audioCallback;
         
         if (_isActive) {
-            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, audioCallback);
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(previousAudioCallback, audioCallback, _isActive);
         }
         
         return 0;
     }
     
-public:
-    void setIsActive() {
-        if (_isActive) {
+    void setIsActive(bool isActive) override {
+        if (_isActive == isActive) {
             return;
         }
-        _isActive = true;
+        _isActive = isActive;
         
         if (_audioCallback) {
-            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallback(nullptr, _audioCallback);
+            ((WrappedAudioDeviceModuleIOS *)WrappedInstance().get())->UpdateAudioCallbackIsActive(_audioCallback, isActive);
         }
     }
     
@@ -733,8 +751,8 @@ public:
         return _audioDeviceModule;
     }
     
-    rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule() override {
-        return rtc::make_ref_counted<WrappedChildAudioDeviceModule>(_audioDeviceModule);
+    rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> makeChildAudioDeviceModule(bool isActive) override {
+        return rtc::make_ref_counted<WrappedChildAudioDeviceModule>(_audioDeviceModule, isActive);
     }
     
     virtual void start() override {
@@ -1928,8 +1946,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             },
             .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
-                    ((WrappedChildAudioDeviceModule *)result.get())->setIsActive();
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(true);
                     return result;
                 } else {
                     return nullptr;
@@ -2260,6 +2277,17 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
+- (void)deactivateIncomingAudio {
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        if (currentAudioDeviceModule) {
+            _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule]() {
+                ((tgcalls::WrappedAudioDeviceModule *)currentAudioDeviceModule.get())->setIsActive(false);
+            });
+        }
+    }
+}
+
 @end
 
 namespace {
@@ -2347,7 +2375,8 @@ statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
 encryptionKey:(NSData * _Nullable)encryptionKey
-isConference:(bool)isConference {
+isConference:(bool)isConference
+isActiveByDefault:(bool)isActiveByDefault {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -2636,10 +2665,9 @@ isConference:(bool)isConference {
                     return resultModule;
                 }
             },
-            .createWrappedAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
+            .createWrappedAudioDeviceModule = [audioDeviceModule, isActiveByDefault](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<tgcalls::WrappedAudioDeviceModule> {
                 if (audioDeviceModule) {
-                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule();
-                    ((WrappedChildAudioDeviceModule *)result.get())->setIsActive();
+                    auto result = audioDeviceModule->getSyncAssumingSameThread()->makeChildAudioDeviceModule(isActiveByDefault);
                     return result;
                 } else {
                     return nullptr;
@@ -2983,6 +3011,14 @@ isConference:(bool)isConference {
 }
 
 - (void)activateIncomingAudio {
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        if (currentAudioDeviceModule) {
+            _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule]() {
+                ((tgcalls::WrappedAudioDeviceModule *)currentAudioDeviceModule.get())->setIsActive(true);
+            });
+        }
+    }
 }
 
 @end

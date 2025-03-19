@@ -11,7 +11,7 @@ import PresentationDataUtils
 import UndoUI
 import OldChannelsController
 
-public final class JoinLinkPreviewController: ViewController {
+public final class LegacyJoinLinkPreviewController: ViewController {
     private var controllerNode: JoinLinkPreviewControllerNode {
         return self.displayNode as! JoinLinkPreviewControllerNode
     }
@@ -184,3 +184,39 @@ public final class JoinLinkPreviewController: ViewController {
     }
 }
 
+public func JoinLinkPreviewController(
+    context: AccountContext,
+    link: String,
+    navigateToPeer: @escaping (EnginePeer, ChatPeekTimeout?) -> Void,
+    parentNavigationController: NavigationController?,
+    resolvedState: ExternalJoiningChatState? = nil
+) -> ViewController {
+    if let data = context.currentAppConfiguration.with({ $0 }).data, data["ios_killswitch_legacy_join_link"] != nil {
+        return LegacyJoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState)
+    } else if case let .invite(invite) = resolvedState, !invite.flags.requestNeeded, !invite.flags.isBroadcast, !invite.flags.canRefulfillSubscription {
+        //TODO:release
+        
+        var verificationStatus: JoinSubjectScreenMode.Group.VerificationStatus?
+        if invite.flags.isFake {
+            verificationStatus = .fake
+        } else if invite.flags.isScam {
+            verificationStatus = .scam
+        } else if invite.flags.isVerified {
+            verificationStatus = .verified
+        }
+        return context.sharedContext.makeJoinSubjectScreen(context: context, mode: .group(JoinSubjectScreenMode.Group(
+            link: link,
+            isGroup: !invite.flags.isChannel,
+            isPublic: invite.flags.isPublic,
+            isRequest: invite.flags.requestNeeded,
+            verificationStatus: verificationStatus,
+            image: invite.photoRepresentation,
+            title: invite.title,
+            about: invite.about,
+            memberCount: invite.participantsCount,
+            members: invite.participants ?? []
+        )))
+    } else {
+        return LegacyJoinLinkPreviewController(context: context, link: link, navigateToPeer: navigateToPeer, parentNavigationController: parentNavigationController, resolvedState: resolvedState)
+    }
+}

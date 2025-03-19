@@ -2726,10 +2726,9 @@ private func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor:
         context.setLineCap(.round)
         context.setStrokeColor(foregroundColor.cgColor)
         
+        context.beginPath()
         context.move(to: CGPoint(x: 10.0, y: 10.0))
         context.addLine(to: CGPoint(x: 20.0, y: 20.0))
-        context.strokePath()
-        
         context.move(to: CGPoint(x: 20.0, y: 10.0))
         context.addLine(to: CGPoint(x: 10.0, y: 20.0))
         context.strokePath()

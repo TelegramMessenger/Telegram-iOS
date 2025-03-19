@@ -1680,6 +1680,10 @@ public final class PresentationCallImpl: PresentationCall {
             }
         }
     }
+    
+    func deactivateIncomingAudio() {
+        self.ongoingContext?.deactivateIncomingAudio()
+    }
 }
 
 func sampleBufferFromPixelBuffer(pixelBuffer: CVPixelBuffer) -> CMSampleBuffer? {

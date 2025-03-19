@@ -60,6 +60,8 @@ swift_library(
         "//submodules/PromptUI",
         "//submodules/TelegramUI/Components/ItemListDatePickerItem:ItemListDatePickerItem",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",

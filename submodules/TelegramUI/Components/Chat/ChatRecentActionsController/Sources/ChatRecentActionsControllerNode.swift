@@ -1326,21 +1326,66 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                             navigationController?.pushViewController(controller)
                                         })
                                     } else {
-                                        strongSelf.presentController(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                                        let joinLinkPreviewController = JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                                             openPeer(peer, peekData)
-                                        }, parentNavigationController: navigationController, resolvedState: resolvedState), .window(.root), nil)
+                                        }, parentNavigationController: navigationController, resolvedState: resolvedState)
+                                        if joinLinkPreviewController.navigationPresentation == .flatModal {
+                                            strongSelf.pushController(joinLinkPreviewController)
+                                        } else {
+                                            strongSelf.presentController(joinLinkPreviewController, .window(.root), nil)
+                                        }
                                     }
                                 default:
-                                    strongSelf.presentController(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                                    let joinLinkPreviewController = JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                                         openPeer(peer, peekData)
-                                    }, parentNavigationController: navigationController, resolvedState: resolvedState), .window(.root), nil)
+                                    }, parentNavigationController: navigationController, resolvedState: resolvedState)
+                                    if joinLinkPreviewController.navigationPresentation == .flatModal {
+                                        strongSelf.pushController(joinLinkPreviewController)
+                                    } else {
+                                        strongSelf.presentController(joinLinkPreviewController, .window(.root), nil)
+                                    }
                                 }
                             })
                         } else {
-                            strongSelf.presentController(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                            let joinLinkPreviewController = JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                                 openPeer(peer, peekData)
-                            }, parentNavigationController: navigationController), .window(.root), nil)
+                            }, parentNavigationController: navigationController, resolvedState: nil)
+                            if joinLinkPreviewController.navigationPresentation == .flatModal {
+                                strongSelf.pushController(joinLinkPreviewController)
+                            } else {
+                                strongSelf.presentController(joinLinkPreviewController, .window(.root), nil)
+                            }
                         }
+                    case let .joinCall(link):
+                        let context = strongSelf.context
+                        let navigationController = strongSelf.getNavigationController()
+                    
+                        let progressSignal = Signal<Never, NoError> { subscriber in
+                            progress?.set(.single(true))
+                            return ActionDisposable {
+                                Queue.mainQueue().async() {
+                                    progress?.set(.single(false))
+                                }
+                            }
+                        }
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.1, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.startStrict()
+                        
+                        var signal = context.engine.peers.joinCallLinkInformation(link)
+                        signal = signal
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
+                                                    
+                        let _ = (signal
+                        |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
+                            navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
+                                inviter: resolvedCallLink.inviter, members: resolvedCallLink.members, totalMemberCount: resolvedCallLink.totalMemberCount
+                            ))))
+                        })
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:

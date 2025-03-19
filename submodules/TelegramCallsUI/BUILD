@@ -119,6 +119,7 @@ swift_library(
         "//submodules/Components/BlurredBackgroundComponent",
         "//submodules/DirectMediaImageCache",
         "//submodules/FastBlur",
+        "//submodules/InviteLinksUI",
     ],
     visibility = [
         "//visibility:public",

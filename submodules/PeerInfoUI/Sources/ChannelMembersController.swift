@@ -655,7 +655,7 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
     }, inviteViaLink: {
         if let controller = getControllerImpl?() {
             dismissInputImpl?()
-            presentControllerImpl?(InviteLinkInviteController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, parentNavigationController: controller.navigationController as? NavigationController), nil)
+            presentControllerImpl?(InviteLinkInviteController(context: context, updatedPresentationData: updatedPresentationData, mode: .groupOrChannel(peerId: peerId), parentNavigationController: controller.navigationController as? NavigationController), nil)
         }
     }, updateHideMembers: { value in
         let _ = context.engine.peers.updateChannelMembersHidden(peerId: peerId, value: value).start()
