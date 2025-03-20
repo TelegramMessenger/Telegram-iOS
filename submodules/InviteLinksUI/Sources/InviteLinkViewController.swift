@@ -594,10 +594,7 @@ public final class InviteLinkViewController: ViewController {
                     guard let peer else {
                         return
                     }
-                    var usdRate = 0.012
-                    if let usdWithdrawRate = configuration.usdWithdrawRate {
-                        usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
-                    }
+                    let usdRate = Double(configuration.usdWithdrawRate) / 1000.0 / 100.0
                     let subscriptionController = context.sharedContext.makeStarsSubscriptionScreen(context: context, peer: peer, pricing: pricing, importer: importer, usdRate: usdRate)
                     self?.controller?.push(subscriptionController)
                 })
@@ -834,11 +831,8 @@ public final class InviteLinkViewController: ViewController {
                     context.account.postbox.loadedPeerWithId(adminId)
                 ) |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
                     if let strongSelf = self {
-                        var usdRate = 0.012
-                        if let usdWithdrawRate = configuration.usdWithdrawRate {
-                            usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
-                        }
-                                                                        
+                        let usdRate = Double(configuration.usdWithdrawRate) / 1000.0 / 100.0
+             
                         var entries: [InviteLinkViewEntry] = []
                         
                         entries.append(.link(presentationData.theme, invite))

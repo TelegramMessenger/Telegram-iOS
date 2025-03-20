@@ -89,7 +89,7 @@ public func storyPreviewWithAddedReactions(
                             guard let file = item.centerAnimation else {
                                 break
                             }
-                            return loadFile(reaction, file)
+                            return loadFile(reaction, file._parse())
                         }
                     }
                     return .single((reaction, nil))
@@ -339,7 +339,7 @@ final class StoryItemOverlaysView: UIView {
                     if let availableReactions {
                         for reactionItem in availableReactions.reactionItems {
                             if reactionItem.reaction.rawValue == reaction {
-                                file = reactionItem.stillAnimation
+                                file = reactionItem.stillAnimation._parse()
                                 break
                             }
                         }
@@ -367,7 +367,7 @@ final class StoryItemOverlaysView: UIView {
                     if let availableReactions {
                         for reactionItem in availableReactions.reactionItems {
                             if reactionItem.reaction.rawValue == reaction {
-                                file = reactionItem.stillAnimation
+                                file = reactionItem.stillAnimation._parse()
                                 break
                             }
                         }
@@ -790,7 +790,7 @@ final class StoryItemOverlaysView: UIView {
                 let itemSize = itemView.update(
                     context: context,
                     emoji: emoji,
-                    emojiFile: context.animatedEmojiStickersValue[emoji]?.first?.file,
+                    emojiFile: context.animatedEmojiStickersValue[emoji]?.first?.file._parse(),
                     temperature: temperature,
                     color: color,
                     synchronous: attemptSynchronous,

@@ -39,6 +39,11 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     public var requestChatDate: Int32?
     public var requestChatIsChannel: Bool?
     public var managingBot: ManagingBot?
+    public var paidMessageStars: StarsAmount?
+    public var registrationDate: String?
+    public var phoneCountry: String?
+    public var nameChangeDate: Int32?
+    public var photoChangeDate: Int32?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
@@ -46,15 +51,37 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatTitle = nil
         self.requestChatDate = nil
         self.managingBot = nil
+        self.paidMessageStars = nil
+        self.registrationDate = nil
+        self.phoneCountry = nil
+        self.nameChangeDate = nil
+        self.photoChangeDate = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil, managingBot: ManagingBot? = nil) {
+    public init(
+        flags: PeerStatusSettings.Flags,
+        geoDistance: Int32? = nil,
+        requestChatTitle: String? = nil,
+        requestChatDate: Int32? = nil,
+        requestChatIsChannel: Bool? = nil,
+        managingBot: ManagingBot? = nil,
+        paidMessageStars: StarsAmount? = nil,
+        registrationDate: String? = nil,
+        phoneCountry: String? = nil,
+        nameChangeDate: Int32? = nil,
+        photoChangeDate: Int32? = nil
+    ) {
         self.flags = flags
         self.geoDistance = geoDistance
         self.requestChatTitle = requestChatTitle
         self.requestChatDate = requestChatDate
         self.requestChatIsChannel = requestChatIsChannel
         self.managingBot = managingBot
+        self.paidMessageStars = paidMessageStars
+        self.registrationDate = registrationDate
+        self.phoneCountry = phoneCountry
+        self.nameChangeDate = nameChangeDate
+        self.photoChangeDate = photoChangeDate
     }
     
     public init(decoder: PostboxDecoder) {
@@ -64,6 +91,11 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
         self.requestChatDate = decoder.decodeOptionalInt32ForKey("requestChatDate")
         self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
         self.managingBot = decoder.decodeCodable(ManagingBot.self, forKey: "managingBot")
+        self.paidMessageStars = decoder.decodeCodable(StarsAmount.self, forKey: "paidMessageStars")
+        self.registrationDate = decoder.decodeOptionalStringForKey("registrationDate")
+        self.phoneCountry = decoder.decodeOptionalStringForKey("phoneCountry")
+        self.nameChangeDate = decoder.decodeOptionalInt32ForKey("nameChangeDate")
+        self.photoChangeDate = decoder.decodeOptionalInt32ForKey("photoChangeDate")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -92,6 +124,31 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
             encoder.encodeCodable(managingBot, forKey: "managingBot")
         } else {
             encoder.encodeNil(forKey: "managingBot")
+        }
+        if let paidMessageStars = self.paidMessageStars {
+            encoder.encodeCodable(paidMessageStars, forKey: "paidMessageStars")
+        } else {
+            encoder.encodeNil(forKey: "paidMessageStars")
+        }
+        if let registrationDate = self.registrationDate {
+            encoder.encodeString(registrationDate, forKey: "registrationDate")
+        } else {
+            encoder.encodeNil(forKey: "registrationDate")
+        }
+        if let phoneCountry = self.phoneCountry {
+            encoder.encodeString(phoneCountry, forKey: "phoneCountry")
+        } else {
+            encoder.encodeNil(forKey: "phoneCountry")
+        }
+        if let nameChangeDate = self.nameChangeDate {
+            encoder.encodeInt32(nameChangeDate, forKey: "nameChangeDate")
+        } else {
+            encoder.encodeNil(forKey: "nameChangeDate")
+        }
+        if let photoChangeDate = self.photoChangeDate {
+            encoder.encodeInt32(photoChangeDate, forKey: "photoChangeDate")
+        } else {
+            encoder.encodeNil(forKey: "photoChangeDate")
         }
     }
     

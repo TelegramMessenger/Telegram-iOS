@@ -12,11 +12,14 @@ import ChatControllerInteraction
 import MultiplexedVideoNode
 import ChatPresentationInterfaceState
 import EntityKeyboardGifContent
+import BatchVideoRendering
 
 final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private let context: AccountContext
     private let interaction: ChatEntityKeyboardInputNode.Interaction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
+    
+    private let batchVideoRenderingContext: BatchVideoRenderingContext
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -45,10 +48,11 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     private var hasInitialText = false
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, batchVideoRenderingContext: BatchVideoRenderingContext, trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>) {
         self.context = context
         self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
+        self.batchVideoRenderingContext = batchVideoRenderingContext
         self.trendingPromise = trendingPromise
         
         self.theme = theme
@@ -217,7 +221,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         super.willEnterHierarchy()
         
         if self.multiplexedNode == nil {
-            let multiplexedNode = MultiplexedVideoNode(account: self.context.account, theme: self.theme, strings: self.strings)
+            let multiplexedNode = MultiplexedVideoNode(context: self.context, theme: self.theme, strings: self.strings, batchVideoRenderingContext: self.batchVideoRenderingContext)
             self.multiplexedNode = multiplexedNode
             if let layout = self.validLayout {
                 multiplexedNode.frame = CGRect(origin: CGPoint(), size: layout)

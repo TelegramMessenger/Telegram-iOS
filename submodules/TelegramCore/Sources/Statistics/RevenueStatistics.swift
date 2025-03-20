@@ -145,7 +145,7 @@ private func requestRevenueStats(postbox: Postbox, network: Network, peerId: Pee
         }
         return nil
     } |> mapToSignal { peer -> Signal<RevenueStats?, NoError> in
-        guard let peer, let inputPeer = apiInputPeer(peer) else {
+        guard let peer, let channel = peer as? TelegramChannel, case .broadcast = channel.info, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
         
@@ -354,7 +354,7 @@ private final class RevenueStatsTransactionsContextImpl {
         }
         |> mapToSignal { peer -> Signal<([RevenueStatsTransactionsContext.State.Transaction], Int32, Int32?), NoError> in
             if let peer {
-                guard let inputPeer = apiInputPeer(peer) else {
+                guard let channel = peer as? TelegramChannel, case .broadcast = channel.info, let inputPeer = apiInputPeer(peer) else {
                     return .complete()
                 }
                 let offset = lastOffset ?? 0

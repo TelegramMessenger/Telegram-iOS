@@ -466,7 +466,10 @@ final class CallListControllerNode: ASDisplayNode {
         if let callManager = context.sharedContext.callManager {
             currentGroupCallPeerId = callManager.currentGroupCallSignal
             |> map { call -> EnginePeer.Id? in
-                call?.peerId
+                guard case let .group(call) = call else {
+                    return nil
+                }
+                return call.peerId
             }
             |> distinctUntilChanged
         } else {

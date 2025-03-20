@@ -1,4 +1,7 @@
+import Foundation
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 private enum InstantPageBlockType: Int32 {
     case unsupported = 0
@@ -512,6 +515,395 @@ public indirect enum InstantPageBlock: PostboxCoding, Equatable {
                 }
         }
     }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageBlock) throws {
+        switch flatBuffersObject.valueType {
+        case .instantpageblockUnsupported:
+            self = .unsupported
+        case .instantpageblockTitle:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Title.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .title(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockSubtitle:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Subtitle.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .subtitle(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockAuthordate:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_AuthorDate.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .authorDate(author: try RichText(flatBuffersObject: value.author), date: value.date)
+        case .instantpageblockHeader:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Header.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .header(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockSubheader:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Subheader.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .subheader(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockParagraph:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Paragraph.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .paragraph(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockPreformatted:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Preformatted.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .preformatted(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockFooter:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Footer.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .footer(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockDivider:
+            self = .divider
+        case .instantpageblockAnchor:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Anchor.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .anchor(value.name)
+        case .instantpageblockList:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_List.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .list(items: try (0 ..< value.itemsCount).map { try InstantPageListItem(flatBuffersObject: value.items(at: $0)!) }, ordered: value.ordered)
+        case .instantpageblockBlockquote:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_BlockQuote.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .blockQuote(text: try RichText(flatBuffersObject: value.text), caption: try RichText(flatBuffersObject: value.caption))
+        case .instantpageblockPullquote:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_PullQuote.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .pullQuote(text: try RichText(flatBuffersObject: value.text), caption: try RichText(flatBuffersObject: value.caption))
+        case .instantpageblockImage:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Image.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .image(id: MediaId(value.id), caption: try InstantPageCaption(flatBuffersObject: value.caption), url: value.url, webpageId: value.webpageId.flatMap(MediaId.init))
+        case .instantpageblockVideo:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Video.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .video(id: MediaId(value.id), caption: try InstantPageCaption(flatBuffersObject: value.caption), autoplay: value.autoplay, loop: value.loop)
+        case .instantpageblockAudio:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Audio.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .audio(id: MediaId(value.id), caption: try InstantPageCaption(flatBuffersObject: value.caption))
+        case .instantpageblockCover:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Cover.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .cover(try InstantPageBlock(flatBuffersObject: value.block))
+        case .instantpageblockWebembed:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_WebEmbed.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .webEmbed(url: value.url, html: value.html, dimensions: value.dimensions.flatMap(PixelDimensions.init), caption: try InstantPageCaption(flatBuffersObject: value.caption), stretchToWidth: value.stretchToWidth, allowScrolling: value.allowScrolling, coverId: value.coverId.flatMap(MediaId.init))
+        case .instantpageblockPostembed:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_PostEmbed.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .postEmbed(url: value.url, webpageId: value.webpageId.flatMap(MediaId.init), avatarId: value.avatarId.flatMap(MediaId.init), author: value.author, date: value.date, blocks: try (0 ..< value.blocksCount).map { try InstantPageBlock(flatBuffersObject: value.blocks(at: $0)!) }, caption: try InstantPageCaption(flatBuffersObject: value.caption))
+        case .instantpageblockCollage:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Collage.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .collage(items: try (0 ..< value.itemsCount).map { try InstantPageBlock(flatBuffersObject: value.items(at: $0)!) }, caption: try InstantPageCaption(flatBuffersObject: value.caption))
+        case .instantpageblockSlideshow:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Slideshow.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .slideshow(items: try (0 ..< value.itemsCount).map { try InstantPageBlock(flatBuffersObject: value.items(at: $0)!) }, caption: try InstantPageCaption(flatBuffersObject: value.caption))
+        case .instantpageblockChannelbanner:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_ChannelBanner.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            let channel = try value.channel.flatMap { try TelegramChannel(flatBuffersObject: $0) }
+            self = .channelBanner(channel)
+        case .instantpageblockKicker:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Kicker.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .kicker(try RichText(flatBuffersObject: value.text))
+        case .instantpageblockTable:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Table.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .table(title: try RichText(flatBuffersObject: value.title), rows: try (0 ..< value.rowsCount).map { try InstantPageTableRow(flatBuffersObject: value.rows(at: $0)!) }, bordered: value.bordered, striped: value.striped)
+        case .instantpageblockDetails:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Details.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .details(title: try RichText(flatBuffersObject: value.title), blocks: try (0 ..< value.blocksCount).map { try InstantPageBlock(flatBuffersObject: value.blocks(at: $0)!) }, expanded: value.expanded)
+        case .instantpageblockRelatedarticles:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_RelatedArticles.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .relatedArticles(title: try RichText(flatBuffersObject: value.title), articles: try (0 ..< value.articlesCount).map { try InstantPageRelatedArticle(flatBuffersObject: value.articles(at: $0)!) })
+        case .instantpageblockMap:
+            guard let value = flatBuffersObject.value(type: TelegramCore_InstantPageBlock_Map.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .map(latitude: value.latitude, longitude: value.longitude, zoom: value.zoom, dimensions: PixelDimensions(value.dimensions), caption: try InstantPageCaption(flatBuffersObject: value.caption))
+        case .none_:
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_InstantPageBlock_Value
+        let offset: Offset
+        
+        switch self {
+        case .unsupported:
+            valueType = .instantpageblockUnsupported
+            let start = TelegramCore_InstantPageBlock_Unsupported.startInstantPageBlock_Unsupported(&builder)
+            offset = TelegramCore_InstantPageBlock_Unsupported.endInstantPageBlock_Unsupported(&builder, start: start)
+        case let .title(text):
+            valueType = .instantpageblockTitle
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Title.startInstantPageBlock_Title(&builder)
+            TelegramCore_InstantPageBlock_Title.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Title.endInstantPageBlock_Title(&builder, start: start)
+        case let .subtitle(text):
+            valueType = .instantpageblockSubtitle
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Subtitle.startInstantPageBlock_Subtitle(&builder)
+            TelegramCore_InstantPageBlock_Subtitle.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Subtitle.endInstantPageBlock_Subtitle(&builder, start: start)
+        case let .authorDate(author, date):
+            valueType = .instantpageblockAuthordate
+            let authorOffset = author.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_AuthorDate.startInstantPageBlock_AuthorDate(&builder)
+            TelegramCore_InstantPageBlock_AuthorDate.add(author: authorOffset, &builder)
+            TelegramCore_InstantPageBlock_AuthorDate.add(date: date, &builder)
+            offset = TelegramCore_InstantPageBlock_AuthorDate.endInstantPageBlock_AuthorDate(&builder, start: start)
+        case let .header(text):
+            valueType = .instantpageblockHeader
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Header.startInstantPageBlock_Header(&builder)
+            TelegramCore_InstantPageBlock_Header.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Header.endInstantPageBlock_Header(&builder, start: start)
+        case let .subheader(text):
+            valueType = .instantpageblockSubheader
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Subheader.startInstantPageBlock_Subheader(&builder)
+            TelegramCore_InstantPageBlock_Subheader.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Subheader.endInstantPageBlock_Subheader(&builder, start: start)
+        case let .paragraph(text):
+            valueType = .instantpageblockParagraph
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Paragraph.startInstantPageBlock_Paragraph(&builder)
+            TelegramCore_InstantPageBlock_Paragraph.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Paragraph.endInstantPageBlock_Paragraph(&builder, start: start)
+        case let .preformatted(text):
+            valueType = .instantpageblockPreformatted
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Preformatted.startInstantPageBlock_Preformatted(&builder)
+            TelegramCore_InstantPageBlock_Preformatted.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Preformatted.endInstantPageBlock_Preformatted(&builder, start: start)
+        case let .footer(text):
+            valueType = .instantpageblockFooter
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Footer.startInstantPageBlock_Footer(&builder)
+            TelegramCore_InstantPageBlock_Footer.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Footer.endInstantPageBlock_Footer(&builder, start: start)
+        case .divider:
+            valueType = .instantpageblockDivider
+            let start = TelegramCore_InstantPageBlock_Divider.startInstantPageBlock_Divider(&builder)
+            offset = TelegramCore_InstantPageBlock_Divider.endInstantPageBlock_Divider(&builder, start: start)
+        case let .anchor(name):
+            valueType = .instantpageblockAnchor
+            let nameOffset = builder.create(string: name)
+            let start = TelegramCore_InstantPageBlock_Anchor.startInstantPageBlock_Anchor(&builder)
+            TelegramCore_InstantPageBlock_Anchor.add(name: nameOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Anchor.endInstantPageBlock_Anchor(&builder, start: start)
+        case let .list(items, ordered):
+            valueType = .instantpageblockList
+            let itemsOffsets = items.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let itemsOffset = builder.createVector(ofOffsets: itemsOffsets, len: itemsOffsets.count)
+            let start = TelegramCore_InstantPageBlock_List.startInstantPageBlock_List(&builder)
+            TelegramCore_InstantPageBlock_List.addVectorOf(items: itemsOffset, &builder)
+            TelegramCore_InstantPageBlock_List.add(ordered: ordered, &builder)
+            offset = TelegramCore_InstantPageBlock_List.endInstantPageBlock_List(&builder, start: start)
+        case let .blockQuote(text, caption):
+            valueType = .instantpageblockBlockquote
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_BlockQuote.startInstantPageBlock_BlockQuote(&builder)
+            TelegramCore_InstantPageBlock_BlockQuote.add(text: textOffset, &builder)
+            TelegramCore_InstantPageBlock_BlockQuote.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_BlockQuote.endInstantPageBlock_BlockQuote(&builder, start: start)
+        case let .pullQuote(text, caption):
+            valueType = .instantpageblockPullquote
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_PullQuote.startInstantPageBlock_PullQuote(&builder)
+            TelegramCore_InstantPageBlock_PullQuote.add(text: textOffset, &builder)
+            TelegramCore_InstantPageBlock_PullQuote.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_PullQuote.endInstantPageBlock_PullQuote(&builder, start: start)
+        case let .image(id, caption, url, webpageId):
+            valueType = .instantpageblockImage
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let urlOffset = url.flatMap { builder.create(string: $0) }
+            let start = TelegramCore_InstantPageBlock_Image.startInstantPageBlock_Image(&builder)
+            TelegramCore_InstantPageBlock_Image.add(id: id.asFlatBuffersObject(), &builder)
+            TelegramCore_InstantPageBlock_Image.add(caption: captionOffset, &builder)
+            if let urlOffset {
+                TelegramCore_InstantPageBlock_Image.add(url: urlOffset, &builder)
+            }
+            if let webpageId {
+                TelegramCore_InstantPageBlock_Image.add(webpageId: webpageId.asFlatBuffersObject(), &builder)
+            }
+            offset = TelegramCore_InstantPageBlock_Image.endInstantPageBlock_Image(&builder, start: start)
+        case let .video(id, caption, autoplay, loop):
+            valueType = .instantpageblockVideo
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Video.startInstantPageBlock_Video(&builder)
+            TelegramCore_InstantPageBlock_Video.add(id: id.asFlatBuffersObject(), &builder)
+            TelegramCore_InstantPageBlock_Video.add(caption: captionOffset, &builder)
+            TelegramCore_InstantPageBlock_Video.add(autoplay: autoplay, &builder)
+            TelegramCore_InstantPageBlock_Video.add(loop: loop, &builder)
+            offset = TelegramCore_InstantPageBlock_Video.endInstantPageBlock_Video(&builder, start: start)
+        case let .audio(id, caption):
+            valueType = .instantpageblockAudio
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Audio.startInstantPageBlock_Audio(&builder)
+            TelegramCore_InstantPageBlock_Audio.add(id: id.asFlatBuffersObject(), &builder)
+            TelegramCore_InstantPageBlock_Audio.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Audio.endInstantPageBlock_Audio(&builder, start: start)
+        case let .cover(block):
+            valueType = .instantpageblockCover
+            let blockOffset = block.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Cover.startInstantPageBlock_Cover(&builder)
+            TelegramCore_InstantPageBlock_Cover.add(block: blockOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Cover.endInstantPageBlock_Cover(&builder, start: start)
+        case let .webEmbed(url, html, dimensions, caption, stretchToWidth, allowScrolling, coverId):
+            valueType = .instantpageblockWebembed
+            let urlOffset = url.flatMap { builder.create(string: $0) }
+            let htmlOffset = html.flatMap { builder.create(string: $0) }
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_WebEmbed.startInstantPageBlock_WebEmbed(&builder)
+            if let urlOffset {
+                TelegramCore_InstantPageBlock_WebEmbed.add(url: urlOffset, &builder)
+            }
+            if let htmlOffset {
+                TelegramCore_InstantPageBlock_WebEmbed.add(html: htmlOffset, &builder)
+            }
+            if let dimensions {
+                TelegramCore_InstantPageBlock_WebEmbed.add(dimensions: dimensions.asFlatBuffersObject(), &builder)
+            }
+            TelegramCore_InstantPageBlock_WebEmbed.add(caption: captionOffset, &builder)
+            TelegramCore_InstantPageBlock_WebEmbed.add(stretchToWidth: stretchToWidth, &builder)
+            TelegramCore_InstantPageBlock_WebEmbed.add(allowScrolling: allowScrolling, &builder)
+            if let coverId {
+                TelegramCore_InstantPageBlock_WebEmbed.add(coverId: coverId.asFlatBuffersObject(), &builder)
+            }
+            offset = TelegramCore_InstantPageBlock_WebEmbed.endInstantPageBlock_WebEmbed(&builder, start: start)
+        case let .postEmbed(url, webpageId, avatarId, author, date, blocks, caption):
+            valueType = .instantpageblockPostembed
+            let urlOffset = builder.create(string: url)
+            let authorOffset = builder.create(string: author)
+            let blocksOffsets = blocks.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let blocksOffset = builder.createVector(ofOffsets: blocksOffsets, len: blocksOffsets.count)
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_PostEmbed.startInstantPageBlock_PostEmbed(&builder)
+            TelegramCore_InstantPageBlock_PostEmbed.add(url: urlOffset, &builder)
+            if let webpageId {
+                TelegramCore_InstantPageBlock_PostEmbed.add(webpageId: webpageId.asFlatBuffersObject(), &builder)
+            }
+            if let avatarId {
+                TelegramCore_InstantPageBlock_PostEmbed.add(avatarId: avatarId.asFlatBuffersObject(), &builder)
+            }
+            TelegramCore_InstantPageBlock_PostEmbed.add(author: authorOffset, &builder)
+            TelegramCore_InstantPageBlock_PostEmbed.add(date: date, &builder)
+            TelegramCore_InstantPageBlock_PostEmbed.addVectorOf(blocks: blocksOffset, &builder)
+            TelegramCore_InstantPageBlock_PostEmbed.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_PostEmbed.endInstantPageBlock_PostEmbed(&builder, start: start)
+        case let .collage(items, caption):
+            valueType = .instantpageblockCollage
+            let itemsOffsets = items.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let itemsOffset = builder.createVector(ofOffsets: itemsOffsets, len: itemsOffsets.count)
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Collage.startInstantPageBlock_Collage(&builder)
+            TelegramCore_InstantPageBlock_Collage.addVectorOf(items: itemsOffset, &builder)
+            TelegramCore_InstantPageBlock_Collage.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Collage.endInstantPageBlock_Collage(&builder, start: start)
+        case let .slideshow(items, caption):
+            valueType = .instantpageblockSlideshow
+            let itemsOffsets = items.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let itemsOffset = builder.createVector(ofOffsets: itemsOffsets, len: itemsOffsets.count)
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Slideshow.startInstantPageBlock_Slideshow(&builder)
+            TelegramCore_InstantPageBlock_Slideshow.addVectorOf(items: itemsOffset, &builder)
+            TelegramCore_InstantPageBlock_Slideshow.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Slideshow.endInstantPageBlock_Slideshow(&builder, start: start)
+        case let .channelBanner(channel):
+            valueType = .instantpageblockChannelbanner
+            let channelOffset = channel.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+            let start = TelegramCore_InstantPageBlock_ChannelBanner.startInstantPageBlock_ChannelBanner(&builder)
+            if let channelOffset {
+                TelegramCore_InstantPageBlock_ChannelBanner.add(channel: channelOffset, &builder)
+            }
+            offset = TelegramCore_InstantPageBlock_ChannelBanner.endInstantPageBlock_ChannelBanner(&builder, start: start)
+        case let .kicker(text):
+            valueType = .instantpageblockKicker
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Kicker.startInstantPageBlock_Kicker(&builder)
+            TelegramCore_InstantPageBlock_Kicker.add(text: textOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Kicker.endInstantPageBlock_Kicker(&builder, start: start)
+        case let .table(title, rows, bordered, striped):
+            valueType = .instantpageblockTable
+            let titleOffset = title.encodeToFlatBuffers(builder: &builder)
+            let rowsOffsets = rows.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let rowsOffset = builder.createVector(ofOffsets: rowsOffsets, len: rowsOffsets.count)
+            let start = TelegramCore_InstantPageBlock_Table.startInstantPageBlock_Table(&builder)
+            TelegramCore_InstantPageBlock_Table.add(title: titleOffset, &builder)
+            TelegramCore_InstantPageBlock_Table.addVectorOf(rows: rowsOffset, &builder)
+            TelegramCore_InstantPageBlock_Table.add(bordered: bordered, &builder)
+            TelegramCore_InstantPageBlock_Table.add(striped: striped, &builder)
+            offset = TelegramCore_InstantPageBlock_Table.endInstantPageBlock_Table(&builder, start: start)
+        case let .details(title, blocks, expanded):
+            valueType = .instantpageblockDetails
+            let titleOffset = title.encodeToFlatBuffers(builder: &builder)
+            let blocksOffsets = blocks.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let blocksOffset = builder.createVector(ofOffsets: blocksOffsets, len: blocksOffsets.count)
+            let start = TelegramCore_InstantPageBlock_Details.startInstantPageBlock_Details(&builder)
+            TelegramCore_InstantPageBlock_Details.add(title: titleOffset, &builder)
+            TelegramCore_InstantPageBlock_Details.addVectorOf(blocks: blocksOffset, &builder)
+            TelegramCore_InstantPageBlock_Details.add(expanded: expanded, &builder)
+            offset = TelegramCore_InstantPageBlock_Details.endInstantPageBlock_Details(&builder, start: start)
+        case let .relatedArticles(title, articles):
+            valueType = .instantpageblockRelatedarticles
+            let titleOffset = title.encodeToFlatBuffers(builder: &builder)
+            let articlesOffsets = articles.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let articlesOffset = builder.createVector(ofOffsets: articlesOffsets, len: articlesOffsets.count)
+            let start = TelegramCore_InstantPageBlock_RelatedArticles.startInstantPageBlock_RelatedArticles(&builder)
+            TelegramCore_InstantPageBlock_RelatedArticles.add(title: titleOffset, &builder)
+            TelegramCore_InstantPageBlock_RelatedArticles.addVectorOf(articles: articlesOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_RelatedArticles.endInstantPageBlock_RelatedArticles(&builder, start: start)
+        case let .map(latitude, longitude, zoom, dimensions, caption):
+            valueType = .instantpageblockMap
+            let captionOffset = caption.encodeToFlatBuffers(builder: &builder)
+            let start = TelegramCore_InstantPageBlock_Map.startInstantPageBlock_Map(&builder)
+            TelegramCore_InstantPageBlock_Map.add(latitude: latitude, &builder)
+            TelegramCore_InstantPageBlock_Map.add(longitude: longitude, &builder)
+            TelegramCore_InstantPageBlock_Map.add(zoom: zoom, &builder)
+            TelegramCore_InstantPageBlock_Map.add(dimensions: dimensions.asFlatBuffersObject(), &builder)
+            TelegramCore_InstantPageBlock_Map.add(caption: captionOffset, &builder)
+            offset = TelegramCore_InstantPageBlock_Map.endInstantPageBlock_Map(&builder, start: start)
+        }
+        
+        return TelegramCore_InstantPageBlock.createInstantPageBlock(&builder, valueType: valueType, valueOffset: offset)
+    }
 }
 
 public final class InstantPageCaption: PostboxCoding, Equatable {
@@ -541,6 +933,21 @@ public final class InstantPageCaption: PostboxCoding, Equatable {
             return false
         }
         return true
+    }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageCaption) throws {
+        self.text = try RichText(flatBuffersObject: flatBuffersObject.text)
+        self.credit = try RichText(flatBuffersObject: flatBuffersObject.credit)
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let textOffset = self.text.encodeToFlatBuffers(builder: &builder)
+        let creditOffset = self.credit.encodeToFlatBuffers(builder: &builder)
+        let start = TelegramCore_InstantPageCaption.startInstantPageCaption(&builder)
+        TelegramCore_InstantPageCaption.add(text: textOffset, &builder)
+        TelegramCore_InstantPageCaption.add(credit: creditOffset, &builder)
+        let offset = TelegramCore_InstantPageCaption.endInstantPageCaption(&builder, start: start)
+        return offset
     }
 }
 
@@ -610,6 +1017,69 @@ public indirect enum InstantPageListItem: PostboxCoding, Equatable {
                     return false
                 }
         }
+    }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageListItem) throws {
+        switch flatBuffersObject.valueType {
+        case .instantpagelistitemText:
+            guard let textValue = flatBuffersObject.value(type: TelegramCore_InstantPageListItem_Text.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .text(try RichText(flatBuffersObject: textValue.text), textValue.number)
+            
+        case .instantpagelistitemBlocks:
+            guard let blocksValue = flatBuffersObject.value(type: TelegramCore_InstantPageListItem_Blocks.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            let blocks = try (0 ..< blocksValue.blocksCount).map { i in
+                return try InstantPageBlock(flatBuffersObject: blocksValue.blocks(at: i)!)
+            }
+            self = .blocks(blocks, blocksValue.number)
+        case .instantpagelistitemUnknown:
+            self = .unknown
+        case .none_:
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_InstantPageListItem_Value
+        let offset: Offset
+        
+        switch self {
+        case let .text(text, number):
+            valueType = .instantpagelistitemText
+            let textOffset = text.encodeToFlatBuffers(builder: &builder)
+            let numberOffset = number.map { builder.create(string: $0) } ?? Offset()
+            
+            let start = TelegramCore_InstantPageListItem_Text.startInstantPageListItem_Text(&builder)
+            TelegramCore_InstantPageListItem_Text.add(text: textOffset, &builder)
+            if let _ = number {
+                TelegramCore_InstantPageListItem_Text.add(number: numberOffset, &builder)
+            }
+            offset = TelegramCore_InstantPageListItem_Text.endInstantPageListItem_Text(&builder, start: start)
+        case let .blocks(blocks, number):
+            valueType = .instantpagelistitemBlocks
+            let blocksOffsets = blocks.map { $0.encodeToFlatBuffers(builder: &builder) }
+            let blocksOffset = builder.createVector(ofOffsets: blocksOffsets, len: blocksOffsets.count)
+            let numberOffset = number.map { builder.create(string: $0) } ?? Offset()
+            
+            let start = TelegramCore_InstantPageListItem_Blocks.startInstantPageListItem_Blocks(&builder)
+            TelegramCore_InstantPageListItem_Blocks.addVectorOf(blocks: blocksOffset, &builder)
+            if let _ = number {
+                TelegramCore_InstantPageListItem_Blocks.add(number: numberOffset, &builder)
+            }
+            offset = TelegramCore_InstantPageListItem_Blocks.endInstantPageListItem_Blocks(&builder, start: start)
+        case .unknown:
+            valueType = .instantpagelistitemUnknown
+            let start = TelegramCore_InstantPageListItem_Unknown.startInstantPageListItem_Unknown(&builder)
+            offset = TelegramCore_InstantPageListItem_Unknown.endInstantPageListItem_Unknown(&builder, start: start)
+        }
+        
+        let start = TelegramCore_InstantPageListItem.startInstantPageListItem(&builder)
+        TelegramCore_InstantPageListItem.add(valueType: valueType, &builder)
+        TelegramCore_InstantPageListItem.add(value: offset, &builder)
+        return TelegramCore_InstantPageListItem.endInstantPageListItem(&builder, start: start)
     }
 }
 
@@ -685,6 +1155,30 @@ public final class InstantPageTableCell: PostboxCoding, Equatable {
         }
         return true
     }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageTableCell) throws {
+        self.text = try flatBuffersObject.text.map { try RichText(flatBuffersObject: $0) }
+        self.header = flatBuffersObject.header
+        self.alignment = TableHorizontalAlignment(rawValue: flatBuffersObject.alignment) ?? .left
+        self.verticalAlignment = TableVerticalAlignment(rawValue: flatBuffersObject.verticalAlignment) ?? .top
+        self.colspan = flatBuffersObject.colspan
+        self.rowspan = flatBuffersObject.rowspan
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let textOffset = text.map { $0.encodeToFlatBuffers(builder: &builder) } ?? Offset()
+        
+        let start = TelegramCore_InstantPageTableCell.startInstantPageTableCell(&builder)
+        if let _ = text {
+            TelegramCore_InstantPageTableCell.add(text: textOffset, &builder)
+        }
+        TelegramCore_InstantPageTableCell.add(header: header, &builder)
+        TelegramCore_InstantPageTableCell.add(alignment: alignment.rawValue, &builder)
+        TelegramCore_InstantPageTableCell.add(verticalAlignment: verticalAlignment.rawValue, &builder)
+        TelegramCore_InstantPageTableCell.add(colspan: colspan, &builder)
+        TelegramCore_InstantPageTableCell.add(rowspan: rowspan, &builder)
+        return TelegramCore_InstantPageTableCell.endInstantPageTableCell(&builder, start: start)
+    }
 }
 
 public final class InstantPageTableRow: PostboxCoding, Equatable {
@@ -704,6 +1198,21 @@ public final class InstantPageTableRow: PostboxCoding, Equatable {
     
     public static func ==(lhs: InstantPageTableRow, rhs: InstantPageTableRow) -> Bool {
         return lhs.cells == rhs.cells
+    }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageTableRow) throws {
+        self.cells = try (0 ..< flatBuffersObject.cellsCount).map { i in
+            return try InstantPageTableCell(flatBuffersObject: flatBuffersObject.cells(at: i)!)
+        }
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let cellsOffsets = cells.map { $0.encodeToFlatBuffers(builder: &builder) }
+        let cellsOffset = builder.createVector(ofOffsets: cellsOffsets, len: cellsOffsets.count)
+        
+        let start = TelegramCore_InstantPageTableRow.startInstantPageTableRow(&builder)
+        TelegramCore_InstantPageTableRow.addVectorOf(cells: cellsOffset, &builder)
+        return TelegramCore_InstantPageTableRow.endInstantPageTableRow(&builder, start: start)
     }
 }
 
@@ -801,6 +1310,45 @@ public final class InstantPageRelatedArticle: PostboxCoding, Equatable {
         }
         return true
     }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPageRelatedArticle) throws {
+        self.url = flatBuffersObject.url
+        self.webpageId = MediaId(flatBuffersObject.webpageId)
+        self.title = flatBuffersObject.title
+        self.description = flatBuffersObject.description
+        self.photoId = flatBuffersObject.photoId.flatMap(MediaId.init)
+        self.author = flatBuffersObject.author
+        self.date = flatBuffersObject.date == Int32.min ? nil : flatBuffersObject.date
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let urlOffset = builder.create(string: url)
+        let titleOffset = title.map { builder.create(string: $0) }
+        let descriptionOffset = description.map { builder.create(string: $0) }
+        let authorOffset = author.map { builder.create(string: $0) }
+        
+        let start = TelegramCore_InstantPageRelatedArticle.startInstantPageRelatedArticle(&builder)
+        TelegramCore_InstantPageRelatedArticle.add(url: urlOffset, &builder)
+        TelegramCore_InstantPageRelatedArticle.add(webpageId: webpageId.asFlatBuffersObject(), &builder)
+        if let titleOffset {
+            TelegramCore_InstantPageRelatedArticle.add(title: titleOffset, &builder)
+        }
+        if let descriptionOffset {
+            TelegramCore_InstantPageRelatedArticle.add(description: descriptionOffset, &builder)
+        }
+        if let photoId {
+            TelegramCore_InstantPageRelatedArticle.add(photoId: photoId.asFlatBuffersObject(), &builder)
+        }
+        if let authorOffset {
+            TelegramCore_InstantPageRelatedArticle.add(author: authorOffset, &builder)
+        }
+        if let date {
+            TelegramCore_InstantPageRelatedArticle.add(date: date, &builder)
+        } else {
+            TelegramCore_InstantPageRelatedArticle.add(date: Int32.min, &builder)
+        }
+        return TelegramCore_InstantPageRelatedArticle.endInstantPageRelatedArticle(&builder, start: start)
+    }
 }
 
 private final class MediaDictionary: PostboxCoding {
@@ -862,6 +1410,17 @@ public final class InstantPage: PostboxCoding, Equatable {
         self.rtl = decoder.decodeInt32ForKey("r", orElse: 0) != 0
         self.url = decoder.decodeStringForKey("url", orElse: "")
         self.views = decoder.decodeOptionalInt32ForKey("v")
+        
+        #if DEBUG
+        var builder = FlatBufferBuilder(initialSize: 1024)
+        let offset = self.encodeToFlatBuffers(builder: &builder)
+        builder.finish(offset: offset)
+        let serializedData = builder.data
+        var byteBuffer = ByteBuffer(data: serializedData)
+        let deserializedValue = FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_InstantPage
+        let parsedValue = try! InstantPage(flatBuffersObject: deserializedValue)
+        assert(self == parsedValue)
+        #endif
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -907,5 +1466,168 @@ public final class InstantPage: PostboxCoding, Equatable {
             return false
         }
         return true
+    }
+    
+    public init(flatBuffersObject: TelegramCore_InstantPage) throws {
+        self.blocks = try (0 ..< flatBuffersObject.blocksCount).map { i in
+            return try InstantPageBlock(flatBuffersObject: flatBuffersObject.blocks(at: i)!)
+        }
+        
+        var media: [MediaId: Media] = [:]
+        for i in 0 ..< flatBuffersObject.mediaCount {
+            let parsedMedia = try TelegramMedia_parse(flatBuffersObject: flatBuffersObject.media(at: i)!)
+            if let id = parsedMedia.id {
+                media[id] = parsedMedia
+            }
+        }
+        self.media = media
+        
+        self.isComplete = flatBuffersObject.isComplete
+        self.rtl = flatBuffersObject.rtl
+        self.url = flatBuffersObject.url
+        self.views = flatBuffersObject.views == Int32.min ? nil : flatBuffersObject.views
+    }
+    
+    public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let blocksOffsets = self.blocks.map { block in
+            return block.encodeToFlatBuffers(builder: &builder)
+        }
+        let blocksOffset = builder.createVector(ofOffsets: blocksOffsets, len: blocksOffsets.count)
+        
+        var mediaOffsets: [Offset] = []
+        for (_, media) in self.media.sorted(by: { $0.key < $1.key }) {
+            if let offset = TelegramMedia_serialize(media: media, flatBuffersBuilder: &builder) {
+                mediaOffsets.append(offset)
+            }
+        }
+        
+        let mediaOffset = builder.createVector(ofOffsets: mediaOffsets, len: mediaOffsets.count)
+        
+        let urlOffset = builder.create(string: self.url)
+        
+        let start = TelegramCore_InstantPage.startInstantPage(&builder)
+        
+        TelegramCore_InstantPage.addVectorOf(blocks: blocksOffset, &builder)
+        TelegramCore_InstantPage.addVectorOf(media: mediaOffset, &builder)
+        TelegramCore_InstantPage.add(isComplete: self.isComplete, &builder)
+        TelegramCore_InstantPage.add(rtl: self.rtl, &builder)
+        TelegramCore_InstantPage.add(url: urlOffset, &builder)
+        TelegramCore_InstantPage.add(views: self.views ?? Int32.min, &builder)
+        
+        return TelegramCore_InstantPage.endInstantPage(&builder, start: start)
+    }
+}
+
+public extension InstantPage {
+    struct Accessor: Equatable {
+        let _wrappedInstantPage: InstantPage?
+        let _wrapped: TelegramCore_InstantPage?
+        let _wrappedData: Data?
+        
+        public init(_ wrapped: TelegramCore_InstantPage, _ _wrappedData: Data) {
+            self._wrapped = wrapped
+            self._wrappedData = _wrappedData
+            self._wrappedInstantPage = nil
+        }
+        
+        public init(_ wrapped: InstantPage) {
+            self._wrapped = nil
+            self._wrappedData = nil
+            self._wrappedInstantPage = wrapped
+        }
+        
+        public func _parse() -> InstantPage {
+            if let _wrappedInstantPage = self._wrappedInstantPage {
+                return _wrappedInstantPage
+            } else {
+                return try! InstantPage(flatBuffersObject: self._wrapped!)
+            }
+        }
+        
+        public static func ==(lhs: InstantPage.Accessor, rhs: InstantPage.Accessor) -> Bool {
+            if let lhsWrappedInstantPage = lhs._wrappedInstantPage, let rhsWrappedInstantPage = rhs._wrappedInstantPage {
+                return lhsWrappedInstantPage == rhsWrappedInstantPage
+            } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
+                return lhsWrappedData == rhsWrappedData
+            } else {
+                return lhs._parse() == rhs._parse()
+            }
+        }
+    }
+}
+
+public extension InstantPage.Accessor {
+    struct MediaIterator: Sequence, IteratorProtocol {
+        private let accessor: InstantPage.Accessor
+        private var wrappedInstantPageIterator: Dictionary<MediaId, Media>.Iterator?
+        private var wrappedCurrentIndex: Int32 = 0
+        
+        init(_ accessor: InstantPage.Accessor) {
+            self.accessor = accessor
+            
+            if let wrappedInstantPage = accessor._wrappedInstantPage {
+                self.wrappedInstantPageIterator = wrappedInstantPage.media.makeIterator()
+            } else {
+                self.wrappedInstantPageIterator = nil
+            }
+        }
+
+        mutating public func next() -> (MediaId, TelegramMedia.Accessor)? {
+            if self.wrappedInstantPageIterator != nil {
+                guard let (id, value) = self.wrappedInstantPageIterator!.next() else {
+                    return nil
+                }
+                return (id, TelegramMedia.Accessor(value))
+            }
+            
+            if self.wrappedCurrentIndex >= self.accessor._wrapped!.mediaCount {
+                return nil
+            }
+            let index = self.wrappedCurrentIndex
+            self.wrappedCurrentIndex += 1
+            let media = self.accessor._wrapped!.media(at: index)!
+            let parsedMedia = TelegramMedia.Accessor(media)
+            if let id = parsedMedia.id {
+                return (id, parsedMedia)
+            } else {
+                return nil
+            }
+        }
+    }
+    
+    var isComplete: Bool {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.isComplete
+        }
+        
+        return self._wrapped!.isComplete
+    }
+    
+    var media: MediaIterator {
+        return MediaIterator(self)
+    }
+    
+    var views: Int32? {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.views
+        }
+        
+        return self._wrapped!.views == Int32.min ? nil : self._wrapped!.views
+    }
+    
+    var url: String {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.url
+        }
+        
+        return self._wrapped!.url
+    }
+    
+    var rtl: Bool {
+        if let wrappedInstantPage = self._wrappedInstantPage {
+            return wrappedInstantPage.rtl
+        }
+        
+        return self._wrapped!.rtl
     }
 }

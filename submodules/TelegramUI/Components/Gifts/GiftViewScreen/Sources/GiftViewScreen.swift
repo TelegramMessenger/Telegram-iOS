@@ -33,6 +33,7 @@ import LottieComponent
 import ContextUI
 import TelegramNotices
 import PremiumLockButtonSubtitleComponent
+import StarsBalanceOverlayComponent
 
 private let modelButtonTag = GenericComponentViewTag()
 private let backdropButtonTag = GenericComponentViewTag()
@@ -267,7 +268,6 @@ private final class GiftViewSheetContent: CombinedComponent {
                 })
             }
             
-            
             if let starsContext = context.starsContext, let state = starsContext.currentState, state.balance < StarsAmount(value: 100, nanos: 0) {
                 self.optionsDisposable = (context.engine.payments.starsTopUpOptions()
                 |> deliverOnMainQueue).start(next: { [weak self] options in
@@ -286,17 +286,7 @@ private final class GiftViewSheetContent: CombinedComponent {
             self.upgradeDisposable?.dispose()
             self.levelsDisposable.dispose()
         }
-        
-        func requestUpgradePreview() {
-            guard let arguments = self.subject.arguments, arguments.canUpgrade || arguments.upgradeStars != nil else {
-                return
-            }
-            self.context.starsContext?.load(force: false)
-            
-            self.inUpgradePreview = true
-            self.updated(transition: .spring(duration: 0.4))
-        }
-        
+
         func requestWearPreview() {
             self.inWearPreview = true
             self.updated(transition: .spring(duration: 0.4))
@@ -326,6 +316,29 @@ private final class GiftViewSheetContent: CombinedComponent {
                 let _ = self.context.engine.peers.updatePeerEmojiStatus(peerId: peerId, fileId: nil, expirationDate: nil).startStandalone()
             } else {
                 let _ = self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil).startStandalone()
+            }
+        }
+        
+        func requestUpgradePreview() {
+            guard let arguments = self.subject.arguments, arguments.canUpgrade || arguments.upgradeStars != nil else {
+                return
+            }
+            self.context.starsContext?.load(force: false)
+            
+            self.inUpgradePreview = true
+            self.updated(transition: .spring(duration: 0.4))
+            
+            if let controller = self.getController() as? GiftViewScreen {
+                controller.showBalance = true
+            }
+        }
+        
+        func cancelUpgradePreview() {
+            self.inUpgradePreview = false
+            self.updated(transition: .spring(duration: 0.4))
+            
+            if let controller = self.getController() as? GiftViewScreen {
+                controller.showBalance = false
             }
         }
         
@@ -381,6 +394,10 @@ private final class GiftViewSheetContent: CombinedComponent {
                 } else {
                     proceed(upgradeForm.id)
                 }
+            }
+            
+            if let controller = self.getController() as? GiftViewScreen {
+                controller.showBalance = true
             }
         }
     }
@@ -546,8 +563,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                             state.inWearPreview = false
                             state.updated(transition: .spring(duration: 0.4))
                         } else if state.inUpgradePreview {
-                            state.inUpgradePreview = false
-                            state.updated(transition: .spring(duration: 0.4))
+                            state.cancelUpgradePreview()
                         } else {
                             cancel(true)
                         }
@@ -619,7 +635,8 @@ private final class GiftViewSheetContent: CombinedComponent {
                 if case .wearPreview = component.subject {
                     giftTitle = uniqueGift.title
                 } else {
-                    giftTitle = "\(uniqueGift.title) #\(uniqueGift.number)"
+                    
+                    giftTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))"
                 }
                 
                 let wearTitle = wearTitle.update(
@@ -1002,7 +1019,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 var descriptionText: String
                 if let uniqueGift {
                     titleString = uniqueGift.title
-                    descriptionText = "\(strings.Gift_Unique_Collectible) #\(uniqueGift.number)"
+                    descriptionText = "\(strings.Gift_Unique_Collectible) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))"
                 } else if soldOut {
                     descriptionText = strings.Gift_View_UnavailableDescription
                 } else if upgraded {
@@ -1464,7 +1481,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         if isWearing {
                                             state.commitTakeOff()
 
-                                            component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_TookOff("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                         } else {
                                             if let controller = controller() as? GiftViewScreen {
                                                 controller.dismissAllTooltips()
@@ -1491,7 +1508,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                                     state.requestWearPreview()
                                                 } else {
                                                     state.commitWear(uniqueGift)
-                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                                    component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                                 }
                                             })
                                         }
@@ -1729,7 +1746,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                     if let upgradeStars, upgradeStars > 0 {
                         finalStars += upgradeStars
                     }
-                    let valueString = "⭐️\(presentationStringsFormattedNumber(abs(Int32(finalStars)), dateTimeFormat.groupingSeparator))"
+                    let valueString = "\(presentationStringsFormattedNumber(abs(Int32(finalStars)), dateTimeFormat.groupingSeparator))⭐️"
                     let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableFont, textColor: tableTextColor)
                     let range = (valueAttributedString.string as NSString).range(of: "⭐️")
                     if range.location != NSNotFound {
@@ -2074,7 +2091,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                                         component.cancel(true)
                                     } else {
                                         Queue.mainQueue().after(0.2) {
-                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(uniqueGift.number)").string)
+                                            component.showAttributeInfo(statusTag, strings.Gift_View_PutOn("\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, environment.dateTimeFormat.groupingSeparator))").string)
                                         }
                                     }
                                 }
@@ -2089,7 +2106,7 @@ private final class GiftViewSheetContent: CombinedComponent {
                 }
                 var upgradeString = strings.Gift_Upgrade_Upgrade
                 if let upgradeForm = state.upgradeForm, let price = upgradeForm.invoice.prices.first?.amount {
-                    upgradeString += "   #  \(price)"
+                    upgradeString += "   #  \(presentationStringsFormattedNumber(Int32(price), environment.dateTimeFormat.groupingSeparator))"
                 }
                 let buttonTitle = subject.arguments?.upgradeStars != nil ? strings.Gift_Upgrade_Confirm : upgradeString
                 let buttonAttributedString = NSMutableAttributedString(string: buttonTitle, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)
@@ -2456,6 +2473,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
     fileprivate var subject: GiftViewScreen.Subject
     public var disposed: () -> Void = {}
     
+    fileprivate var showBalance = false {
+        didSet {
+            self.requestLayout(transition: .immediate)
+        }
+    }
+    private let balanceOverlay = ComponentView<Empty>()
+    
     private let hapticFeedback = HapticFeedback()
     
     public init(
@@ -2614,7 +2638,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                 giftsPeerId = peerId
                 text = added ? presentationData.strings.Gift_Displayed_ChannelText : presentationData.strings.Gift_Hidden_ChannelText
             } else {
-                giftsPeerId = arguments.peerId
+                giftsPeerId = context.account.peerId
                 text = added ? presentationData.strings.Gift_Displayed_NewText : presentationData.strings.Gift_Hidden_NewText
             }
             
@@ -2655,7 +2679,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         }
         
         convertToStarsImpl = { [weak self] in
-            guard let self, let arguments = self.subject.arguments, let reference = arguments.reference, let fromPeerName = arguments.fromPeerName, let convertStars = arguments.convertStars, let navigationController = self.navigationController as? NavigationController else {
+            guard let self, let starsContext = context.starsContext, let arguments = self.subject.arguments, let reference = arguments.reference, let fromPeerName = arguments.fromPeerName, let convertStars = arguments.convertStars, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
             
@@ -2702,7 +2726,13 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                             
                             if let navigationController {
                                 Queue.mainQueue().after(0.5) {
-                                    if !isChannelGift {
+                                    starsContext.load(force: true)
+                                    
+                                    let text: String
+                                    if isChannelGift {
+                                        text = presentationData.strings.Gift_Convert_Success_ChannelText(presentationData.strings.Gift_Convert_Success_ChannelText_Stars(Int32(convertStars))).string
+                                    } else {
+                                        text = presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(convertStars))).string
                                         if let starsContext = context.starsContext {
                                             navigationController.pushViewController(context.sharedContext.makeStarsTransactionsScreen(context: context, starsContext: starsContext), animated: true)
                                         }
@@ -2716,7 +2746,7 @@ public class GiftViewScreen: ViewControllerComponentContainer {
                                                 scale: 0.066,
                                                 colors: [:],
                                                 title: presentationData.strings.Gift_Convert_Success_Title,
-                                                text: presentationData.strings.Gift_Convert_Success_Text(presentationData.strings.Gift_Convert_Success_Text_Stars(Int32(convertStars))).string,
+                                                text: text,
                                                 customUndoText: nil,
                                                 timeout: nil
                                             ),
@@ -3031,6 +3061,11 @@ public class GiftViewScreen: ViewControllerComponentContainer {
         if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
             view.dismissAnimated()
         }
+        
+        if let view = self.balanceOverlay.view, view.superview != nil {
+            view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
+            view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        }
     }
         
     fileprivate func dismissAllTooltips() {
@@ -3051,6 +3086,62 @@ public class GiftViewScreen: ViewControllerComponentContainer {
             }
             return true
         })
+    }
+        
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        if self.showBalance {
+            let context = self.context
+            let insets = layout.insets(options: .statusBar)
+            let balanceSize = self.balanceOverlay.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    StarsBalanceOverlayComponent(
+                        context: context,
+                        theme: context.sharedContext.currentPresentationData.with { $0 }.theme,
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.navigationController as? NavigationController else {
+                                return
+                            }
+                            self.dismissAnimated()
+                            
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: layout.size
+            )
+            if let view = self.balanceOverlay.view {
+                if view.superview == nil {
+                    self.view.addSubview(view)
+                    
+                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    view.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - balanceSize.width) / 2.0), y: insets.top + 5.0), size: balanceSize)
+            }
+        } else if let view = self.balanceOverlay.view, view.superview != nil {
+            view.alpha = 0.0
+            view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4)
+            view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { _ in
+                view.removeFromSuperview()
+                view.alpha = 1.0
+            })
+        }
     }
 }
 

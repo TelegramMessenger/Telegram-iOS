@@ -1,0 +1,27 @@
+namespace TelegramCore;
+
+table PeerReference_User {
+    id:int64 (id: 0);
+    accessHash:int64 (id: 1);
+}
+
+table PeerReference_Group {
+    id:int64 (id: 0);
+}
+
+table PeerReference_Channel {
+    id:int64 (id: 0);
+    accessHash:int64 (id: 1);
+}
+
+union PeerReference_Value {
+    PeerReference_User,
+    PeerReference_Group,
+    PeerReference_Channel
+}
+
+table PeerReference {
+    value:PeerReference_Value (id: 1, required);
+}
+
+root_type PeerReference;

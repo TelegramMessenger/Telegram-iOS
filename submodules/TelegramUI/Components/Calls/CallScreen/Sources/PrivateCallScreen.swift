@@ -503,21 +503,27 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         self.update(transition: .easeInOut(duration: 0.25))
     }
     
-    public func takeIncomingVideoLayer() -> (CALayer, VideoSource.Output?)? {
-        var remoteVideoContainerKey: VideoContainerView.Key?
+    public func takeIncomingVideoLayer() -> ((CALayer, VideoSource.Output?), Bool)? {
+        var activeVideoSources: [(VideoContainerView.Key, Bool)] = []
         if self.swapLocalAndRemoteVideo {
+            if let _ = self.activeLocalVideoSource {
+                activeVideoSources.append((.background, false))
+            }
             if let _ = self.activeRemoteVideoSource {
-                remoteVideoContainerKey = .foreground
+                activeVideoSources.append((.foreground, true))
             }
         } else {
             if let _ = self.activeRemoteVideoSource {
-                remoteVideoContainerKey = .background
+                activeVideoSources.append((.background, true))
+            }
+            if let _ = self.activeLocalVideoSource {
+                activeVideoSources.append((.foreground, false))
             }
         }
         
-        if let remoteVideoContainerKey, let videoContainerView = self.videoContainerViews.first(where: { $0.key == remoteVideoContainerKey }) {
+        if let videoSource = activeVideoSources.first, let videoContainerView = self.videoContainerViews.first(where: { $0.key == videoSource.0 }) {
             videoContainerView.videoContainerLayerTaken = true
-            return (videoContainerView.videoContainerLayer, videoContainerView.currentVideoOutput)
+            return ((videoContainerView.videoContainerLayer, videoContainerView.currentVideoOutput), videoSource.1)
         }
         
         return nil
@@ -607,7 +613,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if let previousParams = self.params, case .active = params.state.lifecycleState {
             switch previousParams.state.lifecycleState {
             case .requesting, .ringing, .connecting, .reconnecting:
-                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden {
+                if self.hideEmojiTooltipTimer == nil && !self.areControlsHidden && self.activeRemoteVideoSource == nil && self.activeLocalVideoSource == nil {
                     self.displayEmojiTooltip = true
                     
                     self.hideEmojiTooltipTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
@@ -1241,8 +1247,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         
         let titleSize = self.titleView.update(
             string: titleString,
-            fontSize: !havePrimaryVideo ? 28.0 : 17.0,
-            fontWeight: !havePrimaryVideo ? 0.0 : 0.25,
+            fontSize: 28.0,
+            fontWeight: 0.0,
             color: .white,
             constrainedWidth: params.size.width - 16.0 * 2.0,
             transition: transition
@@ -1301,7 +1307,11 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
         if currentAreControlsHidden {
             titleY = -8.0 - titleSize.height - statusSize.height
         } else if havePrimaryVideo {
-            titleY = params.insets.top + 2.0
+            if case .active = params.state.lifecycleState {
+                titleY = params.insets.top + 2.0 + 54.0
+            } else {
+                titleY = params.insets.top + 2.0
+            }
         } else {
             titleY = collapsedAvatarFrame.maxY + 39.0
         }
@@ -1313,7 +1323,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             size: titleSize
         )
         transition.setFrame(view: self.titleView, frame: titleFrame)
-        genericAlphaTransition.setAlpha(view: self.titleView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+        genericAlphaTransition.setAlpha(view: self.titleView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall || (havePrimaryVideo && self.isEmojiKeyExpanded)) ? 0.0 : 1.0)
         
         var emojiViewSizeValue: CGSize?
         var emojiTransition = transition
@@ -1392,15 +1402,10 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         }
         
-        var statusEmojiWidth: CGFloat = 0.0
-        let statusEmojiSpacing: CGFloat = 8.0
-        if !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
-            statusEmojiWidth = statusEmojiSpacing + emojiViewSize.width
-        }
         let statusFrame = CGRect(
             origin: CGPoint(
-                x: (params.size.width - statusSize.width - statusEmojiWidth) * 0.5,
-                y: titleFrame.maxY + (havePrimaryVideo ? 0.0 : 4.0)
+                x: (params.size.width - statusSize.width) * 0.5,
+                y: titleFrame.maxY + 4.0
             ),
             size: statusSize
         )
@@ -1414,12 +1419,19 @@ public final class PrivateCallScreen: OverlayMaskContainerView, AVPictureInPictu
             }
         } else {
             transition.setFrame(view: self.statusView, frame: statusFrame)
-            genericAlphaTransition.setAlpha(view: self.statusView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall) ? 0.0 : 1.0)
+            genericAlphaTransition.setAlpha(view: self.statusView, alpha: (currentAreControlsHidden || self.isAnimatedOutToGroupCall || (havePrimaryVideo && self.isEmojiKeyExpanded)) ? 0.0 : 1.0)
         }
         
         if case .active = params.state.lifecycleState {
             if let emojiView = self.emojiView, !self.isEmojiKeyExpanded, let emojiViewSize = emojiViewSizeValue {
-                let emojiViewFrame = CGRect(origin: CGPoint(x: statusFrame.maxX + statusEmojiSpacing, y: statusFrame.minY + floorToScreenPixels((statusFrame.height - emojiViewSize.height) * 0.5)), size: emojiViewSize)
+                let emojiViewY: CGFloat
+                if currentAreControlsHidden {
+                    emojiViewY = -8.0 - emojiViewSize.height
+                } else {
+                    emojiViewY = params.insets.top + 14.0
+                }
+                
+                let emojiViewFrame = CGRect(origin: CGPoint(x: floor((params.size.width - emojiViewSize.width) * 0.5), y: emojiViewY), size: emojiViewSize)
                 
                 if case let .curve(duration, curve) = transition.animation, emojiViewWasExpanded {
                     let distance = CGPoint(x: emojiViewFrame.midX - emojiView.center.x, y: emojiViewFrame.midY - emojiView.center.y)

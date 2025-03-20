@@ -205,13 +205,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
     private var isSoundEnabled: Bool
     private var isMuted: Bool
     private var isAmbientMode: Bool
-    
+     
     private var seekId: Int = 0
     private var seekTimestamp: Double = 0.0
     private var pendingSeekTimestamp: Double?
     private var pendingContinuePlaybackAfterSeekToTimestamp: Double?
     private var shouldNotifySeeked: Bool = false
     private var stoppedAtEnd: Bool = false
+    private var bufferingStartTime: Double?
     
     private var renderSynchronizerRate: Double = 0.0
     private var videoIsRequestingMediaData: Bool = false
@@ -704,9 +705,21 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
             self.triggerRequestMediaData()
         }
         
+        if isBuffering {
+            if self.bufferingStartTime == nil {
+                self.bufferingStartTime = CFAbsoluteTimeGetCurrent()
+            }
+        } else {
+            self.bufferingStartTime = nil
+        }
+        
         let playbackStatus: MediaPlayerPlaybackStatus
         if isBuffering {
-            playbackStatus = .buffering(initial: false, whilePlaying: self.isPlaying, progress: 0.0, display: true)
+            var displayBuffering = false
+            if let bufferingStartTime = self.bufferingStartTime, (CFAbsoluteTimeGetCurrent() - bufferingStartTime) >= 0.3 {
+                displayBuffering = true
+            }
+            playbackStatus = .buffering(initial: false, whilePlaying: self.isPlaying, progress: 0.0, display: displayBuffering)
         } else if self.isPlaying {
             playbackStatus = .playing
         } else {
@@ -743,9 +756,14 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                     self.pause()
                     f()
                 case let .loopDisablingSound(f):
-                    self.stoppedAtEnd = false
-                    self.isSoundEnabled = false
-                    self.seek(timestamp: 0.0, play: true, notify: true)
+                    if duration - 0.1 <= 0.0 {
+                        self.stoppedAtEnd = true
+                        self.pause()
+                    } else {
+                        self.stoppedAtEnd = false
+                        self.isSoundEnabled = false
+                        self.seek(timestamp: 0.0, play: true, notify: true)
+                    }
                     f()
                 }
             }
@@ -918,6 +936,7 @@ public final class ChunkMediaPlayerV2: ChunkMediaPlayer {
                     }
                     
                     self.pendingSeekTimestamp = nil
+                    self.stoppedAtEnd = false
                     self.updateInternalState()
                 }
             }

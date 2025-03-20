@@ -15,6 +15,8 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
+        .package(name: "FlatBuffers", path: "./FlatBuffers"),
+        .package(name: "FlatSerialization", path: "./FlatSerialization"),
         .package(name: "Postbox", path: "../Postbox"),
         .package(name: "SSignalKit", path: "../SSignalKit"),
         .package(name: "MtProtoKit", path: "../MtProtoKit"),
@@ -40,6 +42,8 @@ let package = Package(
                            .product(name: "DarwinDirStat", package: "DarwinDirStat", condition: nil),
                            .product(name: "Reachability", package: "Reachability", condition: nil),
                            .product(name: "Emoji", package: "Emoji", condition: nil),
+                           .product(name: "FlatBuffers", package: "FlatBuffers", condition: nil),
+                           .product(name: "FlatSerialization", package: "FlatSerialization", condition: nil),
                            .product(name: "EncryptionProvider", package: "EncryptionProvider", condition: nil)],
             path: "Sources"),
     ]

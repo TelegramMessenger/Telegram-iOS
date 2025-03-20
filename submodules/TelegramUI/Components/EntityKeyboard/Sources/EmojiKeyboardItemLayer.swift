@@ -177,19 +177,21 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
         
         switch content {
         case let .animation(animationData):
+            let animationDataResource = animationData.resource._parse()
+            
             let loadAnimation: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
                 
-                strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0, customColor: animationData.isTemplate ? .white : nil))
+                strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationDataResource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationDataResource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0, customColor: animationData.isTemplate ? .white : nil))
             }
             
             if attemptSynchronousLoad {
-                if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize) {
+                if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: animationDataResource.resource.id.stringRepresentation, size: pixelSize) {
                     self.updateDisplayPlaceholder(displayPlaceholder: true)
                     
-                    self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
+                    self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationDataResource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationDataResource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                         if !isFinal {
                             if !success {
                                 Queue.mainQueue().async {
@@ -219,7 +221,7 @@ public final class EmojiKeyboardItemLayer: MultiAnimationRenderTarget {
                     loadAnimation()
                 }
             } else {
-                self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
+                self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationDataResource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationDataResource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                     if !isFinal {
                         if !success {
                             Queue.mainQueue().async {

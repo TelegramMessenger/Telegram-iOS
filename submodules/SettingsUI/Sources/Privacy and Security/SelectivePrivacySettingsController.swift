@@ -1553,7 +1553,7 @@ public func selectivePrivacySettingsController(
             var updateGlobalSettingsSignal: Signal<Never, NoError> = Signal.complete()
             var updatedGlobalSettings: GlobalPrivacySettings?
             if let _ = arguments.updateHideReadTime, let globalSettings {
-                updatedGlobalSettings = GlobalPrivacySettings(automaticallyArchiveAndMuteNonContacts: globalSettings.automaticallyArchiveAndMuteNonContacts, keepArchivedUnmuted: globalSettings.keepArchivedUnmuted, keepArchivedFolders: globalSettings.keepArchivedFolders, hideReadTime: hideReadTimeEnabled ?? globalSettings.hideReadTime, nonContactChatsRequirePremium: globalSettings.nonContactChatsRequirePremium)
+                updatedGlobalSettings = GlobalPrivacySettings(automaticallyArchiveAndMuteNonContacts: globalSettings.automaticallyArchiveAndMuteNonContacts, keepArchivedUnmuted: globalSettings.keepArchivedUnmuted, keepArchivedFolders: globalSettings.keepArchivedFolders, hideReadTime: hideReadTimeEnabled ?? globalSettings.hideReadTime, nonContactChatsPrivacy: globalSettings.nonContactChatsPrivacy)
                 if let updatedGlobalSettings {
                     updateGlobalSettingsSignal = context.engine.privacy.updateGlobalPrivacySettings(settings: updatedGlobalSettings)
                 }

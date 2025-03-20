@@ -84,6 +84,7 @@ final class GiftSetupScreenComponent: Component {
         private let remainingCount = ComponentView<Empty>()
         private let introContent = ComponentView<Empty>()
         private let introSection = ComponentView<Empty>()
+        private let starsSection = ComponentView<Empty>()
         private let upgradeSection = ComponentView<Empty>()
         private let hideSection = ComponentView<Empty>()
     
@@ -118,13 +119,17 @@ final class GiftSetupScreenComponent: Component {
         
         private var hideName = false
         private var includeUpgrade = false
+        private var payWithStars = false
+        
         private var inProgress = false
+        
         
         private var previousHadInputHeight: Bool = false
         private var previousInputHeight: CGFloat?
         private var recenterOnTag: NSObject?
                 
         private var peerMap: [EnginePeer.Id: EnginePeer] = [:]
+        private var sendPaidMessageStars: StarsAmount?
         
         private var starImage: (UIImage, PresentationTheme)?
         
@@ -215,12 +220,38 @@ final class GiftSetupScreenComponent: Component {
         }
         
         @objc private func proceed() {
-            guard let component = self.component else {
+            guard let component = self.component, let environment = self.environment else {
                 return
             }
+            
             switch component.subject {
-            case .premium:
-                self.proceedWithPremiumGift()
+            case let .premium(product):
+                if self.payWithStars, let starsPrice = product.starsPrice, let peer = self.peerMap[component.peerId] {
+                    if let balance = component.context.starsContext?.currentState?.balance, balance.value < starsPrice {
+                        self.proceedWithStarGift()
+                    } else {
+                        let controller = textAlertController(
+                            context: component.context,
+                            title: environment.strings.Gift_Send_Premium_Confirmation_Title,
+                            text: environment.strings.Gift_Send_Premium_Confirmation_Text(
+                                peer.compactDisplayTitle,
+                                environment.strings.Gift_Send_Premium_Confirmation_Text_Stars(Int32(starsPrice))
+                            ).string,
+                            actions: [
+                                TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: environment.strings.Gift_Send_Premium_Confirmation_Confirm, action: { [weak self] in
+                                    if let self {
+                                        self.proceedWithStarGift()
+                                    }
+                                })
+                            ],
+                            parseMarkdown: true
+                        )
+                        environment.controller()?.present(controller, in: .window(.root))
+                    }
+                } else {
+                    self.proceedWithPremiumGift()
+                }
             case .starGift:
                 self.proceedWithStarGift()
             }
@@ -320,7 +351,7 @@ final class GiftSetupScreenComponent: Component {
         }
         
         private func proceedWithStarGift() {
-            guard let component = self.component, case let .starGift(starGift) = component.subject, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
+            guard let component = self.component, let starsContext = component.context.starsContext, let starsState = starsContext.currentState else {
                 return
             }
             
@@ -328,9 +359,24 @@ final class GiftSetupScreenComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let peerId = component.peerId
             
-            var finalPrice = starGift.price
-            if self.includeUpgrade, let upgradeStars = starGift.upgradeStars  {
-                finalPrice += upgradeStars
+            let entities = generateChatInputTextEntities(self.textInputState.text)
+            
+            var finalPrice: Int64
+            let source: BotPaymentInvoiceSource
+            switch component.subject {
+            case let .premium(product):
+                if let option = product.starsGiftOption {
+                    finalPrice = option.amount
+                    source = .premiumGift(peerId: peerId, option: option, text: self.textInputState.text.string, entities: entities)
+                } else {
+                    fatalError()
+                }
+            case let .starGift(starGift):
+                finalPrice = starGift.price
+                if self.includeUpgrade, let upgradeStars = starGift.upgradeStars  {
+                    finalPrice += upgradeStars
+                }
+                source = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
             }
             
             let proceed = { [weak self] in
@@ -340,10 +386,6 @@ final class GiftSetupScreenComponent: Component {
                 
                 self.inProgress = true
                 self.state?.updated()
-                
-                let entities = generateChatInputTextEntities(self.textInputState.text)
-                let source: BotPaymentInvoiceSource = .starGift(hideName: self.hideName, includeUpgrade: self.includeUpgrade, peerId: peerId, giftId: starGift.id, text: self.textInputState.text.string, entities: entities)
-                
                 
                 let completion = component.completion
                 
@@ -361,7 +403,7 @@ final class GiftSetupScreenComponent: Component {
                         return
                     }
 
-                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    if peerId.namespace == Namespaces.Peer.CloudChannel, case let .starGift(starGift) = component.subject {
                         var controllers = navigationController.viewControllers
                         controllers = controllers.filter { !($0 is GiftSetupScreen) && !($0 is GiftOptionsScreenProtocol) }
                         navigationController.setViewControllers(controllers, animated: true)
@@ -521,9 +563,10 @@ final class GiftSetupScreenComponent: Component {
                 
                 let _ = (component.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId),
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId),
+                    TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars(id: component.peerId)
                 )
-                |> deliverOnMainQueue).start(next: { [weak self] peer, accountPeer in
+                |> deliverOnMainQueue).start(next: { [weak self] peer, accountPeer, sendPaidMessageStars in
                     guard let self else {
                         return
                     }
@@ -533,6 +576,7 @@ final class GiftSetupScreenComponent: Component {
                     if let accountPeer {
                         self.peerMap[accountPeer.id] = accountPeer
                     }
+                    self.sendPaidMessageStars = sendPaidMessageStars
                     
                     self.state?.updated()
                 })
@@ -638,15 +682,15 @@ final class GiftSetupScreenComponent: Component {
                     }
                 )
                 
+                self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
+                |> deliverOnMainQueue).start(next: { [weak self] options in
+                    guard let self else {
+                        return
+                    }
+                    self.options = options
+                })
+                
                 if case let .starGift(gift) = component.subject {
-                    self.optionsDisposable = (component.context.engine.payments.starsTopUpOptions()
-                    |> deliverOnMainQueue).start(next: { [weak self] options in
-                        guard let self else {
-                            return
-                        }
-                        self.options = options
-                    })
-                    
                     if let _ = gift.upgradeStars {
                         self.previewPromise.set(
                             component.context.engine.payments.starGiftUpgradePreview(giftId: gift.id)
@@ -709,9 +753,6 @@ final class GiftSetupScreenComponent: Component {
                 let total: Int32 = availability.total
                 let position = CGFloat(remains) / CGFloat(total)
                 let sold = total - remains
-                //let remainsString = presentationStringsFormattedNumber(remains, environment.dateTimeFormat.groupingSeparator)
-                //let soldString = presentationStringsFormattedNumber(total - remains, environment.dateTimeFormat.groupingSeparator)
-                //let totalString = presentationStringsFormattedNumber(total, environment.dateTimeFormat.groupingSeparator)
                 let remainingCountSize = self.remainingCount.update(
                     transition: transition,
                     component: AnyComponent(RemainingCountComponent(
@@ -749,50 +790,62 @@ final class GiftSetupScreenComponent: Component {
                
             var introSectionItems: [AnyComponentWithIdentity<Empty>] = []
             introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(Rectangle(color: .clear, height: 346.0, tag: self.introPlaceholderTag))))
-            introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(ListMultilineTextFieldItemComponent(
-                externalState: self.textInputState,
-                context: component.context,
-                theme: environment.theme,
-                strings: environment.strings,
-                initialText: "",
-                resetText: self.resetText.flatMap {
-                    return ListMultilineTextFieldItemComponent.ResetText(value: $0)
-                },
-                placeholder: environment.strings.Gift_Send_Customize_MessagePlaceholder,
-                autocapitalizationType: .sentences,
-                autocorrectionType: .yes,
-                returnKeyType: .done,
-                characterLimit: Int(giftConfiguration.maxCaptionLength),
-                displayCharacterLimit: true,
-                emptyLineHandling: .notAllowed,
-                formatMenuAvailability: .available([.bold, .italic, .underline, .strikethrough, .spoiler]),
-                updated: { _ in
-                },
-                returnKeyAction: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
-                        titleView.endEditing(true)
-                    }
-                },
-                textUpdateTransition: .spring(duration: 0.4),
-                inputMode: self.currentInputMode,
-                toggleInputMode: { [weak self] in
-                    guard let self else {
-                        return
-                    }
-                    switch self.currentInputMode {
-                    case .keyboard:
-                        self.currentInputMode = .emoji
-                    case .emoji:
-                        self.currentInputMode = .keyboard
-                    }
-                    self.state?.updated(transition: .spring(duration: 0.4))
-                },
-                tag: self.textInputTag
-            ))))
-            self.resetText = nil
+            
+            if self.sendPaidMessageStars == nil {
+                introSectionItems.append(AnyComponentWithIdentity(id: introSectionItems.count, component: AnyComponent(ListMultilineTextFieldItemComponent(
+                    externalState: self.textInputState,
+                    context: component.context,
+                    theme: environment.theme,
+                    strings: environment.strings,
+                    initialText: "",
+                    resetText: self.resetText.flatMap {
+                        return ListMultilineTextFieldItemComponent.ResetText(value: $0)
+                    },
+                    placeholder: environment.strings.Gift_Send_Customize_MessagePlaceholder,
+                    autocapitalizationType: .sentences,
+                    autocorrectionType: .yes,
+                    returnKeyType: .done,
+                    characterLimit: Int(giftConfiguration.maxCaptionLength),
+                    displayCharacterLimit: true,
+                    emptyLineHandling: .notAllowed,
+                    formatMenuAvailability: .available([.bold, .italic, .underline, .strikethrough, .spoiler]),
+                    updated: { _ in
+                    },
+                    returnKeyAction: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        if let titleView = self.introSection.findTaggedView(tag: self.textInputTag) as? ListMultilineTextFieldItemComponent.View {
+                            titleView.endEditing(true)
+                        }
+                    },
+                    textUpdateTransition: .spring(duration: 0.4),
+                    inputMode: self.currentInputMode,
+                    toggleInputMode: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        switch self.currentInputMode {
+                        case .keyboard:
+                            self.currentInputMode = .emoji
+                        case .emoji:
+                            self.currentInputMode = .keyboard
+                        }
+                        self.state?.updated(transition: .spring(duration: 0.4))
+                    },
+                    tag: self.textInputTag
+                ))))
+                self.resetText = nil
+            }
+            
+            let footerAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
+                bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
+                link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
+                linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }
+            )
             
             let introFooter: AnyComponent<Empty>?
             switch component.subject {
@@ -856,8 +909,12 @@ final class GiftSetupScreenComponent: Component {
                 let subject: ChatGiftPreviewItem.Subject
                 switch component.subject {
                 case let .premium(product):
-                    let (currency, amount) = product.storeProduct?.priceCurrencyAndAmount ?? ("USD", 1)
-                    subject = .premium(months: product.months, amount: amount, currency: currency)
+                    if self.payWithStars, let starsPrice = product.starsPrice {
+                        subject = .premium(months: product.months, amount: starsPrice, currency: "XTR")
+                    } else {
+                        let (currency, amount) = product.storeProduct?.priceCurrencyAndAmount ?? ("USD", 1)
+                        subject = .premium(months: product.months, amount: amount, currency: currency)
+                    }
                 case let .starGift(gift):
                     subject = .starGift(gift: gift)
                     upgradeStars = gift.upgradeStars
@@ -888,7 +945,8 @@ final class GiftSetupScreenComponent: Component {
                                 chatPeerId: component.peerId,
                                 text: self.textInputState.text.string,
                                 entities: generateChatInputTextEntities(self.textInputState.text),
-                                upgradeStars: self.includeUpgrade ? upgradeStars : nil
+                                upgradeStars: self.includeUpgrade ? upgradeStars : nil,
+                                chargeStars: self.textInputState.text.string.isEmpty ? nil : 250
                             ),
                             params: listItemParams
                         )
@@ -907,8 +965,109 @@ final class GiftSetupScreenComponent: Component {
                     transition.setFrame(view: introContentView, frame: CGRect(origin: CGPoint(), size: introContentSize))
                 }
             }
-    
-            if case let .starGift(gift) = component.subject {
+            
+            switch component.subject {
+            case let .premium(product):
+                let balance = component.context.starsContext?.currentState?.balance.value ?? 0
+                if let starsPrice = product.starsPrice, balance >= starsPrice {
+                    let balanceString = presentationStringsFormattedNumber(Int32(balance), environment.dateTimeFormat.groupingSeparator)
+                    
+                    let starsFooterRawString = environment.strings.Gift_Send_PayWithStars_Info("# \(balanceString)").string
+                    let starsFooterText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(starsFooterRawString, attributes: footerAttributes))
+                    
+                    if self.cachedChevronImage == nil || self.cachedChevronImage?.1 !== environment.theme {
+                        self.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Item List/InlineTextRightArrow"), color: environment.theme.list.itemAccentColor)!, environment.theme)
+                    }
+                    if let range = starsFooterText.string.range(of: "#") {
+                        starsFooterText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: starsFooterText.string))
+                    }
+                    if let range = starsFooterText.string.range(of: ">"), let chevronImage = self.cachedChevronImage?.0 {
+                        starsFooterText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: starsFooterText.string))
+                    }
+                    
+                    let priceString = presentationStringsFormattedNumber(Int32(starsPrice), environment.dateTimeFormat.groupingSeparator)
+                    let starsAttributedText = NSMutableAttributedString(string: environment.strings.Gift_Send_PayWithStars("#\(priceString)").string, font: Font.regular(presentationData.listsFontSize.baseDisplaySize), textColor: environment.theme.list.itemPrimaryTextColor)
+                    let range = (starsAttributedText.string as NSString).range(of: "#")
+                    if range.location != NSNotFound {
+                        starsAttributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                        starsAttributedText.addAttribute(.baselineOffset, value: 1.0, range: range)
+                    }
+                    
+                    let starsSectionSize = self.starsSection.update(
+                        transition: transition,
+                        component: AnyComponent(ListSectionComponent(
+                            theme: environment.theme,
+                            header: nil,
+                            footer: AnyComponent(MultilineTextWithEntitiesComponent(
+                                context: component.context,
+                                animationCache: component.context.animationCache,
+                                animationRenderer: component.context.animationRenderer,
+                                placeholderColor: .clear,
+                                text: .plain(starsFooterText),
+                                maximumNumberOfLines: 0,
+                                highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.1),
+                                highlightInset: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: -8.0),
+                                highlightAction: { attributes in
+                                    if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                        return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                    } else {
+                                        return nil
+                                    }
+                                },
+                                tapAction: { [weak self] _, _ in
+                                    guard let self, let component = self.component, let controller = self.environment?.controller(), let starsContext = component.context.starsContext else {
+                                        return
+                                    }
+                                    let _ = (self.optionsPromise.get()
+                                    |> filter { $0 != nil }
+                                    |> take(1)
+                                    |> deliverOnMainQueue).startStandalone(next: { options in
+                                        let purchaseController = component.context.sharedContext.makeStarsPurchaseScreen(context: component.context, starsContext: starsContext, options: options ?? [], purpose: .generic, completion: { stars in
+                                            starsContext.add(balance: StarsAmount(value: stars, nanos: 0))
+                                        })
+                                        controller.push(purchaseController)
+                                    })
+                                }
+                            )),
+                            items: [
+                                AnyComponentWithIdentity(id: 0, component: AnyComponent(ListActionItemComponent(
+                                    theme: environment.theme,
+                                    title: AnyComponent(VStack([
+                                        AnyComponentWithIdentity(id: AnyHashable(0), component: AnyComponent(
+                                            MultilineTextWithEntitiesComponent(
+                                                context: component.context,
+                                                animationCache: component.context.animationCache,
+                                                animationRenderer: component.context.animationRenderer,
+                                                placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                                                text: .plain(starsAttributedText)
+                                            )
+                                        )),
+                                    ], alignment: .left, spacing: 2.0)),
+                                    accessory: .toggle(ListActionItemComponent.Toggle(style: .regular, isOn: self.payWithStars, action: { [weak self] _ in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.payWithStars = !self.payWithStars
+                                        self.state?.updated(transition: .spring(duration: 0.4))
+                                    })),
+                                    action: nil
+                                )))
+                            ]
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 10000.0)
+                    )
+                    let starsSectionFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: starsSectionSize)
+                    if let starsSectionView = self.starsSection.view {
+                        if starsSectionView.superview == nil {
+                            self.scrollView.addSubview(starsSectionView)
+                        }
+                        transition.setFrame(view: starsSectionView, frame: starsSectionFrame)
+                    }
+                    contentHeight += starsSectionSize.height
+                    contentHeight += sectionSpacing
+                }
+            case let .starGift(gift):
                 if let upgradeStars = gift.upgradeStars, component.peerId != component.context.account.peerId {
                     let upgradeFooterRawString: String
                     if isChannelGift {
@@ -916,13 +1075,7 @@ final class GiftSetupScreenComponent: Component {
                     } else {
                         upgradeFooterRawString = environment.strings.Gift_Send_Upgrade_Info(peerName).string
                     }
-                    let parsedString = parseMarkdownIntoAttributedString(upgradeFooterRawString, attributes: MarkdownAttributes(
-                        body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor),
-                        bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: environment.theme.list.freeTextColor),
-                        link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.itemAccentColor),
-                        linkAttribute: { contents in
-                            return (TelegramTextAttributes.URL, contents)
-                        }))
+                    let parsedString = parseMarkdownIntoAttributedString(upgradeFooterRawString, attributes: footerAttributes)
                     
                     let upgradeFooterText = NSMutableAttributedString(attributedString: parsedString)
                     
@@ -1071,7 +1224,7 @@ final class GiftSetupScreenComponent: Component {
                 }
                 contentHeight += hideSectionSize.height
             }
-            
+                
             contentHeight += 24.0
             
             let buttonHeight: CGFloat = 50.0
@@ -1109,8 +1262,13 @@ final class GiftSetupScreenComponent: Component {
             let buttonString: String
             switch component.subject {
             case let .premium(product):
-                let amountString = product.price
-                buttonString = "\(environment.strings.Gift_Send_Send) \(amountString)"
+                if self.payWithStars, let starsPrice = product.starsPrice {
+                    let amountString = presentationStringsFormattedNumber(Int32(starsPrice), presentationData.dateTimeFormat.groupingSeparator)
+                    buttonString = "\(environment.strings.Gift_Send_Send)  # \(amountString)"
+                } else {
+                    let amountString = product.price
+                    buttonString = "\(environment.strings.Gift_Send_Send) \(amountString)"
+                }
             case let .starGift(starGift):
                 var finalPrice: Int64 = starGift.price
                 if self.includeUpgrade, let upgradePrice = starGift.upgradeStars {
@@ -1118,7 +1276,7 @@ final class GiftSetupScreenComponent: Component {
                 }
                 let amountString = presentationStringsFormattedNumber(Int32(finalPrice), presentationData.dateTimeFormat.groupingSeparator)
                 let buttonTitle = isSelfGift ? environment.strings.Gift_Send_Buy : environment.strings.Gift_Send_Send
-                buttonString = "\(buttonTitle)  #  \(amountString)"
+                buttonString = "\(buttonTitle)  # \(amountString)"
                 if let availability = starGift.availability, availability.remains == 0 {
                     buttonIsEnabled = false
                 }
@@ -1128,11 +1286,12 @@ final class GiftSetupScreenComponent: Component {
             if let range = buttonAttributedString.string.range(of: "#"), let starImage = self.starImage?.0 {
                 buttonAttributedString.addAttribute(.attachment, value: starImage, range: NSRange(range, in: buttonAttributedString.string))
                 buttonAttributedString.addAttribute(.foregroundColor, value: environment.theme.list.itemCheckColors.foregroundColor, range: NSRange(range, in: buttonAttributedString.string))
-                buttonAttributedString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.baselineOffset, value: 1.5, range: NSRange(range, in: buttonAttributedString.string))
+                buttonAttributedString.addAttribute(.kern, value: 2.0, range: NSRange(range, in: buttonAttributedString.string))
             }
             
             let buttonSize = self.button.update(
-                transition: .immediate,
+                transition: transition,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
                         color: environment.theme.list.itemCheckColors.fillColor,
@@ -1141,7 +1300,7 @@ final class GiftSetupScreenComponent: Component {
                         cornerRadius: 10.0
                     ),
                     content: AnyComponentWithIdentity(
-                        id: AnyHashable(0),
+                        id: AnyHashable(buttonString),
                         component: AnyComponent(MultilineTextComponent(text: .plain(buttonAttributedString)))
                     ),
                     isEnabled: buttonIsEnabled,
@@ -1236,7 +1395,7 @@ final class GiftSetupScreenComponent: Component {
                     component: AnyComponent(EmojiSuggestionsComponent(
                         context: component.context,
                         userLocation: .other,
-                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme),
+                        theme: EmojiSuggestionsComponent.Theme(theme: environment.theme, backgroundColor: environment.theme.list.itemBlocksBackgroundColor),
                         animationCache: component.context.animationCache,
                         animationRenderer: component.context.animationRenderer,
                         files: value,
@@ -1600,6 +1759,7 @@ private struct GiftConfiguration {
 
 public struct PremiumGiftProduct: Equatable {
     public let giftOption: CachedPremiumGiftOption
+    public let starsGiftOption: CachedPremiumGiftOption?
     public let storeProduct: InAppPurchaseManager.Product?
     public let discount: Int?
     
@@ -1615,12 +1775,18 @@ public struct PremiumGiftProduct: Equatable {
         return self.storeProduct?.price ?? formatCurrencyAmount(self.giftOption.amount, currency: self.giftOption.currency)
     }
     
-    public var pricePerMonth: String {
-        return self.storeProduct?.pricePerMonth(Int(self.months)) ?? ""
+    public var starsPrice: Int64? {
+        return self.starsGiftOption?.amount
     }
     
-    public init(giftOption: CachedPremiumGiftOption, storeProduct: InAppPurchaseManager.Product?, discount: Int?) {
+    public init(
+        giftOption: CachedPremiumGiftOption,
+        starsGiftOption: CachedPremiumGiftOption?,
+        storeProduct: InAppPurchaseManager.Product?,
+        discount: Int?
+    ) {
         self.giftOption = giftOption
+        self.starsGiftOption = starsGiftOption
         self.storeProduct = storeProduct
         self.discount = discount
     }

@@ -353,6 +353,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatOverscrollControl",
         "//submodules/TelegramUI/Components/AudioWaveformNode",
         "//submodules/TelegramUI/Components/Chat/ChatBotInfoItem",
+        "//submodules/TelegramUI/Components/Chat/ChatUserInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatBotStartInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatButtonKeyboardInputNode",
@@ -453,6 +454,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stars/StarsTransactionScreen",
         "//submodules/TelegramUI/Components/Stars/StarsWithdrawalScreen",
         "//submodules/TelegramUI/Components/Chat/FactCheckAlertController",
+        "//submodules/TelegramUI/Components/Chat/ChatMessagePaymentAlertController",
         "//submodules/TelegramUI/Components/PeerManagement/OwnershipTransferController",
         "//submodules/TelegramUI/Components/PeerManagement/OldChannelsController",
         "//submodules/TelegramUI/Components/Chat/ChatSendStarsScreen",
@@ -463,6 +465,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Gifts/GiftOptionsScreen",
         "//submodules/TelegramUI/Components/ContentReportScreen",
         "//submodules/TelegramUI/Components/PeerInfo/AffiliateProgramSetupScreen",
+        "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
         "//third-party/recaptcha:RecaptchaEnterprise",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

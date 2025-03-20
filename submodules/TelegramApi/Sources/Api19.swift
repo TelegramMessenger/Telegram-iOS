@@ -960,13 +960,13 @@ public extension Api {
 }
 public extension Api {
     enum PeerSettings: TypeConstructorDescription {
-        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?, businessBotId: Int64?, businessBotManageUrl: String?)
+        case peerSettings(flags: Int32, geoDistance: Int32?, requestChatTitle: String?, requestChatDate: Int32?, businessBotId: Int64?, businessBotManageUrl: String?, chargePaidMessageStars: Int64?, registrationMonth: String?, phoneCountry: String?, nameChangeDate: Int32?, photoChangeDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl, let chargePaidMessageStars, let registrationMonth, let phoneCountry, let nameChangeDate, let photoChangeDate):
                     if boxed {
-                        buffer.appendInt32(-1395233698)
+                        buffer.appendInt32(-193510921)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(geoDistance!, buffer: buffer, boxed: false)}
@@ -974,14 +974,19 @@ public extension Api {
                     if Int(flags) & Int(1 << 9) != 0 {serializeInt32(requestChatDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {serializeInt64(businessBotId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {serializeString(businessBotManageUrl!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 14) != 0 {serializeInt64(chargePaidMessageStars!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {serializeString(registrationMonth!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 16) != 0 {serializeString(phoneCountry!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 17) != 0 {serializeInt32(nameChangeDate!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 18) != 0 {serializeInt32(photoChangeDate!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl):
-                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any), ("businessBotId", businessBotId as Any), ("businessBotManageUrl", businessBotManageUrl as Any)])
+                case .peerSettings(let flags, let geoDistance, let requestChatTitle, let requestChatDate, let businessBotId, let businessBotManageUrl, let chargePaidMessageStars, let registrationMonth, let phoneCountry, let nameChangeDate, let photoChangeDate):
+                return ("peerSettings", [("flags", flags as Any), ("geoDistance", geoDistance as Any), ("requestChatTitle", requestChatTitle as Any), ("requestChatDate", requestChatDate as Any), ("businessBotId", businessBotId as Any), ("businessBotManageUrl", businessBotManageUrl as Any), ("chargePaidMessageStars", chargePaidMessageStars as Any), ("registrationMonth", registrationMonth as Any), ("phoneCountry", phoneCountry as Any), ("nameChangeDate", nameChangeDate as Any), ("photoChangeDate", photoChangeDate as Any)])
     }
     }
     
@@ -998,14 +1003,29 @@ public extension Api {
             if Int(_1!) & Int(1 << 13) != 0 {_5 = reader.readInt64() }
             var _6: String?
             if Int(_1!) & Int(1 << 13) != 0 {_6 = parseString(reader) }
+            var _7: Int64?
+            if Int(_1!) & Int(1 << 14) != 0 {_7 = reader.readInt64() }
+            var _8: String?
+            if Int(_1!) & Int(1 << 15) != 0 {_8 = parseString(reader) }
+            var _9: String?
+            if Int(_1!) & Int(1 << 16) != 0 {_9 = parseString(reader) }
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 17) != 0 {_10 = reader.readInt32() }
+            var _11: Int32?
+            if Int(_1!) & Int(1 << 18) != 0 {_11 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 6) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 9) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 9) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 13) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 13) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6)
+            let _c7 = (Int(_1!) & Int(1 << 14) == 0) || _7 != nil
+            let _c8 = (Int(_1!) & Int(1 << 15) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 16) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 17) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 18) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.PeerSettings.peerSettings(flags: _1!, geoDistance: _2, requestChatTitle: _3, requestChatDate: _4, businessBotId: _5, businessBotManageUrl: _6, chargePaidMessageStars: _7, registrationMonth: _8, phoneCountry: _9, nameChangeDate: _10, photoChangeDate: _11)
             }
             else {
                 return nil

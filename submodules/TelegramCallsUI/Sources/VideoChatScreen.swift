@@ -24,16 +24,7 @@ import TelegramAudio
 import LegacyComponents
 import TooltipUI
 
-extension VideoChatCall {
-    var accountContext: AccountContext {
-        switch self {
-        case let .group(group):
-            return group.accountContext
-        case let .conferenceSource(conferenceSource):
-            return conferenceSource.context
-        }
-    }
-    
+extension VideoChatCall {    
     var myAudioLevelAndSpeaking: Signal<(Float, Bool), NoError> {
         switch self {
         case let .group(group):
@@ -172,6 +163,16 @@ final class VideoChatScreenComponent: Component {
     }
 
     static func ==(lhs: VideoChatScreenComponent, rhs: VideoChatScreenComponent) -> Bool {
+        if lhs === rhs {
+            return true
+        }
+        if lhs.initialData !== rhs.initialData {
+            return false
+        }
+        if lhs.initialCall != rhs.initialCall {
+            return false
+        }
+        
         return true
     }
     
@@ -187,6 +188,16 @@ final class VideoChatScreenComponent: Component {
         init(fraction: CGFloat, scrollView: UIScrollView?) {
             self.fraction = fraction
             self.scrollView = scrollView
+        }
+    }
+    
+    struct InvitedPeer: Equatable {
+        var peer: EnginePeer
+        var state: PresentationGroupCallInvitedPeer.State?
+        
+        init(peer: EnginePeer, state: PresentationGroupCallInvitedPeer.State?) {
+            self.peer = peer
+            self.state = state
         }
     }
 
@@ -241,7 +252,7 @@ final class VideoChatScreenComponent: Component {
         var members: PresentationGroupCallMembers?
         var membersDisposable: Disposable?
         
-        var invitedPeers: [EnginePeer] = []
+        var invitedPeers: [InvitedPeer] = []
         var invitedPeersDisposable: Disposable?
         
         var speakingParticipantPeers: [EnginePeer] = []
@@ -322,8 +333,13 @@ final class VideoChatScreenComponent: Component {
             }
             
             var expandedPeer: (id: EnginePeer.Id, isPresentation: Bool)?
-            if let animateOutData, animateOutData.incomingVideoLayer != nil {
-                if let members = self.members, let participant = members.participants.first(where: { $0.peer.id == animateOutData.incomingPeerId }) {
+            if let animateOutData, animateOutData.incomingVideoLayer != nil, let members = self.members {
+                if let participant = members.participants.first(where: { $0.peer.id == animateOutData.incomingPeerId }) {
+                    if let _ = participant.videoDescription {
+                        expandedPeer = (participant.peer.id, false)
+                        self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
+                    }
+                } else if let participant = members.participants.first(where: { $0.peer.id == sourceCallController.call.context.account.peerId }) {
                     if let _ = participant.videoDescription {
                         expandedPeer = (participant.peer.id, false)
                         self.expandedParticipantsVideoState = VideoChatParticipantsComponent.ExpandedVideoState(mainParticipant: VideoChatParticipantsComponent.VideoParticipantKey(id: participant.peer.id, isPresentation: false), isMainParticipantPinned: false, isUIHidden: true)
@@ -968,7 +984,7 @@ final class VideoChatScreenComponent: Component {
             }
         }
         
-        static func groupCallStateForConferenceSource(conferenceSource: PresentationCall) -> Signal<(state: PresentationGroupCallState, invitedPeers: [EnginePeer]), NoError> {
+        static func groupCallStateForConferenceSource(conferenceSource: PresentationCall) -> Signal<(state: PresentationGroupCallState, invitedPeers: [InvitedPeer]), NoError> {
             let invitedPeers = conferenceSource.context.engine.data.subscribe(
                 EngineDataList((conferenceSource as! PresentationCallImpl).pendingInviteToConferencePeerIds.map { TelegramEngine.EngineData.Item.Peer.Peer(id: $0) })
             )
@@ -981,7 +997,7 @@ final class VideoChatScreenComponent: Component {
                 conferenceSource.isMuted,
                 invitedPeers
             )
-            |> mapToSignal { state, isMuted, invitedPeers -> Signal<(state: PresentationGroupCallState, invitedPeers: [EnginePeer]), NoError> in
+            |> mapToSignal { state, isMuted, invitedPeers -> Signal<(state: PresentationGroupCallState, invitedPeers: [VideoChatScreenComponent.InvitedPeer]), NoError> in
                 let mappedNetworkState: PresentationGroupCallState.NetworkState
                 switch state.state {
                 case .active:
@@ -1006,7 +1022,12 @@ final class VideoChatScreenComponent: Component {
                     isVideoWatchersLimitReached: false
                 )
                 
-                return .single((callState, invitedPeers.compactMap({ $0 })))
+                return .single((callState, invitedPeers.compactMap({ peer -> VideoChatScreenComponent.InvitedPeer? in
+                    guard let peer else {
+                        return nil
+                    }
+                    return VideoChatScreenComponent.InvitedPeer(peer: peer, state: .requesting)
+                })))
             }
         }
         
@@ -1022,10 +1043,18 @@ final class VideoChatScreenComponent: Component {
                 var participants: [GroupCallParticipantsContext.Participant] = []
                 let (myPeer, remotePeer) = peers
                 if let myPeer {
+                    var myVideoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
+                    switch state.videoState {
+                    case .active:
+                        myVideoDescription = GroupCallParticipantsContext.Participant.VideoDescription(endpointId: "temp-local", ssrcGroups: [], audioSsrc: nil, isPaused: false)
+                    default:
+                        break
+                    }
+                    
                     participants.append(GroupCallParticipantsContext.Participant(
                         peer: myPeer._asPeer(),
                         ssrc: nil,
-                        videoDescription: nil,
+                        videoDescription: myVideoDescription,
                         presentationDescription: nil,
                         joinTimestamp: 0,
                         raiseHandRating: nil,
@@ -1039,10 +1068,18 @@ final class VideoChatScreenComponent: Component {
                     ))
                 }
                 if let remotePeer {
+                    var remoteVideoDescription: GroupCallParticipantsContext.Participant.VideoDescription?
+                    switch state.remoteVideoState {
+                    case .active:
+                        remoteVideoDescription = GroupCallParticipantsContext.Participant.VideoDescription(endpointId: "temp-remote", ssrcGroups: [], audioSsrc: nil, isPaused: false)
+                    default:
+                        break
+                    }
+                    
                     participants.append(GroupCallParticipantsContext.Participant(
                         peer: remotePeer._asPeer(),
                         ssrc: nil,
-                        videoDescription: nil,
+                        videoDescription: remoteVideoDescription,
                         presentationDescription: nil,
                         joinTimestamp: 0,
                         raiseHandRating: nil,
@@ -1086,12 +1123,17 @@ final class VideoChatScreenComponent: Component {
                 self.members = component.initialData.members
                 self.invitedPeers = component.initialData.invitedPeers
                 if let members = self.members {
-                    self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.id }) })
+                    self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
                 }
                 self.callState = component.initialData.callState
             }
             
-            var call = self.currentCall ?? component.initialCall
+            var call: VideoChatCall
+            if let previousComponent = self.component, previousComponent.initialCall != component.initialCall {
+                call = component.initialCall
+            } else {
+                call = self.currentCall ?? component.initialCall
+            }
             if case let .conferenceSource(conferenceSource) = call, let conferenceCall = conferenceSource.conferenceCall, conferenceSource.conferenceStateValue == .ready {
                 call = .group(conferenceCall)
             }
@@ -1122,7 +1164,7 @@ final class VideoChatScreenComponent: Component {
                             
                             self.members = members
                             if let members {
-                                self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.id }) })
+                                self.invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
                             }
                             
                             if let members, let expandedParticipantsVideoState = self.expandedParticipantsVideoState, !expandedParticipantsVideoState.isUIHidden {
@@ -1228,10 +1270,16 @@ final class VideoChatScreenComponent: Component {
                     self.invitedPeersDisposable = (groupCall.invitedPeers
                     |> mapToSignal { invitedPeers in
                         return accountContext.engine.data.get(
-                            EngineDataList(invitedPeers.map({ TelegramEngine.EngineData.Item.Peer.Peer(id: $0) }))
+                            EngineDataMap(invitedPeers.map({ TelegramEngine.EngineData.Item.Peer.Peer(id: $0.id) }))
                         )
-                        |> map { peers in
-                            return peers.compactMap { $0 }
+                        |> map { peers -> [InvitedPeer] in
+                            var result: [InvitedPeer] = []
+                            for invitedPeer in invitedPeers {
+                                if let maybePeer = peers[invitedPeer.id], let peer = maybePeer {
+                                    result.append(InvitedPeer(peer: peer, state: invitedPeer.state))
+                                }
+                            }
+                            return result
                         }
                     }
                     |> deliverOnMainQueue).startStrict(next: { [weak self] invitedPeers in
@@ -1241,7 +1289,7 @@ final class VideoChatScreenComponent: Component {
                         
                         var invitedPeers = invitedPeers
                         if let members {
-                            invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.id }) })
+                            invitedPeers.removeAll(where: { invitedPeer in members.participants.contains(where: { $0.peer.id == invitedPeer.peer.id }) })
                         }
                         
                         if self.invitedPeers != invitedPeers {
@@ -2372,7 +2420,6 @@ final class VideoChatScreenComponent: Component {
                 }
                 videoButtonContent = .audio(audio: buttonAudio, isEnabled: buttonIsEnabled)
             } else {
-                //TODO:release
                 videoButtonContent = .video(isActive: false)
             }
             let _ = self.videoButton.update(
@@ -2455,13 +2502,13 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
         let peer: EnginePeer?
         let members: PresentationGroupCallMembers?
         let callState: PresentationGroupCallState
-        let invitedPeers: [EnginePeer]
+        let invitedPeers: [VideoChatScreenComponent.InvitedPeer]
         
         init(
             peer: EnginePeer?,
             members: PresentationGroupCallMembers?,
             callState: PresentationGroupCallState,
-            invitedPeers: [EnginePeer]
+            invitedPeers: [VideoChatScreenComponent.InvitedPeer]
         ) {
             self.peer = peer
             self.members = members
@@ -2524,6 +2571,17 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
     
     deinit {
         self.idleTimerExtensionDisposable?.dispose()
+    }
+    
+    func updateCall(call: VideoChatCall) {
+        self.call = call
+        if let component = self.component.wrapped as? VideoChatScreenComponent {
+            // This is only to clear the reference to regular call
+            self.updateComponent(component: AnyComponent(VideoChatScreenComponent(
+                initialData: component.initialData,
+                initialCall: call
+            )), transition: .immediate)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -2616,7 +2674,7 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
             let accountContext = groupCall.accountContext
             let invitedPeers = groupCall.invitedPeers |> take(1) |> mapToSignal { invitedPeers in
                 return accountContext.engine.data.get(
-                    EngineDataList(invitedPeers.map({ TelegramEngine.EngineData.Item.Peer.Peer(id: $0) }))
+                    EngineDataList(invitedPeers.map(\.id).map({ TelegramEngine.EngineData.Item.Peer.Peer(id: $0) }))
                 )
             }
             return combineLatest(
@@ -2630,7 +2688,12 @@ final class VideoChatScreenV2Impl: ViewControllerComponentContainer, VoiceChatCo
                     peer: peer,
                     members: members,
                     callState: callState,
-                    invitedPeers: invitedPeers.compactMap { $0 }
+                    invitedPeers: invitedPeers.compactMap { peer -> VideoChatScreenComponent.InvitedPeer? in
+                        guard let peer else {
+                            return nil
+                        }
+                        return VideoChatScreenComponent.InvitedPeer(peer: peer, state: nil)
+                    }
                 )
             }
         case let .conferenceSource(conferenceSource):

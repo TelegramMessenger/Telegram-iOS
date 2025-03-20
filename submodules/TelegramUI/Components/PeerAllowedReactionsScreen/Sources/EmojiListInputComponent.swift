@@ -8,6 +8,7 @@ import SwitchComponent
 import EntityKeyboard
 import AccountContext
 import HierarchyTrackingLayer
+import TelegramCore
 
 private final class CaretIndicatorView: UIImageView {
     private let hierarchyTrackingLayer: HierarchyTrackingLayer

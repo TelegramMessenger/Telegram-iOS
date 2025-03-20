@@ -1,0 +1,54 @@
+namespace TelegramCore;
+
+table StickerPackReference_Id {
+    id:int64 (id: 0);
+    accessHash:int64 (id: 1);
+}
+
+table StickerPackReference_Name {
+    name:string (id: 0, required);
+}
+
+table StickerPackReference_AnimatedEmoji {
+}
+
+table StickerPackReference_Dice {
+    emoji:string (id: 0, required);
+}
+
+table StickerPackReference_AnimatedEmojiAnimations {
+}
+
+table StickerPackReference_PremiumGifts {
+}
+
+table StickerPackReference_EmojiGenericAnimations {
+}
+
+table StickerPackReference_IconStatusEmoji {
+}
+
+table StickerPackReference_IconTopicEmoji {
+}
+
+table StickerPackReference_IconChannelStatusEmoji {
+}
+
+union StickerPackReference_Value {
+    StickerPackReference_Id,
+    StickerPackReference_Name,
+    StickerPackReference_AnimatedEmoji,
+    StickerPackReference_Dice,
+    StickerPackReference_AnimatedEmojiAnimations,
+    StickerPackReference_PremiumGifts,
+    StickerPackReference_EmojiGenericAnimations,
+    StickerPackReference_IconStatusEmoji,
+    StickerPackReference_IconTopicEmoji,
+    StickerPackReference_IconChannelStatusEmoji
+}
+
+table StickerPackReference {
+    value:StickerPackReference_Value (id: 1, required);
+}
+
+root_type StickerPackReference;

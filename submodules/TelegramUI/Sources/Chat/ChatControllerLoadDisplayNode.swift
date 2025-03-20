@@ -552,7 +552,6 @@ extension ChatControllerImpl {
                     return .single(true)
                 } else {
                     return .single(false)
-                    |> delay(0.1, queue: .mainQueue())
                 }
             }
             |> distinctUntilChanged
@@ -709,15 +708,24 @@ extension ChatControllerImpl {
                 })
             }
             
-            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages,
-                hasPendingMessages,
-                isTopReplyThreadMessageShown,
-                topPinnedMessage,
-                customEmojiAvailable,
-                isForum,
-                threadData,
-                forumTopicData
-            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData in
+            let premiumGiftOptions: Signal<[CachedPremiumGiftOption], NoError> = .single([])
+            |> then(
+                self.context.engine.payments.premiumGiftCodeOptions(peerId: peerId, onlyCached: true)
+                |> map { options in
+                    return options.filter { $0.users == 1 }.map { CachedPremiumGiftOption(months: $0.months, currency: $0.currency, amount: $0.amount, botUrl: "", storeProductId: $0.storeProductId) }
+                }
+            )
+            
+            self.cachedDataDisposable = combineLatest(queue: .mainQueue(), self.chatDisplayNode.historyNode.cachedPeerDataAndMessages |> debug_measureTimeToFirstEvent(label: "cachedData_cachedPeerDataAndMessages"),
+                hasPendingMessages |> debug_measureTimeToFirstEvent(label: "cachedData_hasPendingMessages"),
+                isTopReplyThreadMessageShown |> debug_measureTimeToFirstEvent(label: "cachedData_isTopReplyThreadMessageShown"),
+                topPinnedMessage |> debug_measureTimeToFirstEvent(label: "cachedData_topPinnedMessage"),
+                customEmojiAvailable |> debug_measureTimeToFirstEvent(label: "cachedData_customEmojiAvailable"),
+                isForum |> debug_measureTimeToFirstEvent(label: "cachedData_isForum"),
+                threadData |> debug_measureTimeToFirstEvent(label: "cachedData_threadData"),
+                forumTopicData |> debug_measureTimeToFirstEvent(label: "cachedData_forumTopicData"),
+                premiumGiftOptions |> debug_measureTimeToFirstEvent(label: "cachedData_premiumGiftOptions")
+            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData, premiumGiftOptions in
                 if let strongSelf = self {
                     let (cachedData, messages) = cachedDataAndMessages
                     
@@ -746,7 +754,6 @@ extension ChatControllerImpl {
                     var slowmodeState: ChatSlowmodeState?
                     var activeGroupCallInfo: ChatActiveGroupCallInfo?
                     var inviteRequestsPending: Int32?
-                    var premiumGiftOptions: [CachedPremiumGiftOption] = []
                     if let cachedData = cachedData as? CachedChannelData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if !canBypassRestrictions(chatPresentationInterfaceState: strongSelf.presentationInterfaceState) {
@@ -768,7 +775,6 @@ extension ChatControllerImpl {
                         callsPrivate = cachedData.callsPrivate
                         pinnedMessageId = cachedData.pinnedMessageId
                         voiceMessagesAvailable = cachedData.voiceMessagesAvailable
-                        premiumGiftOptions = cachedData.premiumGiftOptions
                     } else if let cachedData = cachedData as? CachedGroupData {
                         pinnedMessageId = cachedData.pinnedMessageId
                         if let activeCall = cachedData.activeCall {
@@ -983,21 +989,40 @@ extension ChatControllerImpl {
         if case .replyThread = self.chatLocation {
             effectiveCachedDataReady = self.cachedDataReady.get()
         } else {
-            //effectiveCachedDataReady = .single(true)
             effectiveCachedDataReady = self.cachedDataReady.get()
         }
+        var measure_isFirstTime = true
+        let initTimestamp = self.initTimestamp
+        
+        let mapped_chatLocationInfoReady = self._chatLocationInfoReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "chatLocationInfoReady")
+        let mapped_effectiveCachedDataReady = effectiveCachedDataReady |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "effectiveCachedDataReady")
+        let mapped_initialDataReady = initialData |> map { $0 != nil } |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "initialDataReady")
+        let mapped_wallpaperReady = self.wallpaperReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "wallpaperReady")
+        let mapped_presentationReady = self.presentationReady.get() |> filter { $0 } |> debug_measureTimeToFirstEvent(label: "presentationReady")
+        
         self.ready.set(combineLatest(queue: .mainQueue(),
-            self.chatDisplayNode.historyNode.historyState.get(),
-            self._chatLocationInfoReady.get(),
-            effectiveCachedDataReady,
-            initialData,
-            self.wallpaperReady.get(),
-            self.presentationReady.get()
+            mapped_chatLocationInfoReady,
+            mapped_effectiveCachedDataReady,
+            mapped_initialDataReady,
+            mapped_wallpaperReady,
+            mapped_presentationReady
         )
-        |> map { _, chatLocationInfoReady, cachedDataReady, _, wallpaperReady, presentationReady in
-            return chatLocationInfoReady && cachedDataReady && wallpaperReady && presentationReady
+        |> map { chatLocationInfoReady, cachedDataReady, initialData, wallpaperReady, presentationReady in
+            return chatLocationInfoReady && cachedDataReady && initialData && wallpaperReady && presentationReady
         }
-        |> distinctUntilChanged)
+        |> distinctUntilChanged
+        |> beforeNext { value in
+            if measure_isFirstTime {
+                measure_isFirstTime = false
+                #if DEBUG
+                let deltaTime = (CFAbsoluteTimeGetCurrent() - initTimestamp) * 1000.0
+                print("Chat controller init to ready: \(deltaTime) ms")
+                #endif
+            }
+        })
+        #if DEBUG
+        //self.ready.set(.single(true))
+        #endif
         
         if self.context.sharedContext.immediateExperimentalUISettings.crashOnLongQueries {
             let _ = (self.ready.get()
@@ -1219,7 +1244,7 @@ extension ChatControllerImpl {
             }, messageCorrelationId)
         }
         
-        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned in
+        self.chatDisplayNode.sendMessages = { [weak self] messages, silentPosting, scheduleTime, isAnyMessageTextPartitioned, postpone in
             guard let strongSelf = self else {
                 return
             }
@@ -1267,7 +1292,7 @@ extension ChatControllerImpl {
                     }
                 }
                 
-                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime)
+                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting ?? false, scheduleTime: scheduleTime, postpone: postpone)
                 
                 var forwardedMessages: [[EnqueueMessage]] = []
                 var forwardSourcePeerIds = Set<PeerId>()
@@ -1394,7 +1419,6 @@ extension ChatControllerImpl {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Business_Links_EditLinkToastSaved, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             }
-            
             strongSelf.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
         }
         
@@ -1739,6 +1763,7 @@ extension ChatControllerImpl {
                                                 }
                                             case let .custom(fileId):
                                                 if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                                    let itemFile = TelegramMediaFile.Accessor(itemFile)
                                                     reactionItem = ReactionItem(
                                                         reaction: ReactionItem.Reaction(rawValue: updatedReaction),
                                                         appearAnimation: itemFile,
@@ -2573,7 +2598,7 @@ extension ChatControllerImpl {
                 }
             })
         }, openPeerInfo: { [weak self] in
-            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, recommendedChannels: false))
+            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, section: nil))
         }, togglePeerNotifications: { [weak self] in
             if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId {
                 let _ = strongSelf.context.engine.peers.togglePeerMuted(peerId: peerId, threadId: strongSelf.chatLocation.threadId).startStandalone()
@@ -2586,8 +2611,12 @@ extension ChatControllerImpl {
                 strongSelf.interfaceInteraction?.displaySlowmodeTooltip(node.view, rect)
                 return false
             }
-            
-            strongSelf.enqueueChatContextResult(results, result)
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.enqueueChatContextResult(results, result, postpone: postpone)
+            })
             return true
         }, sendBotCommand: { [weak self] botPeer, command in
             if let strongSelf = self, canSendMessagesToChat(strongSelf.presentationInterfaceState) {
@@ -2837,7 +2866,9 @@ extension ChatControllerImpl {
         }, deleteRecordedMedia: { [weak self] in
             self?.deleteMediaRecording()
         }, sendRecordedMedia: { [weak self] silentPosting, viewOnce in
-            self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce)
+            self?.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                self?.sendMediaRecording(silentPosting: silentPosting, viewOnce: viewOnce, postpone: postpone)
+            })
         }, displayRestrictedInfo: { [weak self] subject, displayType in
             guard let strongSelf = self else {
                 return
@@ -4362,8 +4393,24 @@ extension ChatControllerImpl {
             guard let self else {
                 return
             }
-            let controller = PremiumIntroScreen(context: self.context, source: .settings)
+            let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .messageTags, forceDark: false, dismissed: nil)
             self.push(controller)
+        }, openStarsPurchase: { [weak self] requiredStars in
+            guard let self, let starsContext = self.context.starsContext else {
+                return
+            }
+            let _ = (self.context.engine.payments.starsTopUpOptions()
+            |> take(1)
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+                guard let self else {
+                    return
+                }
+                let controller = self.context.sharedContext.makeStarsPurchaseScreen(context: self.context, starsContext: starsContext, options: options, purpose: .generic, completion: { _ in
+                })
+                self.push(controller)
+            })
+        }, openMessagePayment: {
+            
         }, openBoostToUnrestrict: { [weak self] in
             guard let self, let peerId = self.chatLocation.peerId, let cachedData = self.peerView?.cachedData as? CachedChannelData, let boostToUnrestrict = cachedData.boostsToUnrestrict else {
                 return

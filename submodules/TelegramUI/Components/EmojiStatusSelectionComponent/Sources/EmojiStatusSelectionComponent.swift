@@ -23,20 +23,17 @@ import TelegramNotices
 
 private func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
     return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
-    |> map { result -> [TelegramMediaFile]? in
+    |> map { result -> TelegramMediaFile? in
         switch result {
         case let .result(_, items, _):
-            return items.map(\.file)
+            return items.randomElement()?.file._parse()
         default:
             return nil
         }
     }
     |> take(1)
-    |> mapToSignal { items -> Signal<String?, NoError> in
-        guard let items = items else {
-            return .single(nil)
-        }
-        guard let file = items.randomElement() else {
+    |> mapToSignal { file -> Signal<String?, NoError> in
+        guard let file else {
             return .single(nil)
         }
         return Signal { subscriber in
@@ -380,14 +377,9 @@ public final class EmojiStatusSelectionController: ViewController {
                 let filterList: [String] = ["😖", "😫", "🫠", "😨", "❓"]
                 for featuredEmojiPack in featuredEmojiPacks {
                     for item in featuredEmojiPack.topItems {
-                        for attribute in item.file.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, _, alt, _):
-                                if filterList.contains(alt) {
-                                    filteredFiles.append(item.file)
-                                }
-                            default:
-                                break
+                        if let alt = item.file.customEmojiAlt {
+                            if filterList.contains(alt) {
+                                filteredFiles.append(item.file._parse())
                             }
                         }
                     }
@@ -460,7 +452,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                     if let strongSelf = self {
                                         strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId, scrollToGroup: true))
                                     }
-                                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                                    let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info._parse(), items: featuredEmojiPack.topItems).start()
                                     
                                     break
                                 }
@@ -531,7 +523,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                     )
                                     |> take(1)
                                     |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
-                                        var result: [(String, TelegramMediaFile?, String)] = []
+                                        var result: [(String, TelegramMediaFile.Accessor?, String)] = []
                                         
                                         var allEmoticons: [String: String] = [:]
                                         for keyword in keywords {
@@ -544,18 +536,13 @@ public final class EmojiStatusSelectionController: ViewController {
                                             guard let item = entry.item as? StickerPackItem else {
                                                 continue
                                             }
-                                            for attribute in item.file.attributes {
-                                                switch attribute {
-                                                case let .CustomEmoji(_, _, alt, _):
-                                                    if !item.file.isPremiumEmoji || hasPremium {
-                                                        if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                            result.append((alt, item.file, keyword))
-                                                        } else if alt == query {
-                                                            result.append((alt, item.file, alt))
-                                                        }
+                                            if let alt = item.file.customEmojiAlt {
+                                                if !item.file.isPremiumEmoji || hasPremium {
+                                                    if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                                        result.append((alt, item.file, keyword))
+                                                    } else if alt == query {
+                                                        result.append((alt, item.file, alt))
                                                     }
-                                                default:
-                                                    break
                                                 }
                                             }
                                         }
@@ -626,11 +613,12 @@ public final class EmojiStatusSelectionController: ViewController {
                                         continue
                                     }
                                     existingIds.insert(itemFile.fileId)
-                                    let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                    let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                                     let item = EmojiPagerContentComponent.Item(
                                         animationData: animationData,
                                         content: .animation(animationData),
-                                        itemFile: itemFile, subgroupId: nil,
+                                        itemFile: TelegramMediaFile.Accessor(itemFile),
+                                        subgroupId: nil,
                                         icon: .none,
                                         tintMode: animationData.isTemplate ? .primary : .none
                                     )
@@ -801,7 +789,8 @@ public final class EmojiStatusSelectionController: ViewController {
                 if itemFile.isCustomTemplateEmoji {
                     useCleanEffect = true
                 }
-                for attribute in itemFile.attributes {
+                
+                for attribute in itemFile._parse().attributes {
                     if case let .CustomEmoji(_, _, _, packReference) = attribute {
                         switch packReference {
                         case let .id(id, _):
@@ -843,8 +832,8 @@ public final class EmojiStatusSelectionController: ViewController {
                                 context: self.context,
                                 userLocation: .other,
                                 attemptSynchronousLoad: false,
-                                emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemFile.fileId.id, file: itemFile),
-                                file: item.itemFile,
+                                emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemFile.fileId.id, file: itemFile._parse()),
+                                file: item.itemFile?._parse(),
                                 cache: animationCache,
                                 renderer: animationRenderer,
                                 placeholderColor: UIColor(white: 0.0, alpha: 0.0),
@@ -1149,7 +1138,7 @@ public final class EmojiStatusSelectionController: ViewController {
                 }
             }
             
-            if let previewItem = self.previewItem, let itemFile = previewItem.item.displayFile {
+            if let previewItem = self.previewItem, let itemFile = previewItem.item.displayFile?._parse() {
                 let previewScreenView: ComponentView<Empty>
                 var previewScreenTransition = transition
                 if let current = self.previewScreenView {
@@ -1202,14 +1191,8 @@ public final class EmojiStatusSelectionController: ViewController {
                                 } else {
                                     var emojiString: String?
                                     if let itemFile = previewItem.item.itemFile {
-                                        attributeLoop: for attribute in itemFile.attributes {
-                                            switch attribute {
-                                            case let .CustomEmoji(_, _, alt, _):
-                                                emojiString = alt
-                                                break attributeLoop
-                                            default:
-                                                break
-                                            }
+                                        if let alt = itemFile.customEmojiAlt {
+                                            emojiString = alt
                                         }
                                     }
                                     
@@ -1222,7 +1205,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                         }
                                         for reaction in availableReactions.reactions {
                                             if case let .builtin(value) = reaction.value, value == emojiString {
-                                                if let aroundAnimation = reaction.aroundAnimation {
+                                                if let aroundAnimation = reaction.aroundAnimation?._parse() {
                                                     return context.account.postbox.mediaBox.resourceData(aroundAnimation.resource)
                                                     |> take(1)
                                                     |> map { data -> String? in
@@ -1244,7 +1227,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                             return
                                         }
                                         
-                                        let _ = (strongSelf.context.engine.accountData.setEmojiStatus(file: previewItem.item.itemFile, expirationDate: expirationDate)
+                                        let _ = (strongSelf.context.engine.accountData.setEmojiStatus(file: previewItem.item.itemFile?._parse(), expirationDate: expirationDate)
                                         |> deliverOnMainQueue).start()
                                         
                                         strongSelf.animateOutToStatus(item: previewItem.item, sourceLayer: result.sourceView.layer, customEffectFile: filePath, destinationView: destinationView, fromBackground: true)
@@ -1351,13 +1334,13 @@ public final class EmojiStatusSelectionController: ViewController {
                             }
                         })
                     } else {
-                        let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
+                        let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile?._parse(), expirationDate: nil)
                         |> deliverOnMainQueue).start()
                     }
                 case let .backgroundSelection(completion):
-                    completion(item?.itemFile)
+                    completion(item?.itemFile?._parse())
                 case let .customStatusSelection(completion):
-                    completion(item?.itemFile, nil)
+                    completion(item?.itemFile?._parse(), nil)
                 case let .quickReactionSelection(completion):
                     if let item = item, let itemFile = item.itemFile {
                         var selectedReaction: MessageReaction.Reaction?
@@ -1397,14 +1380,8 @@ public final class EmojiStatusSelectionController: ViewController {
                 if animateOutToView, let item = item, let destinationView = controller.destinationItemView() {
                     var emojiString: String?
                     if let itemFile = item.itemFile {
-                        attributeLoop: for attribute in itemFile.attributes {
-                            switch attribute {
-                            case let .CustomEmoji(_, _, alt, _):
-                                emojiString = alt
-                                break attributeLoop
-                            default:
-                                break
-                            }
+                        if let alt = itemFile.customEmojiAlt {
+                            emojiString = alt
                         }
                     }
                     
@@ -1417,7 +1394,7 @@ public final class EmojiStatusSelectionController: ViewController {
                         }
                         for reaction in availableReactions.reactions {
                             if case let .builtin(value) = reaction.value, value == emojiString {
-                                if let aroundAnimation = reaction.aroundAnimation {
+                                if let aroundAnimation = reaction.aroundAnimation?._parse() {
                                     return context.account.postbox.mediaBox.resourceData(aroundAnimation.resource)
                                     |> take(1)
                                     |> map { data -> String? in
@@ -1561,11 +1538,15 @@ private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to tar
 }
 
 extension EmojiPagerContentComponent.Item {
-    var displayFile: TelegramMediaFile? {
+    var displayFile: TelegramMediaFile.Accessor? {
         if let file = self.itemFile {
             return file
         } else if let gift = self.itemGift {
-            return gift.itemFile
+            if let itemFile = gift.itemFile {
+                return TelegramMediaFile.Accessor(itemFile)
+            } else {
+                return nil
+            }
         } else {
             return nil
         }

@@ -55,25 +55,24 @@ public final class HLSQualitySet {
     public init?(baseFile: FileMediaReference, codecConfiguration: HLSCodecConfiguration) {
         var qualityFiles: [Int: FileMediaReference] = [:]
         for alternativeRepresentation in baseFile.media.alternativeRepresentations {
-            if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
-                for attribute in alternativeFile.attributes {
-                    if case let .Video(_, size, _, _, _, videoCodec) = attribute {
-                        if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHardwareAv1Supported: codecConfiguration.isHardwareAv1Supported, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
-                            let key = Int(min(size.width, size.height))
-                            if let currentFile = qualityFiles[key] {
-                                var currentCodec: String?
-                                for attribute in currentFile.media.attributes {
-                                    if case let .Video(_, _, _, _, _, videoCodec) = attribute {
-                                        currentCodec = videoCodec
-                                    }
+            let alternativeFile = alternativeRepresentation
+            for attribute in alternativeFile.attributes {
+                if case let .Video(_, size, _, _, _, videoCodec) = attribute {
+                    if let videoCodec, NativeVideoContent.isVideoCodecSupported(videoCodec: videoCodec, isHardwareAv1Supported: codecConfiguration.isHardwareAv1Supported, isSoftwareAv1Supported: codecConfiguration.isSoftwareAv1Supported) {
+                        let key = Int(min(size.width, size.height))
+                        if let currentFile = qualityFiles[key] {
+                            var currentCodec: String?
+                            for attribute in currentFile.media.attributes {
+                                if case let .Video(_, _, _, _, _, videoCodec) = attribute {
+                                    currentCodec = videoCodec
                                 }
-                                if let currentCodec, (currentCodec == "av1" || currentCodec == "av01") {
-                                } else {
-                                    qualityFiles[key] = baseFile.withMedia(alternativeFile)
-                                }
+                            }
+                            if let currentCodec, (currentCodec == "av1" || currentCodec == "av01") {
                             } else {
                                 qualityFiles[key] = baseFile.withMedia(alternativeFile)
                             }
+                        } else {
+                            qualityFiles[key] = baseFile.withMedia(alternativeFile)
                         }
                     }
                 }
@@ -82,17 +81,16 @@ public final class HLSQualitySet {
         
         var playlistFiles: [Int: FileMediaReference] = [:]
         for alternativeRepresentation in baseFile.media.alternativeRepresentations {
-            if let alternativeFile = alternativeRepresentation as? TelegramMediaFile {
-                if alternativeFile.mimeType == "application/x-mpegurl" {
-                    if let fileName = alternativeFile.fileName {
-                        if fileName.hasPrefix("mtproto:") {
-                            let fileIdString = String(fileName[fileName.index(fileName.startIndex, offsetBy: "mtproto:".count)...])
-                            if let fileId = Int64(fileIdString) {
-                                for (quality, file) in qualityFiles {
-                                    if file.media.fileId.id == fileId {
-                                        playlistFiles[quality] = baseFile.withMedia(alternativeFile)
-                                        break
-                                    }
+            let alternativeFile = alternativeRepresentation
+            if alternativeFile.mimeType == "application/x-mpegurl" {
+                if let fileName = alternativeFile.fileName {
+                    if fileName.hasPrefix("mtproto:") {
+                        let fileIdString = String(fileName[fileName.index(fileName.startIndex, offsetBy: "mtproto:".count)...])
+                        if let fileId = Int64(fileIdString) {
+                            for (quality, file) in qualityFiles {
+                                if file.media.fileId.id == fileId {
+                                    playlistFiles[quality] = baseFile.withMedia(alternativeFile)
+                                    break
                                 }
                             }
                         }

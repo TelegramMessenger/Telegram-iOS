@@ -276,7 +276,7 @@ extension ChatControllerImpl {
                                                     placeholderColor: .clear,
                                                     attemptSynchronous: true
                                                 ),
-                                                file: items.first?.file,
+                                                file: items.first?.file._parse(),
                                                 action: action)
                                             return .single(actions)
                                         } else {
@@ -408,12 +408,9 @@ extension ChatControllerImpl {
                         guard let starsContext = self.context.starsContext else {
                             return
                         }
-                        guard let peerId = self.chatLocation.peerId else {
-                            return
-                        }
                         let _ = (combineLatest(
                             starsContext.state,
-                            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ReactionSettings(id: peerId))
+                            self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ReactionSettings(id: message.id.peerId))
                         )
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] state, reactionSettings in
@@ -446,9 +443,8 @@ extension ChatControllerImpl {
                                             return
                                         }
                                         
-                                        let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: peerId, requiredStars: 1), completion: { result in
+                                        let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: message.id.peerId, requiredStars: 1), completion: { result in
                                             let _ = result
-                                            //TODO:release
                                         })
                                         strongSelf.push(purchaseScreen)
                                     })

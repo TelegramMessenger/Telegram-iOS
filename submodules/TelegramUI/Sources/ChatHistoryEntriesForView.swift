@@ -11,6 +11,7 @@ import ChatMessageItemCommon
 import TextFormat
 import Markdown
 import Display
+import TelegramStringFormatting
 
 struct ChatHistoryEntriesForViewState {
     private var messageStableIdToLocalId: [UInt32: Int64] = [:]
@@ -67,17 +68,19 @@ func chatHistoryEntriesForView(
     var entries: [ChatHistoryEntry] = []
     var adminRanks: [PeerId: CachedChannelAdminRank] = [:]
     var stickersEnabled = true
-    var channelPeer: Peer?
+    var chatPeer: Peer?
     if let peerId = location.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
                 if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data?.get(CachedChannelAdminRanks.self) {
                     adminRanks = data.ranks
                 }
-            } else if case let .peer(_, peer) = additionalEntry, let channel = peer as? TelegramChannel, !channel.flags.contains(.isGigagroup) {
-                channelPeer = channel
-                if let defaultBannedRights = channel.defaultBannedRights, defaultBannedRights.flags.contains(.banSendStickers) {
-                    stickersEnabled = false
+            } else if case let .peer(_, peer) = additionalEntry {
+                chatPeer = peer
+                if let channel = peer as? TelegramChannel, !channel.flags.contains(.isGigagroup) {
+                    if let defaultBannedRights = channel.defaultBannedRights, defaultBannedRights.flags.contains(.banSendStickers) {
+                        stickersEnabled = false
+                    }
                 }
             }
         }
@@ -87,35 +90,7 @@ func chatHistoryEntriesForView(
     if (associatedData.subject?.isService ?? false) {
         
     } else {
-//        if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn {
-//            joinMessage = Message(
-//                stableId: UInt32.max - 1000,
-//                stableVersion: 0,
-//                id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
-//                globallyUniqueId: nil,
-//                groupingKey: nil,
-//                groupInfo: nil,
-//                threadId: nil,
-//                timestamp: invitedOn,
-//                flags: [.Incoming],
-//                tags: [],
-//                globalTags: [],
-//                localTags: [],
-//                customTags: [],
-//                forwardInfo: nil,
-//                author: channelPeer,
-//                text: "",
-//                attributes: [],
-//                media: [TelegramMediaAction(action: .joinedByRequest)],
-//                peers: SimpleDictionary<PeerId, Peer>(),
-//                associatedMessages: SimpleDictionary<MessageId, Message>(),
-//                associatedMessageIds: [],
-//                associatedMedia: [:],
-//                associatedThreadInfo: nil,
-//                associatedStories: [:]
-//            )
-//        } else 
-        if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus, !peer.flags.contains(.isCreator) {
+        if let peer = chatPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus, !peer.flags.contains(.isCreator) {
             joinMessage = Message(
                 stableId: UInt32.max - 1000,
                 stableVersion: 0,
@@ -131,7 +106,7 @@ func chatHistoryEntriesForView(
                 localTags: [],
                 customTags: [],
                 forwardInfo: nil,
-                author: channelPeer,
+                author: chatPeer,
                 text: "",
                 attributes: [],
                 media: [TelegramMediaAction(action: .joinedChannel)],
@@ -448,19 +423,110 @@ func chatHistoryEntriesForView(
     
     if includeChatInfoEntry {
         if view.earlierId == nil, !view.isLoading {
+            var chatPeer: Peer?
             var cachedPeerData: CachedPeerData?
             for entry in view.additionalData {
                 if case let .cachedPeerData(_, data) = entry {
                     cachedPeerData = data
-                    break
+                } else if case let .peer(_, peer) = entry {
+                    chatPeer = peer
                 }
             }
             if case let .peer(peerId) = location, peerId.isReplies {
-                entries.insert(.ChatInfoEntry("", presentationData.strings.RepliesChat_DescriptionText, nil, nil, presentationData), at: 0)
+                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.RepliesChat_DescriptionText, photo: nil, video: nil), presentationData), at: 0)
             } else if case let .peer(peerId) = location, peerId.isVerificationCodes {
-                entries.insert(.ChatInfoEntry("", presentationData.strings.VerificationCodes_DescriptionText, nil, nil, presentationData), at: 0)
-            } else if let cachedPeerData = cachedPeerData as? CachedUserData, let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
-                entries.insert(.ChatInfoEntry(presentationData.strings.Bot_DescriptionTitle, botInfo.description, botInfo.photo, botInfo.video, presentationData), at: 0)
+                entries.insert(.ChatInfoEntry(.botInfo(title: "", text: presentationData.strings.VerificationCodes_DescriptionText, photo: nil, video: nil), presentationData), at: 0)
+            } else if let cachedPeerData = cachedPeerData as? CachedUserData {
+                if let botInfo = cachedPeerData.botInfo, !botInfo.description.isEmpty {
+                    entries.insert(.ChatInfoEntry(.botInfo(title: presentationData.strings.Bot_DescriptionTitle, text: botInfo.description, photo: botInfo.photo, video: botInfo.video), presentationData), at: 0)
+                } else if let peerStatusSettings = cachedPeerData.peerStatusSettings, peerStatusSettings.registrationDate != nil || peerStatusSettings.phoneCountry != nil {
+                    if peerStatusSettings.flags.contains(.canAddContact) || peerStatusSettings.flags.contains(.canReport) || peerStatusSettings.flags.contains(.canBlock) {
+                        
+                        if let chatPeer, let photoChangeDate = peerStatusSettings.photoChangeDate, photoChangeDate > 0 {
+                            let timeText = stringForIntervalSinceUpdateAction(strings: presentationData.strings, value: photoChangeDate)
+                            let text = presentationData.strings.Chat_NonContactUser_UpdatedPhoto(timeText)
+                            var entities: [MessageTextEntity] = []
+                            for range in text.ranges {
+                                entities.append(MessageTextEntity(range: range.range.lowerBound ..< range.range.upperBound, type: .Bold))
+                            }
+                            let message = Message(
+                                stableId: UInt32.max - 1001,
+                                stableVersion: 0,
+                                id: MessageId(peerId: chatPeer.id, namespace: Namespaces.Message.Local, id: -1),
+                                globallyUniqueId: nil,
+                                groupingKey: nil,
+                                groupInfo: nil,
+                                threadId: nil,
+                                timestamp: 2,
+                                flags: [.Incoming],
+                                tags: [],
+                                globalTags: [],
+                                localTags: [],
+                                customTags: [],
+                                forwardInfo: nil,
+                                author: chatPeer,
+                                text: "",
+                                attributes: [],
+                                media: [TelegramMediaAction(action: .customText(
+                                    text: text.string,
+                                    entities: entities,
+                                    additionalAttributes: nil
+                                ))],
+                                peers: SimpleDictionary<PeerId, Peer>(),
+                                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                                associatedMessageIds: [],
+                                associatedMedia: [:],
+                                associatedThreadInfo: nil,
+                                associatedStories: [:]
+                            )
+                            entries.insert(.MessageEntry(message, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: 0)
+                        }
+                        
+                        if let chatPeer, let nameChangeDate = peerStatusSettings.nameChangeDate, nameChangeDate > 0 {
+                            let timeText = stringForIntervalSinceUpdateAction(strings: presentationData.strings, value: nameChangeDate)
+                            let text = presentationData.strings.Chat_NonContactUser_UpdatedName(timeText)
+                            var entities: [MessageTextEntity] = []
+                            for range in text.ranges {
+                                entities.append(MessageTextEntity(range: range.range.lowerBound ..< range.range.upperBound, type: .Bold))
+                            }
+                            let message = Message(
+                                stableId: UInt32.max - 1002,
+                                stableVersion: 0,
+                                id: MessageId(peerId: chatPeer.id, namespace: Namespaces.Message.Local, id: -2),
+                                globallyUniqueId: nil,
+                                groupingKey: nil,
+                                groupInfo: nil,
+                                threadId: nil,
+                                timestamp: 1,
+                                flags: [.Incoming],
+                                tags: [],
+                                globalTags: [],
+                                localTags: [],
+                                customTags: [],
+                                forwardInfo: nil,
+                                author: chatPeer,
+                                text: "",
+                                attributes: [],
+                                media: [TelegramMediaAction(action: .customText(
+                                    text: text.string,
+                                    entities: entities,
+                                    additionalAttributes: nil
+                                ))],
+                                peers: SimpleDictionary<PeerId, Peer>(),
+                                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                                associatedMessageIds: [],
+                                associatedMedia: [:],
+                                associatedThreadInfo: nil,
+                                associatedStories: [:]
+                            )
+                            entries.insert(.MessageEntry(message, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false, authorStoryStats: nil)), at: 0)
+                        }
+
+                        if let peer = chatPeer.flatMap(EnginePeer.init) {
+                            entries.insert(.ChatInfoEntry(.userInfo(peer: peer, verification: cachedPeerData.verification, registrationDate: peerStatusSettings.registrationDate, phoneCountry: peerStatusSettings.phoneCountry, groupsInCommonCount: cachedPeerData.commonGroupCount), presentationData), at: 0)
+                        }
+                    }
+                }
             } else {
                 var isEmpty = true
                 if entries.count <= 3 {

@@ -40,7 +40,7 @@ public enum ItemListStickerPackItemControl: Equatable {
 public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let context: AccountContext
-    let packInfo: StickerPackCollectionInfo
+    let packInfo: StickerPackCollectionInfo.Accessor
     let itemCount: String
     let topItem: StickerPackItem?
     let unread: Bool
@@ -56,7 +56,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let removePack: () -> Void
     let toggleSelected: () -> Void
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, style: ItemListStyle = .blocks, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, packInfo: StickerPackCollectionInfo.Accessor, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, style: ItemListStyle = .blocks, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void, toggleSelected: @escaping () -> Void) {
         self.presentationData = presentationData
         self.context = context
         self.packInfo = packInfo
@@ -487,7 +487,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             var thumbnailItem: StickerPackThumbnailItem?
             var resourceReference: MediaResourceReference?
-            if let thumbnail = item.packInfo.thumbnail {
+            if item.packInfo.hasThumbnail, let thumbnail = item.packInfo._parse().thumbnail {
                 if thumbnail.typeHint != .generic {
                     thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, thumbnail.typeHint == .video, item.packInfo.flags.contains(.isCustomTemplateEmoji))
                 } else {
@@ -495,12 +495,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                 }
                 resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
             } else if let item = item.topItem {
-                if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker, item.file.isCustomTemplateEmoji)
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
-                } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
+                let itemFile = item.file._parse()
+                if itemFile.isAnimatedSticker || itemFile.isVideoSticker {
+                    thumbnailItem = .animated(itemFile.resource, itemFile.dimensions ?? PixelDimensions(width: 100, height: 100), itemFile.isVideoSticker, itemFile.isCustomTemplateEmoji)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: itemFile.resource)
+                } else if let dimensions = itemFile.dimensions, let resource = chatMessageStickerResource(file: itemFile, small: true) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                    resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
+                    resourceReference = MediaResourceReference.media(media: .standalone(media: itemFile), resource: resource)
                 }
             }
             
@@ -844,11 +845,16 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         var imageSize = PixelDimensions(width: 512, height: 512)
                         var immediateThumbnailData: Data?
                         if let data = item.packInfo.immediateThumbnailData {
-                            if item.packInfo.thumbnail?.typeHint == .video || item.topItem?.file.isVideoSticker == true {
+                            var isVideoTypeHint = false
+                            if item.packInfo.hasThumbnail, let thumbnail = item.packInfo._parse().thumbnail {
+                                isVideoTypeHint = thumbnail.typeHint == .video
+                            }
+                            
+                            if isVideoTypeHint || item.topItem?.file.isVideoSticker == true {
                                 imageSize = PixelDimensions(width: 100, height: 100)
                             }
                             immediateThumbnailData = data
-                        } else if let data = item.topItem?.file.immediateThumbnailData {
+                        } else if let data = item.topItem?.file._parse().immediateThumbnailData {
                             immediateThumbnailData = data
                         }
                         

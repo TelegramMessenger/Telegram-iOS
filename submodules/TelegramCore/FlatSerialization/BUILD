@@ -26,7 +26,7 @@ genrule(
     rm -rf "$$BUILD_DIR"
     mkdir -p "$$BUILD_DIR"
 
-    "$$FLATC" --swift -o "$$BUILD_DIR" {flatc_input}
+    "$$FLATC" --require-explicit-ids --swift -o "$$BUILD_DIR" {flatc_input}
     """.format(
         flatc_input=flatc_input
     ) + "\n" + "\n".join([

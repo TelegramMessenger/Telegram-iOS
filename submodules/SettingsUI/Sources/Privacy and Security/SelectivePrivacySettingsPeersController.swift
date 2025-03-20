@@ -46,6 +46,7 @@ private enum SelectivePrivacyPeersEntryStableId: Hashable {
     case premiumUsers
     case bots
     case peer(EnginePeer.Id)
+    case footer
     case delete
 }
 
@@ -63,11 +64,12 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
     case peerItem(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, SelectivePrivacyPeer, ItemListPeerItemEditing, Bool)
     case addItem(String, Bool)
     case headerItem(String)
+    case footerItem(String)
     case deleteItem(String)
     
     var section: ItemListSectionId {
         switch self {
-        case .addItem, .premiumUsersItem, .botsItem, .peerItem, .headerItem:
+        case .addItem, .premiumUsersItem, .botsItem, .peerItem, .headerItem, .footerItem:
             return SelectivePrivacyPeersSection.peers.rawValue
         case .deleteItem:
             return SelectivePrivacyPeersSection.delete.rawValue
@@ -86,6 +88,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
             return .add
         case .headerItem:
             return .header
+        case .footerItem:
+            return .footer
         case .deleteItem:
             return .delete
         }
@@ -141,6 +145,12 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .footerItem(lhsText):
+            if case let .footerItem(rhsText) = rhs, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .deleteItem(lhsText):
             if case let .deleteItem(rhsText) = rhs, lhsText == rhsText {
                 return true
@@ -154,9 +164,16 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
         switch lhs {
         case .deleteItem:
             return false
-        case let .peerItem(index, _, _, _, _, _):
+        case .footerItem:
             switch rhs {
             case .deleteItem:
+                return true
+            case .peerItem, .addItem, .botsItem, .headerItem, .premiumUsersItem, .footerItem:
+                return false
+            }
+        case let .peerItem(index, _, _, _, _, _):
+            switch rhs {
+            case .deleteItem, .footerItem:
                 return true
             case let .peerItem(rhsIndex, _, _, _, _, _):
                 return index < rhsIndex
@@ -165,28 +182,28 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
             }
         case .premiumUsersItem:
             switch rhs {
-            case .peerItem, .deleteItem, .botsItem:
+            case .peerItem, .deleteItem, .botsItem, .footerItem:
                 return true
             case .premiumUsersItem, .addItem, .headerItem:
                 return false
             }
         case .botsItem:
             switch rhs {
-            case .peerItem, .deleteItem:
+            case .peerItem, .deleteItem, .footerItem:
                 return true
             case .botsItem, .premiumUsersItem, .addItem, .headerItem:
                 return false
             }
         case .addItem:
             switch rhs {
-            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem:
+            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem, .footerItem:
                 return true
             case .addItem, .headerItem:
                 return false
             }
         case .headerItem:
             switch rhs {
-            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem, .addItem:
+            case .peerItem, .deleteItem, .botsItem, .premiumUsersItem, .addItem, .footerItem:
                 return true
             case .headerItem:
                 return false
@@ -244,6 +261,8 @@ private enum SelectivePrivacyPeersEntry: ItemListNodeEntry {
                 })
         case let .headerItem(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .footerItem(text):
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
         case let .deleteItem(text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .destructive, alignment: .center, sectionId: self.section, style: .blocks, action: {
                 arguments.deleteAll()
@@ -266,7 +285,7 @@ private struct SelectivePrivacyPeersControllerState: Equatable {
     }
 }
 
-private func selectivePrivacyPeersControllerEntries(presentationData: PresentationData, state: SelectivePrivacyPeersControllerState, peers: [SelectivePrivacyPeer]) -> [SelectivePrivacyPeersEntry] {
+private func selectivePrivacyPeersControllerEntries(presentationData: PresentationData, state: SelectivePrivacyPeersControllerState, peers: [SelectivePrivacyPeer], footer: String?) -> [SelectivePrivacyPeersEntry] {
     var entries: [SelectivePrivacyPeersEntry] = []
     
     let title: String
@@ -292,6 +311,10 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
         index += 1
     }
     
+    if let footer {
+        entries.append(.footerItem(footer))
+    }
+    
     if !peers.isEmpty {
         entries.append(.deleteItem(presentationData.strings.Privacy_Exceptions_DeleteAllExceptions))
     }
@@ -299,7 +322,7 @@ private func selectivePrivacyPeersControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func selectivePrivacyPeersController(context: AccountContext, title: String, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, initialEnableForBots: Bool, displayBotsCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool, Bool) -> Void) -> ViewController {
+public func selectivePrivacyPeersController(context: AccountContext, title: String, footer: String? = nil, hideContacts: Bool = false, initialPeers: [EnginePeer.Id: SelectivePrivacyPeer], initialEnableForPremium: Bool, displayPremiumCategory: Bool, initialEnableForBots: Bool, displayBotsCategory: Bool, updated: @escaping ([EnginePeer.Id: SelectivePrivacyPeer], Bool, Bool) -> Void) -> ViewController {
     let initialState = SelectivePrivacyPeersControllerState(enableForPremium: initialEnableForPremium, enableForBots: initialEnableForBots, editing: false, peerIdWithRevealedOptions: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -405,7 +428,8 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             chatListFilters: nil,
             onlyUsers: false,
             disableChannels: true,
-            disableBots: false
+            disableBots: hideContacts,
+            disableContacts: hideContacts
         )), alwaysEnabled: true))
         addPeerDisposable.set((controller.result
         |> take(1)
@@ -606,7 +630,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
         previousPeers = peers
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacyPeersControllerEntries(presentationData: presentationData, state: state, peers: peers), style: .blocks, emptyStateItem: nil, animateChanges: previous != nil && previous!.count >= peers.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: selectivePrivacyPeersControllerEntries(presentationData: presentationData, state: state, peers: peers, footer: footer), style: .blocks, emptyStateItem: nil, animateChanges: previous != nil && previous!.count >= peers.count)
         
         return (controllerState, (listState, arguments))
     }

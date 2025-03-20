@@ -40,6 +40,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
     private var itemNodes: [MediaId: HorizontalStickerGridItemNode] = [:]
     
     private var validLayout: CGSize?
+    fileprivate weak var currentInterfaceState: ChatPresentationInterfaceState?
     private var ignoreScrolling: Bool = false
     private var animateInOnLayout: Bool = false
     
@@ -114,27 +115,29 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                 }, action: { _, f in
                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode.view, animationNode.bounds, nil, [])
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), true, false, nil, true, animationNode.view, animationNode.bounds, nil, [])
                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode.view, imageNode.bounds, nil, [])
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), true, false, nil, true, imageNode.view, imageNode.bounds, nil, [])
                                         }
                                     }
                                     f(.default)
                                 })))
                             }
                         
-                            menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { _, f in
-                                if let strongSelf = self, let peekController = strongSelf.peekController {
-                                    if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode.view, animationNode.bounds, nil, [])
-                                    } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode.view, imageNode.bounds, nil, [])
+                            if strongSelf.currentInterfaceState?.sendPaidMessageStars == nil {
+                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                }, action: { _, f in
+                                    if let strongSelf = self, let peekController = strongSelf.peekController {
+                                        if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, animationNode.view, animationNode.bounds, nil, [])
+                                        } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file._parse()), false, true, nil, true, imageNode.view, imageNode.bounds, nil, [])
+                                        }
                                     }
-                                }
-                                f(.default)
-                            })))
+                                    f(.default)
+                                })))
+                            }
                             
                             menuItems.append(
                                 .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -142,11 +145,11 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                     
                                     if let strongSelf = self {
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                        let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file._parse(), saved: !isStarred)
                                         |> deliverOnMainQueue).startStandalone(next: { result in
                                             switch result {
                                                 case .generic:
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file._parse(), loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -155,7 +158,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                                     } else {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                     }
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file._parse(), loop: true, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                         if let strongSelf = self {
                                                             if case .info = action {
                                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -176,7 +179,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                     f(.default)
                                 
                                     if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                                        loop: for attribute in item.file.attributes {
+                                        loop: for attribute in item.file._parse().attributes {
                                             switch attribute {
                                             case let .Sticker(_, packReference, _):
                                                 if let packReference = packReference {
@@ -199,7 +202,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, ASScrollVie
                                     }
                                 }))
                             )
-                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(context: strongSelf.context, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file._parse()), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() else {
                                     return
                                 }
@@ -604,6 +607,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = (size, leftInset)
+        self.stickersNode.currentInterfaceState = interfaceState
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         

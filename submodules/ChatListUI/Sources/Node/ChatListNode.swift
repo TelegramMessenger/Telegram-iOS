@@ -114,6 +114,7 @@ public final class ChatListNodeInteraction {
     let editPeer: (ChatListItem) -> Void
     let openWebApp: (TelegramUser) -> Void
     let openPhotoSetup: () -> Void
+    let openAdInfo: (ASDisplayNode) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -171,7 +172,8 @@ public final class ChatListNodeInteraction {
         dismissNotice: @escaping (ChatListNotice) -> Void,
         editPeer: @escaping (ChatListItem) -> Void,
         openWebApp: @escaping (TelegramUser) -> Void,
-        openPhotoSetup: @escaping () -> Void
+        openPhotoSetup: @escaping () -> Void,
+        openAdInfo: @escaping (ASDisplayNode) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -217,6 +219,7 @@ public final class ChatListNodeInteraction {
         self.editPeer = editPeer
         self.openWebApp = openWebApp
         self.openPhotoSetup = openPhotoSetup
+        self.openAdInfo = openAdInfo
     }
 }
 
@@ -1235,6 +1238,7 @@ public final class ChatListNode: ListView {
     public var openStarsTopup: ((Int64?) -> Void)?
     public var openWebApp: ((TelegramUser) -> Void)?
     public var openPhotoSetup: (() -> Void)?
+    public var openAdInfo: ((ASDisplayNode) -> Void)?
     
     private var theme: PresentationTheme
     
@@ -1877,6 +1881,8 @@ public final class ChatListNode: ListView {
                 let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .gracePremium).startStandalone()
             case .setupPhoto:
                 let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .setupPhoto).startStandalone()
+            case .starsSubscriptionLowBalance:
+                let _ = self.context.engine.notices.dismissServerProvidedSuggestion(suggestion: .starsSubscriptionLowBalance).startStandalone()
             default:
                 break
             }
@@ -1891,6 +1897,8 @@ public final class ChatListNode: ListView {
                 return
             }
             self.openPhotoSetup?()
+        }, openAdInfo: { [weak self] node in
+            self?.openAdInfo?(node)
         })
         nodeInteraction.isInlineMode = isInlineMode
         

@@ -21,6 +21,7 @@ private final class GroupsInCommonContextImpl {
     private let hintGroupInCommon: PeerId?
     
     private let disposable = MetaDisposable()
+    private let cacheDisposable = MetaDisposable()
     
     private var peers: [RenderedPeer] = []
     private var count: Int?
@@ -52,15 +53,41 @@ private final class GroupsInCommonContextImpl {
     
     deinit {
         self.disposable.dispose()
+        self.cacheDisposable.dispose()
     }
     
     func loadMore(limit: Int32) {
+        let peerId = self.peerId
+        
         if case .ready(true) = self.dataState {
+            if self.peers.isEmpty {
+                self.cacheDisposable.set((self.account.postbox.transaction { transaction -> ([RenderedPeer], Int32)? in
+                    if let cached = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedGroupsInCommon.self) {
+                        var peers: [RenderedPeer] = []
+                        for peerId in cached.peerIds {
+                            if let peer = transaction.getPeer(peerId) {
+                                peers.append(RenderedPeer(peer: peer))
+                            }
+                        }
+                        return (peers, cached.count)
+                    }
+                    return nil
+                } |> deliverOn(self.queue)).start(next: { [weak self] peersAndCount in
+                    guard let self else {
+                        return
+                    }
+                    if case .loading = self.dataState, let (peers, count) = peersAndCount {
+                        self.peers = peers
+                        self.count = Int(count)
+                        self.pushState()
+                    }
+                }))
+            }
+            
             self.dataState = .loading
             self.pushState()
             
             let maxId = self.peers.last?.peerId.id
-            let peerId = self.peerId
             let accountPeerId = self.account.peerId
             let network = self.account.network
             let postbox = self.account.postbox
@@ -93,7 +120,6 @@ private final class GroupsInCommonContextImpl {
                         count = nil
                     }
                     
-                    
                     return postbox.transaction { transaction -> ([Peer], Int) in
                         let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
                         updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
@@ -120,6 +146,14 @@ private final class GroupsInCommonContextImpl {
                         existingPeers.insert(peer.id)
                         strongSelf.peers.append(RenderedPeer(peer: peer))
                     }
+                }
+                
+                if maxId == nil {
+                    strongSelf.cacheDisposable.set(postbox.transaction { transaction in
+                        if let entry = CodableEntry(CachedGroupsInCommon(peerIds: peers.map { $0.id }, count: Int32(count))) {
+                            transaction.putItemCacheEntry(id: entryId(peerId: peerId), entry: entry)
+                        }
+                    }.start())
                 }
                 
                 let updatedCount = max(strongSelf.peers.count, count)
@@ -165,4 +199,39 @@ public final class GroupsInCommonContext {
             impl.loadMore(limit: 32)
         }
     }
+}
+
+private final class CachedGroupsInCommon: Codable {
+    enum CodingKeys: String, CodingKey {
+        case peerIds
+        case count
+    }
+    
+    var peerIds: [PeerId]
+    let count: Int32
+    
+    init(peerIds: [PeerId], count: Int32) {
+        self.peerIds = peerIds
+        self.count = count
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        self.peerIds = try container.decode([PeerId].self, forKey: .peerIds)
+        self.count = try container.decode(Int32.self, forKey: .count)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(self.peerIds, forKey: .peerIds)
+        try container.encode(self.count, forKey: .count)
+    }
+}
+
+private func entryId(peerId: EnginePeer.Id) -> ItemCacheEntryId {
+    let cacheKey = ValueBoxKey(length: 8)
+    cacheKey.setInt64(0, value: peerId.toInt64())
+    return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedGroupsInCommon, key: cacheKey)
 }

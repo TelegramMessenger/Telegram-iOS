@@ -10,6 +10,9 @@ import ContextUI
 import TelegramPresentationData
 import ShimmerEffect
 import SoftwareVideo
+import BatchVideoRendering
+import GifVideoLayer
+import AccountContext
 
 final class MultiplexedVideoPlaceholderNode: ASDisplayNode {
     private let effectNode: ShimmerEffectNode
@@ -101,9 +104,115 @@ public final class MultiplexedVideoNodeFiles {
 }
 
 public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
-    private let account: Account
+    public final class Item: Equatable {
+        public let file: FileMediaReference
+        public let contextResult: (ChatContextResultCollection, ChatContextResult)?
+        
+        public init(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?) {
+            self.file = file
+            self.contextResult = contextResult
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            if lhs.file.media.fileId != rhs.file.media.fileId {
+                return false
+            }
+            if (lhs.contextResult == nil) != (rhs.contextResult != nil) {
+                return false
+            }
+            
+            return true
+        }
+    }
+    
+    fileprivate final class ItemLayer: GifVideoLayer {
+        let item: Item?
+        
+        private var disposable: Disposable?
+        private var fetchDisposable: Disposable?
+        
+        private var isInHierarchyValue: Bool = false
+        public var isVisibleForAnimations: Bool = false {
+            didSet {
+                if self.isVisibleForAnimations != oldValue {
+                    self.updatePlayback()
+                }
+            }
+        }
+        private(set) var displayPlaceholder: Bool = false
+        let onUpdateDisplayPlaceholder: (Bool, Double) -> Void
+        
+        init(
+            item: Item?,
+            context: AccountContext,
+            batchVideoContext: BatchVideoRenderingContext,
+            groupId: String,
+            attemptSynchronousLoad: Bool,
+            onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
+        ) {
+            self.item = item
+            self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
+            
+            super.init(context: context, batchVideoContext: batchVideoContext, userLocation: .other, file: item?.file, synchronousLoad: attemptSynchronousLoad)
+            
+            if item == nil {
+                self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
+            }
+            
+            self.started = { [weak self] in
+                let _ = self
+                //self?.updateDisplayPlaceholder(displayPlaceholder: false, duration: 0.2)
+            }
+        }
+        
+        override init(layer: Any) {
+            self.item = nil
+            self.onUpdateDisplayPlaceholder = { _, _ in }
+            
+            super.init(layer: layer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+            self.fetchDisposable?.dispose()
+        }
+        
+        override func action(forKey event: String) -> CAAction? {
+            if event == kCAOnOrderIn {
+                self.isInHierarchyValue = true
+            } else if event == kCAOnOrderOut {
+                self.isInHierarchyValue = false
+            }
+            self.updatePlayback()
+            return nullAction
+        }
+        
+        private func updatePlayback() {
+            let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
+            
+            self.shouldBeAnimating = shouldBePlaying
+        }
+        
+        func updateDisplayPlaceholder(displayPlaceholder: Bool, duration: Double) {
+            if self.displayPlaceholder == displayPlaceholder {
+                return
+            }
+            self.displayPlaceholder = displayPlaceholder
+            self.onUpdateDisplayPlaceholder(displayPlaceholder, duration)
+        }
+    }
+    
+    private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private let batchVideoRenderingContext: BatchVideoRenderingContext
     private let trackingNode: MultiplexedVideoTrackingNode
     
     public var didScroll: ((CGFloat, CGFloat) -> Void)?
@@ -142,40 +251,38 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     private var displayItems: [VisibleVideoItem] = []
-    private var visibleThumbnailLayers: [VisibleVideoItem.Id: SoftwareVideoThumbnailNode] = [:]
     private var visiblePlaceholderNodes: [Int: MultiplexedVideoPlaceholderNode] = [:]
 
     private let contextContainerNode: ContextControllerSourceNode
     public let scrollNode: ASScrollNode
     
-    private var visibleLayers: [VisibleVideoItem.Id: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
+    private var visibleLayers: [VisibleVideoItem.Id: ItemLayer] = [:]
     
     private let trendingTitleNode: ImmediateTextNode
     
-    private var displayLink: CADisplayLink!
-    private var timeOffset = 0.0
-    private var pauseTime = 0.0
-    
-    private let timebase: CMTimebase
-    
     public var fileSelected: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect) -> Void)?
     public var fileContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
-    public var enableVideoNodes = false
+    public var enableVideoNodes = false {
+        didSet {
+            if self.enableVideoNodes != oldValue {
+                for (_, itemLayer) in self.visibleLayers {
+                    itemLayer.isVisibleForAnimations = self.enableVideoNodes
+                }
+            }
+        }
+    }
         
     private var currentActivatingId: VisibleVideoItem.Id?
     private var isFinishingActivation = false
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
-        self.account = account
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, batchVideoRenderingContext: BatchVideoRenderingContext) {
+        self.context = context
         self.theme = theme
         self.strings = strings
+        self.batchVideoRenderingContext = batchVideoRenderingContext
+        
         self.trackingNode = MultiplexedVideoTrackingNode()
         self.trackingNode.isLayerBacked = true
-        
-        var timebase: CMTimebase?
-        CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
-        CMTimebaseSetRate(timebase!, rate: 0.0)
-        self.timebase = timebase!
         
         self.contextContainerNode = ContextControllerSourceNode()
         self.contextContainerNode.animateScale = false
@@ -197,35 +304,8 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
         self.addSubnode(self.contextContainerNode)
         self.contextContainerNode.addSubnode(self.scrollNode)
         
-        class DisplayLinkProxy: NSObject {
-            weak var target: MultiplexedVideoNode?
-            
-            init(target: MultiplexedVideoNode) {
-                self.target = target
-            }
-            
-            @objc func displayLinkEvent() {
-                self.target?.displayLinkEvent()
-            }
-        }
-        
-        self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink.add(to: RunLoop.main, forMode: .common)
-        if #available(iOS 10.0, *) {
-            self.displayLink.preferredFramesPerSecond = 25
-        } else {
-            self.displayLink.frameInterval = 2
-        }
-        self.displayLink.isPaused = true
-        
         self.trackingNode.inHierarchyUpdated = { [weak self] value in
             if let strongSelf = self {
-                if !value {
-                    CMTimebaseSetRate(strongSelf.timebase, rate: 0.0)
-                } else {
-                    CMTimebaseSetRate(strongSelf.timebase, rate: 1.0)
-                }
-                strongSelf.displayLink.isPaused = !value
                 if value && !strongSelf.enableVideoNodes {
                     strongSelf.enableVideoNodes = true
                     strongSelf.validVisibleItemsOffset = nil
@@ -261,8 +341,8 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
                 return
             }
             
-            if let currentActivatingId = strongSelf.currentActivatingId, let (_, layer) = strongSelf.visibleLayers[currentActivatingId] {
-                let layer = layer.layer
+            if let currentActivatingId = strongSelf.currentActivatingId, let itemLayer = strongSelf.visibleLayers[currentActivatingId] {
+                let layer = itemLayer
                 
                 let targetContentRect: CGRect = layer.bounds
                 
@@ -286,21 +366,17 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
                 case .begin:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     layer.sublayerTransform = sublayerTransform
-                    
-                    if let thumbnail = strongSelf.visibleThumbnailLayers[currentActivatingId] {
-                        thumbnail.isHidden = true
-                    }
                 case .ended:
                     if !strongSelf.isFinishingActivation {
                         strongSelf.isFinishingActivation = true
                         let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                         let previousTransform = layer.sublayerTransform
                         layer.sublayerTransform = sublayerTransform
-                        layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { _ in
-                            strongSelf.isFinishingActivation = false
-                            if let thumbnail = strongSelf.visibleThumbnailLayers[currentActivatingId] {
-                                thumbnail.isHidden = false
+                        layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { [weak strongSelf] _ in
+                            guard let strongSelf else {
+                                return
                             }
+                            strongSelf.isFinishingActivation = false
                         })
                     }
                 }
@@ -328,19 +404,6 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
     }
     
     deinit {
-        self.displayLink.invalidate()
-        self.displayLink.isPaused = true
-        for (_, value) in self.visibleLayers {
-            value.1.isFreed = true
-        }
-        clearSampleBufferLayerPoll()
-    }
-    
-    private func displayLinkEvent() {
-        let timestamp = CMTimebaseGetTime(self.timebase).seconds
-        for (_, (manager, _)) in self.visibleLayers {
-            manager.tick(timestamp: timestamp)
-        }
     }
     
     private var validSize: CGSize?
@@ -404,7 +467,6 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
         let minVisibleThumbnailY = visibleThumbnailBounds.minY
         let maxVisibleThumbnailY = visibleThumbnailBounds.maxY
         
-        var visibleThumbnailIds = Set<VisibleVideoItem.Id>()
         var visibleIds = Set<VisibleVideoItem.Id>()
         
         var maxVisibleIndex = -1
@@ -421,31 +483,6 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
             
             maxVisibleIndex = max(maxVisibleIndex, index)
             
-            visibleThumbnailIds.insert(item.id)
-            
-            let thumbnailLayer: SoftwareVideoThumbnailNode
-            if let current = self.visibleThumbnailLayers[item.id] {
-                thumbnailLayer = current
-                if ensureFrames {
-                    thumbnailLayer.frame = item.frame
-                }
-            } else {
-                var existingPlaceholderNode: MultiplexedVideoPlaceholderNode?
-                if let placeholderNode = self.visiblePlaceholderNodes[index] {
-                    existingPlaceholderNode = placeholderNode
-                    self.visiblePlaceholderNodes.removeValue(forKey: index)
-                    placeholderNode.removeFromSupernode()
-                }
-                
-                thumbnailLayer = SoftwareVideoThumbnailNode(account: self.account, fileReference: item.file.file, synchronousLoad: synchronous, usePlaceholder: true, existingPlaceholder: existingPlaceholderNode)
-                thumbnailLayer.frame = item.frame
-                self.scrollNode.addSubnode(thumbnailLayer)
-                self.visibleThumbnailLayers[item.id] = thumbnailLayer
-            }
-            
-            thumbnailLayer.update(theme: self.theme, size: item.frame.size)
-            thumbnailLayer.updateAbsoluteRect(item.frame.offsetBy(dx: 0.0, dy: absoluteContainerOffset), within: absoluteContainerSize)
-            
             if item.frame.maxY < minVisibleY {
                 continue
             }
@@ -455,22 +492,25 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
             
             visibleIds.insert(item.id)
             
-            if let (_, layerHolder) = self.visibleLayers[item.id] {
+            if let itemLayer = self.visibleLayers[item.id] {
                 if ensureFrames {
-                    layerHolder.layer.frame = item.frame
+                    itemLayer.frame = item.frame
                 }
+                itemLayer.isVisibleForAnimations = self.enableVideoNodes
             } else {
-                let layerHolder = takeSampleBufferLayer()
-                layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
-                layerHolder.layer.frame = item.frame
-                self.scrollNode.layer.addSublayer(layerHolder.layer)
-                let manager = SoftwareVideoLayerFrameManager(account: self.account, userLocation: .other, userContentType: .other, fileReference: item.file.file, layerHolder: layerHolder)
-                self.visibleLayers[item.id] = (manager, layerHolder)
-                self.visibleThumbnailLayers[item.id]?.ready = { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.visibleLayers[item.id]?.0.start()
+                let itemLayer = ItemLayer(
+                    item: Item(file: item.file.file, contextResult: item.file.contextResult),
+                    context: self.context,
+                    batchVideoContext: self.batchVideoRenderingContext,
+                    groupId: "",
+                    attemptSynchronousLoad: false,
+                    onUpdateDisplayPlaceholder: { _, _ in
                     }
-                }
+                )
+                itemLayer.frame = item.frame
+                self.scrollNode.layer.addSublayer(itemLayer)
+                self.visibleLayers[item.id] = itemLayer
+                itemLayer.isVisibleForAnimations = self.enableVideoNodes
             }
         }
         
@@ -518,13 +558,6 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
             }
         }
         
-        var removeThumbnailIds: [VisibleVideoItem.Id] = []
-        for id in self.visibleThumbnailLayers.keys {
-            if !visibleThumbnailIds.contains(id) {
-                removeThumbnailIds.append(id)
-            }
-        }
-        
         var removePlaceholderIndices: [Int] = []
         for index in self.visiblePlaceholderNodes.keys {
             if !visiblePlaceholderIndices.contains(index) {
@@ -533,15 +566,9 @@ public final class MultiplexedVideoNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         for id in removeIds {
-            let (_, layerHolder) = self.visibleLayers[id]!
-            layerHolder.layer.removeFromSuperlayer()
+            let itemLayer = self.visibleLayers[id]!
+            itemLayer.removeFromSuperlayer()
             self.visibleLayers.removeValue(forKey: id)
-        }
-        
-        for id in removeThumbnailIds {
-            let thumbnailLayer = self.visibleThumbnailLayers[id]!
-            thumbnailLayer.removeFromSupernode()
-            self.visibleThumbnailLayers.removeValue(forKey: id)
         }
         
         for index in removePlaceholderIndices {

@@ -304,7 +304,7 @@ private func requestChannelStats(postbox: Postbox, network: Network, peerId: Pee
         }
         return nil
     } |> mapToSignal { data -> Signal<ChannelStats?, NoError> in
-        guard let (statsDatacenterId, peer) = data, let inputChannel = apiInputChannel(peer) else {
+        guard let (statsDatacenterId, peer) = data, let channel = peer as? TelegramChannel, case .broadcast = channel.info, let inputChannel = apiInputChannel(peer) else {
             return .never()
         }
         
@@ -813,7 +813,7 @@ private func requestGroupStats(accountPeerId: PeerId, postbox: Postbox, network:
         }
         return nil
     } |> mapToSignal { data -> Signal<GroupStats?, NoError> in
-        guard let (statsDatacenterId, peer) = data, let inputChannel = apiInputChannel(peer) else {
+        guard let (statsDatacenterId, peer) = data, let channel = peer as? TelegramChannel, case .group = channel.info, let inputChannel = apiInputChannel(peer) else {
             return .never()
         }
         

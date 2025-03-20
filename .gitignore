@@ -68,4 +68,5 @@ build-input/*
 submodules/OpusBinding/SharedHeaders/*
 submodules/FFMpegBinding/SharedHeaders/*
 submodules/OpenSSLEncryptionProvider/SharedHeaders/*
-
+submodules/TelegramCore/FlatSerialization/Sources/*
+buildServer.json

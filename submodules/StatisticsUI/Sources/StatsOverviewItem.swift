@@ -201,7 +201,7 @@ private final class ValueItemNode: ASDisplayNode {
             
             let valueString: NSAttributedString
             if case .ton = mode {
-                valueString = tonAmountAttributedString(value, integralFont: valueFont, fractionalFont: smallValueFont, color: valueColor)
+                valueString = tonAmountAttributedString(value, integralFont: valueFont, fractionalFont: smallValueFont, color: valueColor, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             } else {
                 valueString = NSAttributedString(string: value, font: valueFont, textColor: valueColor)
             }
@@ -802,7 +802,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        presentationStringsFormattedNumber(additionalStats.balances.availableBalance, item.presentationData.dateTimeFormat.groupingSeparator),
+                        formatStarsAmountText(additionalStats.balances.availableBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         " ",
                         (additionalStats.balances.availableBalance == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(additionalStats.balances.availableBalance.value, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
@@ -812,7 +812,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        presentationStringsFormattedNumber(additionalStats.balances.currentBalance, item.presentationData.dateTimeFormat.groupingSeparator),
+                        formatStarsAmountText(additionalStats.balances.currentBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                         " ",
                         (additionalStats.balances.currentBalance == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(additionalStats.balances.currentBalance.value, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
@@ -822,7 +822,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                         item.context,
                         params.width,
                         item.presentationData,
-                        presentationStringsFormattedNumber(additionalStats.balances.overallRevenue, item.presentationData.dateTimeFormat.groupingSeparator),
+                        formatStarsAmountText(additionalStats.balances.overallRevenue, dateTimeFormat: item.presentationData.dateTimeFormat),
                         " ",
                         (additionalStats.balances.overallRevenue == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(additionalStats.balances.overallRevenue.value, divide: false, rate: additionalStats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                         .stars
@@ -871,7 +871,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    presentationStringsFormattedNumber(stats.balances.availableBalance, item.presentationData.dateTimeFormat.groupingSeparator),
+                    formatStarsAmountText(stats.balances.availableBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                     item.presentationData.strings.Monetization_StarsProceeds_Available,
                     (stats.balances.availableBalance == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(stats.balances.availableBalance.value, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
@@ -881,7 +881,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    presentationStringsFormattedNumber(stats.balances.currentBalance, item.presentationData.dateTimeFormat.groupingSeparator),
+                    formatStarsAmountText(stats.balances.currentBalance, dateTimeFormat: item.presentationData.dateTimeFormat),
                     item.presentationData.strings.Monetization_StarsProceeds_Current,
                     (stats.balances.currentBalance == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(stats.balances.currentBalance.value, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars
@@ -891,7 +891,7 @@ class StatsOverviewItemNode: ListViewItemNode {
                     item.context,
                     params.width,
                     item.presentationData,
-                    presentationStringsFormattedNumber(stats.balances.overallRevenue, item.presentationData.dateTimeFormat.groupingSeparator),
+                    formatStarsAmountText(stats.balances.overallRevenue, dateTimeFormat: item.presentationData.dateTimeFormat),
                     item.presentationData.strings.Monetization_StarsProceeds_Total,
                     (stats.balances.overallRevenue == StarsAmount.zero ? "" : "≈\(formatTonUsdValue(stats.balances.overallRevenue.value, divide: false, rate: stats.usdRate, dateTimeFormat: item.presentationData.dateTimeFormat))", .generic),
                     .stars

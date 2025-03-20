@@ -128,7 +128,7 @@ final class VideoChatParticipantsComponent: Component {
     
     let call: VideoChatCall
     let participants: Participants?
-    let invitedPeers: [EnginePeer]
+    let invitedPeers: [VideoChatScreenComponent.InvitedPeer]
     let speakingParticipants: Set<EnginePeer.Id>
     let expandedVideoState: ExpandedVideoState?
     let maxVideoQuality: Int
@@ -148,7 +148,7 @@ final class VideoChatParticipantsComponent: Component {
     init(
         call: VideoChatCall,
         participants: Participants?,
-        invitedPeers: [EnginePeer],
+        invitedPeers: [VideoChatScreenComponent.InvitedPeer],
         speakingParticipants: Set<EnginePeer.Id>,
         expandedVideoState: ExpandedVideoState?,
         maxVideoQuality: Int,
@@ -637,7 +637,6 @@ final class VideoChatParticipantsComponent: Component {
         
         private var ignoreScrolling: Bool = false
         
-        //TODO:release
         private var gridParticipants: [VideoParticipant] = []
         private var listParticipants: [GroupCallParticipantsContext.Participant] = []
         
@@ -1259,10 +1258,20 @@ final class VideoChatParticipantsComponent: Component {
                         )
                     } else {
                         let invitedPeer = component.invitedPeers[i - self.listParticipants.count]
-                        participantPeerId = invitedPeer.id
+                        participantPeerId = invitedPeer.peer.id
                         
                         let subtitle: PeerListItemComponent.Subtitle
-                        subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusInvited, color: .neutral)
+                        //TODO:localize
+                        switch invitedPeer.state {
+                        case .none:
+                            subtitle = PeerListItemComponent.Subtitle(text: component.strings.VoiceChat_StatusInvited, color: .neutral)
+                        case .connecting:
+                            subtitle = PeerListItemComponent.Subtitle(text: "connecting...", color: .neutral)
+                        case .requesting:
+                            subtitle = PeerListItemComponent.Subtitle(text: "requesting...", color: .neutral)
+                        case .ringing:
+                            subtitle = PeerListItemComponent.Subtitle(text: "ringing...", color: .neutral)
+                        }
                         
                         peerItemComponent = PeerListItemComponent(
                             context: component.call.accountContext,
@@ -1270,15 +1279,15 @@ final class VideoChatParticipantsComponent: Component {
                             strings: component.strings,
                             style: .generic,
                             sideInset: 0.0,
-                            title: invitedPeer.displayTitle(strings: component.strings, displayOrder: .firstLast),
+                            title: invitedPeer.peer.displayTitle(strings: component.strings, displayOrder: .firstLast),
                             avatarComponent: AnyComponent(VideoChatParticipantAvatarComponent(
                                 call: component.call,
-                                peer: invitedPeer,
+                                peer: invitedPeer.peer,
                                 myPeerId: component.participants?.myPeerId ?? component.call.accountContext.account.peerId,
                                 isSpeaking: false,
                                 theme: component.theme
                             )),
-                            peer: invitedPeer,
+                            peer: invitedPeer.peer,
                             subtitle: subtitle,
                             subtitleAccessory: .none,
                             presence: nil,

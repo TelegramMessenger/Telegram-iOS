@@ -20,11 +20,13 @@ import Markdown
 import GradientBackground
 import LegacyComponents
 import DrawingUI
-import SolidRoundedButtonComponent
+import ButtonComponent
 import AnimationCache
 import EmojiTextAttachmentView
 import MediaEditor
 import AvatarBackground
+import LottieComponent
+import UndoUI
 
 public struct AvatarKeyboardInputData: Equatable {
     var emoji: EmojiPagerContentComponent
@@ -114,7 +116,7 @@ final class AvatarEditorScreenComponent: Component {
                     self.fileDisposable = (context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
                     |> map { pack -> TelegramMediaFile? in
                         if case let .result(_, items, _) = pack, let item = items.first(where: { $0.file.fileId.id == fileId }) {
-                            return item.file
+                            return item.file._parse()
                         }
                         return nil
                     }
@@ -126,7 +128,14 @@ final class AvatarEditorScreenComponent: Component {
                     })
                 }
 
-                self.selectedBackground = .gradient(markup.backgroundColors.map { UInt32(bitPattern: $0) })
+                var isPremium = false
+                let colorsValue = markup.backgroundColors.map { UInt32(bitPattern: $0) }
+                if let defaultColor = AvatarBackground.defaultBackgrounds.first(where: { $0.colors == colorsValue}) {
+                    if defaultColor.isPremium {
+                        isPremium = true
+                    }
+                }
+                self.selectedBackground = .gradient(colorsValue, isPremium)
                 self.previousColor = self.selectedBackground
             } else {
                 self.selectedBackground = AvatarBackground.defaultBackgrounds.first!
@@ -188,6 +197,8 @@ final class AvatarEditorScreenComponent: Component {
         private let buttonView = ComponentView<Empty>()
         
         private var component: AvatarEditorScreenComponent?
+        private var environment: EnvironmentType?
+        
         private weak var state: State?
         
         private var navigationMetrics: (navigationHeight: CGFloat, statusBarHeight: CGFloat)?
@@ -249,7 +260,7 @@ final class AvatarEditorScreenComponent: Component {
             self.data = data
             
             if wasEmpty && self.state?.selectedFile == nil {
-                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile
+                self.state?.selectedFile = data.emoji.panelItemGroups.first?.items.first?.itemFile?._parse()
             }
                         
             let updateSearchQuery: (EmojiPagerContentComponent.SearchQuery?) -> Void = { [weak self] query in
@@ -295,7 +306,7 @@ final class AvatarEditorScreenComponent: Component {
                             |> map { view, stickers -> [EmojiPagerContentComponent.ItemGroup] in
                                 let hasPremium = true
                                 
-                                var emoji: [(String, TelegramMediaFile?, String)] = []
+                                var emoji: [(String, TelegramMediaFile.Accessor?, String)] = []
                                 
                                 var existingEmoticons = Set<String>()
                                 var allEmoticons: [String: String] = [:]
@@ -310,18 +321,13 @@ final class AvatarEditorScreenComponent: Component {
                                     guard let item = entry.item as? StickerPackItem else {
                                         continue
                                     }
-                                    for attribute in item.file.attributes {
-                                        switch attribute {
-                                        case let .CustomEmoji(_, _, alt, _):
-                                            if !item.file.isPremiumEmoji || hasPremium {
-                                                if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                                    emoji.append((alt, item.file, keyword))
-                                                } else if alt == query {
-                                                    emoji.append((alt, item.file, alt))
-                                                }
+                                    if let alt = item.file.customEmojiAlt {
+                                        if !item.file.isPremiumEmoji || hasPremium {
+                                            if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                                emoji.append((alt, item.file, keyword))
+                                            } else if alt == query {
+                                                emoji.append((alt, item.file, alt))
                                             }
-                                        default:
-                                            break
                                         }
                                     }
                                 }
@@ -355,11 +361,11 @@ final class AvatarEditorScreenComponent: Component {
                                         }
                                         
                                         existingIds.insert(sticker.file.fileId)
-                                        let animationData = EntityKeyboardAnimationData(file: sticker.file)
+                                        let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(sticker.file))
                                         let item = EmojiPagerContentComponent.Item(
                                             animationData: animationData,
                                             content: .animation(animationData),
-                                            itemFile: sticker.file,
+                                            itemFile: TelegramMediaFile.Accessor(sticker.file),
                                             subgroupId: nil,
                                             icon: .none,
                                             tintMode: .none
@@ -441,11 +447,12 @@ final class AvatarEditorScreenComponent: Component {
                                 continue
                             }
                             existingIds.insert(itemFile.fileId)
-                            let animationData = EntityKeyboardAnimationData(file: itemFile)
+                            let animationData = EntityKeyboardAnimationData(file: TelegramMediaFile.Accessor(itemFile))
                             let item = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
                                 content: .animation(animationData),
-                                itemFile: itemFile, subgroupId: nil,
+                                itemFile: TelegramMediaFile.Accessor(itemFile),
+                                subgroupId: nil,
                                 icon: .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
                             )
@@ -520,7 +527,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedFile = item.itemFile
+                    self.state?.selectedFile = item.itemFile?._parse()
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,
@@ -549,7 +556,7 @@ final class AvatarEditorScreenComponent: Component {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break
@@ -655,7 +662,7 @@ final class AvatarEditorScreenComponent: Component {
                     guard let self, let _ = item.itemFile else {
                         return
                     }
-                    self.state?.selectedFile = item.itemFile
+                    self.state?.selectedFile = item.itemFile?._parse()
                     self.state?.updated(transition: .easeInOut(duration: 0.2))
                 },
                 deleteBackwards: nil,
@@ -684,7 +691,7 @@ final class AvatarEditorScreenComponent: Component {
                                         if installed {
                                             return .complete()
                                         } else {
-                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                            return context.engine.stickers.addStickerPackInteractively(info: info._parse(), items: items)
                                         }
                                     case .fetching:
                                         break
@@ -787,12 +794,15 @@ final class AvatarEditorScreenComponent: Component {
         
         private var isExpanded = false
         
-        func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<ViewControllerComponentContainer.Environment>, transition: ComponentTransition) -> CGSize {
+        func update(component: AvatarEditorScreenComponent, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: ComponentTransition) -> CGSize {
             self.component = component
+            
+            let environment = environment[EnvironmentType.self].value
+            self.environment = environment
             self.state = state
                         
-            let environment = environment[ViewControllerComponentContainer.Environment.self].value
             let strings = environment.strings
+            let theme = environment.theme
             
             let controller = environment.controller
             self.controller = {
@@ -994,6 +1004,7 @@ final class AvatarEditorScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(BackgroundColorComponent(
                     theme: environment.theme,
+                    isPremium: component.context.isPremium,
                     values: AvatarBackground.defaultBackgrounds,
                     selectedValue: state.selectedBackground,
                     customValue: state.customColor,
@@ -1041,8 +1052,8 @@ final class AvatarEditorScreenComponent: Component {
                         colors: state.selectedBackground.colors,
                         colorsChanged: { [weak state] colors in
                             if let state {
-                                state.customColor = .gradient(colors)
-                                state.selectedBackground = .gradient(colors)
+                                state.customColor = .gradient(colors, true)
+                                state.selectedBackground = .gradient(colors, true)
                                 state.updated(transition: .immediate)
                             }
                         },
@@ -1279,22 +1290,57 @@ final class AvatarEditorScreenComponent: Component {
                 buttonText = strings.AvatarEditor_SetChannelPhoto
             }
             
+            var isLocked = false
+            if component.peerType != .suggest, !component.context.isPremium {
+                if state.selectedBackground.isPremium {
+                    isLocked = true
+                }
+                if let selectedFile = state.selectedFile {
+                    if selectedFile.isSticker {
+                        isLocked = true
+                    }
+                }
+            }
+            
+            var buttonContents: [AnyComponentWithIdentity<Empty>] = []
+            buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(buttonText), component: AnyComponent(
+                Text(text: buttonText, font: Font.semibold(17.0), color: theme.list.itemCheckColors.foregroundColor)
+            )))
+            if !component.context.isPremium && isLocked {
+                buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "premium_unlock"),
+                    color: theme.list.itemCheckColors.foregroundColor,
+                    startingPosition: .begin,
+                    size: CGSize(width: 30.0, height: 30.0),
+                    loop: true
+                ))))
+            }
+            
             let buttonSize = self.buttonView.update(
                 transition: transition,
                 component: AnyComponent(
-                    SolidRoundedButtonComponent(
-                        title: buttonText,
-                        theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
-                        fontSize: 17.0,
-                        height: 50.0,
-                        cornerRadius: 10.0,
+                    ButtonComponent(
+                        background: ButtonComponent.Background(
+                            color: theme.list.itemCheckColors.fillColor,
+                            foreground: theme.list.itemCheckColors.foregroundColor,
+                            pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
+                        ),
+                        content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
+                            HStack(buttonContents, spacing: 3.0)
+                        )),
+                        isEnabled: true,
+                        displaysProgress: false,
                         action: { [weak self] in
-                            self?.complete()
+                            if isLocked {
+                                self?.presentPremiumToast()
+                            } else {
+                                self?.complete()
+                            }
                         }
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: environment.navigationHeight - environment.statusBarHeight)
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 50.0)
             )
             if let buttonView = self.buttonView.view {
                 if buttonView.superview == nil {
@@ -1302,8 +1348,39 @@ final class AvatarEditorScreenComponent: Component {
                 }
                 transition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight), size: buttonSize))
             }
+            
+            let bottomPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight - 4.0), size: CGSize(width: availableSize.width, height: availableSize.height - contentHeight + 4.0))
+            if let controller = environment.controller(), !controller.automaticallyControlPresentationContextLayout {
+                let layout = ContainerViewLayout(
+                    size: availableSize,
+                    metrics: environment.metrics,
+                    deviceMetrics: environment.deviceMetrics,
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomPanelFrame.height, right: 0.0),
+                    safeInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                    additionalInsets: .zero,
+                    statusBarHeight: environment.statusBarHeight,
+                    inputHeight: nil,
+                    inputHeightIsInteractivellyChanging: false,
+                    inVoiceOver: false
+                )
+                controller.presentationContext.containerLayoutUpdated(layout, transition: transition.containedViewLayoutTransition)
+            }
           
             return availableSize
+        }
+        
+        private func presentPremiumToast() {
+            guard let environment = self.environment, let component = self.component, let parentController = environment.controller() else {
+                return
+            }
+            HapticFeedback().impact(.light)
+            
+            let controller = premiumAlertController(
+                context: component.context,
+                parentController: parentController,
+                text: environment.strings.AvatarEditor_PremiumNeeded_Background
+            )
+            parentController.present(controller, in: .window(.root))
         }
         
         private let queue = Queue()
@@ -1535,6 +1612,9 @@ public final class AvatarEditorScreen: ViewControllerComponentContainer {
         
         let componentReady = Promise<Bool>()
         super.init(context: context, component: AvatarEditorScreenComponent(context: context, ready: componentReady, peerType: peerType, markup: markup), navigationBarAppearance: .transparent)
+        
+        self.automaticallyControlPresentationContextLayout = false
+        
         self.navigationPresentation = .modal
             
         self.readyValue.set(componentReady.get() |> timeout(0.3, queue: .mainQueue(), alternate: .single(true)))

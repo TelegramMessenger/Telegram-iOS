@@ -151,7 +151,7 @@ public final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNod
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file._parse()), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
     public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -359,7 +359,7 @@ public final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeS
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file._parse()), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
     public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -1212,10 +1212,13 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
-            
-    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?) {
+    
+    private let stars: StarsAmount?
+    
+    public init(context: AccountContext, interaction: ChatPanelInterfaceInteraction?, stars: StarsAmount?) {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         self.isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+        self.stars = stars
         
         self.interaction = interaction
         
@@ -1254,14 +1257,18 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
     
     @objc private func buttonPressed() {
         if let interaction = self.interaction {
-            interaction.openPremiumRequiredForMessaging()
+            if let _ = self.stars {
+                interaction.openStarsPurchase(nil)
+            } else {
+                interaction.openPremiumRequiredForMessaging()
+            }
         }
     }
     
     public func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         let serviceColor = serviceMessageColorComponents(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper)
         
-        let maxWidth = min(200.0, size.width)
+        let maxWidth = min(270.0, size.width)
         
         let sideInset: CGFloat = 22.0
         let topInset: CGFloat = 16.0
@@ -1277,23 +1284,46 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
             peerTitle = " "
         }
         
-        let text: String
-        if self.isPremiumDisabled {
-            text = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremiumDisabled_Text(peerTitle).string
+        let text: NSAttributedString
+        let actionText: String
+        let attributes = MarkdownAttributes(
+            body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: serviceColor.primaryText),
+            bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: serviceColor.primaryText),
+            link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: serviceColor.primaryText),
+            linkAttribute: { url in
+                return ("URL", url)
+            }
+        )
+        if let amount = self.stars {
+            let starsString = presentationStringsFormattedNumber(Int32(amount.value), interfaceState.dateTimeFormat.groupingSeparator)
+            let rawText: String
+            if self.isPremiumDisabled {
+                rawText = interfaceState.strings.Chat_EmptyStatePaidMessagingDisabled_Text(peerTitle, " $ \(starsString)").string
+            } else {
+                rawText = interfaceState.strings.Chat_EmptyStatePaidMessaging_Text(peerTitle, " $ \(starsString)").string
+            }
+            let attributedString = parseMarkdownIntoAttributedString(rawText, attributes: attributes).mutableCopy() as! NSMutableAttributedString
+            if let range = attributedString.string.range(of: "$") {
+                attributedString.addAttribute(.attachment, value: PresentationResourcesChat.chatEmptyStateStarIcon(interfaceState.theme)!, range: NSRange(range, in: attributedString.string))
+                attributedString.addAttribute(.foregroundColor, value: serviceColor.primaryText, range: NSRange(range, in: attributedString.string))
+                attributedString.addAttribute(.baselineOffset, value: 2.0, range: NSRange(range, in: attributedString.string))
+            }
+            text = attributedString
+            actionText = interfaceState.strings.Chat_EmptyStatePaidMessaging_Action
         } else {
-            text = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).string
+            let rawText: String
+            if self.isPremiumDisabled {
+                rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremiumDisabled_Text(peerTitle).string
+            } else {
+                rawText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Text(peerTitle).string
+            }
+            text = parseMarkdownIntoAttributedString(rawText, attributes: attributes)
+            actionText = interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Action
         }
         let textSize = self.text.update(
             transition: .immediate,
             component: AnyComponent(BalancedTextComponent(
-                text: .markdown(text: text, attributes: MarkdownAttributes(
-                    body: MarkdownAttributeSet(font: Font.regular(15.0), textColor: serviceColor.primaryText),
-                    bold: MarkdownAttributeSet(font: Font.semibold(15.0), textColor: serviceColor.primaryText),
-                    link: MarkdownAttributeSet(font: Font.regular(15.0), textColor: serviceColor.primaryText),
-                    linkAttribute: { url in
-                        return ("URL", url)
-                    }
-                )),
+                text: .plain(text),
                 horizontalAlignment: .center,
                 maximumNumberOfLines: 0
             )),
@@ -1304,7 +1334,7 @@ public final class ChatEmptyNodePremiumRequiredChatContent: ASDisplayNode, ChatE
         let buttonTitleSize = self.buttonTitle.update(
             transition: .immediate,
             component: AnyComponent(MultilineTextComponent(
-                text: .plain(NSAttributedString(string: interfaceState.strings.Chat_EmptyStateMessagingRestrictedToPremium_Action, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
+                text: .plain(NSAttributedString(string: actionText, font: Font.semibold(15.0), textColor: serviceColor.primaryText))
             )),
             environment: {},
             containerSize: CGSize(width: 200.0, height: 100.0)
@@ -1396,6 +1426,7 @@ private enum ChatEmptyNodeContentType: Equatable {
     case greeting
     case topic
     case premiumRequired
+    case starsRequired
 }
 
 private final class EmptyAttachedDescriptionNode: HighlightTrackingButtonNode {
@@ -1784,7 +1815,9 @@ public final class ChatEmptyNode: ASDisplayNode {
                 } else if let _ = interfaceState.peerNearbyData {
                     contentType = .peerNearby
                 } else if let peer = peer as? TelegramUser {
-                    if interfaceState.isPremiumRequiredForMessaging {
+                    if let _ = interfaceState.sendPaidMessageStars {
+                        contentType = .starsRequired
+                    } else if interfaceState.isPremiumRequiredForMessaging {
                         contentType = .premiumRequired
                     } else {
                         if peer.isDeleted || peer.botInfo != nil || peer.flags.contains(.isSupport) || peer.isScam || interfaceState.peerIsBlocked {
@@ -1847,7 +1880,9 @@ public final class ChatEmptyNode: ASDisplayNode {
             case .topic:
                 node = ChatEmptyNodeTopicChatContent(context: self.context)
             case .premiumRequired:
-                node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction)
+                node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction, stars: nil)
+            case .starsRequired:
+                node = ChatEmptyNodePremiumRequiredChatContent(context: self.context, interaction: self.interaction, stars: interfaceState.sendPaidMessageStars)
             }
             self.content = (contentType, node)
             self.addSubnode(node)
@@ -1858,7 +1893,7 @@ public final class ChatEmptyNode: ASDisplayNode {
                 node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
             }
         }
-        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired, .cloud].contains(contentType)
+        self.isUserInteractionEnabled = [.peerNearby, .greeting, .premiumRequired, .starsRequired, .cloud].contains(contentType)
         
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
         

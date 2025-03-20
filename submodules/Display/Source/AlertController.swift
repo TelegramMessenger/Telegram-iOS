@@ -150,7 +150,7 @@ open class AlertController: ViewController, StandalonePresentableController, Key
         self.presentingViewController?.dismiss(animated: false, completion: completion)
     }
     
-    public func dismissAnimated() {
+    open func dismissAnimated() {
         self.controllerNode.animateOut { [weak self] in
             self?.dismiss()
         }

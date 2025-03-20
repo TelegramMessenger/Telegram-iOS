@@ -285,7 +285,6 @@ extension VideoChatScreenComponent.View {
         }
         
         //let isScheduled = strongSelf.isScheduled
-        //TODO:release
         let isScheduled: Bool = !"".isEmpty
 
         let canSpeak: Bool

@@ -1087,9 +1087,9 @@ public final class OngoingGroupCallContext {
             
         }
         
-        func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+        func activateIncomingAudio() {
             #if os(iOS)
-            self.context.addRemoteConnectedEvent(isRemoteConntected)
+            self.context.activateIncomingAudio()
             #endif
         }
     }
@@ -1314,9 +1314,9 @@ public final class OngoingGroupCallContext {
         }
     }
     
-    public func addRemoteConnectedEvent(isRemoteConntected: Bool) {
+    public func activateIncomingAudio() {
         self.impl.with { impl in
-            impl.addRemoteConnectedEvent(isRemoteConntected: isRemoteConntected)
+            impl.activateIncomingAudio()
         }
     }
 }

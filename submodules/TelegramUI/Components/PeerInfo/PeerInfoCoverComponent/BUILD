@@ -20,8 +20,10 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/Components/HierarchyTrackingLayer",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/Utils/LokiRng",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",

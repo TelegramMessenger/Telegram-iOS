@@ -30,7 +30,7 @@ public final class TrendingPaneInteraction {
 
 public final class TrendingPanePackEntry: Identifiable, Comparable {
     public let index: Int
-    public let info: StickerPackCollectionInfo
+    public let info: StickerPackCollectionInfo.Accessor
     public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let topItems: [StickerPackItem]
@@ -38,7 +38,7 @@ public final class TrendingPanePackEntry: Identifiable, Comparable {
     public let unread: Bool
     public let topSeparator: Bool
     
-    public init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
+    public init(index: Int, info: StickerPackCollectionInfo.Accessor, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
         self.index = index
         self.info = info
         self.theme = theme
@@ -88,9 +88,9 @@ public final class TrendingPanePackEntry: Identifiable, Comparable {
     public func item(context: AccountContext, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
         return StickerPaneSearchGlobalItem(context: context, theme: self.theme, strings: self.strings, listAppearance: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: false, installed: self.installed, unread: self.unread, open: {
-            interaction.openPack(info)
+            interaction.openPack(info._parse())
         }, install: {
-            interaction.installPack(info)
+            interaction.installPack(info._parse())
         }, getItemIsPreviewed: { item in
             return interaction.getItemIsPreviewed(item)
         }, itemContext: interaction.itemContext)
@@ -272,16 +272,17 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                         if installed {
                             return .complete()
                         } else {
+                            let parsedInfo = info._parse()
                             return preloadedStickerPackThumbnail(account: context.account, info: info, items: items)
                             |> filter { $0 }
                             |> ignoreValues
                             |> then(
-                                context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                context.engine.stickers.addStickerPackInteractively(info: parsedInfo, items: items)
                                 |> ignoreValues
                             )
                             |> mapToSignal { _ -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                             }
-                            |> then(.single((info, items)))
+                            |> then(.single((parsedInfo, items)))
                         }
                     case .fetching:
                         break

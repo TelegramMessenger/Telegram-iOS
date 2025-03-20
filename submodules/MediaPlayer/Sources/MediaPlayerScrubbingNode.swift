@@ -489,7 +489,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     chapterNodesContainer.isUserInteractionEnabled = false
                     chapterNodesContainerImpl = chapterNodesContainer
                     
-                    var chapters = chapters
+                    var chapters = chapters.sorted(by: { $0.start < $1.start })
                     if let firstChapter = chapters.first, firstChapter.start > 0.0 {
                         chapters.insert(MediaPlayerScrubbingChapter(title: "", start: 0.0), at: 0)
                     }
@@ -915,7 +915,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                             let endPosition: CGFloat = max(startPosition, floor(backgroundFrame.width * CGFloat(chapter.start / duration)) - lineWidth / 2.0)
                             let width = endPosition - startPosition
-                            if width < lineWidth * 0.5 {
+                            if width < lineWidth * 0.5 && i != node.chapterNodes.count - 1 {
                                 previousChapterNode.frame = CGRect()
                                 continue
                             }

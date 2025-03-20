@@ -517,7 +517,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
                         inner: for availableReaction in availableReactions.reactions {
                             if availableReaction.value == reaction {
                                 if let file = availableReaction.centerAnimation {
-                                    self.items.append(Item(reaction: reaction, count: count, title: title, file: file))
+                                    self.items.append(Item(reaction: reaction, count: count, title: title, file: file._parse()))
                                 }
                                 break inner
                             }
@@ -769,7 +769,7 @@ final class ChatSearchTitleAccessoryPanelNode: ChatTitleAccessoryPanelNode, Chat
             reactionFile = self.context.engine.stickers.availableReactions()
             |> take(1)
             |> map { availableReactions -> TelegramMediaFile? in
-                return availableReactions?.reactions.first(where: { $0.value == reaction })?.selectAnimation
+                return availableReactions?.reactions.first(where: { $0.value == reaction })?.selectAnimation._parse()
             }
         case let .custom(fileId):
             reactionFile = self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])

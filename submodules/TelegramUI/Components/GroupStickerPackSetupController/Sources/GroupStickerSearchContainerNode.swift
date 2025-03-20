@@ -48,7 +48,7 @@ private final class GroupStickerSearchEntry: Comparable, Identifiable {
         let pack = self.pack
         let count = presentationData.strings.StickerPack_EmojiCount(pack.count)
         
-        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), context: context, packInfo: pack, itemCount: count, topItem: self.topItem as? StickerPackItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: true, style: .plain, sectionId: 0, action: {
+        return ItemListStickerPackItem(presentationData: ItemListPresentationData(presentationData), context: context, packInfo: StickerPackCollectionInfo.Accessor(pack), itemCount: count, topItem: self.topItem as? StickerPackItem, unread: false, control: .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: true, style: .plain, sectionId: 0, action: {
             interaction.packSelected(pack)
         }, setPackIdWithRevealedOptions: { _, _ in
         }, addPack: {

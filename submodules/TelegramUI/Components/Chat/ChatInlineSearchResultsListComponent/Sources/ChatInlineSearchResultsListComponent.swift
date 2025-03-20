@@ -685,6 +685,8 @@ public final class ChatInlineSearchResultsListComponent: Component {
                         openWebApp: { _ in
                         },
                         openPhotoSetup: {
+                        },
+                        openAdInfo: { _ in
                         }
                     )
                     self.chatListNodeInteraction = chatListNodeInteraction

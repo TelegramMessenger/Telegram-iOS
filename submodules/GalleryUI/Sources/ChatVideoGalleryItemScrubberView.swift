@@ -388,15 +388,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             let targetCloneView = scrubberTransition.makeView()
             self.addSubview(targetCloneView)
             targetCloneView.frame = fromRect
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 0.0), .immediate)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 0.0, direction: .in), .immediate)
             targetCloneView.alpha = 1.0
             
             transition.updateFrame(view: targetCloneView, frame: CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - fromRect.height - 3.0), size: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height)))
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 1.0), transition)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: fromRect.size, destinationSize: CGSize(width: self.scrubberNode.bounds.width, height: fromRect.height), progress: 1.0, direction: .in), transition)
             let scrubberTransitionView = scrubberTransition.view
             scrubberTransitionView.isHidden = true
-            ContainedViewLayoutTransition.animated(duration: 0.08, curve: .easeInOut).updateAlpha(layer: targetCloneView.layer, alpha: 0.0, completion: { [weak scrubberTransitionView, weak targetCloneView] _ in
-                scrubberTransitionView?.isHidden = false
+            ContainedViewLayoutTransition.animated(duration: 0.08, curve: .easeInOut).updateAlpha(layer: targetCloneView.layer, alpha: 0.0, completion: { [weak targetCloneView] _ in
                 targetCloneView?.removeFromSuperview()
             })
             
@@ -428,11 +427,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             let targetCloneView = scrubberTransition.makeView()
             self.addSubview(targetCloneView)
             targetCloneView.frame = CGRect(origin: CGPoint(x: self.scrubberNode.frame.minX, y: self.scrubberNode.frame.maxY - toRect.height), size: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height))
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 0.0), .immediate)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 0.0, direction: .out), .immediate)
             targetCloneView.alpha = 0.0
             
             transition.updateFrame(view: targetCloneView, frame: toRect)
-            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 1.0), transition)
+            scrubberTransition.updateView(targetCloneView, GalleryItemScrubberTransition.Scrubber.TransitionState(sourceSize: CGSize(width: self.scrubberNode.bounds.width, height: toRect.height), destinationSize: toRect.size, progress: 1.0, direction: .out), transition)
             let scrubberTransitionView = scrubberTransition.view
             scrubberTransitionView.isHidden = true
             transition.updateAlpha(layer: targetCloneView.layer, alpha: 1.0, completion: { [weak scrubberTransitionView] _ in

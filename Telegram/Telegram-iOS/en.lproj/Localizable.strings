@@ -3703,6 +3703,18 @@ Unused sets are archived when you add more.";
 "NotificationsSound.Pulse" = "Pulse";
 "NotificationsSound.Synth" = "Synth";
 
+"NotificationsSound.Rebound" = "Rebound";
+"NotificationsSound.Antic" = "Antic";
+"NotificationsSound.Cheers" = "Cheers";
+"NotificationsSound.Droplet" = "Droplet";
+"NotificationsSound.Handoff" = "Handoff";
+"NotificationsSound.Milestone" = "Milestone";
+"NotificationsSound.Passage" = "Passage";
+"NotificationsSound.Portal" = "Portal";
+"NotificationsSound.Rattle" = "Rattle";
+"NotificationsSound.Slide" = "Slide";
+"NotificationsSound.Welcome" = "Welcome";
+
 "NotificationsSound.Tritone" = "Tri-tone";
 "NotificationsSound.Tremolo" = "Tremolo";
 "NotificationsSound.Alert" = "Alert";
@@ -9813,10 +9825,6 @@ Sorry for the inconvenience.";
 "Premium.Stories.Format.Title" = "Links and Formatting";
 "Premium.Stories.Format.Text" = "Add links and formatting in captions to your stories.";
 
-"Premium.MaxExpiringStoriesText" = "You can post **%@** stories in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
-"Premium.MaxExpiringStoriesNoPremiumText" = "You have reached the limit of **%@** stories per **24** hours.";
-"Premium.MaxExpiringStoriesFinalText" = "You have reached the limit of **%@** stories per **24** hours.";
-
 "Premium.MaxStoriesWeeklyText" = "You can post **%@** stories in a week. Upgrade to **Telegram Premium** to increase this limit to **%@**.";
 "Premium.MaxStoriesWeeklyNoPremiumText" = "You have reached the limit of **%@** stories per week.";
 "Premium.MaxStoriesWeeklyFinalText" = "You have reached the limit of **%@** stories per week.";
@@ -12845,6 +12853,8 @@ Sorry for the inconvenience.";
 
 "Chat.ToastStarsSent.Title_1" = "Star sent!";
 "Chat.ToastStarsSent.Title_any" = "Stars sent!";
+"Chat.ToastStarsSent.TitleChannel_1" = "Star sent as {name}!";
+"Chat.ToastStarsSent.TitleChannel_any" = "Stars sent as {name}!";
 
 "Chat.ToastStarsSent.AnonymousTitle_1" = "Star sent anonymously!";
 "Chat.ToastStarsSent.AnonymousTitle_any" = "Stars sent anonymously!";
@@ -13457,6 +13467,7 @@ Sorry for the inconvenience.";
 "StarsTransaction.StarRefReason.Miniapp" = "Mini App";
 "StarsTransaction.StarRefReason.Affiliate" = "Affiliate";
 "StarsTransaction.StarRefReason.Referred" = "Referred User";
+"StarsTransaction.StarRefReason.Commission" = "Commission";
 
 "Gallery.SaveToGallery.cached" = "cached";
 
@@ -13561,7 +13572,7 @@ Sorry for the inconvenience.";
 "FolderLinkPreview.ToastChatsAddedTitleV2" = "Folder {folder} Updated";
 "FolderLinkPreview.ToastFolderAddedTitleV2" = "Folder {folder} Added";
 
-"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade yort gift into a unique collectible.";
+"Stars.Purchase.UpgradeStarGiftInfo" = "Buy Stars to upgrade your gift into a unique collectible.";
 
 "Gift.Send.Upgrade" = "Make Unique for %@";
 "Gift.Send.Upgrade.Info" = "Enable this to let %1$@ turn your gift into a unique collectible. [Learn More >]()";
@@ -13799,7 +13810,7 @@ Sorry for the inconvenience.";
 "NameColor.GiftInfo" = "Apply your collectible's unique look to your profile.";
 "NameColor.WearCollectible" = "Wear Collectible";
 
-"Notification.StarsGift.TransferToChannel" = "%@ transferred a unique collectible to %@";
+"Notification.StarsGift.TransferToChannel" = "%1$@ transferred a unique collectible to %2$@";
 "Notification.StarsGift.TransferToChannelYou" = "You transferred a unique collectible to %@";
 
 "Gift.Convert.Success.ChannelText" = "**%1$@** were sent to channel's balance.";
@@ -13808,3 +13819,202 @@ Sorry for the inconvenience.";
 
 "Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
 "Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
+
+"AvatarEditor.PremiumNeeded.Background" = "Subscribe to Telegram Premium to choose this background.";
+"AvatarEditor.PremiumNeeded.Emoji" = "Subscribe to Telegram Premium to choose this emoji.";
+"AvatarEditor.PremiumNeeded.Sticker" = "Subscribe to Telegram Premium to choose this sticker.";
+
+"PremiumNeeded.Title" = "Premium Needed";
+"PremiumNeeded.Subscribe" = "Subscribe";
+
+"Gift.Convert.Success.ChannelText" = "**%1$@** were sent to channel's balance.";
+"Gift.Convert.Success.ChannelText.Stars_1" = "%@ Star";
+"Gift.Convert.Success.ChannelText.Stars_any" = "%@ Stars";
+
+"GroupInfo.Permissions.ChargeForMessages" = "Charge for Messages";
+"GroupInfo.Permissions.ChargeForMessagesInfo" = "If you turn this on, regular members of the group will have to pay Stars to send messages.";
+"GroupInfo.Permissions.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
+"GroupInfo.Permissions.MessagePriceInfo" = "Your group will receive %1$@% of the selected fee (%2$@) for each incoming message.";
+
+"Privacy.Messages.ChargeForMessages" = "Charge for Messages";
+"Privacy.Messages.ChargeForMessagesInfo" = "Charge a fee for messages from people outide your contacts or those you haven't messaged first.";
+"Privacy.Messages.MessagePrice" = "SET YOUR PRICE PER MESSAGE";
+"Privacy.Messages.MessagePriceInfo" = "Your will receive %1$@% of the selected fee (%2$@) for each incoming message.";
+
+"Privacy.Messages.RemoveFeeHeader" = "EXCEPTIONS";
+"Privacy.Messages.RemoveFee" = "Remove Fee";
+"Privacy.Messages.RemoveFeeInfo" = "Add users or entire groups who won't be charged for sending messages to you.";
+
+"Privacy.Messages.Exceptions.Title" = "Remove Fee";
+
+"Chat.EmptyStatePaidMessaging.Text" = "**%1$@** charges **%2$@**\nfor each message.";
+"Chat.EmptyStatePaidMessagingDisabled.Text" = "**%1$@** charges **%2$@**\nfor each message.";
+"Chat.EmptyStatePaidMessaging.Action" = "Buy Stars";
+
+"Notification.PaidMessage.Stars_1" = "%@ Star";
+"Notification.PaidMessage.Stars_any" = "%@ Stars";
+
+"Notification.PaidMessage.Messages_1" = "%@ message";
+"Notification.PaidMessage.Messages_any" = "%@ messages";
+
+"Notification.PaidMessage" = "%1$@ paid %2$@ to send a message";
+"Notification.PaidMessageYou" = "You paid %1$@ to send a message";
+
+"Notification.PaidMessageMany" = "%1$@ paid %2$@ to send %3$@";
+"Notification.PaidMessageYouMany" = "You paid %1$@ to send %2$@";
+
+"Stars.Transfer.Terms" = "By purchasing you agree to the [Terms of Service]().";
+"Stars.Transfer.Terms_URL" = "https://telegram.org/tos/stars";
+
+"StarsTransaction.Commission" = "Commission";
+
+"Settings.Privacy.Messages.ValuePaid" = "Paid";
+
+"Stars.Transaction.PaidMessage_1" = "Fee for %@ Message";
+"Stars.Transaction.PaidMessage_any" = "Fee for %@ Messages";
+"Stars.Transaction.PaidMessage.Text" = "You receive **%@%** of the price that you charge for each incoming message. [Change Fee >]()";
+"Stars.Transaction.Paid" = "Paid";
+
+"Stars.Intro.Transaction.PaidMessage_1" = "Fee for %@ Message";
+"Stars.Intro.Transaction.PaidMessage_any" = "Fee for %@ Messages";
+
+"Stars.Transaction.TelegramPremium_1" = "Premium for %@ Month";
+"Stars.Transaction.TelegramPremium_any" = "Premium for %@ Months";
+
+"Stars.Intro.Transaction.TelegramPremium_1" = "Premium for %@ Month";
+"Stars.Intro.Transaction.TelegramPremium_any" = "Premium for %@ Months";
+
+"Stars.Purchase.SendMessageInfo" = "Buy Stars to send a message to **%@**.";
+"Stars.Purchase.SendGroupMessageInfo" = "Buy Stars to send a message in **%@**.";
+
+"Gift.Options.Gift.Transfer" = "Transfer";
+"Gift.Options.Gift.Filter.MyGifts" = "My Gifts";
+"Gift.Options.Premium.OrStars" = "or %@";
+
+"Gift.Send.PayWithStars" = "Pay with %@";
+"Gift.Send.PayWithStars.Info" = "Your balance is **%@**. [Get More Stars >]()";
+
+"Chat.PanelCustomStatusShortInfo" = "%@ is a mark for [Premium subscribers >]()";
+
+"Chat.NonContactUser.Subtitle" = "Not a contact";
+"Chat.NonContactUser.PhoneNumber" = "Phone Number";
+"Chat.NonContactUser.Registration" = "Registration";
+"Chat.NonContactUser.Groups" = "Shared Groups";
+"Chat.NonContactUser.GroupsCount_1" = "%@ group";
+"Chat.NonContactUser.GroupsCount_any" = "%@ groups";
+"Chat.NonContactUser.GroupsNone" = "None";
+"Chat.NonContactUser.Disclaimer" = "Not an official account";
+"Chat.NonContactUser.AnonymousNumber" = "Anonymous";
+
+"Chat.NonContactUser.UpdatedName" = "User updated name %1$@";
+"Chat.NonContactUser.UpdatedPhoto" = "User updated photo %1$@";
+
+"Chat.NonContactUser.UpdatedMinutes_1" = "%@ minute ago";
+"Chat.NonContactUser.UpdatedMinutes_any" = "%@ minutes ago";
+"Chat.NonContactUser.UpdatedHours_1" = "%@ hour ago";
+"Chat.NonContactUser.UpdatedHours_any" = "%@ hours ago";
+"Chat.NonContactUser.UpdatedDays_1" = "%@ day ago";
+"Chat.NonContactUser.UpdatedDays_any" = "%@ days ago";
+
+"Chat.InputTextPaidMessagePlaceholder" = "Message for %@";
+"Chat.InputTextPaidCommentPlaceholder" = "Comment for %@";
+
+"Privacy.Messages.Stars_1" = "%@ Star";
+"Privacy.Messages.Stars_any" = "%@ Stars";
+"Privacy.Messages.Unlock" = "Unlock with Telegram Premium";
+
+"Premium.PaidMessages" = "Paid Messages";
+"Premium.PaidMessagesInfo" = "Charge a fee for messages from non-contacts or new senders.";
+"Premium.PaidMessages.Proceed" = "About Telegram Premium";
+
+"PeerInfo.Gifts.Reorder" = "Reorder";
+"PeerInfo.Gifts.Context.Pin" = "Pin";
+"PeerInfo.Gifts.Context.Unpin" = "Unpin";
+"PeerInfo.Gifts.Context.Reorder" = "Reorder";
+"PeerInfo.Gifts.Context.Wear" = "Wear";
+"PeerInfo.Gifts.Context.CopyLink" = "Copy Link";
+"PeerInfo.Gifts.Context.Share" = "Share";
+"PeerInfo.Gifts.Context.Hide" = "Hide";
+"PeerInfo.Gifts.Context.Show" = "Show";
+"PeerInfo.Gifts.Context.Transfer" = "Transfer";
+
+"Gift.Send.Premium.Confirmation.Title" = "Send a Gift";
+"Gift.Send.Premium.Confirmation.Text" = "Are you sure you want to gift **Telegram Premium** to **%1$@** for **%2$@**?";
+"Gift.Send.Premium.Confirmation.Text.Stars_1" = "%@ Star";
+"Gift.Send.Premium.Confirmation.Text.Stars_any" = "%@ Stars";
+"Gift.Send.Premium.Confirmation.Confirm" = "Confirm";
+
+"StarsBalance.YourBalance" = "Your balance is %@";
+"StarsBalance.GetMoreStars" = "Get More Stars >";
+
+"Stars.Intro.BuyShort" = "Top Up";
+"Stars.Intro.Withdraw" = "Withdraw";
+"Stars.Intro.Stats" = "Stats";
+
+"Group.Info.Settings" = "Group Settings";
+
+"Monetization.Balance.StarsInfoGroup" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";
+
+"PeerInfo.Gifts.ToastPinLimit.Text_1" = "You can't pin more than %@ gift.";
+"PeerInfo.Gifts.ToastPinLimit.Text_any" = "You can't pin more than %@ gifts.";
+"PeerInfo.Gifts.ToastUnpinned.Text" = "Gift Unpinned.";
+"PeerInfo.Gifts.ToastPinned.Title" = "Gift Pinned";
+"PeerInfo.Gifts.ToastPinned.Text" = "Now it will always be shown on the top.";
+
+"Chat.PaidMessage.Confirm.Title" = "Confirm Payment";
+"Chat.PaidMessage.Confirm.DontAskAgain" = "Don't ask again";
+"Chat.PaidMessage.Confirm.PayForMessage_1" = "Pay for %@ Message";
+"Chat.PaidMessage.Confirm.PayForMessage_any" = "Pay for %@ Messages";
+"Chat.PaidMessage.Confirm.Single.Text" = "**%1$@** charges **%2$@** per incoming message. Would you like to pay **%3$@** to send %4$@?";
+"Chat.PaidMessage.Confirm.SingleComment.Text" = "**%1$@** charges **%2$@** per comment. Would you like to pay **%3$@** to send %4$@?";
+"Chat.PaidMessage.Confirm.Multiple.Text" = "You selected %1$@ who charge Stars for messages. Would you like to pay **%2$@** Stars to send %3$@?";
+"Chat.PaidMessage.Confirm.Text.Users_1" = "**%@** user";
+"Chat.PaidMessage.Confirm.Text.Users_any" = "**%@** users";
+"Chat.PaidMessage.Confirm.Text.Messages_1" = "**%@** message";
+"Chat.PaidMessage.Confirm.Text.Messages_any" = "**%@** messages";
+"Chat.PaidMessage.Confirm.Text.Stars_1" = "%@ Star";
+"Chat.PaidMessage.Confirm.Text.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessage.RemoveFee.Title" = "Remove Fee";
+"Chat.PaidMessage.RemoveFee.Text" = "Are you sure you want to allow **%@** to message you for free?";
+"Chat.PaidMessage.RemoveFee.Yes" = "Yes";
+"Chat.PaidMessage.RemoveFee.Refund" = "Refund already paid **%@**";
+"Chat.PaidMessage.RemoveFee.Refund.Stars_1" = "%@ Star";
+"Chat.PaidMessage.RemoveFee.Refund.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessage.Sent.Title_1" = "Message Sent";
+"Chat.PaidMessage.Sent.Title_any" = "%@ Messages Sent";
+"Chat.PaidMessage.Sent.Text" = "You paid %@";
+"Chat.PaidMessage.Sent.Text.Stars_1" = "%@ Star";
+"Chat.PaidMessage.Sent.Text.Stars_any" = "%@ Stars";
+
+"Chat.PaidMessageFee.Text" = "%1$@ must pay %2$@ for each message to you.";
+"Chat.PaidMessageFee.RemoveFee" = "Remove Fee";
+
+"Privacy.Review.Review" = "Review";
+"Privacy.Review.Calls.Title" = "Call Settings";
+"Privacy.Review.Calls.Text" = "You've restricted who can message you, but anyone can still call you. Would you like to review these settings?";
+
+"Privacy.Review.Invite.Title" = "Invitation Settings";
+"Privacy.Review.Invite.Text" = "You've restricted who can message you, but anyone can still invite you to groups and channels. Would you like to review these settings?";
+
+"Conversation.VideoTimeLinkCopied" = "Link with start time at %@ copied to clipboard.";
+"Share.VideoStartAt" = "Start at %@";
+"SendStarReactions.SubtitleFrom" = "from %@";
+
+"Premium.MaxExpiringStoriesTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesTextPremiumNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesTextPremiumNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesTextFormat" = "You can post %@ in **24** hours. Subscribe to **Telegram Premium** to increase this limit to **%@**.";
+
+"Premium.MaxExpiringStoriesNoPremiumTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesNoPremiumTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesNoPremiumTextFormat" = "You have reached the limit of %@ per **24** hours.";
+
+"Premium.MaxExpiringStoriesFinalTextNumberFormat_1" = "**%d** story";
+"Premium.MaxExpiringStoriesFinalTextNumberFormat_any" = "**%d** stories";
+"Premium.MaxExpiringStoriesFinalTextFormat" = "You have reached the limit of %@ stories per **24** hours.";
+
+"Stars.AccountRevenue.Proceeds.Info" = "Stars from your total balance can be withdrawn as rewards 21 days after they are earned.";
+"Stars.AccountRevenue.Withdraw.Info" = "You can collect rewards for Stars using Fragment. You cannot withdraw less than 1000 stars. [Learn More >]()";

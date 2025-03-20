@@ -51,7 +51,7 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
         if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
             parsedPeers.append(telegramUser)
             switch user {
-            case let .user(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId, _, _, _, _):
+            case let .user(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId, _, _, _, _, _):
                 let isMin = (flags & (1 << 20)) != 0
                 let storiesUnavailable = (flags2 & (1 << 4)) != 0
                 
@@ -72,7 +72,7 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
     }
     for (_, chat) in peers.chats {
         switch chat {
-        case let .channel(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId, _, _, _, _, _, _):
+        case let .channel(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId, _, _, _, _, _, _, _):
             let isMin = (flags & (1 << 12)) != 0
             let storiesUnavailable = (flags2 & (1 << 3)) != 0
             
@@ -315,7 +315,7 @@ func updatePeerPresences(transaction: Transaction, accountPeerId: PeerId, peerPr
             parsedPresences[peerId] = presence
         default:
             switch user {
-            case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 let isMin = (flags & (1 << 20)) != 0
                 if isMin, let _ = transaction.getPeerPresence(peerId: peerId) {
                 } else {
@@ -383,7 +383,7 @@ func updateContacts(transaction: Transaction, apiUsers: [Api.User]) {
     for user in apiUsers {
         var isContact: Bool?
         switch user {
-        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .user(flags, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if (flags & (1 << 20)) == 0 {
                 isContact = (flags & (1 << 11)) != 0
             }

@@ -14,6 +14,7 @@ import MultiplexedVideoNode
 import FeaturedStickersScreen
 import StickerPeekUI
 import EntityKeyboardGifContent
+import BatchVideoRendering
 
 private let searchBarHeight: CGFloat = 52.0
 
@@ -54,7 +55,7 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
         return self.contentNode.ready
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, stickerActionTitle: String? = nil, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void, peekBehavior: EmojiContentPeekBehavior?) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, batchVideoRenderingContext: BatchVideoRenderingContext?, stickerActionTitle: String? = nil, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void, peekBehavior: EmojiContentPeekBehavior?) {
         self.context = context
         self.mode = mode
         self.interaction = interaction
@@ -62,7 +63,7 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
         self.peekBehavior = peekBehavior
         switch mode {
         case .gif:
-            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
+            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, batchVideoRenderingContext: batchVideoRenderingContext ?? BatchVideoRenderingContext(context: context), trendingPromise: trendingGifsPromise)
         case .sticker, .trending:
             self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, stickerActionTitle: stickerActionTitle)
         }

@@ -179,6 +179,25 @@ private final class ScrollContent: CombinedComponent {
             contentSize.height += spacing
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+            
+            let respectText: String
+            let adsText: String
+            let infoRawText: String
+            switch component.mode {
+            case .channel:
+                respectText = strings.AdsInfo_Respect_Text
+                adsText = strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string
+                infoRawText = strings.AdsInfo_Launch_Text
+            case .bot:
+                respectText = strings.AdsInfo_Bot_Respect_Text
+                adsText =  strings.AdsInfo_Bot_Ads_Text
+                infoRawText = strings.AdsInfo_Bot_Launch_Text
+            case .search:
+                respectText = "Ads like this do not use your personal information and are based on the search query you entered."
+                adsText = strings.AdsInfo_Bot_Ads_Text
+                infoRawText = "Anyone can create an ad to display in search results for any query. Check out the Telegram Ad Platform for details. [Learn More >]()"
+            }
+            
             var items: [AnyComponentWithIdentity<Empty>] = []
             items.append(
                 AnyComponentWithIdentity(
@@ -186,7 +205,7 @@ private final class ScrollContent: CombinedComponent {
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Respect_Title,
                         titleColor: textColor,
-                        text: component.mode == .bot ? strings.AdsInfo_Bot_Respect_Text : strings.AdsInfo_Respect_Text,
+                        text: respectText,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Ads/Privacy",
@@ -194,27 +213,31 @@ private final class ScrollContent: CombinedComponent {
                     ))
                 )
             )
-            items.append(
-                AnyComponentWithIdentity(
-                    id: "split",
-                    component: AnyComponent(ParagraphComponent(
-                        title: component.mode == .bot ? strings.AdsInfo_Bot_Split_Title : strings.AdsInfo_Split_Title,
-                        titleColor: textColor,
-                        text: component.mode == .bot ? strings.AdsInfo_Bot_Split_Text : strings.AdsInfo_Split_Text,
-                        textColor: secondaryTextColor,
-                        accentColor: linkColor,
-                        iconName: "Ads/Split",
-                        iconColor: linkColor
-                    ))
+            if case .search = component.mode {
+                
+            } else {
+                items.append(
+                    AnyComponentWithIdentity(
+                        id: "split",
+                        component: AnyComponent(ParagraphComponent(
+                            title: component.mode == .bot ? strings.AdsInfo_Bot_Split_Title : strings.AdsInfo_Split_Title,
+                            titleColor: textColor,
+                            text: component.mode == .bot ? strings.AdsInfo_Bot_Split_Text : strings.AdsInfo_Split_Text,
+                            textColor: secondaryTextColor,
+                            accentColor: linkColor,
+                            iconName: "Ads/Split",
+                            iconColor: linkColor
+                        ))
+                    )
                 )
-            )
+            }
             items.append(
                 AnyComponentWithIdentity(
                     id: "ads",
                     component: AnyComponent(ParagraphComponent(
                         title: strings.AdsInfo_Ads_Title,
                         titleColor: textColor,
-                        text: component.mode == .bot ? strings.AdsInfo_Bot_Ads_Text : strings.AdsInfo_Ads_Text("\(premiumConfiguration.minChannelRestrictAdsLevel)").string,
+                        text: adsText,
                         textColor: secondaryTextColor,
                         accentColor: linkColor,
                         iconName: "Premium/BoostPerk/NoAds",
@@ -253,7 +276,7 @@ private final class ScrollContent: CombinedComponent {
                 state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
             }
             
-            var infoString = component.mode == .bot ? strings.AdsInfo_Bot_Launch_Text : strings.AdsInfo_Launch_Text
+            var infoString = infoRawText
             if let spaceRegex {
                 let nsRange = NSRange(infoString.startIndex..., in: infoString)
                 let matches = spaceRegex.matches(in: infoString, options: [], range: nsRange)
@@ -621,6 +644,7 @@ public class AdsInfoScreen: ViewController {
     public enum Mode: Equatable {
         case channel
         case bot
+        case search
     }
     
     final class Node: ViewControllerTracingNode, ASGestureRecognizerDelegate {

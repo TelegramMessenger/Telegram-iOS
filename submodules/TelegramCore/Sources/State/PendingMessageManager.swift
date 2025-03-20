@@ -63,6 +63,8 @@ private final class PendingMessageContext {
     var error: PendingMessageFailureReason?
     var statusSubscribers = Bag<(PendingMessageStatus?, PendingMessageFailureReason?) -> Void>()
     var forcedReuploadOnce: Bool = false
+    let postponeDisposable = MetaDisposable()
+    var postponeSending = false
 }
 
 public enum PendingMessageFailureReason {
@@ -252,6 +254,7 @@ public final class PendingMessageManager {
                     context.sendDisposable.dispose()
                     context.uploadDisposable.dispose()
                     context.activityDisposable.dispose()
+                    context.postponeDisposable.dispose()
                     
                     if context.status != nil {
                         context.status = nil
@@ -486,7 +489,10 @@ public final class PendingMessageManager {
 
                 
                 for (messageContext, message, type, contentUploadSignal) in messagesToUpload {
-                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type) {
+                    if let paidStarsAttribute = message.paidStarsAttribute, paidStarsAttribute.postponeSending {
+                        strongSelf.beginWaitingForPostponedMessageCommit(messageContext: messageContext, id: message.id)
+                    }
+                    if strongSelf.canBeginUploadingMessage(id: message.id, type: type), !messageContext.postponeSending {
                         strongSelf.beginUploadingMessage(messageContext: messageContext, id: message.id, threadId: message.threadId, groupId: message.groupingKey, uploadSignal: contentUploadSignal)
                     } else {
                         messageContext.state = .waitingForUploadToStart(groupId: message.groupingKey, upload: contentUploadSignal)
@@ -663,6 +669,33 @@ public final class PendingMessageManager {
         messageContext.state = .collectingInfo(message: message)
     }
     
+    private func beginWaitingForPostponedMessageCommit(messageContext: PendingMessageContext, id: MessageId) {
+        messageContext.postponeSending = true
+        
+        let signal: Signal<Void, NoError> = self.postbox.transaction { transaction -> Void in
+            transaction.setPendingMessageAction(type: .sendPostponedPaidMessage, id: id, action: PostponeSendPaidMessageAction(randomId: Int64.random(in: Int64.min ... Int64.max)))
+        }
+        |> mapToSignal { _ in
+            return self.stateManager.commitSendPendingPaidMessage
+            |> filter {
+                $0 == id
+            }
+            |> take(1)
+            |> map { _ in
+                Void()
+            }
+        }
+        |> deliverOn(self.queue)
+        
+        messageContext.postponeDisposable.set(signal.start(next: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            messageContext.postponeSending = false
+            self.updateWaitingUploads(peerId: id.peerId)
+        }))
+    }
+    
     private func beginUploadingMessage(messageContext: PendingMessageContext, id: MessageId, threadId: Int64?, groupId: Int64?, uploadSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>) {
         messageContext.state = .uploading(groupId: groupId)
         
@@ -740,7 +773,7 @@ public final class PendingMessageManager {
         loop: for contextId in messageIdsForPeer {
             let context = self.messageContexts[contextId]!
             if case let .waitingForUploadToStart(groupId, uploadSignal) = context.state {
-                if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media) {
+                if self.canBeginUploadingMessage(id: contextId, type: context.contentType ?? .media), !context.postponeSending {
                     context.state = .uploading(groupId: groupId)
                     let status = PendingMessageStatus(isRunning: true, progress: PendingMessageStatus.Progress(progress: 0.0))
                     context.status = status
@@ -826,6 +859,7 @@ public final class PendingMessageManager {
                 var sendAsPeerId: PeerId?
                 var quickReply: OutgoingQuickReplyMessageAttribute?
                 var messageEffect: EffectMessageAttribute?
+                var allowPaidStars: Int64?
                 
                 var flags: Int32 = 0
                 
@@ -862,6 +896,8 @@ public final class PendingMessageManager {
                         flags |= Int32(1 << 16)
                     } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
                         videoTimestamp = attribute.timestamp
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute {
+                        allowPaidStars = attribute.stars.value * Int64(messages.count)
                     }
                 }
                                 
@@ -925,6 +961,10 @@ public final class PendingMessageManager {
                         flags |= 1 << 17
                     }
                     
+                    if let _ = allowPaidStars {
+                        flags |= 1 << 21
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -932,7 +972,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -1063,7 +1103,11 @@ public final class PendingMessageManager {
                         messageEffectId = messageEffect.id
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId))
+                    if let _ = allowPaidStars {
+                        flags |= 1 << 21
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyTo: replyTo, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars))
                 }
                 
                 return sendMessageRequest
@@ -1279,6 +1323,7 @@ public final class PendingMessageManager {
                 var bubbleUpEmojiOrStickersets = false
                 var quickReply: OutgoingQuickReplyMessageAttribute?
                 var messageEffect: EffectMessageAttribute?
+                var allowPaidStars: Int64?
                 
                 var flags: Int32 = 0
         
@@ -1319,6 +1364,8 @@ public final class PendingMessageManager {
                         messageEffect = attribute
                     } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
                         videoTimestamp = attribute.timestamp
+                    } else if let attribute = attribute as? PaidStarsMessageAttribute {
+                        allowPaidStars = attribute.stars.value
                     }
                 }
                 
@@ -1426,7 +1473,11 @@ public final class PendingMessageManager {
                             messageEffectId = messageEffect.id
                         }
                     
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), info: .acknowledgement, tag: dependencyTag)
+                        if let _ = allowPaidStars {
+                            flags |= 1 << 21
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
@@ -1510,7 +1561,11 @@ public final class PendingMessageManager {
                             messageEffectId = messageEffect.id
                         }
                         
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId), tag: dependencyTag)
+                        if let _ = allowPaidStars {
+                            flags |= 1 << 21
+                        }
+                    
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, effect: messageEffectId, allowPaidStars: allowPaidStars), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         var topMsgId: Int32?
@@ -1533,8 +1588,12 @@ public final class PendingMessageManager {
                             flags |= 1 << 20
                         }
                     
+                        if let _ = allowPaidStars {
+                            flags |= 1 << 21
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1607,7 +1666,11 @@ public final class PendingMessageManager {
                             flags |= 1 << 17
                         }
                     
-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut))
+                        if let _ = allowPaidStars {
+                            flags |= 1 << 21
+                        }
+                    
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: quickReplyShortcut, allowPaidStars: allowPaidStars))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
                         let replyTo: Api.InputReplyTo
@@ -1758,7 +1821,7 @@ public final class PendingMessageManager {
             if message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 isScheduled = true
             }
-            if case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage {
+            if case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage {
                 if (flags2 & (1 << 4)) != 0 {
                     isScheduled = true
                 }
@@ -1793,7 +1856,7 @@ public final class PendingMessageManager {
                 namespace = Namespaces.Message.QuickReplyCloud
             } else if let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
                 namespace = Namespaces.Message.ScheduledCloud
-            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
+            } else if let apiMessage = result.messages.first, case let .message(_, flags2, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = apiMessage, (flags2 & (1 << 4)) != 0 {
                 namespace = Namespaces.Message.ScheduledCloud
             }
         }

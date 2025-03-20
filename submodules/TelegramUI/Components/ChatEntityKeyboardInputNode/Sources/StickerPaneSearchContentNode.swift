@@ -95,7 +95,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
             itemContext.canPlayMedia = true
-            return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: false, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: false, info: StickerPackCollectionInfo.Accessor(info), topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info, topItems, !installed)
@@ -255,10 +255,11 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 |> mapToSignal { result -> Signal<(StickerPackCollectionInfo, [StickerPackItem]), NoError> in
                     switch result {
                     case let .result(info, items, installed):
+                        let info = info._parse()
                         if installed {
                             return .complete()
                         } else {
-                            return preloadedStickerPackThumbnail(account: context.account, info: info, items: items)
+                            return preloadedStickerPackThumbnail(account: context.account, info: StickerPackCollectionInfo.Accessor(info), items: items)
                             |> filter { $0 }
                             |> ignoreValues
                             |> then(
@@ -572,7 +573,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         if !self.trendingPane.isHidden {
             if let (itemNode, item) = self.trendingPane.itemAt(point: self.view.convert(point, to: self.trendingPane.view)) {
-                return (itemNode, StickerPreviewPeekItem.pack(item.file))
+                return (itemNode, StickerPreviewPeekItem.pack(item.file._parse()))
             }
         } else {
             if let itemNode = self.gridNode.itemNodeAtPoint(self.view.convert(point, to: self.gridNode.view)) {
@@ -580,7 +581,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     return (itemNode, StickerPreviewPeekItem.found(stickerItem))
                 } else if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                     if let (node, item) = itemNode.itemAt(point: self.view.convert(point, to: itemNode.view)) {
-                        return (node, StickerPreviewPeekItem.pack(item.file))
+                        return (node, StickerPreviewPeekItem.pack(item.file._parse()))
                     }
                 }
             }

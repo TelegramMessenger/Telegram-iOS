@@ -48,6 +48,10 @@ swift_library(
         "//submodules/lottie-ios:Lottie",
         "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
         "//submodules/TelegramUIPreferences",
+        "//submodules/TelegramCore/FlatBuffers",
+        "//submodules/TelegramCore/FlatSerialization",
+        "//submodules/TelegramUI/Components/BatchVideoRendering",
+        "//submodules/TelegramUI/Components/GifVideoLayer",
     ],
     visibility = [
         "//visibility:public",

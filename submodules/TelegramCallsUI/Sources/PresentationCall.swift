@@ -15,13 +15,14 @@ import AccountContext
 import DeviceProximity
 import PhoneNumberFormat
 
-final class SharedCallAudioContext {
+public final class SharedCallAudioContext {
     let audioDevice: OngoingCallContext.AudioDevice?
     let callKitIntegration: CallKitIntegration?
     
     private var audioSessionDisposable: Disposable?
     private var audioSessionShouldBeActiveDisposable: Disposable?
     private var isAudioSessionActiveDisposable: Disposable?
+    private var audioOutputStateDisposable: Disposable?
     
     private(set) var audioSessionControl: ManagedAudioSessionControl?
     
@@ -32,7 +33,7 @@ final class SharedCallAudioContext {
     
     private let audioOutputStatePromise = Promise<([AudioSessionOutput], AudioSessionOutput?)>(([], nil))
     private var audioOutputStateValue: ([AudioSessionOutput], AudioSessionOutput?) = ([], nil)
-    private var currentAudioOutputValue: AudioSessionOutput = .builtin
+    public private(set) var currentAudioOutputValue: AudioSessionOutput = .builtin
     private var didSetCurrentAudioOutputValue: Bool = false
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> {
         return self.audioOutputStatePromise.get()
@@ -62,6 +63,15 @@ final class SharedCallAudioContext {
                         audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
                         audioSessionControl.setup(synchronous: true)
                     }
+                    
+                    let audioSessionActive: Signal<Bool, NoError>
+                    if let callKitIntegration = self.callKitIntegration {
+                        audioSessionActive = callKitIntegration.audioSessionActive
+                    } else {
+                        audioSessionControl.activate({ _ in })
+                        audioSessionActive = .single(true)
+                    }
+                    self.isAudioSessionActivePromise.set(audioSessionActive)
                 }
             }
         }, deactivate: { [weak self] _ in
@@ -130,7 +140,18 @@ final class SharedCallAudioContext {
             guard let self else {
                 return
             }
-            let _ = self
+            self.audioDevice?.setIsAudioSessionActive(value)
+        })
+        
+        self.audioOutputStateDisposable = (self.audioOutputStatePromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let self else {
+                return
+            }
+            self.audioOutputStateValue = value
+            if let currentOutput = value.1 {
+                self.currentAudioOutputValue = currentOutput
+            }
         })
     }
     
@@ -138,6 +159,7 @@ final class SharedCallAudioContext {
         self.audioSessionDisposable?.dispose()
         self.audioSessionShouldBeActiveDisposable?.dispose()
         self.isAudioSessionActiveDisposable?.dispose()
+        self.audioOutputStateDisposable?.dispose()
     }
     
     func setCurrentAudioOutput(_ output: AudioSessionOutput) {
@@ -192,7 +214,7 @@ public final class PresentationCallImpl: PresentationCall {
     private let currentNetworkType: NetworkType
     private let updatedNetworkType: Signal<NetworkType, NoError>
     
-    private var sharedAudioContext: SharedCallAudioContext?
+    public private(set) var sharedAudioContext: SharedCallAudioContext?
     
     private var sessionState: CallSession?
     private var callContextState: OngoingCallContextState?
@@ -316,6 +338,8 @@ public final class PresentationCallImpl: PresentationCall {
     private var localVideoEndpointId: String?
     private var remoteVideoEndpointId: String?
     
+    private var isMovedToConference: Bool = false
+    
     init(
         context: AccountContext,
         audioSession: ManagedAudioSession,
@@ -402,10 +426,8 @@ public final class PresentationCallImpl: PresentationCall {
         
         if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_call_device"] {
             self.sharedAudioContext = nil
-        } else if context.sharedContext.immediateExperimentalUISettings.conferenceCalls {
-            self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
         } else {
-            self.sharedAudioContext = nil
+            self.sharedAudioContext = SharedCallAudioContext(audioSession: audioSession, callKitIntegration: callKitIntegration)
         }
         
         if let _ = self.sharedAudioContext {
@@ -532,6 +554,89 @@ public final class PresentationCallImpl: PresentationCall {
         }
     }
     
+    public func resetAsMovedToConference() {
+        if self.isMovedToConference {
+            return
+        }
+        self.isMovedToConference = true
+        
+        self.sharedAudioContext = nil
+        self.sessionState = nil
+        self.callContextState = nil
+        self.ongoingContext = nil
+        self.ongoingContextStateDisposable?.dispose()
+        self.ongoingContextStateDisposable = nil
+        self.ongoingContextIsFailedDisposable?.dispose()
+        self.ongoingContextIsFailedDisposable = nil
+        self.ongoingContextIsDroppedDisposable?.dispose()
+        self.ongoingContextIsDroppedDisposable = nil
+        self.didDropCall = false
+        self.requestedVideoAspect = nil
+        self.reception = nil
+        self.receptionDisposable?.dispose()
+        self.receptionDisposable = nil
+        self.audioLevelDisposable?.dispose()
+        self.audioLevelDisposable = nil
+        self.reportedIncomingCall = false
+        self.batteryLevelDisposable?.dispose()
+        self.batteryLevelDisposable = nil
+        self.callWasActive = false
+        self.shouldPresentCallRating = false
+        self.previousVideoState = nil
+        self.previousRemoteVideoState = nil
+        self.previousRemoteAudioState = nil
+        self.previousRemoteBatteryLevel = nil
+        self.sessionStateDisposable?.dispose()
+        self.sessionStateDisposable = nil
+        self.activeTimestamp = nil
+        self.audioSessionControl = nil
+        self.audioSessionDisposable?.dispose()
+        self.audioSessionDisposable = nil
+        self.audioSessionShouldBeActiveDisposable?.dispose()
+        self.audioSessionShouldBeActiveDisposable = nil
+        self.audioSessionActiveDisposable?.dispose()
+        self.audioSessionActiveDisposable = nil
+        self.isAudioSessionActive = false
+        self.currentTone = nil
+        
+        self.dropCallKitCallTimer?.invalidate()
+        self.dropCallKitCallTimer = nil
+        
+        self.droppedCall = true
+        
+        self.videoCapturer = nil
+
+        self.screencastBufferServerContext = nil
+        self.screencastCapturer = nil
+        self.isScreencastActive = false
+        
+        if let proximityManagerIndex = self.proximityManagerIndex {
+            DeviceProximityManager.shared().remove(proximityManagerIndex)
+            self.proximityManagerIndex = nil
+        }
+
+        self.screencastFramesDisposable.set(nil)
+        self.screencastAudioDataDisposable.set(nil)
+        self.screencastStateDisposable.set(nil)
+        
+        self.conferenceCallImpl = nil
+        
+        self.conferenceCallDisposable?.dispose()
+        self.conferenceCallDisposable = nil
+        
+        self.upgradedToConferenceCompletions.removeAll()
+        
+        self.waitForConferenceCallReadyDisposable?.dispose()
+        self.waitForConferenceCallReadyDisposable = nil
+        
+        self.pendingInviteToConferencePeerIds.removeAll()
+        
+        self.localVideoEndpointId = nil
+        self.remoteVideoEndpointId = nil
+        
+        self.callKitIntegration?.updateCallIsConference(uuid: self.internalId)
+    }
+    
     func internal_markAsCanBeRemoved() {
         if !self.didSetCanBeRemoved {
             self.didSetCanBeRemoved = true
@@ -540,6 +645,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     private func updateSessionState(sessionState: CallSession, callContextState: OngoingCallContextState?, reception: Int32?, audioSessionControl: ManagedAudioSessionControl?) {
+        if self.isMovedToConference {
+            return
+        }
         self.reception = reception
         
         if let ongoingContext = self.ongoingContext {
@@ -721,11 +829,11 @@ public final class PresentationCallImpl: PresentationCall {
                 presentationState = PresentationCallState(state: .terminated(id, reason, self.callWasActive && (options.contains(.reportRating) || self.shouldPresentCallRating)), videoState: mappedVideoState, remoteVideoState: .inactive, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
             case let .requesting(ringing, _):
                 presentationState = PresentationCallState(state: .requesting(ringing), videoState: mappedVideoState, remoteVideoState: mappedRemoteVideoState, remoteAudioState: mappedRemoteAudioState, remoteBatteryLevel: mappedRemoteBatteryLevel)
-            case let .active(_, _, keyVisualHash, _, _, _, _, _, _), let .switchedToConference(_, keyVisualHash, _):
+            case let .active(_, _, keyVisualHash, _, _, _, _, _, _, _), let .switchedToConference(_, keyVisualHash, _):
                 self.callWasActive = true
             
                 var isConference = false
-                if case let .active(_, _, _, _, _, _, _, _, conferenceCall) = sessionState.state {
+                if case let .active(_, _, _, _, _, _, _, _, conferenceCall, _) = sessionState.state {
                     isConference = conferenceCall != nil
                 } else if case .switchedToConference = sessionState.state {
                     isConference = true
@@ -765,8 +873,8 @@ public final class PresentationCallImpl: PresentationCall {
         var conferenceCallData: (key: Data, keyVisualHash: Data, conferenceCall: GroupCallReference)?
         var conferenceFromCallId: CallId?
         switch sessionState.state {
-        case let .active(id, key, keyVisualHash, _, _, _, _, _, conferenceCall):
-            if let conferenceCall {
+        case let .active(id, key, keyVisualHash, _, _, _, _, _, conferenceCall, isIncomingConference):
+            if let conferenceCall, !isIncomingConference {
                 conferenceFromCallId = id
                 conferenceCallData = (key, keyVisualHash, conferenceCall)
             }
@@ -779,6 +887,10 @@ public final class PresentationCallImpl: PresentationCall {
         if let (key, _, conferenceCall) = conferenceCallData {
             if self.conferenceCallDisposable == nil {
                 self.conferenceCallDisposable = EmptyDisposable
+                
+                #if DEBUG
+                print("Switching to conference call with encryption key: \(key.base64EncodedString())")
+                #endif
                 
                 let conferenceCall = PresentationGroupCallImpl(
                     accountContext: self.context,
@@ -801,13 +913,14 @@ public final class PresentationCallImpl: PresentationCall {
                     isStream: false,
                     encryptionKey: (key, 1),
                     conferenceFromCallId: conferenceFromCallId,
+                    conferenceSourceId: self.internalId,
                     isConference: true,
                     sharedAudioContext: self.sharedAudioContext
                 )
                 self.conferenceCallImpl = conferenceCall
                 conferenceCall.upgradedConferenceCall = self
                 
-                conferenceCall.setInvitedPeers(self.pendingInviteToConferencePeerIds)
+                conferenceCall.setConferenceInvitedPeers(self.pendingInviteToConferencePeerIds)
                 for peerId in self.pendingInviteToConferencePeerIds {
                     let _ = conferenceCall.invitePeer(peerId)
                 }
@@ -888,8 +1001,6 @@ public final class PresentationCallImpl: PresentationCall {
                         return
                     }
                     
-                    self.ongoingContext?.stop(debugLogValue: Promise())
-                    self.ongoingContext = nil
                     self.ongoingContextStateDisposable?.dispose()
                     
                     self.conferenceStateValue = .ready
@@ -908,7 +1019,7 @@ public final class PresentationCallImpl: PresentationCall {
                 if let _ = audioSessionControl {
                     self.audioSessionShouldBeActive.set(true)
                 }
-            case let .active(id, key, _, connections, maxLayer, version, customParameters, allowsP2P, _):
+            case let .active(id, key, _, connections, maxLayer, version, customParameters, allowsP2P, _, _):
                 self.audioSessionShouldBeActive.set(true)
             
                 if conferenceCallData != nil {
@@ -1035,7 +1146,7 @@ public final class PresentationCallImpl: PresentationCall {
         }
         
         var isConference = false
-        if case let .active(_, _, _, _, _, _, _, _, conferenceCall) = sessionState.state {
+        if case let .active(_, _, _, _, _, _, _, _, conferenceCall, _) = sessionState.state {
             isConference = conferenceCall != nil
         } else if case .switchedToConference = sessionState.state {
             isConference = true
@@ -1063,59 +1174,10 @@ public final class PresentationCallImpl: PresentationCall {
         }
     }
     
-    private func requestMediaChannelDescriptions(ssrcs: Set<UInt32>, completion: @escaping ([OngoingGroupCallContext.MediaChannelDescription]) -> Void) -> Disposable {
-        /*func extractMediaChannelDescriptions(remainingSsrcs: inout Set<UInt32>, participants: [GroupCallParticipantsContext.Participant], into result: inout [OngoingGroupCallContext.MediaChannelDescription]) {
-            for participant in participants {
-                guard let audioSsrc = participant.ssrc else {
-                    continue
-                }
-
-                if remainingSsrcs.contains(audioSsrc) {
-                    remainingSsrcs.remove(audioSsrc)
-
-                    result.append(OngoingGroupCallContext.MediaChannelDescription(
-                        kind: .audio,
-                        audioSsrc: audioSsrc,
-                        videoDescription: nil
-                    ))
-                }
-
-                if let screencastSsrc = participant.presentationDescription?.audioSsrc {
-                    if remainingSsrcs.contains(screencastSsrc) {
-                        remainingSsrcs.remove(screencastSsrc)
-
-                        result.append(OngoingGroupCallContext.MediaChannelDescription(
-                            kind: .audio,
-                            audioSsrc: screencastSsrc,
-                            videoDescription: nil
-                        ))
-                    }
-                }
-            }
-        }
-
-        var remainingSsrcs = ssrcs
-        var result: [OngoingGroupCallContext.MediaChannelDescription] = []
-
-        if let membersValue = self.membersValue {
-            extractMediaChannelDescriptions(remainingSsrcs: &remainingSsrcs, participants: membersValue.participants, into: &result)
-        }
-
-        if !remainingSsrcs.isEmpty, let callInfo = self.internalState.callInfo {
-            return (self.accountContext.engine.calls.getGroupCallParticipants(callId: callInfo.id, accessHash: callInfo.accessHash, offset: "", ssrcs: Array(remainingSsrcs), limit: 100, sortAscending: callInfo.sortAscending)
-            |> deliverOnMainQueue).start(next: { state in
-                extractMediaChannelDescriptions(remainingSsrcs: &remainingSsrcs, participants: state.participants, into: &result)
-
-                completion(result)
-            })
-        } else {
-            completion(result)
-            return EmptyDisposable
-        }*/
-        return EmptyDisposable
-    }
-    
     private func updateTone(_ state: PresentationCallState, callContextState: OngoingCallContextState?, previous: CallSession?) {
+        if self.isMovedToConference {
+            return
+        }
         var tone: PresentationCallTone?
         if let callContextState = callContextState, case .reconnecting = callContextState.state {
             if !self.isVideo {
@@ -1144,6 +1206,8 @@ public final class PresentationCallImpl: PresentationCall {
                                                 tone = .busy
                                             case .hungUp, .missed:
                                                 tone = .ended
+                                            case .switchedToConference:
+                                                tone = nil
                                         }
                                     case .error:
                                         tone = .failed
@@ -1165,16 +1229,25 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     private func updateIsAudioSessionActive(_ value: Bool) {
+        if self.isMovedToConference {
+            return
+        }
         if self.isAudioSessionActive != value {
             self.isAudioSessionActive = value
         }
     }
     
     public func answer() {
+        if self.isMovedToConference {
+            return
+        }
         self.answer(fromCallKitAction: false)
     }
         
     func answer(fromCallKitAction: Bool) {
+        if self.isMovedToConference {
+            return
+        }
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
@@ -1225,6 +1298,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func hangUp() -> Signal<Bool, NoError> {
+        if self.isMovedToConference {
+            return .single(true)
+        }
         let debugLogValue = Promise<String?>()
         self.callSessionManager.drop(internalId: self.internalId, reason: .hangUp, debugLog: debugLogValue.get())
         self.ongoingContext?.stop(debugLogValue: debugLogValue)
@@ -1233,22 +1309,34 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func rejectBusy() {
+        if self.isMovedToConference {
+            return
+        }
         self.callSessionManager.drop(internalId: self.internalId, reason: .busy, debugLog: .single(nil))
         let debugLog = Promise<String?>()
         self.ongoingContext?.stop(debugLogValue: debugLog)
     }
     
     public func toggleIsMuted() {
+        if self.isMovedToConference {
+            return
+        }
         self.setIsMuted(!self.isMutedValue)
     }
     
     public func setIsMuted(_ value: Bool) {
+        if self.isMovedToConference {
+            return
+        }
         self.isMutedValue = value
         self.isMutedPromise.set(self.isMutedValue)
         self.ongoingContext?.setIsMuted(self.isMutedValue)
     }
     
     public func requestVideo() {
+        if self.isMovedToConference {
+            return
+        }
         if self.videoCapturer == nil {
             let videoCapturer = OngoingCallVideoCapturer()
             self.videoCapturer = videoCapturer
@@ -1261,6 +1349,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func requestVideo(capturer: OngoingCallVideoCapturer) {
+        if self.isMovedToConference {
+            return
+        }
         if self.videoCapturer == nil {
             self.videoCapturer = capturer
         }
@@ -1272,11 +1363,17 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func setRequestedVideoAspect(_ aspect: Float) {
+        if self.isMovedToConference {
+            return
+        }
         self.requestedVideoAspect = aspect
         self.ongoingContext?.setRequestedVideoAspect(aspect)
     }
     
     public func disableVideo() {
+        if self.isMovedToConference {
+            return
+        }
         if let _ = self.videoCapturer {
             self.videoCapturer = nil
             if let ongoingContext = self.ongoingContext {
@@ -1286,6 +1383,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
 
     private func resetScreencastContext() {
+        if self.isMovedToConference {
+            return
+        }
         let basePath = self.context.sharedContext.basePath + "/broadcast-coordination"
         let screencastBufferServerContext = IpcGroupCallBufferAppContext(basePath: basePath)
         self.screencastBufferServerContext = screencastBufferServerContext
@@ -1323,6 +1423,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
 
     private func requestScreencast() {
+        if self.isMovedToConference {
+            return
+        }
         self.disableVideo()
 
         if let screencastCapturer = self.screencastCapturer {
@@ -1334,6 +1437,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
 
     func disableScreencast(reset: Bool = true) {
+        if self.isMovedToConference {
+            return
+        }
         if self.isScreencastActive {
             if let _ = self.videoCapturer {
                 self.videoCapturer = nil
@@ -1348,10 +1454,16 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func setOutgoingVideoIsPaused(_ isPaused: Bool) {
+        if self.isMovedToConference {
+            return
+        }
         self.videoCapturer?.setIsVideoEnabled(!isPaused)
     }
     
     public func upgradeToConference(invitePeerIds: [EnginePeer.Id], completion: @escaping (PresentationGroupCall) -> Void) -> Disposable {
+        if self.isMovedToConference {
+            return EmptyDisposable
+        }
         if let conferenceCall = self.conferenceCall {
             completion(conferenceCall)
             return EmptyDisposable
@@ -1376,6 +1488,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func setCurrentAudioOutput(_ output: AudioSessionOutput) {
+        if self.isMovedToConference {
+            return
+        }
         if let sharedAudioContext = self.sharedAudioContext {
             sharedAudioContext.setCurrentAudioOutput(output)
             return
@@ -1407,6 +1522,9 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     func video(isIncoming: Bool) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
+        if self.isMovedToConference {
+            return nil
+        }
         if isIncoming {
             if let ongoingContext = self.ongoingContext {
                 return ongoingContext.video(isIncoming: isIncoming)
@@ -1421,6 +1539,10 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func makeOutgoingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
+        if self.isMovedToConference {
+            completion(nil)
+            return
+        }
         if self.videoCapturer == nil {
             let videoCapturer = OngoingCallVideoCapturer()
             self.videoCapturer = videoCapturer
@@ -1495,8 +1617,34 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func switchVideoCamera() {
+        if self.isMovedToConference {
+            return
+        }
         self.useFrontCamera = !self.useFrontCamera
         self.videoCapturer?.switchVideoInput(isFront: self.useFrontCamera)
+    }
+    
+    public func playRemoteCameraTone() {
+        let name: String
+        name = "voip_group_recording_started.mp3"
+
+        self.beginTone(tone: .custom(name: name, loopCount: 1))
+    }
+    
+    private func beginTone(tone: PresentationCallTone?) {
+        if let tone, let toneData = presentationCallToneData(tone) {
+            if let sharedAudioContext = self.sharedAudioContext {
+                sharedAudioContext.audioDevice?.setTone(tone: OngoingCallContext.Tone(
+                    samples: toneData,
+                    sampleRate: 48000,
+                    loopCount: tone.loopCount ?? 100000
+                ))
+            }
+        } else {
+            if let sharedAudioContext = self.sharedAudioContext {
+                sharedAudioContext.audioDevice?.setTone(tone: nil)
+            }
+        }
     }
 }
 

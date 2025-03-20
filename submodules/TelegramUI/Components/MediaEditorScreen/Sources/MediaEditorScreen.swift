@@ -1365,6 +1365,7 @@ final class MediaEditorScreenComponent: Component {
                         strings: environment.strings,
                         style: .editor,
                         placeholder: .plain(environment.strings.Story_Editor_InputPlaceholderAddCaption),
+                        sendPaidMessageStars: nil,
                         maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                         queryTypes: [.mention, .hashtag],
                         alwaysDarkWhenHasText: false,
@@ -4714,11 +4715,8 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                             |> map { result -> TelegramMediaFile? in
                                 if case let .result(_, items, _) = result, let match = items.first(where: { item in
                                     var displayText: String?
-                                    for attribute in item.file.attributes {
-                                        if case let .CustomEmoji(_, _, alt, _) = attribute {
-                                            displayText = alt
-                                            break
-                                        }
+                                    if let alt = item.file.customEmojiAlt {
+                                        displayText = alt
                                     }
                                     if let displayText, displayText.hasPrefix(flag) {
                                         return true
@@ -4726,7 +4724,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
                                         return false
                                     }
                                 }) {
-                                    return match.file
+                                    return match.file._parse()
                                 } else {
                                     return nil
                                 }
@@ -5124,7 +5122,7 @@ public final class MediaEditorScreenImpl: ViewController, MediaEditorScreen, UID
             if let reaction = self.availableReactions.first(where: { reaction in
                 return reaction.reaction.rawValue == .builtin(heart)
             }) {
-                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: reaction.stillAnimation), .reaction(.builtin(heart), .white)))
+                let stickerEntity = DrawingStickerEntity(content: .file(.standalone(media: reaction.stillAnimation._parse()), .reaction(.builtin(heart), .white)))
                 self.interaction?.insertEntity(stickerEntity, scale: 1.175)
             }
             

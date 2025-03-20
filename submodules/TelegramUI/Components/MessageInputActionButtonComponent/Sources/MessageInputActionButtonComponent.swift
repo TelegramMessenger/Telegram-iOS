@@ -111,6 +111,8 @@ private extension MessageInputActionButtonComponent.Mode {
             return ButtonIcon(icon: .apply)
         case .send:
             return ButtonIcon(icon: .send)
+        case .stars:
+            return nil
         default:
             return nil
         }
@@ -121,6 +123,7 @@ public final class MessageInputActionButtonComponent: Component {
     public enum Mode: Equatable {
         case none
         case send
+        case stars(Int64)
         case apply
         case voiceInput
         case videoInput
@@ -472,7 +475,7 @@ public final class MessageInputActionButtonComponent: Component {
                 break
             case .captionUp, .captionDown:
                 sendAlpha = 0.0
-            case .send, .apply, .attach, .delete, .forward, .removeVideoInput, .repost:
+            case .send, .apply, .attach, .delete, .forward, .removeVideoInput, .repost, .stars:
                 sendAlpha = 1.0
             case let .like(reaction, _, _):
                 if reaction != nil {
@@ -671,7 +674,7 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost, .captionUp, .captionDown:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost, .captionUp, .captionDown, .stars:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
                     case .videoInput, .removeVideoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)

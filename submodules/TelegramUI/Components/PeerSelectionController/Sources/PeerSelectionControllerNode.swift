@@ -718,7 +718,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                         forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [],
                         canMakePaidContent: false,
                         currentPrice: nil,
-                        hasTimers: false
+                        hasTimers: false,
+                        sendPaidMessageStars: nil
                     )),
                     hasEntityKeyboard: hasEntityKeyboard,
                     gesture: gesture,
@@ -778,6 +779,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, hideTranslationPanel: {
         }, openPremiumGift: {
         }, openPremiumRequiredForMessaging: {
+        }, openStarsPurchase: { _ in
+        }, openMessagePayment: {
         }, openBoostToUnrestrict: {
         }, updateVideoTrimRange: { _, _, _, _ in
         }, updateHistoryFilter: { _ in

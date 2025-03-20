@@ -1,5 +1,7 @@
 import Foundation
 import Postbox
+import FlatBuffers
+import FlatSerialization
 
 private let typeFileName: Int32 = 0
 private let typeSticker: Int32 = 1
@@ -120,6 +122,96 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
         }
     }
     
+    init(flatBuffersObject: TelegramCore_StickerPackReference) throws {
+        switch flatBuffersObject.valueType {
+        case .stickerpackreferenceId:
+            guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Id.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .id(id: value.id, accessHash: value.accessHash)
+        case .stickerpackreferenceName:
+            guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Name.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .name(value.name)
+        case .stickerpackreferenceAnimatedemoji:
+            self = .animatedEmoji
+        case .stickerpackreferenceDice:
+            guard let value = flatBuffersObject.value(type: TelegramCore_StickerPackReference_Dice.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .dice(value.emoji)
+        case .stickerpackreferenceAnimatedemojianimations:
+            self = .animatedEmojiAnimations
+        case .stickerpackreferencePremiumgifts:
+            self = .premiumGifts
+        case .stickerpackreferenceEmojigenericanimations:
+            self = .emojiGenericAnimations
+        case .stickerpackreferenceIconstatusemoji:
+            self = .iconStatusEmoji
+        case .stickerpackreferenceIcontopicemoji:
+            self = .iconTopicEmoji
+        case .stickerpackreferenceIconchannelstatusemoji:
+            self = .iconChannelStatusEmoji
+        case .none_:
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+    }
+    
+    func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_StickerPackReference_Value
+        let offset: Offset
+        switch self {
+        case let .id(id, accessHash):
+            valueType = .stickerpackreferenceId
+            let start = TelegramCore_StickerPackReference_Id.startStickerPackReference_Id(&builder)
+            TelegramCore_StickerPackReference_Id.add(id: id, &builder)
+            TelegramCore_StickerPackReference_Id.add(accessHash: accessHash, &builder)
+            offset = TelegramCore_StickerPackReference_Id.endStickerPackReference_Id(&builder, start: start)
+        case let .name(name):
+            valueType = .stickerpackreferenceName
+            let nameOffset = builder.create(string: name)
+            let start = TelegramCore_StickerPackReference_Name.startStickerPackReference_Name(&builder)
+            TelegramCore_StickerPackReference_Name.add(name: nameOffset, &builder)
+            offset = TelegramCore_StickerPackReference_Name.endStickerPackReference_Name(&builder, start: start)
+        case .animatedEmoji:
+            valueType = .stickerpackreferenceAnimatedemoji
+            let start = TelegramCore_StickerPackReference_AnimatedEmoji.startStickerPackReference_AnimatedEmoji(&builder)
+            offset = TelegramCore_StickerPackReference_AnimatedEmoji.endStickerPackReference_AnimatedEmoji(&builder, start: start)
+        case let .dice(emoji):
+            valueType = .stickerpackreferenceDice
+            let emojiOffset = builder.create(string: emoji)
+            let start = TelegramCore_StickerPackReference_Dice.startStickerPackReference_Dice(&builder)
+            TelegramCore_StickerPackReference_Dice.add(emoji: emojiOffset, &builder)
+            offset = TelegramCore_StickerPackReference_Dice.endStickerPackReference_Dice(&builder, start: start)
+        case .animatedEmojiAnimations:
+            valueType = .stickerpackreferenceAnimatedemojianimations
+            let start = TelegramCore_StickerPackReference_AnimatedEmojiAnimations.startStickerPackReference_AnimatedEmojiAnimations(&builder)
+            offset = TelegramCore_StickerPackReference_AnimatedEmojiAnimations.endStickerPackReference_AnimatedEmojiAnimations(&builder, start: start)
+        case .premiumGifts:
+            valueType = .stickerpackreferencePremiumgifts
+            let start = TelegramCore_StickerPackReference_PremiumGifts.startStickerPackReference_PremiumGifts(&builder)
+            offset = TelegramCore_StickerPackReference_PremiumGifts.endStickerPackReference_PremiumGifts(&builder, start: start)
+        case .emojiGenericAnimations:
+            valueType = .stickerpackreferenceEmojigenericanimations
+            let start = TelegramCore_StickerPackReference_EmojiGenericAnimations.startStickerPackReference_EmojiGenericAnimations(&builder)
+            offset = TelegramCore_StickerPackReference_EmojiGenericAnimations.endStickerPackReference_EmojiGenericAnimations(&builder, start: start)
+        case .iconStatusEmoji:
+            valueType = .stickerpackreferenceIconstatusemoji
+            let start = TelegramCore_StickerPackReference_IconStatusEmoji.startStickerPackReference_IconStatusEmoji(&builder)
+            offset = TelegramCore_StickerPackReference_IconStatusEmoji.endStickerPackReference_IconStatusEmoji(&builder, start: start)
+        case .iconTopicEmoji:
+            valueType = .stickerpackreferenceIcontopicemoji
+            let start = TelegramCore_StickerPackReference_IconTopicEmoji.startStickerPackReference_IconTopicEmoji(&builder)
+            offset = TelegramCore_StickerPackReference_IconTopicEmoji.endStickerPackReference_IconTopicEmoji(&builder, start: start)
+        case .iconChannelStatusEmoji:
+            valueType = .stickerpackreferenceIconchannelstatusemoji
+            let start = TelegramCore_StickerPackReference_IconChannelStatusEmoji.startStickerPackReference_IconChannelStatusEmoji(&builder)
+            offset = TelegramCore_StickerPackReference_IconChannelStatusEmoji.endStickerPackReference_IconChannelStatusEmoji(&builder, start: start)
+        }
+        return TelegramCore_StickerPackReference.createStickerPackReference(&builder, valueType: valueType, valueOffset: offset)
+    }
+    
     public static func ==(lhs: StickerPackReference, rhs: StickerPackReference) -> Bool {
         switch lhs {
         case let .id(id, accessHash):
@@ -217,9 +309,9 @@ public struct StickerMaskCoords: PostboxCoding, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.n = decoder.decodeInt32ForKey("n", orElse: 0)
-        self.x = decoder.decodeDoubleForKey("x", orElse: 0.0)
-        self.y = decoder.decodeDoubleForKey("y", orElse: 0.0)
-        self.zoom = decoder.decodeDoubleForKey("z", orElse: 0.0)
+        self.x = Double(Float32(decoder.decodeDoubleForKey("x", orElse: 0.0)))
+        self.y = Double(Float32(decoder.decodeDoubleForKey("y", orElse: 0.0)))
+        self.zoom = Double(Float32(decoder.decodeDoubleForKey("z", orElse: 0.0)))
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -227,6 +319,13 @@ public struct StickerMaskCoords: PostboxCoding, Equatable {
         encoder.encodeDouble(self.x, forKey: "x")
         encoder.encodeDouble(self.y, forKey: "y")
         encoder.encodeDouble(self.zoom, forKey: "z")
+    }
+    
+    init(flatBuffersObject: TelegramCore_StickerMaskCoords) {
+        self.n = flatBuffersObject.n
+        self.x = Double(flatBuffersObject.x)
+        self.y = Double(flatBuffersObject.y)
+        self.zoom = Double(flatBuffersObject.zoom)
     }
 }
 
@@ -262,7 +361,12 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                     duration = Double(decoder.decodeInt32ForKey("du", orElse: 0))
                 }
             
-                self = .Video(duration: duration, size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"), coverTime: decoder.decodeOptionalDoubleForKey("ct"), videoCodec: decoder.decodeOptionalStringForKey("vc"))
+                var coverTime: Double?
+                if let coverTimeValue = decoder.decodeOptionalDoubleForKey("ct") {
+                    coverTime = Double(Float32(coverTimeValue))
+                }
+            
+                self = .Video(duration: Double(Float32(duration)), size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)), preloadSize: decoder.decodeOptionalInt32ForKey("prs"), coverTime: coverTime, videoCodec: decoder.decodeOptionalStringForKey("vc"))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
                 var waveform: Data?
@@ -363,6 +467,171 @@ public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
                 }
         }
     }
+    
+    init(flatBuffersData data: Data) throws {
+        var byteBuffer = ByteBuffer(data: data)
+        let flatBuffersObject: TelegramCore_TelegramMediaFileAttribute = FlatBuffers_getRoot(byteBuffer: &byteBuffer)
+        try self.init(flatBuffersObject: flatBuffersObject)
+    }
+    
+    init(flatBuffersObject: TelegramCore_TelegramMediaFileAttribute) throws {
+        switch flatBuffersObject.valueType {
+        case .telegrammediafileattributeFilename:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_FileName.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .FileName(fileName: value.fileName)
+        case .telegrammediafileattributeSticker:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Sticker.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .Sticker(displayText: value.displayText, packReference: try value.packReference.flatMap({ try StickerPackReference(flatBuffersObject: $0) }), maskData: value.maskData.flatMap({ StickerMaskCoords(flatBuffersObject: $0) }))
+        case .telegrammediafileattributeImagesize:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_ImageSize.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .ImageSize(size: PixelDimensions(width: value.width, height: value.height))
+        case .telegrammediafileattributeAnimated:
+            self = .Animated
+        case .telegrammediafileattributeVideo:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Video.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .Video(duration: Double(value.duration), size: PixelDimensions(width: value.width, height: value.height), flags: TelegramMediaVideoFlags(rawValue: value.flags), preloadSize: value.preloadSize == 0 ? nil : value.preloadSize, coverTime: value.coverTime == 0.0 ? nil : Double(value.coverTime), videoCodec: value.videoCodec)
+        case .telegrammediafileattributeAudio:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_Audio.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .Audio(isVoice: value.isVoice, duration: Int(value.duration), title: value.title, performer: value.performer, waveform: value.waveform.isEmpty ? nil : Data(value.waveform))
+        case .telegrammediafileattributeHaslinkedstickers:
+            self = .HasLinkedStickers
+        case .telegrammediafileattributeHintfileislarge:
+            self = .hintFileIsLarge
+        case .telegrammediafileattributeHintisvalidated:
+            self = .hintIsValidated
+        case .telegrammediafileattributeNopremium:
+            self = .NoPremium
+        case .none_:
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        case .telegrammediafileattributeCustomemoji:
+            guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) else {
+                throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+            }
+            self = .CustomEmoji(isPremium: value.isPremium, isSingleColor: value.isSingleColor, alt: value.alt, packReference: try value.packReference.flatMap({ try StickerPackReference(flatBuffersObject: $0) }))
+        }
+    }
+
+    func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_TelegramMediaFileAttribute_Value
+        let offset: Offset
+
+        switch self {
+        case let .FileName(fileName):
+            valueType = .telegrammediafileattributeFilename
+            let fileNameOffset = builder.create(string: fileName)
+            let start = TelegramCore_TelegramMediaFileAttribute_FileName.startTelegramMediaFileAttribute_FileName(&builder)
+            TelegramCore_TelegramMediaFileAttribute_FileName.add(fileName: fileNameOffset, &builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_FileName.endTelegramMediaFileAttribute_FileName(&builder, start: start)
+        case let .Sticker(displayText, packReference, maskData):
+            valueType = .telegrammediafileattributeSticker
+            let displayTextOffset = builder.create(string: displayText)
+            
+            let packReferenceOffset = packReference.flatMap {
+                return $0.encodeToFlatBuffers(builder: &builder)
+            }
+            let maskDataOffset = maskData.flatMap { maskData -> Offset in
+                let start = TelegramCore_StickerMaskCoords.startStickerMaskCoords(&builder)
+                TelegramCore_StickerMaskCoords.add(n: maskData.n, &builder)
+                TelegramCore_StickerMaskCoords.add(x: Float32(maskData.x), &builder)
+                TelegramCore_StickerMaskCoords.add(y: Float32(maskData.y), &builder)
+                TelegramCore_StickerMaskCoords.add(zoom: Float32(maskData.zoom), &builder)
+                return TelegramCore_StickerMaskCoords.endStickerMaskCoords(&builder, start: start)
+            }
+            let start = TelegramCore_TelegramMediaFileAttribute_Sticker.startTelegramMediaFileAttribute_Sticker(&builder)
+            TelegramCore_TelegramMediaFileAttribute_Sticker.add(displayText: displayTextOffset, &builder)
+            if let packReferenceOffset {
+                TelegramCore_TelegramMediaFileAttribute_Sticker.add(packReference: packReferenceOffset, &builder)
+            }
+            if let maskDataOffset {
+                TelegramCore_TelegramMediaFileAttribute_Sticker.add(maskData: maskDataOffset, &builder)
+            }
+            offset = TelegramCore_TelegramMediaFileAttribute_Sticker.endTelegramMediaFileAttribute_Sticker(&builder, start: start)
+        case let .ImageSize(size):
+            valueType = .telegrammediafileattributeImagesize
+            let start = TelegramCore_TelegramMediaFileAttribute_ImageSize.startTelegramMediaFileAttribute_ImageSize(&builder)
+            TelegramCore_TelegramMediaFileAttribute_ImageSize.add(width: size.width, &builder)
+            TelegramCore_TelegramMediaFileAttribute_ImageSize.add(height: size.height, &builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_ImageSize.endTelegramMediaFileAttribute_ImageSize(&builder, start: start)
+        case .Animated:
+            valueType = .telegrammediafileattributeAnimated
+            let start = TelegramCore_TelegramMediaFileAttribute_Animated.startTelegramMediaFileAttribute_Animated(&builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_Animated.endTelegramMediaFileAttribute_Animated(&builder, start: start)
+        case let .Video(duration, size, flags, preloadSize, coverTime, videoCodec):
+            valueType = .telegrammediafileattributeVideo
+            let videoCodecOffset = videoCodec.flatMap { builder.create(string: $0) }
+            let start = TelegramCore_TelegramMediaFileAttribute_Video.startTelegramMediaFileAttribute_Video(&builder)
+            
+            TelegramCore_TelegramMediaFileAttribute_Video.add(duration: Float32(duration), &builder)
+            TelegramCore_TelegramMediaFileAttribute_Video.add(width: size.width, &builder)
+            TelegramCore_TelegramMediaFileAttribute_Video.add(height: size.height, &builder)
+            TelegramCore_TelegramMediaFileAttribute_Video.add(flags: flags.rawValue, &builder)
+            TelegramCore_TelegramMediaFileAttribute_Video.add(preloadSize: preloadSize ?? 0, &builder)
+            TelegramCore_TelegramMediaFileAttribute_Video.add(coverTime: Float32(coverTime ?? 0.0), &builder)
+            if let videoCodecOffset {
+                TelegramCore_TelegramMediaFileAttribute_Video.add(videoCodec: videoCodecOffset, &builder)}
+            offset = TelegramCore_TelegramMediaFileAttribute_Video.endTelegramMediaFileAttribute_Video(&builder, start: start)
+        case let .Audio(isVoice, duration, title, performer, waveform):
+            valueType = .telegrammediafileattributeAudio
+            let titleOffset = title.flatMap { builder.create(string: $0) }
+            let performerOffset = performer.flatMap { builder.create(string: $0) }
+            let waveformOffset = waveform.flatMap { builder.createVector(bytes: $0) }
+            let start = TelegramCore_TelegramMediaFileAttribute_Audio.startTelegramMediaFileAttribute_Audio(&builder)
+            TelegramCore_TelegramMediaFileAttribute_Audio.add(isVoice: isVoice, &builder)
+            TelegramCore_TelegramMediaFileAttribute_Audio.add(duration: Int32(duration), &builder)
+            if let titleOffset {
+                TelegramCore_TelegramMediaFileAttribute_Audio.add(title: titleOffset, &builder)
+            }
+            if let performerOffset {
+                TelegramCore_TelegramMediaFileAttribute_Audio.add(performer: performerOffset, &builder)
+            }
+            if let waveformOffset {
+                TelegramCore_TelegramMediaFileAttribute_Audio.addVectorOf(waveform: waveformOffset, &builder)
+            }
+            offset = TelegramCore_TelegramMediaFileAttribute_Audio.endTelegramMediaFileAttribute_Audio(&builder, start: start)
+        case .HasLinkedStickers:
+            valueType = .telegrammediafileattributeHaslinkedstickers
+            let start = TelegramCore_TelegramMediaFileAttribute_HasLinkedStickers.startTelegramMediaFileAttribute_HasLinkedStickers(&builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_HasLinkedStickers.endTelegramMediaFileAttribute_HasLinkedStickers(&builder, start: start)
+        case .hintFileIsLarge:
+            valueType = .telegrammediafileattributeHintfileislarge
+            let start = TelegramCore_TelegramMediaFileAttribute_HintFileIsLarge.startTelegramMediaFileAttribute_HintFileIsLarge(&builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_HintFileIsLarge.endTelegramMediaFileAttribute_HintFileIsLarge(&builder, start: start)
+        case .hintIsValidated:
+            valueType = .telegrammediafileattributeHintisvalidated
+            let start = TelegramCore_TelegramMediaFileAttribute_HintIsValidated.startTelegramMediaFileAttribute_HintIsValidated(&builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_HintIsValidated.endTelegramMediaFileAttribute_HintIsValidated(&builder, start: start)
+        case .NoPremium:
+            valueType = .telegrammediafileattributeNopremium
+            let start = TelegramCore_TelegramMediaFileAttribute_NoPremium.startTelegramMediaFileAttribute_NoPremium(&builder)
+            offset = TelegramCore_TelegramMediaFileAttribute_NoPremium.endTelegramMediaFileAttribute_NoPremium(&builder, start: start)
+        case let .CustomEmoji(isPremium, isSingleColor, alt, packReference):
+            valueType = .telegrammediafileattributeCustomemoji
+            let altOffset = builder.create(string: alt)
+            let packReferenceOffset = packReference.flatMap {
+                return $0.encodeToFlatBuffers(builder: &builder)
+            }
+            let start = TelegramCore_TelegramMediaFileAttribute_CustomEmoji.startTelegramMediaFileAttribute_CustomEmoji(&builder)
+            TelegramCore_TelegramMediaFileAttribute_CustomEmoji.add(isPremium: isPremium, &builder)
+            TelegramCore_TelegramMediaFileAttribute_CustomEmoji.add(isSingleColor: isSingleColor, &builder)
+            TelegramCore_TelegramMediaFileAttribute_CustomEmoji.add(alt: altOffset, &builder)
+            if let packReferenceOffset {
+                TelegramCore_TelegramMediaFileAttribute_CustomEmoji.add(packReference: packReferenceOffset, &builder)
+            }
+            offset = TelegramCore_TelegramMediaFileAttribute_CustomEmoji.endTelegramMediaFileAttribute_CustomEmoji(&builder, start: start)
+        }
+
+        return TelegramCore_TelegramMediaFileAttribute.createTelegramMediaFileAttribute(&builder, valueType: valueType, valueOffset: offset)
+    }
 }
 
 public enum TelegramMediaFileReference: PostboxCoding, Equatable {
@@ -398,6 +667,43 @@ public enum TelegramMediaFileDecodingError: Error {
 }
 
 public final class TelegramMediaFile: Media, Equatable, Codable {
+    public struct Accessor: Equatable {
+        let _wrappedFile: TelegramMediaFile?
+        let _wrapped: TelegramCore_TelegramMediaFile?
+        let _wrappedData: Data?
+        
+        public init(_ wrapped: TelegramCore_TelegramMediaFile, _ _wrappedData: Data) {
+            self._wrapped = wrapped
+            self._wrappedData = _wrappedData
+            self._wrappedFile = nil
+        }
+        
+        public init(_ wrapped: TelegramMediaFile) {
+            self._wrapped = nil
+            self._wrappedData = nil
+            self._wrappedFile = wrapped
+        }
+        
+        public func _parse() -> TelegramMediaFile {
+            if let _wrappedFile = self._wrappedFile {
+                return _wrappedFile
+            } else {
+                return try! TelegramMediaFile(flatBuffersObject: self._wrapped!)
+            }
+        }
+        
+        public static func ==(lhs: TelegramMediaFile.Accessor, rhs: TelegramMediaFile.Accessor) -> Bool {
+            if let lhsWrappedFile = lhs._wrappedFile, let rhsWrappedFile = rhs._wrappedFile {
+                return lhsWrappedFile === rhsWrappedFile
+            } else if let lhsWrappedData = lhs._wrappedData, let rhsWrappedData = rhs._wrappedData {
+                return lhsWrappedData == rhsWrappedData
+            } else {
+                assertionFailure()
+                return false
+            }
+        }
+    }
+    
     enum CodingKeys: String, CodingKey {
         case data
     }
@@ -420,6 +726,23 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             encoder.encodeInt32(self.dimensions.width, forKey: "w")
             encoder.encodeInt32(self.dimensions.height, forKey: "h")
             encoder.encodeObject(self.resource, forKey: "r")
+        }
+        
+        public init(flatBuffersObject: TelegramCore_VideoThumbnail) throws {
+            self.dimensions = PixelDimensions(width: flatBuffersObject.width, height: flatBuffersObject.height)
+            self.resource = try TelegramMediaResource_parse(flatBuffersObject: flatBuffersObject.resource)
+        }
+        
+        public func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+            let resourceOffset = TelegramMediaResource_serialize(resource: self.resource, flatBuffersBuilder: &builder)!
+            
+            let start = TelegramCore_VideoThumbnail.startVideoThumbnail(&builder)
+            
+            TelegramCore_VideoThumbnail.add(width: self.dimensions.width, &builder)
+            TelegramCore_VideoThumbnail.add(height: self.dimensions.height, &builder)
+            TelegramCore_VideoThumbnail.add(resource: resourceOffset, &builder)
+            
+            return TelegramCore_VideoThumbnail.endVideoThumbnail(&builder, start: start)
         }
         
         public static func ==(lhs: VideoThumbnail, rhs: VideoThumbnail) -> Bool {
@@ -446,7 +769,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public let mimeType: String
     public let size: Int64?
     public let attributes: [TelegramMediaFileAttribute]
-    public let alternativeRepresentations: [Media]
+    public let alternativeRepresentations: [TelegramMediaFile]
     public let peerIds: [PeerId] = []
     
     public var id: MediaId? {
@@ -477,7 +800,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         mimeType: String,
         size: Int64?,
         attributes: [TelegramMediaFileAttribute],
-        alternativeRepresentations: [Media]
+        alternativeRepresentations: [TelegramMediaFile]
     ) {
         self.fileId = fileId
         self.partialReference = partialReference
@@ -510,9 +833,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         }
         self.attributes = decoder.decodeObjectArrayForKey("at")
         if let altMedia = try? decoder.decodeObjectArrayWithCustomDecoderForKey("arep", decoder: { d in
-            return d.decodeRootObject() as! Media
+            return d.decodeRootObject()
         }) {
-            self.alternativeRepresentations = altMedia
+            self.alternativeRepresentations = altMedia.compactMap { $0 as? TelegramMediaFile }
         } else {
             self.alternativeRepresentations = []
         }
@@ -578,6 +901,89 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(postboxEncoder.makeData(), forKey: .data)
+    }
+    
+    public func encodeToFlatBuffersData() -> Data {
+        var builder = FlatBufferBuilder(initialSize: 1024)
+        let value = self.encodeToFlatBuffers(builder: &builder)
+        builder.finish(offset: value)
+        return builder.data
+    }
+    
+    public init(flatBuffersObject: TelegramCore_TelegramMediaFile) throws {
+        self.fileId = MediaId(namespace: flatBuffersObject.fileId.namespace, id: flatBuffersObject.fileId.id)
+        self.partialReference = try flatBuffersObject.partialReference.flatMap { try PartialMediaReference(flatBuffersObject: $0 ) }
+        self.resource = try TelegramMediaResource_parse(flatBuffersObject: flatBuffersObject.resource)
+        self.previewRepresentations = try (0 ..< flatBuffersObject.previewRepresentationsCount).map { i in
+            return try TelegramMediaImageRepresentation(flatBuffersObject: flatBuffersObject.previewRepresentations(at: i)!)
+        }
+        self.videoThumbnails = try (0 ..< flatBuffersObject.videoThumbnailsCount).map { i in
+            return try VideoThumbnail(flatBuffersObject: flatBuffersObject.videoThumbnails(at: i)!)
+        }
+        self.videoCover = try flatBuffersObject.videoCover.flatMap { try TelegramMediaImage(flatBuffersObject: $0) }
+        self.immediateThumbnailData = flatBuffersObject.immediateThumbnailData.isEmpty ? nil : Data(flatBuffersObject.immediateThumbnailData)
+        self.mimeType = flatBuffersObject.mimeType
+        self.size = flatBuffersObject.size == Int64.min ? nil : flatBuffersObject.size
+        self.attributes = try (0 ..< flatBuffersObject.attributesCount).map { i in
+            return try TelegramMediaFileAttribute(flatBuffersObject: flatBuffersObject.attributes(at: i)!)
+        }
+        self.alternativeRepresentations = try (0 ..< flatBuffersObject.alternativeRepresentationsCount).map { i in
+            return try TelegramMediaFile(flatBuffersObject: flatBuffersObject.alternativeRepresentations(at: i)!)
+        }
+    }
+    
+    func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let partialReferenceOffset = self.partialReference.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        
+        let resourceOffset = TelegramMediaResource_serialize(resource: self.resource, flatBuffersBuilder: &builder)!
+        
+        let previewRepresentationsOffsets = self.previewRepresentations.map { attribute in
+            return attribute.encodeToFlatBuffers(builder: &builder)
+        }
+        let previewRepresentationsOffset = builder.createVector(ofOffsets: previewRepresentationsOffsets, len: previewRepresentationsOffsets.count)
+        
+        let videoThumbnailsOffsets = self.videoThumbnails.map { videoThumbnail in
+            return videoThumbnail.encodeToFlatBuffers(builder: &builder)
+        }
+        let videoThumbnailsOffset = builder.createVector(ofOffsets: videoThumbnailsOffsets, len: videoThumbnailsOffsets.count)
+        
+        let videoCoverOffset = self.videoCover.flatMap { $0.encodeToFlatBuffers(builder: &builder) }
+        
+        let immediateThumbnailDataOffset = self.immediateThumbnailData.flatMap { builder.createVector(bytes: $0) }
+        
+        let mimeTypeOffset = builder.create(string: self.mimeType)
+        
+        let attributesOffsets = self.attributes.map { attribute in
+            return attribute.encodeToFlatBuffers(builder: &builder)
+        }
+        let attributesOffset = builder.createVector(ofOffsets: attributesOffsets, len: attributesOffsets.count)
+        
+        let alternativeRepresentationsOffsets = self.alternativeRepresentations.map { alternativeRepresentation in
+            return alternativeRepresentation.encodeToFlatBuffers(builder: &builder)
+        }
+        let alternativeRepresentationsOffset = builder.createVector(ofOffsets: alternativeRepresentationsOffsets, len: alternativeRepresentationsOffsets.count)
+        
+        let start = TelegramCore_TelegramMediaFile.startTelegramMediaFile(&builder)
+        
+        TelegramCore_TelegramMediaFile.add(fileId: TelegramCore_MediaId(namespace: self.fileId.namespace, id: self.fileId.id), &builder)
+        if let partialReferenceOffset {
+            TelegramCore_TelegramMediaFile.add(partialReference: partialReferenceOffset, &builder)
+        }
+        TelegramCore_TelegramMediaFile.add(resource: resourceOffset, &builder)
+        TelegramCore_TelegramMediaFile.addVectorOf(previewRepresentations: previewRepresentationsOffset, &builder)
+        TelegramCore_TelegramMediaFile.addVectorOf(videoThumbnails: videoThumbnailsOffset, &builder)
+        if let immediateThumbnailDataOffset {
+            TelegramCore_TelegramMediaFile.addVectorOf(immediateThumbnailData: immediateThumbnailDataOffset, &builder)
+        }
+        if let videoCoverOffset {
+            TelegramCore_TelegramMediaFile.add(videoCover: videoCoverOffset, &builder)
+        }
+        TelegramCore_TelegramMediaFile.add(mimeType: mimeTypeOffset, &builder)
+        TelegramCore_TelegramMediaFile.add(size: self.size ?? Int64.min, &builder)
+        TelegramCore_TelegramMediaFile.addVectorOf(attributes: attributesOffset, &builder)
+        TelegramCore_TelegramMediaFile.addVectorOf(alternativeRepresentations: alternativeRepresentationsOffset, &builder)
+        
+        return TelegramCore_TelegramMediaFile.endTelegramMediaFile(&builder, start: start)
     }
     
     public var fileName: String? {
@@ -930,4 +1336,451 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
 
 public func ==(lhs: TelegramMediaFile, rhs: TelegramMediaFile) -> Bool {
     return lhs.isEqual(to: rhs)
+}
+
+public extension TelegramMediaFile.Accessor {
+    var fileId: MediaId {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.fileId
+        }
+        return MediaId(namespace: self._wrapped!.fileId.namespace, id: self._wrapped!.fileId.id)
+    }
+    
+    var id: MediaId {
+        return self.fileId
+    }
+    
+    var fileName: String? {
+        get {
+            if let _wrappedFile = self._wrappedFile {
+                return _wrappedFile.fileName
+            }
+            for i in 0 ..< self._wrapped!.attributesCount {
+                let attribute = self._wrapped!.attributes(at: i)!
+                if attribute.valueType == .telegrammediafileattributeFilename {
+                    if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_FileName.self) {
+                        return value.fileName
+                    }
+                }
+            }
+            return nil
+        }
+    }
+    
+    var isSticker: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isSticker
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeSticker {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var isStaticSticker: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isStaticSticker
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeSticker {
+                if self._wrapped!.size != Int64.min, self._wrapped!.size < 300 * 1024 {
+                    return !isAnimatedSticker
+                } else if self._wrapped!.size == Int64.min {
+                    return !isAnimatedSticker
+                }
+                return false
+            }
+        }
+        return false
+    }
+    
+    var isStaticEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isStaticEmoji
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                return self._wrapped!.mimeType == "image/webp"
+            }
+        }
+        return false
+    }
+    
+    var isVideo: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isVideo
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeVideo {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var isInstantVideo: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isInstantVideo
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeVideo {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Video.self) {
+                    return TelegramMediaVideoFlags(rawValue: value.flags).contains(.instantRoundVideo)
+                }
+            }
+        }
+        return false
+    }
+    
+    var preloadSize: Int32? {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.preloadSize
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeVideo {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Video.self) {
+                    return value.preloadSize == 0 ? nil : value.preloadSize
+                }
+            }
+        }
+        return nil
+    }
+    
+    var isAnimated: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isAnimated
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeAnimated {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var isAnimatedSticker: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isAnimatedSticker
+        }
+        if self._wrapped!.mimeType == "application/x-tgsticker" && self.fileName != nil {
+            return true
+        }
+        return false
+    }
+    
+    var isPremiumSticker: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isPremiumSticker
+        }
+        for i in 0 ..< self._wrapped!.videoThumbnailsCount {
+            let thumbnail = self._wrapped!.videoThumbnails(at: i)!
+            if thumbnail.resource.valueType == .telegrammediaresourceClouddocumentsizemediaresource {
+                if let value = thumbnail.resource.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) {
+                    if value.sizeSpec == "f" {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+    
+    var noPremium: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.noPremium
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeNopremium {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var premiumEffect: TelegramMediaFile.VideoThumbnail? {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.premiumEffect
+        }
+        for i in 0 ..< self._wrapped!.videoThumbnailsCount {
+            let thumbnail = self._wrapped!.videoThumbnails(at: i)!
+            if thumbnail.resource.valueType == .telegrammediaresourceClouddocumentsizemediaresource {
+                if let value = thumbnail.resource.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) {
+                    if value.sizeSpec == "f" {
+                        return try! TelegramMediaFile.VideoThumbnail(flatBuffersObject: thumbnail)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
+    var isVideoSticker: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isVideoSticker
+        }
+        if self._wrapped!.mimeType == "video/webm" {
+            var hasSticker = false
+            for i in 0 ..< self._wrapped!.attributesCount {
+                let attribute = self._wrapped!.attributes(at: i)!
+                if attribute.valueType == .telegrammediafileattributeSticker {
+                    hasSticker = true
+                    break
+                } else if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                    hasSticker = true
+                    break
+                }
+            }
+            return hasSticker
+        }
+        return false
+    }
+    
+    var isCustomEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isCustomEmoji
+        }
+        var hasSticker = false
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                hasSticker = true
+                break
+            }
+        }
+        return hasSticker
+    }
+    
+    var customEmojiAlt: String? {
+        if let _wrappedFile = self._wrappedFile {
+            for attribute in _wrappedFile.attributes {
+                if case let .CustomEmoji(_, _, alt, _) = attribute {
+                    return alt
+                }
+            }
+            return nil
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) {
+                    return value.alt
+                }
+                break
+            }
+        }
+        return nil
+    }
+    
+    var stickerDisplayText: String? {
+        if let _wrappedFile = self._wrappedFile {
+            for attribute in _wrappedFile.attributes {
+                if case let .Sticker(displayText, _, _) = attribute {
+                    return displayText
+                }
+            }
+            return nil
+        }
+        
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeSticker {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Sticker.self) {
+                    return value.displayText
+                }
+            }
+        }
+        
+        return nil
+    }
+    
+    var isCustomTemplateEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isCustomTemplateEmoji
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) {
+                    let isSingleColor = value.isSingleColor
+                    if isSingleColor {
+                        return true
+                    }
+                    
+                    if let packReference = value.packReference {
+                        if packReference.valueType == .stickerpackreferenceId {
+                            if let value = packReference.value(type: TelegramCore_StickerPackReference_Id.self) {
+                                if value.id == 1269403972611866647 {
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+    
+    var internal_isHardcodedTemplateEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            for attribute in _wrappedFile.attributes {
+                if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                    switch packReference {
+                    case let .id(id, _):
+                        if id == 773947703670341676 || id == 2964141614563343 {
+                            return true
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            return false
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) {
+                    if let packReference = value.packReference {
+                        if packReference.valueType == .stickerpackreferenceId {
+                            if let value = packReference.value(type: TelegramCore_StickerPackReference_Id.self) {
+                                if value.id == 773947703670341676 || value.id == 2964141614563343 {
+                                    return true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+    
+    var isPremiumEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isPremiumEmoji
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_CustomEmoji.self) {
+                    return value.isPremium
+                }
+            }
+        }
+        return false
+    }
+    
+    var isVideoEmoji: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isVideoEmoji
+        }
+        if self._wrapped!.mimeType == "video/webm" {
+            var hasSticker = false
+            for i in 0 ..< self._wrapped!.attributesCount {
+                let attribute = self._wrapped!.attributes(at: i)!
+                if attribute.valueType == .telegrammediafileattributeCustomemoji {
+                    hasSticker = true
+                    break
+                }
+            }
+            return hasSticker
+        }
+        return false
+    }
+    
+    var hasLinkedStickers: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.hasLinkedStickers
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeHaslinkedstickers {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var isMusic: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isMusic
+        }
+        
+        var hasNonVoiceAudio = false
+        var hasVideo = false
+        
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeAudio {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Audio.self) {
+                    if !value.isVoice {
+                        hasNonVoiceAudio = true
+                    }
+                }
+            } else if attribute.valueType == .telegrammediafileattributeVideo {
+                hasVideo = true
+            }
+        }
+        return hasNonVoiceAudio && !hasVideo
+    }
+    
+    var isVoice: Bool {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.isVoice
+        }
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeAudio {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Audio.self) {
+                    return value.isVoice
+                }
+            }
+        }
+        return false
+    }
+    
+    var dimensions: PixelDimensions? {
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.dimensions
+        }
+        
+        for i in 0 ..< self._wrapped!.attributesCount {
+            let attribute = self._wrapped!.attributes(at: i)!
+            if attribute.valueType == .telegrammediafileattributeVideo {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_Video.self) {
+                    return PixelDimensions(width: value.width, height: value.height)
+                }
+            } else if attribute.valueType == .telegrammediafileattributeImagesize {
+                if let value = attribute.value(type: TelegramCore_TelegramMediaFileAttribute_ImageSize.self) {
+                    return PixelDimensions(width: value.width, height: value.height)
+                }
+            }
+        }
+        
+        if self.isAnimatedSticker {
+            return PixelDimensions(width: 512, height: 512)
+        } else {
+            return nil
+        }
+    }
+    
+    var immediateThumbnailData: Data? {
+        //TODO:release defer parsing
+        if let _wrappedFile = self._wrappedFile {
+            return _wrappedFile.immediateThumbnailData
+        }
+        
+        return _wrapped!.immediateThumbnailData.isEmpty ? nil : Data(_wrapped!.immediateThumbnailData)
+    }
 }

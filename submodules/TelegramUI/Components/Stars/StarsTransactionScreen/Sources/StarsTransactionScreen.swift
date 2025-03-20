@@ -12,6 +12,7 @@ import ComponentFlow
 import ViewControllerComponent
 import SheetComponent
 import MultilineTextComponent
+import MultilineTextWithEntitiesComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
@@ -37,6 +38,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
+    let openPaidMessageFee: () -> Void
     let copyTransactionId: (String) -> Void
     let updateSubscription: () -> Void
     let sendGift: (EnginePeer.Id) -> Void
@@ -49,6 +51,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
+        openPaidMessageFee: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
         updateSubscription: @escaping () -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void
@@ -60,6 +63,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
         self.openMessage = openMessage
         self.openMedia = openMedia
         self.openAppExamples = openAppExamples
+        self.openPaidMessageFee = openPaidMessageFee
         self.copyTransactionId = copyTransactionId
         self.updateSubscription = updateSubscription
         self.sendGift = sendGift
@@ -238,6 +242,8 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var isGiftUpgrade = false
             var giftAvailability: StarGift.Gift.Availability?
             var isRefProgram = false
+            var isPaidMessage = false
+            var premiumGiftMonths: Int32?
             
             var delayedCloseOnOpenPeer = true
             switch subject {
@@ -414,14 +420,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     isGift = true
                 } else if let starrefCommissionPermille = transaction.starrefCommissionPermille {
                     isRefProgram = true
-                    if transaction.starrefPeerId == nil {
+                    if transaction.flags.contains(.isPaidMessage) {
+                        isPaidMessage = true
+                        titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
+                        countOnTop = true
+                        descriptionText = strings.Stars_Transaction_PaidMessage_Text(formatPermille(1000 - starrefCommissionPermille)).string
+                    } else if transaction.starrefPeerId == nil {
                         titleText = strings.StarsTransaction_TitleCommission(formatPermille(starrefCommissionPermille)).string
+                        countOnTop = false
+                        descriptionText = ""
                     } else {
                         titleText = transaction.title ?? " "
+                        countOnTop = false
+                        descriptionText = ""
                     }
-                    descriptionText = ""
                     count = transaction.count
-                    countOnTop = false
                     transactionId = transaction.id
                     date = transaction.date
                     transactionPeer = transaction.peer
@@ -443,7 +456,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                 } else {
                     switch transaction.peer {
                     case let .peer(peer):
-                        if !transaction.media.isEmpty {
+                        if let months = transaction.premiumGiftMonths {
+                            premiumGiftMonths = months
+                            titleText = strings.Stars_Transaction_TelegramPremium(months)
+                        } else if transaction.flags.contains(.isPaidMessage) {
+                            isPaidMessage = true
+                            titleText = strings.Stars_Transaction_PaidMessage(transaction.paidMessageCount ?? 1)
+                        } else if !transaction.media.isEmpty {
                             titleText = strings.Stars_Transaction_MediaPurchase
                         } else {
                             titleText = transaction.title ?? peer.compactDisplayTitle
@@ -459,8 +478,13 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         via = strings.Stars_Transaction_PremiumBotTopUp_Subtitle
                     case .fragment:
                         if parentPeer.id == component.context.account.peerId {
-                            titleText = strings.Stars_Transaction_FragmentTopUp_Title
-                            via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                            if (transaction.count.value < 0 && !transaction.flags.contains(.isRefund)) || (transaction.count.value > 0 && transaction.flags.contains(.isRefund)) {
+                                titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
+                                via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
+                            } else {
+                                titleText = strings.Stars_Transaction_FragmentTopUp_Title
+                                via = strings.Stars_Transaction_FragmentTopUp_Subtitle
+                            }
                         } else {
                             titleText = strings.Stars_Transaction_FragmentWithdrawal_Title
                             via = strings.Stars_Transaction_FragmentWithdrawal_Subtitle
@@ -613,7 +637,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             }
             
             let absCount = StarsAmount(value: abs(count.value), nanos: abs(count.nanos))
-            let formattedAmount = presentationStringsFormattedNumber(absCount, dateTimeFormat.groupingSeparator)
+            let formattedAmount = formatStarsAmountText(absCount, dateTimeFormat: dateTimeFormat)
             let countColor: UIColor
             var countFont: UIFont = isSubscription || isSubscriber ? Font.regular(17.0) : Font.semibold(17.0)
             var countBackgroundColor: UIColor?
@@ -657,8 +681,18 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             
             let imageSubject: StarsImageComponent.Subject
             var imageIcon: StarsImageComponent.Icon?
-            if isGift {
-                imageSubject = .gift(count.value)
+            if let premiumGiftMonths {
+                imageSubject = .gift(premiumGiftMonths)
+            } else if isGift {
+                var value: Int32 = 3
+                if count.value <= 1000 {
+                    value = 3
+                } else if count.value < 2500 {
+                    value = 6
+                } else {
+                    value = 12
+                }
+                imageSubject = .gift(value)
             } else if !media.isEmpty {
                 imageSubject = .media(media)
             } else if let photo {
@@ -735,8 +769,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     transition: .immediate
                 )
             }
-                        
-            let amountAttributedText = NSMutableAttributedString(string: amountText, font: countFont, textColor: countColor)
+             
+            let amountAttributedText: NSAttributedString
+            if amountText.contains(environment.dateTimeFormat.decimalSeparator) {
+                let smallCountFont = Font.regular(14.0)
+                amountAttributedText = tonAmountAttributedString(amountText, integralFont: countFont, fractionalFont: smallCountFont, color: countColor, decimalSeparator: environment.dateTimeFormat.decimalSeparator)
+            } else {
+                amountAttributedText = NSAttributedString(string: amountText, font: countFont, textColor: countColor)
+            }
+            
             let amount = amount.update(
                 component: BalancedTextComponent(
                     text: .plain(amountAttributedText),
@@ -758,6 +799,7 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             )
             
             let tableFont = Font.regular(15.0)
+            let tableBoldFont = Font.semibold(15.0)
             let tableTextColor = theme.list.itemPrimaryTextColor
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
@@ -1027,38 +1069,41 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
                 if let starRefPeerId = transaction.starrefPeerId, let starRefPeer = state.peerMap[starRefPeerId] {
-                    tableItems.append(.init(
-                        id: "to",
-                        title: strings.StarsTransaction_StarRefReason_Affiliate,
-                        component: AnyComponent(
-                            Button(
-                                content: AnyComponent(
-                                    PeerCellComponent(
-                                        context: component.context,
-                                        theme: theme,
-                                        peer: starRefPeer
-                                    )
-                                ),
-                                action: {
-                                    if delayedCloseOnOpenPeer {
-                                        component.openPeer(starRefPeer, false)
-                                        Queue.mainQueue().after(1.0, {
-                                            component.cancel(false)
-                                        })
-                                    } else {
-                                        if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
-                                            chatController.playShakeAnimation()
+                    if !transaction.flags.contains(.isPaidMessage) {
+                        tableItems.append(.init(
+                            id: "to",
+                            title: strings.StarsTransaction_StarRefReason_Affiliate,
+                            component: AnyComponent(
+                                Button(
+                                    content: AnyComponent(
+                                        PeerCellComponent(
+                                            context: component.context,
+                                            theme: theme,
+                                            peer: starRefPeer
+                                        )
+                                    ),
+                                    action: {
+                                        if delayedCloseOnOpenPeer {
+                                            component.openPeer(starRefPeer, false)
+                                            Queue.mainQueue().after(1.0, {
+                                                component.cancel(false)
+                                            })
+                                        } else {
+                                            if let controller = controller() as? StarsTransactionScreen, let navigationController = controller.navigationController, let chatController = navigationController.viewControllers.first(where: { $0 is ChatController }) as? ChatController {
+                                                chatController.playShakeAnimation()
+                                            }
+                                            component.cancel(true)
                                         }
-                                        component.cancel(true)
                                     }
-                                }
+                                )
                             )
-                        )
-                    ))
+                        ))
+                    }
+                    
                     if let toPeer {
                         tableItems.append(.init(
                             id: "referred",
-                            title: strings.StarsTransaction_StarRefReason_Referred,
+                            title: transaction.flags.contains(.isPaidMessage) ? strings.Stars_Transaction_From : strings.StarsTransaction_StarRefReason_Referred,
                             component: AnyComponent(
                                 Button(
                                     content: AnyComponent(
@@ -1087,13 +1132,41 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                     }
                 }
                 if let starrefCommissionPermille = transaction.starrefCommissionPermille, transaction.starrefPeerId != nil {
-                    tableItems.append(.init(
-                        id: "commission",
-                        title: "Commission",
-                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(formatPermille(starrefCommissionPermille))%", font: tableFont, textColor: tableTextColor))
-                        )),
-                        insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
-                    ))
+                    if transaction.flags.contains(.isPaidMessage) {
+                        var totalStars = transaction.count
+                        if let starrefCount = transaction.starrefAmount {
+                            totalStars = totalStars + starrefCount
+                        }
+                        let valueString = "\(presentationStringsFormattedNumber(abs(Int32(totalStars.value)), dateTimeFormat.groupingSeparator))⭐️"
+                        let valueAttributedString = NSMutableAttributedString(string: valueString, font: tableBoldFont, textColor: theme.list.itemDisclosureActions.constructive.fillColor)
+                        let range = (valueAttributedString.string as NSString).range(of: "⭐️")
+                        if range.location != NSNotFound {
+                            valueAttributedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: range)
+                            valueAttributedString.addAttribute(.baselineOffset, value: 1.0, range: range)
+                        }
+                        tableItems.append(.init(
+                            id: "paid",
+                            title: strings.Stars_Transaction_Paid,
+                            component: AnyComponent(
+                                MultilineTextWithEntitiesComponent(
+                                    context: component.context,
+                                    animationCache: component.context.animationCache,
+                                    animationRenderer: component.context.animationRenderer,
+                                    placeholderColor: theme.list.mediaPlaceholderColor,
+                                    text: .plain(valueAttributedString),
+                                    maximumNumberOfLines: 0
+                                )
+                            ),
+                            insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
+                        ))
+                    } else {
+                        tableItems.append(.init(
+                            id: "commission",
+                            title: strings.StarsTransaction_StarRefReason_Commission,
+                            component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "\(formatPermille(starrefCommissionPermille))%", font: tableFont, textColor: tableTextColor)))),
+                            insets: UIEdgeInsets(top: 0.0, left: 12.0, bottom: 0.0, right: 5.0)
+                        ))
+                    }
                 }
             }
 
@@ -1234,19 +1307,21 @@ private final class StarsTransactionSheetContent: CombinedComponent {
             var descriptionSize: CGSize = .zero
             if !descriptionText.isEmpty {
                 let openAppExamples = component.openAppExamples
+                let openPaidMessageFee = component.openPaidMessageFee
                 
                 if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
                     state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, theme)
                 }
                 
                 let textColor = countOnTop && !isSubscriber ? theme.list.itemPrimaryTextColor : textColor
-                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: textFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
                     return (TelegramTextAttributes.URL, contents)
                 })
                 let attributedString = parseMarkdownIntoAttributedString(descriptionText, attributes: markdownAttributes, textAlignment: .center).mutableCopy() as! NSMutableAttributedString
                 if let range = attributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                     attributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: attributedString.string))
                 }
+                let descriptionAvailableWidth = isPaidMessage ? context.availableSize.width - sideInset * 2.0 - 16.0 : context.availableSize.width - sideInset * 2.0 - 60.0
                 let description = description.update(
                     component: MultilineTextComponent(
                         text: .plain(attributedString),
@@ -1264,11 +1339,15 @@ private final class StarsTransactionSheetContent: CombinedComponent {
                         },
                         tapAction: { attributes, _ in
                             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                openAppExamples()
+                                if isPaidMessage {
+                                    openPaidMessageFee()
+                                } else {
+                                    openAppExamples()
+                                }
                             }
                         }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: descriptionAvailableWidth, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
                 descriptionSize = description.size
@@ -1473,6 +1552,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
     let openMessage: (EngineMessage.Id) -> Void
     let openMedia: ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void
     let openAppExamples: () -> Void
+    let openPaidMessageFee: () -> Void
     let copyTransactionId: (String) -> Void
     let updateSubscription: () -> Void
     let sendGift: (EnginePeer.Id) -> Void
@@ -1484,6 +1564,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         openMessage: @escaping (EngineMessage.Id) -> Void,
         openMedia: @escaping ([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void,
         openAppExamples: @escaping () -> Void,
+        openPaidMessageFee: @escaping () -> Void,
         copyTransactionId: @escaping (String) -> Void,
         updateSubscription: @escaping () -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void
@@ -1494,6 +1575,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
         self.openMessage = openMessage
         self.openMedia = openMedia
         self.openAppExamples = openAppExamples
+        self.openPaidMessageFee = openPaidMessageFee
         self.copyTransactionId = copyTransactionId
         self.updateSubscription = updateSubscription
         self.sendGift = sendGift
@@ -1540,6 +1622,7 @@ private final class StarsTransactionSheetComponent: CombinedComponent {
                         openMessage: context.component.openMessage,
                         openMedia: context.component.openMedia,
                         openAppExamples: context.component.openAppExamples,
+                        openPaidMessageFee: context.component.openPaidMessageFee,
                         copyTransactionId: context.component.copyTransactionId,
                         updateSubscription: context.component.updateSubscription,
                         sendGift: context.component.sendGift
@@ -1640,6 +1723,7 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
         var openMessageImpl: ((EngineMessage.Id) -> Void)?
         var openMediaImpl: (([Media], @escaping (Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?, @escaping (UIView) -> Void) -> Void)?
         var openAppExamplesImpl: (() -> Void)?
+        var openPaidMessageFeeImpl: (() -> Void)?
         var copyTransactionIdImpl: ((String) -> Void)?
         var updateSubscriptionImpl: (() -> Void)?
         var sendGiftImpl: ((EnginePeer.Id) -> Void)?
@@ -1660,6 +1744,9 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                 },
                 openAppExamples: {
                     openAppExamplesImpl?()
+                },
+                openPaidMessageFee: {
+                    openPaidMessageFeeImpl?()
                 },
                 copyTransactionId: { transactionId in
                     copyTransactionIdImpl?(transactionId)
@@ -1770,6 +1857,23 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
                     return
                 }
                 navigationController.pushViewController(context.sharedContext.makeMiniAppListScreen(context: context, initialData: initialData))
+            })
+        }
+        
+        openPaidMessageFeeImpl = { [weak self] in
+            guard let self, let navigationController = self.navigationController as? NavigationController else {
+                return
+            }
+            let _ = (context.engine.privacy.requestAccountPrivacySettings()
+            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] privacySettings in
+                let controller = context.sharedContext.makeIncomingMessagePrivacyScreen(context: context, value: privacySettings.globalSettings.nonContactChatsPrivacy, exceptions: privacySettings.noPaidMessages, update: { settingValue in
+                    let _ = context.engine.privacy.updateNonContactChatsPrivacy(value: settingValue).start()
+                })
+                navigationController?.pushViewController(controller)
+                
+                Queue.mainQueue().after(0.6) {
+                    self?.dismissAnimated()
+                }
             })
         }
         

@@ -116,6 +116,14 @@ private final class SheetContent: CombinedComponent {
                 minAmount = configuration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 maxAmount = status.balances.availableBalance
                 amountLabel = nil
+            case .accountWithdraw:
+                titleString = environment.strings.Stars_Withdraw_Title
+                amountTitle = environment.strings.Stars_Withdraw_AmountTitle
+                amountPlaceholder = environment.strings.Stars_Withdraw_AmountPlaceholder
+                
+                minAmount = configuration.minWithdrawAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
+                maxAmount = state.balance
+                amountLabel = nil
             case .paidMedia:
                 titleString = environment.strings.Stars_PaidContent_Title
                 amountTitle = environment.strings.Stars_PaidContent_AmountTitle
@@ -124,9 +132,8 @@ private final class SheetContent: CombinedComponent {
                 minAmount = StarsAmount(value: 1, nanos: 0)
                 maxAmount = configuration.maxPaidMediaAmount.flatMap { StarsAmount(value: $0, nanos: 0) }
                 
-                var usdRate = 0.012
                 if let usdWithdrawRate = configuration.usdWithdrawRate, let amount = state.amount, amount > StarsAmount.zero {
-                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
+                    let usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
                     amountLabel = "≈\(formatTonUsdValue(amount.value, divide: false, rate: usdRate, dateTimeFormat: environment.dateTimeFormat))"
                 } else {
                     amountLabel = nil
@@ -153,7 +160,9 @@ private final class SheetContent: CombinedComponent {
             contentSize.height += 40.0
             
             let balance: StarsAmount?
-            if case .reaction = component.mode {
+            if case .accountWithdraw = component.mode {
+                balance = state.balance
+            } else if case .reaction = component.mode {
                 balance = state.balance
             } else if case let .withdraw(starsState) = component.mode {
                 balance = starsState.balances.availableBalance
@@ -378,7 +387,9 @@ private final class SheetContent: CombinedComponent {
             var amount: StarsAmount?
             switch mode {
             case let .withdraw(stats):
-                amount = stats.balances.availableBalance
+                amount = StarsAmount(value: stats.balances.availableBalance.value, nanos: 0)
+            case .accountWithdraw:
+                amount = context.starsContext?.currentState.flatMap { StarsAmount(value: $0.balance.value, nanos: 0) }
             case let .paidMedia(initialValue):
                 amount = initialValue.flatMap { StarsAmount(value: $0, nanos: 0) }
             case .reaction:
@@ -500,6 +511,7 @@ private final class StarsWithdrawSheetComponent: CombinedComponent {
 public final class StarsWithdrawScreen: ViewControllerComponentContainer {
     public enum Mode: Equatable {
         case withdraw(StarsRevenueStats)
+        case accountWithdraw
         case paidMedia(Int64?)
         case reaction(Int64?)
     }

@@ -267,7 +267,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             var file: TelegramMediaFile?
             var previousFile: TelegramMediaFile?
             if let currentItem = currentItem, case let .found(_, topItem, _) = currentItem.content {
-                previousFile = topItem?.file
+                previousFile = topItem?.file._parse()
             }
             
             switch item.content {
@@ -278,7 +278,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                     titleAttributedString = NSAttributedString(string: item.strings.Channel_Stickers_Searching, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                     statusAttributedString = NSAttributedString(string: "", font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
                 case let .found(packInfo, topItem, subtitle):
-                    file = topItem?.file
+                    file = topItem?.file._parse()
                     titleAttributedString = NSAttributedString(string: packInfo.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
                     statusAttributedString = NSAttributedString(string: subtitle, font: statusFont, textColor: item.theme.list.itemSecondaryTextColor)
             }

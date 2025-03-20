@@ -1,0 +1,7 @@
+namespace TelegramCore;
+
+table TelegramChatBannedRights {
+    flags:int32 (id: 0);
+    untilDate:int32 (id: 1);
+}
+

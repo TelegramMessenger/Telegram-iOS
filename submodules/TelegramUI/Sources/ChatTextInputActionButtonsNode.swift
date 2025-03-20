@@ -14,6 +14,7 @@ import ChatTextInputMediaRecordingButton
 import ChatSendButtonRadialStatusNode
 import ChatSendMessageActionUI
 import ComponentFlow
+import AnimatedCountLabelNode
 
 private final class EffectBadgeView: UIView {
     private let context: AccountContext
@@ -138,6 +139,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
     var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
+    
+    let textNode: ImmediateAnimatedCountLabelNode
+    
     let expandMediaInputButton: HighlightableButtonNode
     private var effectBadgeView: EffectBadgeView?
     
@@ -172,6 +176,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
         self.backgroundNode.clipsToBounds = true
         self.backdropNode = ChatMessageBubbleBackdrop()
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: nil)
+        
+        self.textNode = ImmediateAnimatedCountLabelNode()
+        self.textNode.isUserInteractionEnabled = false
         
         self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         
@@ -211,6 +218,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
             self.backgroundNode.addSubnode(self.backdropNode)
         }
         self.sendContainerNode.addSubnode(self.sendButton)
+        self.sendContainerNode.addSubnode(self.textNode)
         self.addSubnode(self.expandMediaInputButton)
     }
     
@@ -260,20 +268,68 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
         }
     }
     
-    func updateLayout(size: CGSize, isMediaInputExpanded: Bool, currentMessageEffectId: Int64?, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    func updateLayout(size: CGSize, isMediaInputExpanded: Bool, showTitle: Bool, currentMessageEffectId: Int64?, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGSize {
         self.validLayout = size
+        
+        var innerSize = size
+        if let sendPaidMessageStars = interfaceState.sendPaidMessageStars, interfaceState.interfaceState.editMessage == nil {
+            self.sendButton.imageNode.alpha = 0.0
+            self.textNode.isHidden = false
+            
+            var amount: Int64
+            if let forwardedCount = interfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
+                amount = sendPaidMessageStars.value * Int64(forwardedCount)
+                if interfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
+                    amount += sendPaidMessageStars.value
+                }
+            } else {
+                if interfaceState.interfaceState.effectiveInputState.inputText.length > 4096 {
+                    let messageCount = Int32(ceil(CGFloat(interfaceState.interfaceState.effectiveInputState.inputText.length) / 4096.0))
+                    amount = sendPaidMessageStars.value * Int64(messageCount)
+                } else {
+                    amount = sendPaidMessageStars.value
+                }
+            }
+            
+            let text = "\(amount)"
+            let font = Font.with(size: 17.0, design: .round, weight: .semibold, traits: .monospacedNumbers)
+            let badgeString = NSMutableAttributedString(string: "⭐️ ", font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+            if let range = badgeString.string.range(of: "⭐️") {
+                badgeString.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(interfaceState.theme)!, range: NSRange(range, in: badgeString.string))
+                badgeString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: badgeString.string))
+            }
+            var segments: [AnimatedCountLabelNode.Segment] = []
+            segments.append(.text(0, badgeString))
+            for char in text {
+                if let intValue = Int(String(char)) {
+                    segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)))
+                }
+            }
+            self.textNode.segments = segments
+            
+            let textSize = self.textNode.updateLayout(size: CGSize(width: 100.0, height: 100.0), animated: transition.isAnimated)
+            let buttonInset: CGFloat = 14.0
+            if showTitle {
+                innerSize.width = textSize.width + buttonInset * 2.0
+            }
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: showTitle ? 5.0 + 7.0 : floorToScreenPixels((innerSize.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize))
+        } else {
+            self.sendButton.imageNode.alpha = 1.0
+            self.textNode.isHidden = true
+        }
+    
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
         
-        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.sendContainerNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: innerSize))
+        transition.updateFrame(node: self.sendContainerNode, frame: CGRect(origin: CGPoint(), size: innerSize))
         
-        let backgroundSize = CGSize(width: 33.0, height: 33.0)
-        let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: floorToScreenPixels((size.height - backgroundSize.height) / 2.0)), size: backgroundSize)
+        let backgroundSize = CGSize(width: innerSize.width - 11.0, height: 33.0)
+        let backgroundFrame = CGRect(origin: CGPoint(x: showTitle ? 5.0 + UIScreenPixel : floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: floorToScreenPixels((size.height - backgroundSize.height) / 2.0)), size: backgroundSize)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
-        self.backgroundNode.cornerRadius = backgroundSize.width / 2.0
+        self.backgroundNode.cornerRadius = backgroundSize.height / 2.0
         
-        transition.updateFrame(node: self.backdropNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: size.width + 12.0, height: size.height + 2.0)))
+        transition.updateFrame(node: self.backdropNode, frame: CGRect(origin: CGPoint(x: -2.0, y: -2.0), size: CGSize(width: innerSize.width + 12.0, height: size.height + 2.0)))
         if let (rect, containerSize) = self.absoluteRect {
             self.backdropNode.update(rect: rect, within: containerSize)
         }
@@ -303,6 +359,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode, ChatSendMessageAction
                 effectBadgeView?.removeFromSuperview()
             })
         }
+        
+        return innerSize
     }
     
     func updateAccessibility() {

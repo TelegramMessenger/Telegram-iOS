@@ -220,7 +220,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
             case let .packsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .pack(_, _, _, info, topItem, count, playAnimatedStickers, selected):
-                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: info, itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
+                return ItemListStickerPackItem(presentationData: presentationData, context: arguments.context, packInfo: StickerPackCollectionInfo.Accessor(info), itemCount: count, topItem: topItem, unread: false, control: selected ? .selection : .none, editing: ItemListStickerPackItemEditing(editable: false, editing: false, revealed: false, reorderable: false, selectable: false), enabled: true, playAnimatedStickers: playAnimatedStickers, sectionId: self.section, action: {
                     if selected {
                         arguments.openStickerPack(info)
                     } else {
@@ -337,7 +337,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                 case .fetching:
                     return nil
                 case let .result(info, items, _):
-                    return InitialStickerPackData.data(StickerPackData(info: info, item: items.first))
+                    return InitialStickerPackData.data(StickerPackData(info: info._parse(), item: items.first))
             }
         })
     } else {
@@ -389,7 +389,7 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
                         case .none:
                             return .single((searchText, .notFound))
                         case let .result(info, items, _):
-                            return .single((searchText, .found(StickerPackData(info: info, item: items.first))))
+                            return .single((searchText, .found(StickerPackData(info: info._parse(), item: items.first))))
                     }
                 }
                 |> afterNext { value in

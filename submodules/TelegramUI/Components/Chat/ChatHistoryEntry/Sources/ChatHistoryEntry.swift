@@ -41,12 +41,17 @@ public struct ChatMessageEntryAttributes: Equatable {
     }
 }
 
+public enum ChatInfoData: Equatable {
+    case botInfo(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?)
+    case userInfo(peer: EnginePeer, verification: PeerVerification?, registrationDate: String?, phoneCountry: String?, groupsInCommonCount: Int32)
+}
+
 public enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
     case MessageGroupEntry(Int64, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
-    case ChatInfoEntry(String, String, TelegramMediaImage?, TelegramMediaFile?, ChatPresentationData)
+    case ChatInfoEntry(ChatInfoData, ChatPresentationData)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
     public var stableId: UInt64 {
@@ -272,8 +277,8 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                 } else {
                     return false
                 }
-            case let .ChatInfoEntry(lhsTitle, lhsText, lhsPhoto, lhsVideo, lhsPresentationData):
-                if case let .ChatInfoEntry(rhsTitle, rhsText, rhsPhoto, rhsVideo, rhsPresentationData) = rhs, lhsTitle == rhsTitle, lhsText == rhsText, lhsPhoto == rhsPhoto, lhsVideo == rhsVideo, lhsPresentationData === rhsPresentationData {
+            case let .ChatInfoEntry(lhsData, lhsPresentationData):
+                if case let .ChatInfoEntry(rhsData, rhsPresentationData) = rhs, lhsData == rhsData, lhsPresentationData === rhsPresentationData {
                     return true
                 } else {
                     return false

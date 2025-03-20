@@ -64,9 +64,11 @@ private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, med
     return []
 }
 
-public func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galleryMedia: Media) -> [InstantPageGalleryEntry] {
+public func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage.Accessor, galleryMedia: Media) -> [InstantPageGalleryEntry] {
     var result: [InstantPageGalleryEntry] = []
     var counter: Int = 0
+    
+    let page = page._parse()
     
     for block in page.blocks {
         result.append(contentsOf: instantPageBlockMedia(pageId: webpageId, block: block, media: page.media, counter: &counter))

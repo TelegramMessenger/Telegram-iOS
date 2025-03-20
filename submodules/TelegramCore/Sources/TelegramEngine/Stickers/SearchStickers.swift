@@ -75,7 +75,7 @@ func _internal_randomGreetingSticker(account: Account) -> Signal<FoundStickerIte
     |> map { items -> FoundStickerItem? in
         if let randomItem = items?.randomElement(), let item = randomItem.contents.get(RecentMediaItem.self) {
             let file = item.media
-            return FoundStickerItem(file: file, stringRepresentations: [])
+            return FoundStickerItem(file: file._parse(), stringRepresentations: [])
         }
         return nil
     }
@@ -107,7 +107,7 @@ func _internal_searchStickers(account: Account, query: String?, emoticon: [Strin
                     for representation in item.stringRepresentations {
                         for queryItem in emoticon {
                             if representation.hasPrefix(queryItem) {
-                                result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
+                                result.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: item.stringRepresentations))
                                 break
                             }
                         }
@@ -131,7 +131,7 @@ func _internal_searchStickers(account: Account, query: String?, emoticon: [Strin
                     if !currentItems.contains(file.fileId) {
                         currentItems.insert(file.fileId)
                         
-                        for case let .Sticker(displayText, _, _) in file.attributes {
+                        if let displayText = file.stickerDisplayText {
                             for queryItem in emoticon {
                                 if displayText.hasPrefix(queryItem) {
                                     matchingRecentItemsIds.insert(file.fileId)
@@ -140,9 +140,9 @@ func _internal_searchStickers(account: Account, query: String?, emoticon: [Strin
                             }
                             recentItemsIds.insert(file.fileId)
                             if file.isAnimatedSticker || file.isVideoSticker {
-                                recentAnimatedItems.append(file)
+                                recentAnimatedItems.append(file._parse())
                             } else {
-                                recentItems.append(file)
+                                recentItems.append(file._parse())
                             }
                             break
                         }
@@ -167,18 +167,18 @@ func _internal_searchStickers(account: Account, query: String?, emoticon: [Strin
                             let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                             if !recentItemsIds.contains(item.file.fileId) {
                                 if item.file.isPremiumSticker {
-                                    installedPremiumItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                    installedPremiumItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                 } else if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                    installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                    installedAnimatedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                 } else {
-                                    installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                    installedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                 }
                             } else {
                                 matchingRecentItemsIds.insert(item.file.fileId)
                                 if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                    recentAnimatedItems.append(item.file)
+                                    recentAnimatedItems.append(item.file._parse())
                                 } else {
-                                    recentItems.append(item.file)
+                                    recentItems.append(item.file._parse())
                                 }
                             }
                         }
@@ -504,13 +504,13 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                 if let item = entry.contents.get(SavedStickerItem.self) {
                     if case .premium = category.kind {
                         if item.file.isPremiumSticker {
-                            result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
+                            result.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: item.stringRepresentations))
                         }
                     } else {
                         for representation in item.stringRepresentations {
                             for queryItem in query {
                                 if representation.hasPrefix(queryItem) {
-                                    result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
+                                    result.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: item.stringRepresentations))
                                     break
                                 }
                             }
@@ -535,7 +535,7 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                     if !currentItems.contains(file.fileId) {
                         currentItems.insert(file.fileId)
                         
-                        for case let .Sticker(displayText, _, _) in file.attributes {
+                        if let displayText = file.stickerDisplayText {
                             if case .premium = category.kind {
                                 if file.isPremiumSticker {
                                     matchingRecentItemsIds.insert(file.fileId)
@@ -550,9 +550,9 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                             }
                             recentItemsIds.insert(file.fileId)
                             if file.isAnimatedSticker || file.isVideoSticker {
-                                recentAnimatedItems.append(file)
+                                recentAnimatedItems.append(file._parse())
                             } else {
-                                recentItems.append(file)
+                                recentItems.append(file._parse())
                             }
                             break
                         }
@@ -585,18 +585,18 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                             
                             if !recentItemsIds.contains(item.file.fileId) {
                                 if item.file.isPremiumSticker {
-                                    installedPremiumItems.append(FoundStickerItem(file: item.file, stringRepresentations: []))
+                                    installedPremiumItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: []))
                                 } else if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                    installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: []))
+                                    installedAnimatedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: []))
                                 } else {
-                                    installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: []))
+                                    installedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: []))
                                 }
                             } else {
                                 matchingRecentItemsIds.insert(item.file.fileId)
                                 if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                    recentAnimatedItems.append(item.file)
+                                    recentAnimatedItems.append(item.file._parse())
                                 } else {
-                                    recentItems.append(item.file)
+                                    recentItems.append(item.file._parse())
                                 }
                             }
                         }
@@ -614,18 +614,18 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                     
                     if !recentItemsIds.contains(item.media.fileId) {
                         if item.media.isPremiumSticker {
-                            installedPremiumItems.append(FoundStickerItem(file: item.media, stringRepresentations: []))
+                            installedPremiumItems.append(FoundStickerItem(file: item.media._parse(), stringRepresentations: []))
                         } else if item.media.isAnimatedSticker || item.media.isVideoSticker {
-                            installedAnimatedItems.append(FoundStickerItem(file: item.media, stringRepresentations: []))
+                            installedAnimatedItems.append(FoundStickerItem(file: item.media._parse(), stringRepresentations: []))
                         } else {
-                            installedItems.append(FoundStickerItem(file: item.media, stringRepresentations: []))
+                            installedItems.append(FoundStickerItem(file: item.media._parse(), stringRepresentations: []))
                         }
                     } else {
                         matchingRecentItemsIds.insert(item.media.fileId)
                         if item.media.isAnimatedSticker || item.media.isVideoSticker {
-                            recentAnimatedItems.append(item.media)
+                            recentAnimatedItems.append(item.media._parse())
                         } else {
-                            recentItems.append(item.media)
+                            recentItems.append(item.media._parse())
                         }
                     }
                 }
@@ -639,18 +639,18 @@ func _internal_searchStickers(account: Account, category: EmojiSearchCategories.
                                 let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                                 if !recentItemsIds.contains(item.file.fileId) {
                                     if item.file.isPremiumSticker {
-                                        installedPremiumItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                        installedPremiumItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                     } else if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                        installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                        installedAnimatedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                     } else {
-                                        installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                                        installedItems.append(FoundStickerItem(file: item.file._parse(), stringRepresentations: stringRepresentations))
                                     }
                                 } else {
                                     matchingRecentItemsIds.insert(item.file.fileId)
                                     if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                                        recentAnimatedItems.append(item.file)
+                                        recentAnimatedItems.append(item.file._parse())
                                     } else {
-                                        recentItems.append(item.file)
+                                        recentItems.append(item.file._parse())
                                     }
                                 }
                             }
@@ -908,7 +908,7 @@ func _internal_searchEmoji(account: Account, query: String?, emoticon: [String],
                                 let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                                 for stringRepresentation in stringRepresentations {
                                     if querySet.contains(stringRepresentation) {
-                                        installedItems.append(FoundStickerItem(file: file, stringRepresentations: stringRepresentations))
+                                        installedItems.append(FoundStickerItem(file: file._parse(), stringRepresentations: stringRepresentations))
                                         break
                                     }
                                 }

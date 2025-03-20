@@ -19,6 +19,7 @@ import TooltipUI
 import TelegramNotices
 import ComponentFlow
 import MediaScrubberComponent
+import AnimatedCountLabelNode
 
 //Xcode 16
 #if canImport(ContactProvider)
@@ -69,6 +70,10 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     let deleteButton: HighlightableButtonNode
     let binNode: AnimationNode
     let sendButton: HighlightTrackingButtonNode
+    let sendBackgroundNode: ASDisplayNode
+    let sendIconNode: ASImageNode
+    let textNode: ImmediateAnimatedCountLabelNode
+    
     private var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     let playButton: HighlightableButtonNode
     private let playPauseIconNode: PlayPauseIconNode
@@ -114,7 +119,16 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.sendButton = HighlightTrackingButtonNode()
         self.sendButton.displaysAsynchronously = false
         self.sendButton.isExclusiveTouch = true
-        self.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(theme), for: [])
+        
+        self.sendBackgroundNode = ASDisplayNode()
+        self.sendBackgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
+        
+        self.sendIconNode = ASImageNode()
+        self.sendIconNode.displaysAsynchronously = false
+        self.sendIconNode.image = PresentationResourcesChat.chatInputPanelSendIconImage(theme)
+        
+        self.textNode = ImmediateAnimatedCountLabelNode()
+        self.textNode.isUserInteractionEnabled = false
         
         self.viewOnceButton = ChatRecordingViewOnceButtonNode(icon: .viewOnce)
         self.recordMoreButton = ChatRecordingViewOnceButtonNode(icon: .recordMore)
@@ -167,6 +181,9 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.deleteButton.addSubnode(self.binNode)
         self.addSubnode(self.waveformBackgroundNode)
         self.addSubnode(self.sendButton)
+        self.sendButton.addSubnode(self.sendBackgroundNode)
+        self.sendButton.addSubnode(self.sendIconNode)
+        self.sendButton.addSubnode(self.textNode)
         self.addSubnode(self.waveformScrubberNode)
         self.addSubnode(self.playButton)
         self.addSubnode(self.durationLabel)
@@ -249,6 +266,55 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         if self.presentationInterfaceState == nil {
             isFirstTime = true
         }
+        
+        var innerSize = CGSize(width: 44.0, height: 44.0)
+        if let sendPaidMessageStars = interfaceState.sendPaidMessageStars {
+            self.sendIconNode.alpha = 0.0
+            self.textNode.isHidden = false
+            
+            var amount = sendPaidMessageStars.value
+            if let forwardedCount = interfaceState.interfaceState.forwardMessageIds?.count, forwardedCount > 0 {
+                amount = sendPaidMessageStars.value * Int64(forwardedCount)
+                if interfaceState.interfaceState.effectiveInputState.inputText.length > 0 {
+                    amount += sendPaidMessageStars.value
+                }
+            }
+            
+            let text = "\(amount)"
+            let font = Font.with(size: 17.0, design: .round, weight: .semibold, traits: .monospacedNumbers)
+            let badgeString = NSMutableAttributedString(string: "⭐️ ", font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+            if let range = badgeString.string.range(of: "⭐️") {
+                badgeString.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(interfaceState.theme)!, range: NSRange(range, in: badgeString.string))
+                badgeString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: badgeString.string))
+            }
+            var segments: [AnimatedCountLabelNode.Segment] = []
+            segments.append(.text(0, badgeString))
+            for char in text {
+                if let intValue = Int(String(char)) {
+                    segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)))
+                }
+            }
+            self.textNode.segments = segments
+            
+            let textSize = self.textNode.updateLayout(size: CGSize(width: 100.0, height: 100.0), animated: transition.isAnimated)
+            let buttonInset: CGFloat = 14.0
+            innerSize.width = textSize.width + buttonInset * 2.0
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: 12.0, y: floorToScreenPixels((innerSize.height - textSize.height) / 2.0)), size: textSize))
+        } else {
+            self.sendIconNode.alpha = 1.0
+            self.textNode.isHidden = true
+        }
+        
+        transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - innerSize.width + 1.0 - UIScreenPixel, y: 1.0 + UIScreenPixel), size: innerSize))
+        let backgroundSize = CGSize(width: innerSize.width - 11.0, height: 33.0)
+        let backgroundFrame = CGRect(origin: CGPoint(x: 5.0, y: floorToScreenPixels((innerSize.height - backgroundSize.height) / 2.0)), size: backgroundSize)
+        transition.updateFrame(node: self.sendBackgroundNode, frame: backgroundFrame)
+        self.sendBackgroundNode.cornerRadius = backgroundSize.height / 2.0
+        
+        if let icon = self.sendIconNode.image {
+            transition.updateFrame(node: self.sendIconNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((innerSize.width - icon.size.width) / 2.0), y: floorToScreenPixels((innerSize.height - icon.size.height) / 2.0)), size: icon.size))
+        }
+        
         if self.presentationInterfaceState != interfaceState {
             var updateWaveform = false
             if self.presentationInterfaceState?.interfaceState.mediaDraftState != interfaceState.interfaceState.mediaDraftState {
@@ -346,7 +412,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                         ),
                         environment: {},
                         forceUpdate: false,
-                        containerSize: CGSize(width: min(424, width - leftInset - rightInset - 45.0 * 2.0), height: 33.0)
+                        containerSize: CGSize(width: min(424, width - leftInset - rightInset - 45.0 - innerSize.width - 1.0), height: 33.0)
                     )
 
                     if let view = self.scrubber.view {
@@ -360,15 +426,14 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         }
         
         if let view = self.scrubber.view {
-            view.frame = CGRect(origin: CGPoint(x: max(leftInset + 45.0, floorToScreenPixels((width - view.bounds.width) / 2.0)), y: 7.0 - UIScreenPixel), size: view.bounds.size)
+            view.frame = CGRect(origin: CGPoint(x: min(width - innerSize.width - view.bounds.width, max(leftInset + 45.0, floorToScreenPixels((width - view.bounds.width) / 2.0))), y: 7.0 - UIScreenPixel), size: view.bounds.size)
         }
                 
         let panelHeight = defaultHeight(metrics: metrics)
-
         transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: 1), size: CGSize(width: 40.0, height: 40)))
-        transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: 2 - UIScreenPixel), size: CGSize(width: 44.0, height: 44)))
+                
         self.binNode.frame = self.deleteButton.bounds
-        
+
         var viewOnceOffset: CGFloat = 0.0
         if interfaceState.interfaceState.replyMessageSubject != nil {
             viewOnceOffset = -35.0
@@ -413,11 +478,11 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.playButton, frame: CGRect(origin: CGPoint(x: leftInset + 52.0, y: 10.0), size: CGSize(width: 26.0, height: 26.0)))
         self.playPauseIconNode.frame = CGRect(origin: CGPoint(x: -2.0, y: -1.0), size: CGSize(width: 26.0, height: 26.0))
 
-        let waveformBackgroundFrame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 90.0, height: 33.0))
+        let waveformBackgroundFrame = CGRect(origin: CGPoint(x: leftInset + 45.0, y: 7.0 - UIScreenPixel), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0, height: 33.0))
         transition.updateFrame(node: self.waveformBackgroundNode, frame: waveformBackgroundFrame)
-        transition.updateFrame(node: self.waveformButton, frame: CGRect(origin: CGPoint(x: leftInset + 45.0, y: 0.0), size: CGSize(width: width - leftInset - rightInset - 90.0, height: panelHeight)))
-        transition.updateFrame(node: self.waveformScrubberNode, frame: CGRect(origin: CGPoint(x: leftInset + 45.0 + 35.0, y: 7.0 + floor((33.0 - 13.0) / 2.0)), size: CGSize(width: width - leftInset - rightInset - 90.0 - 45.0 - 40.0, height: 13.0)))
-        transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: width - rightInset - 90.0 - 4.0, y: 15.0), size: CGSize(width: 35.0, height: 20.0)))
+        transition.updateFrame(node: self.waveformButton, frame: CGRect(origin: CGPoint(x: leftInset + 45.0, y: 0.0), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0, height: panelHeight)))
+        transition.updateFrame(node: self.waveformScrubberNode, frame: CGRect(origin: CGPoint(x: leftInset + 45.0 + 35.0, y: 7.0 + floor((33.0 - 13.0) / 2.0)), size: CGSize(width: width - leftInset - rightInset - 45.0 - innerSize.width - 1.0 - 45.0 - 40.0, height: 13.0)))
+        transition.updateFrame(node: self.durationLabel, frame: CGRect(origin: CGPoint(x: width - rightInset - 45.0 - innerSize.width - 1.0 - 4.0, y: 15.0), size: CGSize(width: 35.0, height: 20.0)))
         
         prevInputPanelNode?.frame = CGRect(origin: .zero, size: CGSize(width: width, height: panelHeight))
         if let prevTextInputPanelNode = self.prevInputPanelNode as? ChatTextInputPanelNode {

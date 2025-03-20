@@ -132,6 +132,7 @@ import BrowserUI
 import NotificationPeerExceptionController
 import AdsReportScreen
 import AdUI
+import ChatMessagePaymentAlertController
 
 public enum ChatControllerPeekActions {
     case standard
@@ -532,6 +533,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     let selectAddMemberDisposable = MetaDisposable()
     let addMemberDisposable = MetaDisposable()
     let joinChannelDisposable = MetaDisposable()
+    var premiumOrStarsRequiredDisposable: Disposable?
     
     var shouldDisplayDownButton = false
 
@@ -627,6 +629,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var currentSendStarsUndoMessageId: EngineMessage.Id?
     var currentSendStarsUndoCount: Int = 0
     
+    weak var currentPaidMessageUndoController: UndoOverlayController?
+    
+    let initTimestamp: Double
+    
     public var alwaysShowSearchResultsAsList: Bool = false {
         didSet {
             self.presentationInterfaceState = self.presentationInterfaceState.updatedDisplayHistoryFilterAsList(self.alwaysShowSearchResultsAsList)
@@ -675,6 +681,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         customChatNavigationStack: [EnginePeer.Id]? = nil,
         params: ChatControllerParams? = nil
     ) {
+        self.initTimestamp = CFAbsoluteTimeGetCurrent()
+        
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -880,29 +888,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let controllerInteraction = ChatControllerInteraction(openMessage: { [weak self] message, params in
-            guard let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) else {
+            guard let self, self.isNodeLoaded, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) else {
                 return false
             }
             
             let mode = params.mode
             
-            let displayVoiceMessageDiscardAlert: () -> Bool = {
-                if strongSelf.presentVoiceMessageDiscardAlert(action: { [weak self] in
-                    if let strongSelf = self {
-                        Queue.mainQueue().after(0.1, {
-                            let _ = strongSelf.controllerInteraction?.openMessage(message, params)
-                        })
-                    }
+            let displayVoiceMessageDiscardAlert: () -> Bool = { [weak self] in
+                guard let self else {
+                    return true
+                }
+                if self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+                    Queue.mainQueue().after(0.1, {
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.controllerInteraction?.openMessage(message, params)
+                    })
                 }, performAction: false) {
                     return false
                 }
                 return true
             }
             
-            strongSelf.commitPurposefulAction()
-            strongSelf.dismissAllTooltips()
+            self.commitPurposefulAction()
+            self.dismissAllTooltips()
             
-            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             var openMessageByAction = false
             var isLocation = false
@@ -916,9 +928,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 if let file = media as? TelegramMediaFile {
                     if file.isInstantVideo {
-                        if strongSelf.chatDisplayNode.isInputViewFocused {
-                            strongSelf.returnInputViewFocus = true
-                            strongSelf.chatDisplayNode.dismissInput()
+                        if self.chatDisplayNode.isInputViewFocused {
+                            self.returnInputViewFocus = true
+                            self.chatDisplayNode.dismissInput()
                         }
                     }
                     if file.isMusic || file.isVoice || file.isInstantVideo {
@@ -927,7 +939,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if (file.isVoice || file.isInstantVideo) && message.minAutoremoveOrClearTimeout == viewOnceTimeout {
-                            strongSelf.openViewOnceMediaMessage(message)
+                            self.openViewOnceMediaMessage(message)
                             return false
                         }
                     } else if file.isVideo {
@@ -940,7 +952,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
-                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, params)
+                                self.controllerInteraction?.openCheckoutOrReceipt(message.id, params)
                                 return true
                             } else {
                                 return false
@@ -952,7 +964,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch extendedMedia {
                         case .preview:
                             if displayVoiceMessageDiscardAlert() {
-                                strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id, nil)
+                                self.controllerInteraction?.openCheckoutOrReceipt(message.id, nil)
                                 return true
                             } else {
                                 return false
@@ -962,15 +974,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else if media is TelegramMediaGiveaway || media is TelegramMediaGiveawayResults {
                     let progress = params.progress
-                    let presentationData = strongSelf.presentationData
+                    let presentationData = self.presentationData
                     
-                    var signal = strongSelf.context.engine.payments.premiumGiveawayInfo(peerId: message.id.peerId, messageId: message.id)
+                    var signal = self.context.engine.payments.premiumGiveawayInfo(peerId: message.id.peerId, messageId: message.id)
                     let disposable: MetaDisposable
-                    if let current = strongSelf.giveawayStatusDisposable {
+                    if let current = self.giveawayStatusDisposable {
                         disposable = current
                     } else {
                         disposable = MetaDisposable()
-                        strongSelf.giveawayStatusDisposable = disposable
+                        self.giveawayStatusDisposable = disposable
                     }
                     
                     let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
@@ -1003,8 +1015,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     disposable.set((signal
                     |> deliverOnMainQueue).startStrict(next: { [weak self] info in
-                        if let strongSelf = self, let info {
-                            strongSelf.displayGiveawayStatusInfo(messageId: message.id, giveawayInfo: info)
+                        if let self, let info {
+                            self.displayGiveawayStatusInfo(messageId: message.id, giveawayInfo: info)
                         }
                     }))
                     
@@ -1017,22 +1029,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults, .customText:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
+                                    self.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
                                     break
                                 }
                             }
                         case let .photoUpdated(image):
                             openMessageByAction = image != nil
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
-                            if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
-                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled, isStream: activeCall.isStream))
+                            if let activeCall = self.presentationInterfaceState.activeGroupCallInfo?.activeCall {
+                                self.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled, isStream: activeCall.isStream))
                             } else {
                                 var canManageGroupCalls = false
-                                if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
+                                if let channel = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel {
                                     if channel.flags.contains(.isCreator) || channel.hasPermission(.manageCalls) {
                                         canManageGroupCalls = true
                                     }
-                                } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
+                                } else if let group = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
                                     if case .creator = group.role {
                                         canManageGroupCalls = true
                                     } else if case let .admin(rights, _) = group.role {
@@ -1044,80 +1056,80 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 
                                 if canManageGroupCalls {
                                     let text: String
-                                    if let channel = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
-                                        text = strongSelf.presentationData.strings.LiveStream_CreateNewVoiceChatText
+                                    if let channel = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                        text = self.presentationData.strings.LiveStream_CreateNewVoiceChatText
                                     } else {
-                                        text = strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatText
+                                        text = self.presentationData.strings.VoiceChat_CreateNewVoiceChatText
                                     }
-                                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatStartNow, action: {
-                                        if let strongSelf = self {
+                                    self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.VoiceChat_CreateNewVoiceChatStartNow, action: { [weak self] in
+                                        if let self {
                                             var dismissStatus: (() -> Void)?
-                                            let statusController = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: {
+                                            let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: {
                                                 dismissStatus?()
                                             }))
                                             dismissStatus = { [weak self, weak statusController] in
                                                 self?.createVoiceChatDisposable.set(nil)
                                                 statusController?.dismiss()
                                             }
-                                            strongSelf.present(statusController, in: .window(.root))
-                                            strongSelf.createVoiceChatDisposable.set((strongSelf.context.engine.calls.createGroupCall(peerId: message.id.peerId, title: nil, scheduleDate: nil, isExternalStream: false)
+                                            self.present(statusController, in: .window(.root))
+                                            self.createVoiceChatDisposable.set((self.context.engine.calls.createGroupCall(peerId: message.id.peerId, title: nil, scheduleDate: nil, isExternalStream: false)
                                             |> deliverOnMainQueue).startStrict(next: { [weak self] info in
-                                                guard let strongSelf = self else {
+                                                guard let self else {
                                                     return
                                                 }
-                                                strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
+                                                self.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: info.subscribedToScheduled, isStream: info.isStream))
                                             }, error: { [weak self] error in
                                                 dismissStatus?()
                                                 
-                                                guard let strongSelf = self else {
+                                                guard let self else {
                                                     return
                                                 }
                                             
                                                 let text: String
                                                 switch error {
                                                 case .generic, .scheduledTooLate:
-                                                    text = strongSelf.presentationData.strings.Login_UnknownError
+                                                    text = self.presentationData.strings.Login_UnknownError
                                                 case .anonymousNotAllowed:
                                                     if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-                                                        text = strongSelf.presentationData.strings.LiveStream_AnonymousDisabledAlertText
+                                                        text = self.presentationData.strings.LiveStream_AnonymousDisabledAlertText
                                                     } else {
-                                                        text = strongSelf.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
+                                                        text = self.presentationData.strings.VoiceChat_AnonymousDisabledAlertText
                                                     }
                                                 }
-                                                strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                             }, completed: {
                                                 dismissStatus?()
                                             }))
                                         }
-                                    }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.VoiceChat_CreateNewVoiceChatSchedule, action: {
-                                        if let strongSelf = self {
-                                            strongSelf.context.scheduleGroupCall(peerId: message.id.peerId, parentController: strongSelf)
+                                    }), TextAlertAction(type: .genericAction, title: self.presentationData.strings.VoiceChat_CreateNewVoiceChatSchedule, action: { [weak self] in
+                                        if let self {
+                                            self.context.scheduleGroupCall(peerId: message.id.peerId, parentController: self)
                                         }
-                                    }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
+                                    }), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {})], actionLayout: .vertical), in: .window(.root))
                                 }
                             }
                             return true
                         case .messageAutoremoveTimeoutUpdated:
                             var canSetupAutoremoveTimeout = false
                             
-                            if let _ = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
+                            if let _ = self.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
                                 canSetupAutoremoveTimeout = false
-                            } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
+                            } else if let group = self.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
                                 if !group.hasBannedPermission(.banChangeInfo) {
                                     canSetupAutoremoveTimeout = true
                                 }
-                            } else if let user = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
-                                if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
+                            } else if let user = self.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
+                                if user.id != self.context.account.peerId && user.botInfo == nil {
                                     canSetupAutoremoveTimeout = true
                                 }
-                            } else if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
+                            } else if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                                 if channel.hasPermission(.changeInfo) {
                                     canSetupAutoremoveTimeout = true
                                 }
                             }
                             
                             if canSetupAutoremoveTimeout {
-                                strongSelf.presentAutoremoveSetup()
+                                self.presentAutoremoveSetup()
                             }
                         case let .paymentSent(currency, _, _, _, _):
                             if currency == "XTR" {
@@ -1129,14 +1141,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     self.push(self.context.sharedContext.makeStarsReceiptScreen(context: self.context, receipt: receipt))
                                 })
                             } else {
-                                strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                self.present(BotReceiptController(context: self.context, messageId: message.id), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                             }
                             return true
                         case .setChatTheme:
-                            strongSelf.presentThemeSelection()
+                            self.presentThemeSelection()
                             return true
                         case let .setChatWallpaper(wallpaper, _):
-                            guard let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+                            guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
                                 return true
                             }
                             if let peer = peer as? TelegramChannel {
@@ -1151,11 +1163,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 return true
                             }
-                            guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
-                                strongSelf.presentThemeSelection()
+                            guard message.effectivelyIncoming(self.context.account.peerId), let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+                                self.presentThemeSelection()
                                 return true
                             }
-                            strongSelf.chatDisplayNode.dismissInput()
+                            self.chatDisplayNode.dismissInput()
                             var options = WallpaperPresentationOptions()
                             var intensity: Int32?
                             if let settings = wallpaper.settings {
@@ -1169,7 +1181,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     intensity = settings.intensity
                                 }
                             }
-                            let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
+                            let wallpaperPreviewController = WallpaperGalleryController(context: self.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
                             wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness, forBoth in
                                 var settings: WallpaperSettings?
                                 if case let .wallpaper(wallpaper, _) = entry {
@@ -1182,69 +1194,69 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     settings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), colors: baseSettings?.colors ?? [], intensity: intensity, rotation: baseSettings?.rotation)
                                 }
-                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: settings, forBoth: forBoth)
+                                let _ = (self.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: settings, forBoth: forBoth)
                                 |> deliverOnMainQueue).startStandalone()
                                 Queue.mainQueue().after(0.1) {
                                     wallpaperPreviewController?.dismiss()
                                 }
                             }
-                            strongSelf.push(wallpaperPreviewController)
+                            self.push(wallpaperPreviewController)
                             return true
                         case let .giftPremium(_, _, duration, _, _, _, _):
-                            strongSelf.chatDisplayNode.dismissInput()
-                            let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
-                            let toPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? message.id.peerId : strongSelf.context.account.peerId
-                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
-                            strongSelf.push(controller)
+                            self.chatDisplayNode.dismissInput()
+                            let fromPeerId: PeerId = message.author?.id == self.context.account.peerId ? self.context.account.peerId : message.id.peerId
+                            let toPeerId: PeerId = message.author?.id == self.context.account.peerId ? message.id.peerId : self.context.account.peerId
+                            let controller = PremiumIntroScreen(context: self.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration, giftCode: nil))
+                            self.push(controller)
                             return true
                         case .starGift, .starGiftUnique:
-                            let controller = strongSelf.context.sharedContext.makeGiftViewScreen(context: strongSelf.context, message: EngineMessage(message), shareStory: { [weak self] uniqueGift in
-                                if let self {
-                                    Queue.mainQueue().after(0.15) {
+                            let controller = self.context.sharedContext.makeGiftViewScreen(context: self.context, message: EngineMessage(message), shareStory: { [weak self] uniqueGift in
+                                Queue.mainQueue().after(0.15) {
+                                    if let self {
                                         let controller = self.context.sharedContext.makeStorySharingScreen(context: self.context, subject: .gift(uniqueGift), parentController: self)
                                         self.push(controller)
                                     }
                                 }
                             })
-                            strongSelf.push(controller)
+                            self.push(controller)
                             return true
                         case .giftStars:
-                            let controller = strongSelf.context.sharedContext.makeStarsGiftScreen(context: strongSelf.context, message: EngineMessage(message))
-                            strongSelf.push(controller)
+                            let controller = self.context.sharedContext.makeStarsGiftScreen(context: self.context, message: EngineMessage(message))
+                            self.push(controller)
                             return true
                         case let .giftCode(slug, _, _, _, _, _, _, _, _, _, _):
-                            strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
+                            self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id, progress: params.progress)
                             return true
                         case .prizeStars:
-                            let controller = strongSelf.context.sharedContext.makeStarsGiftScreen(context: strongSelf.context, message: EngineMessage(message))
-                            strongSelf.push(controller)
+                            let controller = self.context.sharedContext.makeStarsGiftScreen(context: self.context, message: EngineMessage(message))
+                            self.push(controller)
                             return true
                         case let .suggestedProfilePhoto(image):
-                            strongSelf.chatDisplayNode.dismissInput()
+                            self.chatDisplayNode.dismissInput()
                             if let image = image {
-                                if message.effectivelyIncoming(strongSelf.context.account.peerId) {
+                                if message.effectivelyIncoming(self.context.account.peerId) {
                                     if let emojiMarkup = image.emojiMarkup {
-                                        let controller = AvatarEditorScreen(context: strongSelf.context, inputData: AvatarEditorScreen.inputData(context: strongSelf.context, isGroup: false), peerType: .user, markup: emojiMarkup)
+                                        let controller = AvatarEditorScreen(context: self.context, inputData: AvatarEditorScreen.inputData(context: self.context, isGroup: false), peerType: .user, markup: emojiMarkup)
                                         controller.imageCompletion = { [weak self] image, commit in
-                                            if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            if let self {
+                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
                                                     settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }
                                         }
                                         controller.videoCompletion = { [weak self] image, url, values, markup, commit in
-                                            if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            if let self {
+                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
                                                     settingsController.updateProfileVideo(image, video: nil, values: nil, markup: markup, mode: .accept, uploadStatus: nil)
                                                     commit()
                                                 }
                                             }
                                         }
-                                        strongSelf.push(controller)
+                                        self.push(controller)
                                     } else {
                                         var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-                                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                                        self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                                             if let itemNode = itemNode as? ChatMessageItemView {
                                                 if let result = itemNode.transitionNode(id: message.id, media: image, adjustRect: false) {
                                                     selectedNode = result
@@ -1260,17 +1272,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             senderName = nil
                                         }
                                         
-                                        legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
+                                        legacyAvatarEditor(context: self.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
                                             self?.present(c, in: .window(.root), with: a)
                                         }, imageCompletion: { [weak self] image in
-                                            if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            if let self {
+                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
                                                     settingsController.updateProfilePhoto(image, mode: .accept, uploadStatus: nil)
                                                 }
                                             }
                                         }, videoCompletion: { [weak self] image, url, adjustments in
-                                            if let strongSelf = self {
-                                                if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            if let self {
+                                                if let rootController = self.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
                                                     settingsController.oldUpdateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments, mode: .accept)
                                                 }
                                             }
@@ -1281,7 +1293,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         case .boostsApplied:
-                            strongSelf.controllerInteraction?.openGroupBoostInfo(nil, 0)
+                            self.controllerInteraction?.openGroupBoostInfo(nil, 0)
                             return true
                         default:
                             break
@@ -1292,29 +1304,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            let openChatLocation = strongSelf.chatLocation
+            let openChatLocation = self.chatLocation
             var chatFilterTag: MemoryBuffer?
-            if case let .customTag(value, _) = strongSelf.chatDisplayNode.historyNode.tag {
+            if case let .customTag(value, _) = self.chatDisplayNode.historyNode.tag {
                 chatFilterTag = value
             }
             
             var standalone = false
-            if case .customChatContents = strongSelf.chatLocation {
+            if case .customChatContents = self.chatLocation {
                 standalone = true
             }
             
             if let adAttribute = message.attributes.first(where: { $0 is AdMessageAttribute }) as? AdMessageAttribute {
                 if let file = message.media.first(where: { $0 is TelegramMediaFile}) as? TelegramMediaFile, file.isVideo && !file.isAnimated {
-                    strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: true, fullscreen: false)
+                    self.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId, media: true, fullscreen: false)
                 } else {
-                    strongSelf.controllerInteraction?.activateAdAction(message.id, nil, true, false)
+                    self.controllerInteraction?.activateAdAction(message.id, nil, true, false)
                     return true
                 }
             }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
+            let openChatMessageParams = OpenChatMessageParams(context: context, updatedPresentationData: self.updatedPresentationData, chatLocation: openChatLocation, chatFilterTag: chatFilterTag, chatLocationContextHolder: self.chatLocationContextHolder, message: message, mediaIndex: params.mediaIndex, standalone: standalone, reverseMessageGalleryOrder: false, mode: mode, navigationController: self.effectiveNavigationController, dismissInput: { [weak self] in
                 self?.chatDisplayNode.dismissInput()
-            }, present: { c, a, i in
+            }, present: { [weak self] c, a, i in
+                guard let self else {
+                    return
+                }
+                
                 if case .current = i {
                     c.presentationArguments = a
                     c.statusBar.alphaUpdated = { [weak self] transition in
@@ -1323,14 +1339,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         self.updateStatusBarPresentation(animated: transition.isAnimated)
                     }
-                    self?.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
+                    self.galleryPresentationContext.present(c, on: PresentationSurfaceLevel(rawValue: 0), blockInteraction: true, completion: {})
                 } else {
-                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                    self.present(c, in: .window(.root), with: a, blockInteraction: true)
                 }
-            }, transitionNode: { messageId, media, adjustRect in
+            }, transitionNode: { [weak self] messageId, media, adjustRect in
                 var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                if let self {
+                    self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView {
                             if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: adjustRect) {
                                 selectedNode = result
@@ -1339,27 +1355,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 return selectedNode
-            }, addToTransitionSurface: { view in
-                guard let strongSelf = self else {
+            }, addToTransitionSurface: { [weak self] view in
+                guard let self else {
                     return
                 }
-                strongSelf.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: strongSelf.chatDisplayNode.historyNode.view)
-            }, openUrl: { url in
+                self.chatDisplayNode.historyNode.view.superview?.insertSubview(view, aboveSubview: self.chatDisplayNode.historyNode.view)
+            }, openUrl: { [weak self] url in
                 self?.openUrl(url, concealed: false, skipConcealedAlert: isLocation, message: nil)
-            }, openPeer: { peer, navigation in
+            }, openPeer: { [weak self] peer, navigation in
                 self?.openPeer(peer: EnginePeer(peer), navigation: navigation, fromMessage: nil)
-            }, callPeer: { peerId, isVideo in
+            }, callPeer: { [weak self] peerId, isVideo in
                 self?.controllerInteraction?.callPeer(peerId, isVideo)
-            }, enqueueMessage: { message in
+            }, enqueueMessage: { [weak self] message in
                 self?.sendMessages([message])
-            }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
+            }, sendSticker: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] fileReference, sourceNode, sourceRect in
                 return self?.controllerInteraction?.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, []) ?? false
-            } : nil, sendEmoji: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { text, attribute in
+            } : nil, sendEmoji: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] text, attribute in
                 self?.controllerInteraction?.sendEmoji(text, attribute, false)
-            } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
-                if let strongSelf = self {
-                    strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { entry in
-                        if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+            } : nil, setupTemporaryHiddenMedia: { [weak self] signal, centralIndex, galleryMedia in
+                if let self {
+                    self.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] entry in
+                        if let self, let controllerInteraction = self.controllerInteraction {
                             var messageIdAndMedia: [MessageId: [Media]] = [:]
                             
                             if let entry = entry as? InstantPageGalleryEntry, entry.index == centralIndex {
@@ -1368,7 +1384,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             controllerInteraction.hiddenMedia = messageIdAndMedia
                             
-                            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? ChatMessageItemView {
                                     itemNode.updateHiddenMedia()
                                 }
@@ -1376,10 +1392,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }))
                 }
-            }, chatAvatarHiddenMedia: { signal, media in
-                if let strongSelf = self {
-                    strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { messageId in
-                        if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
+            }, chatAvatarHiddenMedia: { [weak self] signal, media in
+                if let self {
+                    self.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] messageId in
+                        if let self, let controllerInteraction = self.controllerInteraction {
                             var messageIdAndMedia: [MessageId: [Media]] = [:]
                             
                             if let messageId = messageId {
@@ -1388,7 +1404,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             controllerInteraction.hiddenMedia = messageIdAndMedia
                             
-                            strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? ChatMessageItemView {
                                     itemNode.updateHiddenMedia()
                                 }
@@ -1398,54 +1414,54 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, actionInteraction: GalleryControllerActionInteraction(
                 openUrl: { [weak self] url, concealed in
-                    if let strongSelf = self {
-                        strongSelf.openUrl(url, concealed: concealed, message: nil)
+                    if let self {
+                        self.openUrl(url, concealed: concealed, message: nil)
                     }
                 }, openUrlIn: { [weak self] url in
-                    if let strongSelf = self {
-                        strongSelf.openUrlIn(url)
+                    if let self {
+                        self.openUrlIn(url)
                     }
                 }, openPeerMention: { [weak self] mention in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.openPeerMention(mention, nil)
+                    if let self {
+                        self.controllerInteraction?.openPeerMention(mention, nil)
                     }
                 }, openPeer: { [weak self] peer in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
+                    if let self {
+                        self.controllerInteraction?.openPeer(peer, .default, nil, .default)
                     }
                 }, openHashtag: { [weak self] peerName, hashtag in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.openHashtag(peerName, hashtag)
+                    if let self {
+                        self.controllerInteraction?.openHashtag(peerName, hashtag)
                     }
                 }, openBotCommand: { [weak self] command in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.sendBotCommand(nil, command)
+                    if let self {
+                        self.controllerInteraction?.sendBotCommand(nil, command)
                     }
                 }, openAd: { [weak self] messageId in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.activateAdAction(messageId, nil, true, true)
+                    if let self {
+                        self.controllerInteraction?.activateAdAction(messageId, nil, true, true)
                     }
                 }, addContact: { [weak self] phoneNumber in
-                    if let strongSelf = self {
-                        strongSelf.controllerInteraction?.addContact(phoneNumber)
+                    if let self {
+                        self.controllerInteraction?.addContact(phoneNumber)
                     }
                 }, storeMediaPlaybackState: { [weak self] messageId, timestamp, playbackRate in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return
                     }
                     var storedState: MediaPlaybackStoredState?
                     if let timestamp = timestamp {
                         storedState = MediaPlaybackStoredState(timestamp: timestamp, playbackRate: AudioPlaybackRate(playbackRate))
                     }
-                    let _ = updateMediaPlaybackStoredStateInteractively(engine: strongSelf.context.engine, messageId: messageId, state: storedState).startStandalone()
+                    let _ = updateMediaPlaybackStoredStateInteractively(engine: self.context.engine, messageId: messageId, state: storedState).startStandalone()
                 }, editMedia: { [weak self] messageId, snapshots, transitionCompletion in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return
                     }
                     
-                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+                    let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
                     |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
-                        guard let strongSelf = self, let message = message else {
+                        guard let self, let message = message else {
                             return
                         }
                         
@@ -1465,17 +1481,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
-                            legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
+                            legacyMediaEditor(context: self.context, peer: peer, threadTitle: self.threadInfo?.title, media: mediaReference, mode: .draw, initialCaption: NSAttributedString(), snapshots: snapshots, transitionCompletion: {
                                 transitionCompletion()
                             }, getCaptionPanelView: { [weak self] in
                                 return self?.getCaptionPanelView(isFile: false)
                             }, sendMessagesWithSignals: { [weak self] signals, _, _, isCaptionAbove in
-                                if let strongSelf = self {
+                                if let self {
                                     var parameters: ChatSendMessageActionSheetController.SendParameters?
                                     if isCaptionAbove {
                                         parameters = ChatSendMessageActionSheetController.SendParameters(effect: nil, textIsAboveMedia: true)
                                     }
-                                    strongSelf.enqueueMediaMessages(signals: signals, silentPosting: false, parameters: parameters)
+                                    self.enqueueMediaMessages(signals: signals, silentPosting: false, parameters: parameters)
                                 }
                             }, present: { [weak self] c, a in
                                 self?.present(c, in: .window(.root), with: a)
@@ -1486,18 +1502,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.canReadHistory.set(canReadHistory)
                 }),
                 getSourceRect: { [weak self] in
-                    guard let strongSelf = self else {
+                    guard let self else {
                         return nil
                     }
                     var rect: CGRect?
-                    strongSelf.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
+                    self.chatDisplayNode.historyNode.forEachVisibleMessageItemNode({ itemNode in
                         if itemNode.item?.message.id == message.id {
                             rect = itemNode.view.convert(itemNode.contentFrame(), to: nil)
                         }
                     })
                     return rect
                 }
-            ))
+            )
+            
+            self.controllerInteraction?.isOpeningMediaSignal = openChatMessageParams.blockInteraction.get()
+            
+            return context.sharedContext.openChatMessage(openChatMessageParams)
         }, openPeer: { [weak self] peer, navigation, fromMessage, source in
             var expandAvatar = false
             if case let .groupParticipant(storyStats, avatarHeaderNode) = source {
@@ -1688,6 +1708,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 case let .custom(fileId):
                                     if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                        let itemFile = TelegramMediaFile.Accessor(itemFile)
                                         reactionItem = ReactionItem(
                                             reaction: ReactionItem.Reaction(rawValue: chosenReaction),
                                             appearAnimation: itemFile,
@@ -1779,7 +1800,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     
                                     let purchaseScreen = strongSelf.context.sharedContext.makeStarsPurchaseScreen(context: strongSelf.context, starsContext: starsContext, options: options, purpose: .reactions(peerId: peerId, requiredStars: 1), completion: { result in
                                         let _ = result
-                                        //TODO:release
                                     })
                                     strongSelf.push(purchaseScreen)
                                 })
@@ -1875,6 +1895,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     case let .custom(fileId):
                                         if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                                            let itemFile = TelegramMediaFile.Accessor(itemFile)
                                             reactionItem = ReactionItem(
                                                 reaction: ReactionItem.Reaction(rawValue: chosenReaction),
                                                 appearAnimation: itemFile,
@@ -2047,11 +2068,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             }
         }, sendCurrentMessage: { [weak self] silentPosting, messageEffect in
-            if let strongSelf = self {
-                if let _ = strongSelf.presentationInterfaceState.interfaceState.mediaDraftState {
-                    strongSelf.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
+            if let self {
+                if let _ = self.presentationInterfaceState.interfaceState.mediaDraftState {
+                    self.sendMediaRecording(silentPosting: silentPosting, messageEffect: messageEffect)
                 } else {
-                    strongSelf.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, messageEffect: messageEffect)
+                    self.presentPaidMessageAlertIfNeeded(count: 1, completion: { [weak self] postpone in
+                        if let self {
+                            self.chatDisplayNode.sendCurrentMessage(silentPosting: silentPosting, postpone: postpone, messageEffect: messageEffect)
+                        }
+                    })
                 }
             }
         }, sendMessage: { [weak self] text in
@@ -2122,89 +2147,94 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let _ = sourceView.asyncdisplaykit_node as? ChatEmptyNodeStickerContentNode {
                 shouldAnimateMessageTransition = true
             }
-
-            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                        var current = current
-                        current = current.updatedInterfaceState { interfaceState in
-                            var interfaceState = interfaceState
-                            interfaceState = interfaceState.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil)
-                            if clearInput {
-                                interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
-                            }
-                            return interfaceState
-                        }.updatedInputMode { current in
-                            if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
-                                return .media(mode: mode, expanded: nil, focused: focused)
-                            }
-                            return current
-                        }
-
-                        return current
-                    })
-                }
-            }, shouldAnimateMessageTransition ? correlationId : nil)
-
-            if shouldAnimateMessageTransition {
-                if let sourceNode = sourceView.asyncdisplaykit_node as? ChatMediaInputStickerGridItemNode {
-                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                            var current = current
-                            current = current.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
-                                    return .media(mode: mode, expanded: nil, focused: focused)
-                                }
-                                return current
-                            }
-
-                            return current
-                        })
-                    })
-                } else if let sourceNode = sourceView.asyncdisplaykit_node as? HorizontalStickerGridItemNode {
-                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
-                } else if let sourceNode = sourceView.asyncdisplaykit_node as? ChatEmptyNodeStickerContentNode {
-                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .emptyPanel(itemNode: sourceNode), replyPanel: nil), initiated: {})
-                } else if let sourceLayer = sourceLayer {
-                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .universal(sourceContainerView: sourceView, sourceRect: sourceRect, sourceLayer: sourceLayer), replyPanel: replyPanel), initiated: {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
-                            var current = current
-                            current = current.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
-                                    return .media(mode: mode, expanded: nil, focused: focused)
-                                }
-                                return current
-                            }
-
-                            return current
-                        })
-                    })
-                }
-            }
             
-            let messages: [EnqueueMessage]  = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: fileReference.abstract, threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]
-            if silentPosting {
-                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting)
-                strongSelf.sendMessages(transformedMessages)
-            } else if schedule {
-                strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
-                        let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
-                        strongSelf.sendMessages(transformedMessages)
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                            var current = current
+                            current = current.updatedInterfaceState { interfaceState in
+                                var interfaceState = interfaceState
+                                interfaceState = interfaceState.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil)
+                                if clearInput {
+                                    interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString()))
+                                }
+                                return interfaceState
+                            }.updatedInputMode { current in
+                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                    return .media(mode: mode, expanded: nil, focused: focused)
+                                }
+                                return current
+                            }
+                            
+                            return current
+                        })
                     }
-                })
-            } else {
-                let transformedMessages = strongSelf.transformEnqueueMessages(messages)
-                strongSelf.sendMessages(transformedMessages)
-            }
+                }, shouldAnimateMessageTransition ? correlationId : nil)
+                
+                if shouldAnimateMessageTransition {
+                    if let sourceNode = sourceView.asyncdisplaykit_node as? ChatMediaInputStickerGridItemNode {
+                        strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .inputPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                                var current = current
+                                current = current.updatedInputMode { current in
+                                    if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                        return .media(mode: mode, expanded: nil, focused: focused)
+                                    }
+                                    return current
+                                }
+                                
+                                return current
+                            })
+                        })
+                    } else if let sourceNode = sourceView.asyncdisplaykit_node as? HorizontalStickerGridItemNode {
+                        strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .mediaPanel(itemNode: sourceNode), replyPanel: replyPanel), initiated: {})
+                    } else if let sourceNode = sourceView.asyncdisplaykit_node as? ChatEmptyNodeStickerContentNode {
+                        strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .emptyPanel(itemNode: sourceNode), replyPanel: nil), initiated: {})
+                    } else if let sourceLayer = sourceLayer {
+                        strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .stickerMediaInput(input: .universal(sourceContainerView: sourceView, sourceRect: sourceRect, sourceLayer: sourceLayer), replyPanel: replyPanel), initiated: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, { current in
+                                var current = current
+                                current = current.updatedInputMode { current in
+                                    if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil {
+                                        return .media(mode: mode, expanded: nil, focused: focused)
+                                    }
+                                    return current
+                                }
+                                
+                                return current
+                            })
+                        })
+                    }
+                }
+                
+                let messages: [EnqueueMessage]  = [.message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: fileReference.abstract, threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)]
+                if silentPosting {
+                    let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
+                    strongSelf.sendMessages(transformedMessages)
+                } else if schedule {
+                    strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+                        if let strongSelf = self {
+                            let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime, postpone: postpone)
+                            strongSelf.sendMessages(transformedMessages)
+                        }
+                    })
+                } else {
+                    let transformedMessages = strongSelf.transformEnqueueMessages(messages, postpone: postpone)
+                    strongSelf.sendMessages(transformedMessages)
+                }
+            })
             return true
         }, sendEmoji: { [weak self] text, attribute, immediately in
             if let strongSelf = self {
@@ -2258,36 +2288,41 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
-                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.collapseInput()
-                        
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }.updatedInputMode { current in
-                                if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
-                                    return .media(mode: mode, expanded: nil, focused: focused)
+                strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                        if let strongSelf = self {
+                            strongSelf.chatDisplayNode.collapseInput()
+                            
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }.updatedInputMode { current in
+                                    if case let .media(mode, maybeExpanded, focused) = current, maybeExpanded != nil  {
+                                        return .media(mode: mode, expanded: nil, focused: focused)
+                                    }
+                                    return current
                                 }
-                                return current
+                            })
+                        }
+                    }, nil)
+                    
+                    var messages = [EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: fileReference.abstract, threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+                    if silentPosting {
+                        messages = strongSelf.transformEnqueueMessages(messages, silentPosting: true)
+                        strongSelf.sendMessages(messages)
+                    } else if schedule {
+                        strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
+                            if let strongSelf = self {
+                                let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
+                                strongSelf.sendMessages(transformedMessages)
                             }
                         })
+                    } else {
+                        messages = strongSelf.transformEnqueueMessages(messages)
+                        strongSelf.sendMessages(messages)
                     }
-                }, nil)
-                
-                var messages = [EnqueueMessage.message(text: "", attributes: [], inlineStickers: [:], mediaReference: fileReference.abstract, threadId: strongSelf.chatLocation.threadId, replyToMessageId: strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject?.subjectModel, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
-                if silentPosting {
-                    messages = strongSelf.transformEnqueueMessages(messages, silentPosting: true)
-                    strongSelf.sendMessages(messages)
-                } else if schedule {
-                    strongSelf.presentScheduleTimePicker(completion: { [weak self] scheduleTime in
-                        if let strongSelf = self {
-                            let transformedMessages = strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: scheduleTime)
-                            strongSelf.sendMessages(transformedMessages)
-                        }
-                    })
-                } else {
-                    messages = strongSelf.transformEnqueueMessages(messages)
-                    strongSelf.sendMessages(messages)
-                }
+                })
             }
             return true
         }, sendBotContextResultAsGif: { [weak self] collection, result, sourceView, sourceRect, silentPosting, resetTextInputState in
@@ -3105,19 +3140,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetry, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                     }, action: { [weak self] _, f in
-                        if let strongSelf = self {
-                            let _ = resendMessages(account: strongSelf.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                        if let self {
+                            self.presentPaidMessageAlertIfNeeded(count: Int32(selectedGroup.count), alwaysAsk: true, completion: { [weak self] _ in
+                                guard let self else {
+                                    return
+                                }
+                                let _ = resendMessages(account: self.context.account, messageIds: selectedGroup.map({ $0.id })).startStandalone()
+                            })
+                            f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                         }
-                        f(.dismissWithoutContent)
                     })))
                     if totalGroupCount != 1 {
                         actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_MessageDialogRetryAll(totalGroupCount).string, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
                         }, action: { [weak self] _, f in
-                            if let strongSelf = self {
-                                let _ = resendMessages(account: strongSelf.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                            if let self {
+                                self.presentPaidMessageAlertIfNeeded(count: Int32(messages.count), alwaysAsk: true, completion: { [weak self] _ in
+                                    guard let self else {
+                                        return
+                                    }
+                                    let _ = resendMessages(account: self.context.account, messageIds: messages.map({ $0.id })).startStandalone()
+                                })
+                                f(self.presentationInterfaceState.sendPaidMessageStars == nil ? .dismissWithoutContent : .default)
                             }
-                            f(.dismissWithoutContent)
                         })))
                     }
                     actions.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
@@ -4420,7 +4465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> take(1)
                             |> mapToSignal { result -> Signal<PremiumSource, NoError> in
                                 if case let .result(_, items, _) = result {
-                                    return .single(.emojiStatus(peerId, peerStatus, items.first?.file, result))
+                                    return .single(.emojiStatus(peerId, peerStatus, items.first?.file._parse(), result))
                                 } else {
                                     return .single(.emojiStatus(peerId, peerStatus, nil, nil))
                                 }
@@ -4576,6 +4621,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             self.openUrl("https://t.me/nft/\(slug)", concealed: false)
+        }, openMessageFeeException: { [weak self] in
+            guard let self, let peer = self.presentationInterfaceState.renderedPeer?.peer.flatMap(EnginePeer.init) else {
+                return
+            }
+            
+            let _ = (self.context.engine.peers.getPaidMessagesRevenue(peerId: peer.id)
+            |> deliverOnMainQueue).start(next: { [weak self] revenue in
+                guard let self else {
+                    return
+                }
+                let controller = chatMessageRemovePaymentAlertController(
+                    context: self.context,
+                    presentationData: self.presentationData,
+                    updatedPresentationData: self.updatedPresentationData,
+                    peer: peer,
+                    amount: (revenue?.value ?? 0) > 0 ? revenue : nil,
+                    navigationController: self.navigationController as? NavigationController,
+                    completion: { [weak self] refund in
+                        guard let self else {
+                            return
+                        }
+                        let _ = self.context.engine.peers.addNoPaidMessagesException(peerId: peer.id, refundCharged: refund).start()
+                    }
+                )
+                self.present(controller, in: .window(.root))
+            })
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -4787,7 +4858,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
                         }, action: { _, f in
                             f(.dismissWithoutContent)
-                            self?.navigationButtonAction(.openChatInfo(expandAvatar: true, recommendedChannels: false))
+                            self?.navigationButtonAction(.openChatInfo(expandAvatar: true, section: nil))
                         })))
                         
                         if canViewStats {
@@ -5118,7 +5189,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         chatInfoButtonItem.target = self
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
-        self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true, recommendedChannels: false), buttonItem: chatInfoButtonItem)
+        self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo(expandAvatar: true, section: nil), buttonItem: chatInfoButtonItem)
         
         self.moreBarButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
         self.moreInfoNavigationButton = ChatNavigationButton(action: .toggleInfoPanel, buttonItem: UIBarButtonItem(customDisplayNode: self.moreBarButton)!)
@@ -5140,7 +5211,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.pressed = { [weak self] in
-            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, recommendedChannels: false))
+            self?.navigationButtonAction(.openChatInfo(expandAvatar: false, section: nil))
         }
         
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
@@ -5698,22 +5769,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                             if case .broadcast = peer.info {
                                 starGiftsAvailable = cachedData.flags.contains(.starGiftsAvailable)
-                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
-                                    peerDiscussionId = value
-                                }
                             } else {
                                 peerGeoLocation = cachedData.peerGeoLocation
+                            }
+                            if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                peerDiscussionId = value
                             }
                         }
                         var renderedPeer: RenderedPeer?
                         var contactStatus: ChatContactStatus?
                         var businessIntro: TelegramBusinessIntro?
+                        var sendPaidMessageStars: StarsAmount?
                         if let peer = peerView.peers[peerView.peerId] {
                             if let cachedData = peerView.cachedData as? CachedUserData {
                                 contactStatus = ChatContactStatus(canAddContact: !peerView.peerIsContact, canReportIrrelevantLocation: false, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: nil, managingBot: managingBot)
                                 if case let .known(value) = cachedData.businessIntro {
                                     businessIntro = value
                                 }
+                                sendPaidMessageStars = cachedData.sendPaidMessageStars
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {
                                 var invitedBy: Peer?
                                 if let invitedByPeerId = cachedData.invitedBy {
@@ -5737,6 +5810,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                                
+                                if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
+                                }
                             }
                             
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -5890,7 +5970,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         if strongSelf.preloadHistoryPeerId != peerDiscussionId {
                             strongSelf.preloadHistoryPeerId = peerDiscussionId
-                            if let peerDiscussionId = peerDiscussionId {
+                            if let peerDiscussionId = peerDiscussionId, let channel = peerView.peers[peerView.peerId] as? TelegramChannel, case .broadcast = channel.info {
                                 let combinedDisposable = DisposableSet()
                                 strongSelf.preloadHistoryPeerIdDisposable.set(combinedDisposable)
                                 combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: peerDiscussionId).startStrict())
@@ -5905,6 +5985,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let cachedChannelData = peerView.cachedData as? CachedChannelData {
                             appliedBoosts = cachedChannelData.appliedBoosts
                             boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
+                        }
+                        
+                        if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                            strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
                         }
                         
                         var adMessage = adMessage
@@ -5936,6 +6020,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                              .updatedCopyProtectionEnabled(copyProtectionEnabled)
                              .updatedHasSearchTags(hasSearchTags)
                              .updatedIsPremiumRequiredForMessaging(isPremiumRequiredForMessaging)
+                             .updatedSendPaidMessageStars(sendPaidMessageStars)
                              .updatedHasSavedChats(hasSavedChats)
                              .updatedAppliedBoosts(appliedBoosts)
                              .updatedBoostsToUnrestrict(boostsToUnrestrict)
@@ -6291,6 +6376,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         var contactStatus: ChatContactStatus?
                         var copyProtectionEnabled: Bool = false
                         var businessIntro: TelegramBusinessIntro?
+                        var sendPaidMessageStars: StarsAmount?
                         if let peer = peerView.peers[peerView.peerId] {
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedData = peerView.cachedData as? CachedUserData {
@@ -6319,6 +6405,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }
                                 contactStatus = ChatContactStatus(canAddContact: false, canReportIrrelevantLocation: canReportIrrelevantLocation, peerStatusSettings: cachedData.peerStatusSettings, invitedBy: invitedBy, managingBot: managingBot)
+                               
+                                if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                                    if channel.flags.contains(.isCreator) || channel.adminRights != nil {
+                                    } else {
+                                        sendPaidMessageStars = channel.sendPaidMessageStars
+                                    }
+                                }
                             }
                             
                             var peers = SimpleDictionary<PeerId, Peer>()
@@ -6461,12 +6554,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             var currentSendAsPeerId: PeerId?
                             if let peer = peerView.peers[peerView.peerId] as? TelegramChannel, let cachedData = peerView.cachedData as? CachedChannelData {
                                 currentSendAsPeerId = cachedData.sendAsPeerId
-                                if case .broadcast = peer.info {
-                                    if case let .known(value) = cachedData.linkedDiscussionPeerId {
-                                        peerDiscussionId = value
-                                    }
-                                } else {
+                                if case .group = peer.info {
                                     peerGeoLocation = cachedData.peerGeoLocation
+                                }
+                                if case let .known(value) = cachedData.linkedDiscussionPeerId {
+                                    peerDiscussionId = value
                                 }
                             }
                             
@@ -6571,6 +6663,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 boostsToUnrestrict = cachedChannelData.boostsToUnrestrict
                             }
                             
+                            if strongSelf.premiumOrStarsRequiredDisposable == nil, sendPaidMessageStars != nil, let peerId = strongSelf.chatLocation.peerId {
+                                strongSelf.premiumOrStarsRequiredDisposable = ((strongSelf.context.engine.peers.isPremiumRequiredToContact([peerId]) |> then(.complete() |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue()))) |> restart).startStandalone()
+                            }
+                            
                             strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                                 return $0.updatedPeer { _ in
                                     return renderedPeer
@@ -6582,6 +6678,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     .updatedAppliedBoosts(appliedBoosts)
                                     .updatedBoostsToUnrestrict(boostsToUnrestrict)
                                     .updatedBusinessIntro(businessIntro)
+                                    .updatedSendPaidMessageStars(sendPaidMessageStars)
                                     .updatedInterfaceState { interfaceState in
                                         var interfaceState = interfaceState
                                         
@@ -7277,6 +7374,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.displaySendWhenOnlineTipDisposable.dispose()
             self.networkSpeedEventsDisposable?.dispose()
             self.postedScheduledMessagesEventsDisposable?.dispose()
+            self.premiumOrStarsRequiredDisposable?.dispose()
         }
         deallocate()
     }
@@ -8294,6 +8392,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if case .standard(.default) = self.mode {
             self.hasBrowserOrAppInFront.set(.single(false))
         }
+        
+        if let _ = self.currentPaidMessageUndoController, let peerId = self.chatLocation.peerId {
+            self.context.engine.messages.forceSendPostponedPaidMessage(peerId: peerId)
+        }
     }
     
     func saveInterfaceState(includeScrollState: Bool = true) {
@@ -8949,46 +9051,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
-            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                if let strongSelf = self {
-                    strongSelf.chatDisplayNode.collapseInput()
-                    
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
-                    })
+            strongSelf.presentPaidMessageAlertIfNeeded(completion: { [weak self] postpone in
+                guard let strongSelf = self else {
+                    return
                 }
-            }, nil)
-            let message: EnqueueMessage = .message(
-                text: "",
-                attributes: [],
-                inlineStickers: [:],
-                mediaReference: .standalone(media: TelegramMediaPoll(
-                    pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
-                    publicity: poll.publicity,
-                    kind: poll.kind,
-                    text: poll.text.string,
-                    textEntities: poll.text.entities,
-                    options: poll.options,
-                    correctAnswers: poll.correctAnswers,
-                    results: poll.results,
-                    isClosed: false,
-                    deadlineTimeout: poll.deadlineTimeout
-                )),
-                threadId: strongSelf.chatLocation.threadId,
-                replyToMessageId: nil,
-                replyToStoryId: nil,
-                localGroupingKey: nil,
-                correlationId: nil,
-                bubbleUpEmojiOrStickersets: []
-            )
-            strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+                let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.chatDisplayNode.collapseInput()
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedSendMessageEffect(nil) }
+                        })
+                    }
+                }, nil)
+                let message: EnqueueMessage = .message(
+                    text: "",
+                    attributes: [],
+                    inlineStickers: [:],
+                    mediaReference: .standalone(media: TelegramMediaPoll(
+                        pollId: MediaId(namespace: Namespaces.Media.LocalPoll, id: Int64.random(in: Int64.min ... Int64.max)),
+                        publicity: poll.publicity,
+                        kind: poll.kind,
+                        text: poll.text.string,
+                        textEntities: poll.text.entities,
+                        options: poll.options,
+                        correctAnswers: poll.correctAnswers,
+                        results: poll.results,
+                        isClosed: false,
+                        deadlineTimeout: poll.deadlineTimeout
+                    )),
+                    threadId: strongSelf.chatLocation.threadId,
+                    replyToMessageId: nil,
+                    replyToStoryId: nil,
+                    localGroupingKey: nil,
+                    correlationId: nil,
+                    bubbleUpEmojiOrStickersets: []
+                )
+                strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageSubject?.subjectModel)])
+            })
         })
     }
     
-    func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage], postpone: Bool = false) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
-        return transformEnqueueMessages(messages, silentPosting: silentPosting)
+        return transformEnqueueMessages(messages, silentPosting: silentPosting, postpone: postpone)
     }
     
     @discardableResult func dismissAllUndoControllers() -> UndoOverlayController? {
@@ -9151,7 +9258,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil) -> [EnqueueMessage] {
+    func transformEnqueueMessages(_ messages: [EnqueueMessage], silentPosting: Bool, scheduleTime: Int32? = nil, postpone: Bool = false) -> [EnqueueMessage] {
         var defaultReplyMessageSubject: EngineMessageReplySubject?
         switch self.chatLocation {
         case .peer:
@@ -9189,6 +9296,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             return message.withUpdatedAttributes { attributes in
                 var attributes = attributes
+                
+                if let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars {
+                    var effectivePostpone = postpone
+                    for i in (0 ..< attributes.count).reversed() {
+                        if let paidStarsMessageAttribute = attributes[i] as? PaidStarsMessageAttribute {
+                            effectivePostpone = effectivePostpone || paidStarsMessageAttribute.postponeSending
+                            attributes.remove(at: i)
+                        }
+                    }
+                    attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: effectivePostpone))
+                }
+                
                 if silentPosting || scheduleTime != nil {
                     for i in (0 ..< attributes.count).reversed() {
                         if attributes[i] is NotificationInfoMessageAttribute {
@@ -9223,7 +9342,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return .single(false)
     }
     
-    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
+    func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, postpone: Bool = false, commit: Bool = false) {
         if case let .customChatContents(customChatContents) = self.subject {
             customChatContents.enqueueMessages(messages: messages)
             return
@@ -9262,7 +9381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if commit || !isScheduledMessages {
                 self.commitPurposefulAction()
                 
-                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages))
+                let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages, postpone: postpone))
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                     if let strongSelf = self, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -9285,14 +9404,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
                     if let strongSelf = self {
-                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
+                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time, postpone: postpone), commit: true)
                     }
                 })
             }
         })
     }
     
-    func enqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+    func enqueueMediaMessages(fromGallery: Bool = false, signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
+        if let _ = self.presentationInterfaceState.sendPaidMessageStars {
+            self.presentPaidMessageAlertIfNeeded(count: Int32(signals?.count ?? 1), forceDark: fromGallery, completion: { [weak self] postpone in
+                self?.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+            })
+        } else {
+            self.commitEnqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, parameters: parameters, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+        }
+    }
+    
+    private func commitEnqueueMediaMessages(signals: [Any]?, silentPosting: Bool, scheduleTime: Int32? = nil, postpone: Bool = false, parameters: ChatSendMessageActionSheetController.SendParameters? = nil, getAnimatedTransitionSource: ((String) -> UIView?)? = nil, completion: @escaping () -> Void = {}) {
         self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(context: self.context, account: self.context.account, signals: signals!)
         |> deliverOnMainQueue).startStrict(next: { [weak self] items in
             guard let strongSelf = self else {
@@ -9425,7 +9554,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                                                     
-                let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
+                let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime, postpone: postpone)
                 let replyMessageSubject = strongSelf.presentationInterfaceState.interfaceState.replyMessageSubject
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
@@ -9447,7 +9576,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
 
-    func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true) {
+    func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult, hideVia: Bool = false, closeMediaInput: Bool = false, silentPosting: Bool = false, resetTextInputState: Bool = true, postpone: Bool = false) {
         if !canSendMessagesToChat(self.presentationInterfaceState) {
             return
         }
@@ -9466,7 +9595,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let replyMessageSubject = self.presentationInterfaceState.interfaceState.replyMessageSubject
-            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageSubject?.subjectModel, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime) {
+            
+            let sendPaidMessageStars = self.presentationInterfaceState.sendPaidMessageStars
+            if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageSubject?.subjectModel, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, sendPaidMessageStars: sendPaidMessageStars, postpone: postpone) {
                 self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.collapseInput()

@@ -398,7 +398,7 @@
         _captionMixin.stickersContext = stickersContext;
         [_captionMixin createInputPanelIfNeeded];
         
-        _headerWrapperView = [[UIView alloc] init];
+        _headerWrapperView = [[TGMediaPickerGalleryWrapperView alloc] init];
         [_wrapperView addSubview:_headerWrapperView];
         
         _photoCounterButton = [[TGMediaPickerPhotoCounterButton alloc] initWithFrame:CGRectMake(0, 0, 64, 38)];
@@ -429,13 +429,13 @@
         
         TGPhotoEditorDoneButton doneButton = isScheduledMessages ? TGPhotoEditorDoneButtonSchedule : TGPhotoEditorDoneButtonSend;
         
-        _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:TGPhotoEditorBackButtonBack doneButton:doneButton solidBackground:false];
+        _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:TGPhotoEditorBackButtonBack doneButton:doneButton solidBackground:false stickersContext:editingContext.sendPaidMessageStars > 0 ? stickersContext : nil];
         _portraitToolbarView.cancelPressed = toolbarCancelPressed;
         _portraitToolbarView.donePressed = toolbarDonePressed;
         _portraitToolbarView.doneLongPressed = toolbarDoneLongPressed;
         [_wrapperView addSubview:_portraitToolbarView];
         
-        _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:TGPhotoEditorBackButtonBack doneButton:doneButton solidBackground:false];
+        _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:TGPhotoEditorBackButtonBack doneButton:doneButton solidBackground:false stickersContext:nil];
         _landscapeToolbarView.cancelPressed = toolbarCancelPressed;
         _landscapeToolbarView.donePressed = toolbarDonePressed;
         _landscapeToolbarView.doneLongPressed = toolbarDoneLongPressed;
@@ -1227,6 +1227,10 @@
     if (_ignoreSelectionUpdates)
         return;
     
+    NSUInteger finalCount = MAX(1, selectedCount);
+    _portraitToolbarView.sendPaidMessageStars = (_editingContext.sendPaidMessageStars * finalCount);
+    [_portraitToolbarView setNeedsLayout];
+    
     if (counterVisible)
     {
         bool animateCount = animated && !(counterVisible && _photoCounterButton.internalHidden);
@@ -1625,9 +1629,27 @@
 
 #pragma mark -
 
+- (UIView *)hitTestWithSpecialHandling:(UIView *)view point:(CGPoint)point withEvent:(UIEvent *)event {
+    for (UIView *subview in [view.subviews reverseObjectEnumerator]) {
+        if ([subview isKindOfClass:[TGMediaPickerGalleryWrapperView class]]) {
+            UIView *result = [self hitTestWithSpecialHandling:subview point:[view convertPoint:point toView:subview] withEvent:event];
+            if (result) {
+                return result;
+            }
+        } else {
+            UIView *result = [subview hitTest:[view convertPoint:point toView:subview] withEvent:event];
+            if (result) {
+                return result;
+            }
+        }
+    }
+    
+    return nil;
+}
+
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event
 {
-    UIView *view = [super hitTest:point withEvent:event];
+    UIView *view = [self hitTestWithSpecialHandling:self point:point withEvent:event];
     
     bool editingCover = false;
     if (_coverTitleLabel != nil && !_coverTitleLabel.isHidden) {

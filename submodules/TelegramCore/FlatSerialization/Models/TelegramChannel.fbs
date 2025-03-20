@@ -1,0 +1,60 @@
+include "PeerId.fbs";
+include "TelegramPeerAccessHash.fbs";
+include "TelegramMediaImageRepresentation.fbs";
+include "PeerAccessRestrictionInfo.fbs";
+include "TelegramChatAdminRights.fbs";
+include "TelegramChatBannedRights.fbs";
+include "TelegramPeerUsername.fbs";
+include "Optional.fbs";
+include "PeerNameColor.fbs";
+include "PeerEmojiStatus.fbs";
+include "StarsAmount.fbs";
+
+namespace TelegramCore;
+
+table TelegramChannelInfo_Broadcast {
+    flags:int32 (id: 0);
+}
+
+table TelegramChannelInfo_Group {
+    flags:int32 (id: 0);
+}
+
+union TelegramChannelInfo_Value {
+    TelegramChannelInfo_Broadcast,
+    TelegramChannelInfo_Group
+}
+
+table TelegramChannelInfo {
+    value:TelegramChannelInfo_Value (id: 1, required);
+}
+
+table TelegramChannel {
+    id:PeerId (id: 0, required);
+    accessHash:TelegramPeerAccessHash (id: 1);
+    title:string (id: 2, required);
+    username:string (id: 3);
+    photo:[TelegramMediaImageRepresentation] (id: 4);
+    creationDate:int32 (id: 5);
+    version:int32 (id: 6);
+    participationStatus:int32 (id: 7);
+    info:TelegramChannelInfo (id: 8, required);
+    flags:int32 (id: 9);
+    restrictionInfo:PeerAccessRestrictionInfo (id: 10);
+    adminRights:TelegramChatAdminRights (id: 11);
+    bannedRights:TelegramChatBannedRights (id: 12);
+    defaultBannedRights:TelegramChatBannedRights (id: 13);
+    usernames:[TelegramPeerUsername] (id: 14);
+    storiesHidden:OptionalBool (id: 15);
+    nameColor:PeerNameColor (id: 16);
+    backgroundEmojiId:int64 (id: 17);
+    profileColor:PeerNameColor (id: 18);
+    profileBackgroundEmojiId:int64 (id: 19);
+    emojiStatus:PeerEmojiStatus (id: 20);
+    approximateBoostLevel:int32 (id: 21);
+    subscriptionUntilDate:int32 (id: 22);
+    verificationIconFileId:int64 (id: 23);
+    sendPaidMessageStars:StarsAmount (id: 24);
+}
+
+root_type TelegramChannel;

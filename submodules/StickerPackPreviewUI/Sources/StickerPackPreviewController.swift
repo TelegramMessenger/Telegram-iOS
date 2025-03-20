@@ -196,6 +196,7 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                 case let .result(info, items, _):
                     var preloadSignals: [Signal<Bool, NoError>] = []
                     
+                    let info = info._parse()
                     if let thumbnail = info.thumbnail {
                         let signal = Signal<Bool, NoError> { subscriber in
                             let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)).start()
@@ -218,11 +219,12 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
                     let topItems = items.prefix(16)
                     for item in topItems {
                         if item.file.isAnimatedSticker {
+                            let itemFile = item.file._parse()
                             let signal = Signal<Bool, NoError> { subscriber in
-                                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: FileMediaReference.standalone(media: item.file).resourceReference(item.file.resource)).start()
-                                let data = account.postbox.mediaBox.resourceData(item.file.resource).start()
+                                let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: FileMediaReference.standalone(media: itemFile).resourceReference(itemFile.resource)).start()
+                                let data = account.postbox.mediaBox.resourceData(itemFile.resource).start()
                                 let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: item.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
+                                let fetchedRepresentation = chatMessageAnimatedStickerDatas(postbox: account.postbox, userLocation: .other, file: itemFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)), fetched: true, onlyFullSize: false, synchronousLoad: false).start(next: { next in
                                     let hasContent = next._0 != nil || next._1 != nil
                                     subscriber.putNext(hasContent)
                                     if hasContent {

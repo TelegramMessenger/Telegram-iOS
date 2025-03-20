@@ -19,118 +19,8 @@ import SoftwareVideo
 import AVFoundation
 import PhotoResources
 import ShimmerEffect
-
-private class GifVideoLayer: AVSampleBufferDisplayLayer {
-    private let context: AccountContext
-    private let userLocation: MediaResourceUserLocation
-    private let file: TelegramMediaFile?
-    
-    private var frameManager: SoftwareVideoLayerFrameManager?
-    
-    private var thumbnailDisposable: Disposable?
-    
-    private var playbackTimestamp: Double = 0.0
-    private var playbackTimer: SwiftSignalKit.Timer?
-    
-    var started: (() -> Void)?
-    
-    var shouldBeAnimating: Bool = false {
-        didSet {
-            if self.shouldBeAnimating == oldValue {
-                return
-            }
-            
-            if self.shouldBeAnimating {
-                self.playbackTimer?.invalidate()
-                let startTimestamp = self.playbackTimestamp + CFAbsoluteTimeGetCurrent()
-                self.playbackTimer = SwiftSignalKit.Timer(timeout: 1.0 / 30.0, repeat: true, completion: { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let timestamp = CFAbsoluteTimeGetCurrent() - startTimestamp
-                    strongSelf.frameManager?.tick(timestamp: timestamp)
-                    strongSelf.playbackTimestamp = timestamp
-                }, queue: .mainQueue())
-                self.playbackTimer?.start()
-            } else {
-                self.playbackTimer?.invalidate()
-                self.playbackTimer = nil
-            }
-        }
-    }
-    
-    init(context: AccountContext, userLocation: MediaResourceUserLocation, file: TelegramMediaFile?, synchronousLoad: Bool) {
-        self.context = context
-        self.userLocation = userLocation
-        self.file = file
-        
-        super.init()
-        
-        self.videoGravity = .resizeAspectFill
-        
-        if let file = self.file {
-            if let dimensions = file.dimensions {
-                self.thumbnailDisposable = (mediaGridMessageVideo(postbox: context.account.postbox, userLocation: userLocation, videoReference: .savedGif(media: file), synchronousLoad: synchronousLoad, nilForEmptyResult: true)
-                |> deliverOnMainQueue).start(next: { [weak self] transform in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let boundingSize = CGSize(width: 93.0, height: 93.0)
-                    let imageSize = dimensions.cgSize.aspectFilled(boundingSize)
-                    
-                    if let image = transform(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .fill(.clear)))?.generateImage() {
-                        Queue.mainQueue().async {
-                            if let strongSelf = self {
-                                strongSelf.contents = image.cgImage
-                                strongSelf.setupVideo()
-                                strongSelf.started?()
-                            }
-                        }
-                    } else {
-                        strongSelf.setupVideo()
-                    }
-                })
-            } else {
-                self.setupVideo()
-            }
-        }
-    }
-    
-    override init(layer: Any) {
-        guard let layer = layer as? GifVideoLayer else {
-            preconditionFailure()
-        }
-        
-        self.context = layer.context
-        self.userLocation = layer.userLocation
-        self.file = layer.file
-        
-        super.init(layer: layer)
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.thumbnailDisposable?.dispose()
-    }
-    
-    private func setupVideo() {
-        guard let file = self.file else {
-            return
-        }
-        let frameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: self.userLocation, userContentType: .other, fileReference: .savedGif(media: file), layerHolder: nil, layer: self)
-        self.frameManager = frameManager
-        frameManager.started = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            let _ = strongSelf
-        }
-        frameManager.start()
-    }
-}
+import BatchVideoRendering
+import GifVideoLayer
 
 public final class GifPagerContentComponent: Component {
     public typealias EnvironmentType = (EntityKeyboardChildEnvironment, PagerComponentChildEnvironment)
@@ -382,6 +272,7 @@ public final class GifPagerContentComponent: Component {
             init(
                 item: Item?,
                 context: AccountContext,
+                batchVideoContext: BatchVideoRenderingContext,
                 groupId: String,
                 attemptSynchronousLoad: Bool,
                 onUpdateDisplayPlaceholder: @escaping (Bool, Double) -> Void
@@ -389,7 +280,7 @@ public final class GifPagerContentComponent: Component {
                 self.item = item
                 self.onUpdateDisplayPlaceholder = onUpdateDisplayPlaceholder
                 
-                super.init(context: context, userLocation: .other, file: item?.file.media, synchronousLoad: attemptSynchronousLoad)
+                super.init(context: context, batchVideoContext: batchVideoContext, userLocation: .other, file: item?.file, synchronousLoad: attemptSynchronousLoad)
                 
                 if item == nil {
                     self.updateDisplayPlaceholder(displayPlaceholder: true, duration: 0.0)
@@ -576,7 +467,8 @@ public final class GifPagerContentComponent: Component {
         private let standaloneShimmerEffect: StandaloneShimmerEffect
         
         private let backgroundView: BlurredBackgroundView
-        private var vibrancyEffectView: UIVisualEffectView?
+        private let backgroundTintView: UIView
+        private var vibrancyEffectView: UIView?
         private let mirrorContentScrollView: UIView
         private let scrollView: ContentScrollView
         private let scrollClippingView: UIView
@@ -593,11 +485,13 @@ public final class GifPagerContentComponent: Component {
         private var pagerEnvironment: PagerComponentChildEnvironment?
         private var theme: PresentationTheme?
         private var itemLayout: ItemLayout?
+        private var batchVideoContext: BatchVideoRenderingContext?
         
         private var currentLoadMoreToken: String?
         
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: nil)
+            self.backgroundTintView = UIView()
             
             self.shimmerHostView = PortalSourceView()
             self.standaloneShimmerEffect = StandaloneShimmerEffect()
@@ -620,6 +514,7 @@ public final class GifPagerContentComponent: Component {
             
             super.init(frame: frame)
             
+            self.backgroundView.addSubview(self.backgroundTintView)
             self.addSubview(self.backgroundView)
             
             self.shimmerHostView.alpha = 0.0
@@ -830,6 +725,14 @@ public final class GifPagerContentComponent: Component {
                 searchInset += itemLayout.searchHeight
             }
             
+            let batchVideoContext: BatchVideoRenderingContext
+            if let current = self.batchVideoContext {
+                batchVideoContext = current
+            } else {
+                batchVideoContext = BatchVideoRenderingContext(context: component.context)
+                self.batchVideoContext = batchVideoContext
+            }
+            
             if let itemRange = itemLayout.visibleItems(for: self.scrollView.bounds) {
                 for index in itemRange.lowerBound ..< itemRange.upperBound {
                     var item: Item?
@@ -866,6 +769,7 @@ public final class GifPagerContentComponent: Component {
                         itemLayer = ItemLayer(
                             item: item,
                             context: component.context,
+                            batchVideoContext: batchVideoContext,
                             groupId: "savedGif",
                             attemptSynchronousLoad: attemptSynchronousLoads,
                             onUpdateDisplayPlaceholder: { [weak self] displayPlaceholder, duration in
@@ -983,15 +887,15 @@ public final class GifPagerContentComponent: Component {
                 }
             } else {
                 if self.vibrancyEffectView == nil {
-                    let style: UIBlurEffect.Style
-                    style = .extraLight
-                    let blurEffect = UIBlurEffect(style: style)
-                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+                    let vibrancyEffectView = UIView()
+                    vibrancyEffectView.backgroundColor = .white
+                    if let filter = CALayer.luminanceToAlpha() {
+                        vibrancyEffectView.layer.filters = [filter]
+                    }
                     self.vibrancyEffectView = vibrancyEffectView
-                    self.backgroundView.addSubview(vibrancyEffectView)
-                    vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
-                    vibrancyEffectView.contentView.addSubview(self.mirrorSearchHeaderContainer)
+                    self.backgroundTintView.mask = vibrancyEffectView
+                    vibrancyEffectView.addSubview(self.mirrorContentScrollView)
+                    vibrancyEffectView.addSubview(self.mirrorSearchHeaderContainer)
                 }
             }
             
@@ -1000,7 +904,11 @@ public final class GifPagerContentComponent: Component {
             if hideBackground {
                 backgroundColor = backgroundColor.withAlphaComponent(0.01)
             }
-            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            
+            self.backgroundTintView.backgroundColor = backgroundColor
+            transition.setFrame(view: self.backgroundTintView, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            self.backgroundView.updateColor(color: .clear, enableBlur: true, forceKeepBlur: true, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             

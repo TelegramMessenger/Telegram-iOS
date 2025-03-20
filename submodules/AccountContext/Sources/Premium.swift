@@ -42,6 +42,7 @@ public enum PremiumIntroSource {
     case folderTags
     case animatedEmoji
     case messageEffects
+    case paidMessages
 }
 
 public enum PremiumGiftSource: Equatable {
@@ -79,6 +80,7 @@ public enum PremiumDemoSubject {
     case folderTags
     case business
     case messageEffects
+    case paidMessages
     
     case businessLocation
     case businessHours
@@ -134,6 +136,7 @@ public enum StarsPurchasePurpose: Equatable {
     case unlockMedia(requiredStars: Int64)
     case starGift(peerId: EnginePeer.Id, requiredStars: Int64)
     case upgradeStarGift(requiredStars: Int64)
+    case sendMessage(peerId: EnginePeer.Id, requiredStars: Int64)
 }
 
 public struct PremiumConfiguration {

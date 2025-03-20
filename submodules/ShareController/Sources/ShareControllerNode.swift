@@ -15,6 +15,7 @@ import TelegramStringFormatting
 import BundleIconComponent
 import LottieComponent
 import CheckNode
+import ChatMessagePaymentAlertController
 
 enum ShareState {
     case preparing(Bool)
@@ -327,6 +328,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     private let segmentedValues: [ShareControllerSegmentedValue]?
     private let collectibleItemInfo: TelegramCollectibleItemInfo?
     private let mediaParameters: ShareControllerSubject.MediaParameters?
+    private let messageCount: Int
     
     var selectedSegmentedIndex: Int = 0
     
@@ -387,7 +389,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
     
     private let showNames = ValuePromise<Bool>(true)
     
-    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, mediaParameters: ShareControllerSubject.MediaParameters?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?, collectibleItemInfo: TelegramCollectibleItemInfo?) {
+    init(controller: ShareController, environment: ShareControllerEnvironment, presentationData: PresentationData, presetText: String?, defaultAction: ShareControllerAction?, mediaParameters: ShareControllerSubject.MediaParameters?, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, presentError: @escaping (String?, String) -> Void, externalShare: Bool, immediateExternalShare: Bool, immediatePeerId: PeerId?, fromForeignApp: Bool, forceTheme: PresentationTheme?, fromPublicChannel: Bool, segmentedValues: [ShareControllerSegmentedValue]?, shareStory: (() -> Void)?, collectibleItemInfo: TelegramCollectibleItemInfo?, messageCount: Int) {
         self.controller = controller
         self.environment = environment
         self.presentationData = presentationData
@@ -401,6 +403,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.segmentedValues = segmentedValues
         self.collectibleItemInfo = collectibleItemInfo
         self.mediaParameters = mediaParameters
+        self.messageCount = messageCount
         
         self.presetText = presetText
         
@@ -469,8 +472,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
         
         if let startAtTimestamp = mediaParameters?.startAtTimestamp {
-            //TODO:localize
-            self.startAtTimestampNode = ShareStartAtTimestampNode(titleText: "Start at \(textForTimeout(value: startAtTimestamp))", titleTextColor: self.presentationData.theme.actionSheet.secondaryTextColor, checkNodeTheme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
+            self.startAtTimestampNode = ShareStartAtTimestampNode(titleText: self.presentationData.strings.Share_VideoStartAt(textForTimeout(value: startAtTimestamp)).string, titleTextColor: self.presentationData.theme.actionSheet.secondaryTextColor, checkNodeTheme: CheckNodeTheme(backgroundColor: presentationData.theme.list.itemCheckColors.fillColor, strokeColor: presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
         } else {
             self.startAtTimestampNode = nil
         }
@@ -1260,7 +1262,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             })
         }
     }
-    
+        
     func send(peerId: PeerId? = nil, showNames: Bool = true, silently: Bool = false) {
         let peerIds: [PeerId]
         if let peerId = peerId {
@@ -1273,19 +1275,29 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
             let _ = (context.stateManager.postbox.combinedView(
                 keys: peerIds.map { peerId in
                     return PostboxViewKey.basicPeer(peerId)
+                } + peerIds.map { peerId in
+                    return PostboxViewKey.cachedPeerData(peerId: peerId)
                 }
             )
             |> take(1)
-            |> map { views -> [EnginePeer.Id: EnginePeer?] in
+            |> map { views -> ([EnginePeer.Id: EnginePeer?], [EnginePeer.Id: Int64]) in
                 var result: [EnginePeer.Id: EnginePeer?] = [:]
+                var requiresStars: [EnginePeer.Id: Int64] = [:]
                 for peerId in peerIds {
                     if let view = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView, let peer = view.peer {
                         result[peerId] = EnginePeer(peer)
+                        if peer is TelegramUser, let cachedPeerDataView = views.views[PostboxViewKey.cachedPeerData(peerId: peerId)] as? CachedPeerDataView {
+                            if let cachedData = cachedPeerDataView.cachedPeerData as? CachedUserData {
+                                requiresStars[peerId] = cachedData.sendPaidMessageStars?.value
+                            }
+                        } else if let channel = peer as? TelegramChannel {
+                            requiresStars[peerId] = channel.sendPaidMessageStars?.value
+                        }
                     }
                 }
-                return result
+                return (result, requiresStars)
             }
-            |> deliverOnMainQueue).start(next: { [weak self] peers in
+            |> deliverOnMainQueue).start(next: { [weak self] peers, requiresStars in
                 guard let self else {
                     return
                 }
@@ -1300,11 +1312,48 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
                 if !tryShare(self.inputFieldNode.text, mappedPeers) {
                     return
                 }
+
+                self.presentPaidMessageAlertIfNeeded(peers: mappedPeers, requiresStars: requiresStars, completion: { [weak self] in
+                    self?.commitSend(peerId: peerId, showNames: showNames, silently: silently)
+                })
                 
-                self.commitSend(peerId: peerId, showNames: showNames, silently: silently)
             })
         } else {
             self.commitSend(peerId: peerId, showNames: showNames, silently: silently)
+        }
+    }
+    
+    private func presentPaidMessageAlertIfNeeded(peers: [EnginePeer], requiresStars: [EnginePeer.Id: Int64], completion: @escaping () -> Void) {
+        var count: Int32 = Int32(self.messageCount)
+        if !self.inputFieldNode.text.isEmpty {
+            count += 1
+        }
+        var chargingPeers: [EnginePeer] = []
+        var totalAmount: StarsAmount = .zero
+        for peer in peers {
+            if let stars = requiresStars[peer.id] {
+                chargingPeers.append(peer)
+                totalAmount = totalAmount + StarsAmount(value: stars, nanos: 0)
+            }
+        }
+        if totalAmount.value > 0 {
+            let controller = chatMessagePaymentAlertController(
+                context: nil,
+                presentationData: self.presentationData,
+                updatedPresentationData: nil,
+                peers: chargingPeers,
+                count: count,
+                amount: totalAmount,
+                totalAmount: totalAmount,
+                hasCheck: false,
+                navigationController: nil,
+                completion: { _ in
+                    completion()
+                }
+            )
+            self.present?(controller)
+        } else {
+            completion()
         }
     }
     
@@ -1522,7 +1571,7 @@ final class ShareControllerNode: ViewControllerTracingNode, ASScrollViewDelegate
         }
     }
     
-    func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
+    func updatePeers(context: ShareControllerAccountContext, switchableAccounts: [ShareControllerSwitchableAccount], peers: [(peer: EngineRenderedPeer, presence: EnginePeer.Presence?, requiresPremiumForMessaging: Bool, requiresStars: Int64?)], accountPeer: EnginePeer, defaultAction: ShareControllerAction?) {
         self.context = context
         
         if let peersContentNode = self.peersContentNode, peersContentNode.accountPeer.id == accountPeer.id {

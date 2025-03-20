@@ -142,7 +142,7 @@ public final class ManagedDiceAnimationNode: ManagedAnimationNode {
                 case let .result(_, items, _):
                     var emojiStickers: [TelegramMediaFile] = []
                     for item in items {
-                        emojiStickers.append(item.file)
+                        emojiStickers.append(item.file._parse())
                     }
                     return .single(emojiStickers)
                 default:

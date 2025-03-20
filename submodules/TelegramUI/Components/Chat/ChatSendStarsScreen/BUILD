@@ -34,6 +34,7 @@ swift_library(
         "//submodules/Components/BundleIconComponent",
         "//submodules/CheckNode",
         "//submodules/TextFormat",
+        "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
     ],
     visibility = [
         "//visibility:public",

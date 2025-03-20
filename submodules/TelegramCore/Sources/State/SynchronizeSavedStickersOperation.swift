@@ -54,7 +54,7 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                             if stickerItem.file.fileId == file.fileId {
                                 let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
                                 found = true
-                                addSavedSticker(transaction: transaction, file: stickerItem.file, stringRepresentations: stringRepresentations)
+                                addSavedSticker(transaction: transaction, file: stickerItem.file._parse(), stringRepresentations: stringRepresentations)
                                 break inner
                             }
                         }
@@ -124,7 +124,7 @@ public func addSavedSticker(transaction: Transaction, file: TelegramMediaFile, s
 
 public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
     if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(SavedStickerItem.self) {
-        if let resource = item.file.resource as? CloudDocumentMediaResource {
+        if let resource = item.file._parse().resource as? CloudDocumentMediaResource {
             transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: entry.id)
             addSynchronizeSavedStickersOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
         }
@@ -134,7 +134,7 @@ public func removeSavedSticker(transaction: Transaction, mediaId: MediaId) {
 public func removeSavedSticker(postbox: Postbox, mediaId: MediaId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction in
         if let entry = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: RecentMediaItemId(mediaId).rawValue), let item = entry.contents.get(SavedStickerItem.self) {
-            if let resource = item.file.resource as? CloudDocumentMediaResource {
+            if let resource = item.file._parse().resource as? CloudDocumentMediaResource {
                 transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudSavedStickers, itemId: entry.id)
                 addSynchronizeSavedStickersOperation(transaction: transaction, operation: .remove(id: resource.fileId, accessHash: resource.accessHash))
             }

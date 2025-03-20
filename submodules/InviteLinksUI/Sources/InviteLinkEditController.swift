@@ -493,13 +493,10 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
         if state.subscriptionEnabled {
             var label: String = ""
             if let subscriptionFee = state.subscriptionFee, subscriptionFee > StarsAmount.zero {
-                var usdRate = 0.012
-                if let usdWithdrawRate = configuration.usdWithdrawRate {
-                    usdRate = Double(usdWithdrawRate) / 1000.0 / 100.0
-                }
+                let usdRate = Double(configuration.usdWithdrawRate) / 1000.0 / 100.0
                 label = presentationData.strings.InviteLink_Create_FeePerMonth("≈\(formatTonUsdValue(subscriptionFee.value, divide: false, rate: usdRate, dateTimeFormat: presentationData.dateTimeFormat))").string
             }
-            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, configuration.maxFee.flatMap({ StarsAmount(value: $0, nanos: 0) })))
+            entries.append(.subscriptionFee(presentationData.theme, presentationData.strings.InviteLink_Create_FeePlaceholder, isEditingEnabled, state.subscriptionFee, label, StarsAmount(value: configuration.maxFee, nanos: 0)))
         }
         let infoText: String
         if let _ = invite, state.subscriptionEnabled {
@@ -856,26 +853,4 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         }
     }
     return controller
-}
-
-struct StarsSubscriptionConfiguration {
-    static var defaultValue: StarsSubscriptionConfiguration {
-        return StarsSubscriptionConfiguration(maxFee: 2500, usdWithdrawRate: 1200)
-    }
-    
-    let maxFee: Int64?
-    let usdWithdrawRate: Int64?
-    
-    fileprivate init(maxFee: Int64?, usdWithdrawRate: Int64?) {
-        self.maxFee = maxFee
-        self.usdWithdrawRate = usdWithdrawRate
-    }
-    
-    public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
-        if let data = appConfiguration.data, let value = data["stars_subscription_amount_max"] as? Double, let usdRate = data["stars_usd_withdraw_rate_x1000"] as? Double {
-            return StarsSubscriptionConfiguration(maxFee: Int64(value), usdWithdrawRate: Int64(usdRate))
-        } else {
-            return .defaultValue
-        }
-    }
 }

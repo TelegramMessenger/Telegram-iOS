@@ -1474,6 +1474,18 @@ public extension TelegramEngine {
             return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
         
+        public func getPaidMessagesRevenue(peerId: EnginePeer.Id) -> Signal<StarsAmount?, NoError> {
+            return _internal_getPaidMessagesRevenue(account: self.account, peerId: peerId)
+        }
+        
+        public func addNoPaidMessagesException(peerId: EnginePeer.Id, refundCharged: Bool) -> Signal<Never, NoError> {
+            return _internal_addNoPaidMessagesException(account: self.account, peerId: peerId, refundCharged: refundCharged)
+        }
+        
+        public func updateChannelPaidMessagesStars(peerId: EnginePeer.Id, stars: StarsAmount?) -> Signal<Never, NoError> {
+            return _internal_updateChannelPaidMessagesStars(account: self.account, peerId: peerId, stars: stars)
+        }
+        
         public func recommendedChannels(peerId: EnginePeer.Id?) -> Signal<RecommendedChannels?, NoError> {
             return _internal_recommendedChannels(account: self.account, peerId: peerId)
         }
@@ -1510,7 +1522,7 @@ public extension TelegramEngine {
             return _internal_requestRecommendedBots(account: self.account, peerId: peerId, forceUpdate: forceUpdate)
         }
                 
-        public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id], NoError> {
+        public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id: RequirementToContact], NoError> {
             return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
         }
         

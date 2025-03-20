@@ -248,6 +248,8 @@ public protocol VoiceChatController: ViewController {
     var onViewDidAppear: (() -> Void)? { get set }
     var onViewDidDisappear: (() -> Void)? { get set }
     
+    func updateCall(call: VideoChatCall)
+    
     func dismiss(closing: Bool, manual: Bool)
 }
 
@@ -1889,7 +1891,8 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
             self.updateDecorationsColors()
                         
             let invitedPeers: Signal<[EnginePeer], NoError> = self.call.invitedPeers
-            |> mapToSignal { ids -> Signal<[EnginePeer], NoError> in
+            |> mapToSignal { peers -> Signal<[EnginePeer], NoError> in
+                let ids = peers.map(\.id)
                 return context.engine.data.get(EngineDataList(
                     ids.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                 ))
@@ -6936,6 +6939,9 @@ final class VoiceChatControllerImpl: ViewController, VoiceChatController {
         if let currentOverlayController = self.currentOverlayController {
             currentOverlayController.animateOut(reclaim: false, targetPosition: CGPoint(), completion: { _ in })
         }
+    }
+    
+    func updateCall(call: VideoChatCall) {
     }
     
     override public func loadDisplayNode() {

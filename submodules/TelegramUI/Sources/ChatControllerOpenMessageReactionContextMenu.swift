@@ -48,7 +48,7 @@ extension ChatControllerImpl {
                 reactionFile = self.context.engine.stickers.availableReactions()
                 |> take(1)
                 |> map { availableReactions -> TelegramMediaFile? in
-                    return availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                    return availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation._parse()
                 }
             case let .custom(fileId):
                 reactionFile = self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
@@ -325,7 +325,7 @@ extension ChatControllerImpl {
                                         placeholderColor: .clear,
                                         attemptSynchronous: true
                                     ),
-                                    file: items.first?.file,
+                                    file: items.first?.file._parse(),
                                     action: action)
                                 return .single(tip)
                             } else {
@@ -338,7 +338,7 @@ extension ChatControllerImpl {
                 let reactionFile: TelegramMediaFile?
                 switch value {
                 case .builtin, .stars:
-                    reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation
+                    reactionFile = availableReactions?.reactions.first(where: { $0.value == value })?.selectAnimation._parse()
                 case let .custom(fileId):
                     reactionFile = customEmoji[fileId]
                 }
@@ -493,46 +493,62 @@ extension ChatControllerImpl {
     }
     
     func displayOrUpdateSendStarsUndo(messageId: EngineMessage.Id, count: Int, privacy: TelegramPaidReactionPrivacy) {
-        if self.currentSendStarsUndoMessageId != messageId {
-            if let current = self.currentSendStarsUndoController {
-                self.currentSendStarsUndoController = nil
-                current.dismiss()
+        var privacyPeer: Signal<EnginePeer?, NoError> = .single(nil)
+        if case let .peer(id) = privacy {
+            privacyPeer = self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: id)
+            )
+        }
+        let _ = (privacyPeer
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] privacyPeer in
+            guard let self else {
+                return
             }
-        }
-        
-        if let _ = self.currentSendStarsUndoController {
-            self.currentSendStarsUndoCount += count
-        } else {
-            self.currentSendStarsUndoCount = count
-        }
-        
-        let title: String
-        if case .anonymous = privacy {
-            title = self.presentationData.strings.Chat_ToastStarsSent_AnonymousTitle(Int32(self.currentSendStarsUndoCount))
-        } else {
-            title = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
-        }
-        
-        let textItems = AnimatedTextComponent.extractAnimatedTextString(string: self.presentationData.strings.Chat_ToastStarsSent_Text("", ""), id: "text", mapping: [
-            0: .number(self.currentSendStarsUndoCount, minDigits: 1),
-            1: .text(self.presentationData.strings.Chat_ToastStarsSent_TextStarAmount(Int32(self.currentSendStarsUndoCount)))
-        ])
-        
-        self.currentSendStarsUndoMessageId = messageId
-        if let current = self.currentSendStarsUndoController {
-            current.content = .starsSent(context: self.context, title: title, text: textItems)
-        } else {
-            let controller = UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, title: title, text: textItems), elevatedLayout: false, position: .top, action: { [weak self] action in
-                guard let self else {
+            
+            if self.currentSendStarsUndoMessageId != messageId {
+                if let current = self.currentSendStarsUndoController {
+                    self.currentSendStarsUndoController = nil
+                    current.dismiss()
+                }
+            }
+            
+            if let _ = self.currentSendStarsUndoController {
+                self.currentSendStarsUndoCount += count
+            } else {
+                self.currentSendStarsUndoCount = count
+            }
+            
+            let title: String
+            if case .anonymous = privacy {
+                title = self.presentationData.strings.Chat_ToastStarsSent_AnonymousTitle(Int32(self.currentSendStarsUndoCount))
+            } else if case .peer = privacy, let privacyPeer {
+                let rawTitle = self.presentationData.strings.Chat_ToastStarsSent_TitleChannel(Int32(self.currentSendStarsUndoCount))
+                title = rawTitle.replacingOccurrences(of: "{name}", with: privacyPeer.compactDisplayTitle)
+            } else {
+                title = self.presentationData.strings.Chat_ToastStarsSent_Title(Int32(self.currentSendStarsUndoCount))
+            }
+            
+            let textItems = AnimatedTextComponent.extractAnimatedTextString(string: self.presentationData.strings.Chat_ToastStarsSent_Text("", ""), id: "text", mapping: [
+                0: .number(self.currentSendStarsUndoCount, minDigits: 1),
+                1: .text(self.presentationData.strings.Chat_ToastStarsSent_TextStarAmount(Int32(self.currentSendStarsUndoCount)))
+            ])
+            
+            self.currentSendStarsUndoMessageId = messageId
+            if let current = self.currentSendStarsUndoController {
+                current.content = .starsSent(context: self.context, title: title, text: textItems)
+            } else {
+                let controller = UndoOverlayController(presentationData: self.presentationData, content: .starsSent(context: self.context, title: title, text: textItems), elevatedLayout: false, position: .top, action: { [weak self] action in
+                    guard let self else {
+                        return false
+                    }
+                    if case .undo = action {
+                        self.context.engine.messages.cancelPendingSendStarsReaction(id: messageId)
+                    }
                     return false
-                }
-                if case .undo = action {
-                    self.context.engine.messages.cancelPendingSendStarsReaction(id: messageId)
-                }
-                return false
-            })
-            self.currentSendStarsUndoController = controller
-            self.present(controller, in: .current)
-        }
+                })
+                self.currentSendStarsUndoController = controller
+                self.present(controller, in: .current)
+            }
+        })
     }
 }

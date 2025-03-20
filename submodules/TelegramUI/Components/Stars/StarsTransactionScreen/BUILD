@@ -19,6 +19,7 @@ swift_library(
         "//submodules/Components/ViewControllerComponent",
         "//submodules/Components/ComponentDisplayAdapters",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/MultilineTextWithEntitiesComponent",
         "//submodules/Components/BalancedTextComponent",
         "//submodules/TelegramPresentationData",
         "//submodules/AccountContext",

@@ -22,6 +22,7 @@ import CheckNode
 import TextFormat
 import CheckComponent
 import ContextUI
+import StarsBalanceOverlayComponent
 
 private final class BalanceComponent: CombinedComponent {
     let context: AccountContext
@@ -1003,11 +1004,14 @@ private final class ChatSendStarsScreenComponent: Component {
         private let scrollContentView: UIView
         private let hierarchyTrackingNode: HierarchyTrackingNode
         
+        private var balanceOverlay = ComponentView<Empty>()
+        
         private let leftButton = ComponentView<Empty>()
         private let peerSelectorButton = ComponentView<Empty>()
         private let closeButton = ComponentView<Empty>()
         
         private let title = ComponentView<Empty>()
+        private let subtitle = ComponentView<Empty>()
         private let descriptionText = ComponentView<Empty>()
         
         private let badgeStars = BadgeStarsView()
@@ -1242,6 +1246,11 @@ private final class ChatSendStarsScreenComponent: Component {
             if let buttonDescriptionTextView = self.buttonDescriptionText.view {
                 buttonDescriptionTextView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animateOffset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, additive: true)
             }
+            
+            if let view = self.balanceOverlay.view {
+                view.layer.animateScale(from: 1.0, to: 0.8, duration: 0.4, removeOnCompletion: false)
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }
         }
         
         private var previousSliderValue: Float = 0.0
@@ -1431,6 +1440,48 @@ private final class ChatSendStarsScreenComponent: Component {
                 fillingSize = min(availableSize.width, 428.0) - environment.safeInsets.left * 2.0
             }
             let sideInset: CGFloat = floor((availableSize.width - fillingSize) * 0.5) + 16.0
+            
+            let context = component.context
+            let balanceSize = self.balanceOverlay.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    StarsBalanceOverlayComponent(
+                        context: component.context,
+                        theme: environment.theme,
+                        action: { [weak self] in
+                            guard let self, let starsContext = context.starsContext, let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
+                                return
+                            }
+                            self.environment?.controller()?.dismiss()
+                            
+                            let _ = (context.engine.payments.starsTopUpOptions()
+                            |> take(1)
+                            |> deliverOnMainQueue).startStandalone(next: { options in
+                                let controller = context.sharedContext.makeStarsPurchaseScreen(
+                                    context: context,
+                                    starsContext: starsContext,
+                                    options: options,
+                                    purpose: .generic,
+                                    completion: { _ in }
+                                )
+                                navigationController.pushViewController(controller)
+                            })
+                        }
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            if let view = self.balanceOverlay.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                    
+                    view.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    view.layer.animateSpring(from: 0.8 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5, initialVelocity: 0.0, removeOnCompletion: true, additive: false, completion: nil)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                }
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - balanceSize.width) / 2.0), y: environment.statusBarHeight + 5.0), size: balanceSize)
+            }
             
             if self.component == nil {
                 self.currentMyPeer = component.myPeer
@@ -1757,6 +1808,17 @@ private final class ChatSendStarsScreenComponent: Component {
             let title = self.title
             let descriptionText = self.descriptionText
             let actionButton = self.actionButton
+            
+            let titleSubtitleSpacing: CGFloat = 1.0
+            
+            let subtitleSize = self.subtitle.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(
+                    text: .plain(NSAttributedString(string: environment.strings.SendStarReactions_SubtitleFrom(currentMyPeer.compactDisplayTitle).string, font: Font.regular(12.0), textColor: environment.theme.list.itemSecondaryTextColor))
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
+            )
                 
             let titleSize = title.update(
                 transition: .immediate,
@@ -1766,12 +1828,23 @@ private final class ChatSendStarsScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - leftButtonFrame.maxX * 2.0, height: 100.0)
             )
-            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSize.height) * 0.5)), size: titleSize)
+            
+            let titleSubtitleHeight = titleSize.height + titleSubtitleSpacing + subtitleSize.height
+            
+            let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: floor((56.0 - titleSubtitleHeight) * 0.5)), size: titleSize)
             if let titleView = title.view {
                 if titleView.superview == nil {
                     self.navigationBarContainer.addSubview(titleView)
                 }
                 transition.setFrame(view: titleView, frame: titleFrame)
+            }
+            
+            let subtitleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - subtitleSize.width) * 0.5), y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            if let subtitleView = subtitle.view {
+                if subtitleView.superview == nil {
+                    self.navigationBarContainer.addSubview(subtitleView)
+                }
+                transition.setFrame(view: subtitleView, frame: subtitleFrame)
             }
                 
             contentHeight += 56.0
@@ -1962,17 +2035,37 @@ private final class ChatSendStarsScreenComponent: Component {
                                 guard let self, let component = self.component, let peer = topPeer.peer else {
                                     return
                                 }
-                                if let peerInfoController = component.context.sharedContext.makePeerInfoController(
-                                    context: component.context,
-                                    updatedPresentationData: nil,
-                                    peer: peer._asPeer(),
-                                    mode: .generic,
-                                    avatarInitiallyExpanded: false,
-                                    fromChat: false,
-                                    requestsContext: nil
-                                ) {
-                                    self.environment?.controller()?.push(peerInfoController)
+                                guard let controller = self.environment?.controller() else {
+                                    return
                                 }
+                                guard let navigationController = controller.navigationController as? NavigationController else {
+                                    return
+                                }
+                                var viewControllers = navigationController.viewControllers
+                                guard let index = viewControllers.firstIndex(where: { $0 === controller }) else {
+                                    return
+                                }
+                                
+                                let context = component.context
+                                
+                                if case .user = peer {
+                                    if let peerInfoController = context.sharedContext.makePeerInfoController(
+                                        context: context,
+                                        updatedPresentationData: nil,
+                                        peer: peer._asPeer(),
+                                        mode: .generic,
+                                        avatarInitiallyExpanded: false,
+                                        fromChat: false,
+                                        requestsContext: nil
+                                    ) {
+                                        viewControllers.insert(peerInfoController, at: index)
+                                    }
+                                } else {
+                                    let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(.default), params: nil)
+                                    viewControllers.insert(chatController, at: index)
+                                }
+                                navigationController.setViewControllers(viewControllers, animated: true)
+                                controller.dismiss()
                             },
                             isEnabled: topPeer.peer != nil && topPeer.peer?.id != component.context.account.peerId,
                             animateAlpha: false

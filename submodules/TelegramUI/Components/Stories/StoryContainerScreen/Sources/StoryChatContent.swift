@@ -219,7 +219,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: nil,
-                            appliedBoosts: nil
+                            appliedBoosts: nil,
+                            sendPaidMessageStars: cachedUserData.sendPaidMessageStars
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
@@ -230,7 +231,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: cachedChannelData.boostsToUnrestrict,
-                            appliedBoosts: cachedChannelData.appliedBoosts
+                            appliedBoosts: cachedChannelData.appliedBoosts,
+                            sendPaidMessageStars: cachedChannelData.sendPaidMessageStars
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
@@ -241,7 +243,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: nil,
-                            appliedBoosts: nil
+                            appliedBoosts: nil,
+                            sendPaidMessageStars: nil
                         )
                     }
                 } else {
@@ -253,7 +256,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                         preferHighQualityStories: preferHighQualityStories,
                         boostsToUnrestrict: nil,
-                        appliedBoosts: nil
+                        appliedBoosts: nil,
+                        sendPaidMessageStars: nil
                     )
                 }
                 let state = stateView.value?.get(Stories.PeerState.self)
@@ -1182,7 +1186,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.NotificationSettings.Global(),
                 TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict(id: storyId.peerId),
-                TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: storyId.peerId)
+                TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: storyId.peerId),
+                TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars(id: storyId.peerId)
             ),
             item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]), NoError> in
                 return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile], [StoryId: EngineStoryItem?]) in
@@ -1253,7 +1258,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 return
             }
             
-            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts) = data
+            let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts, sendPaidMessageStars) = data
             let (item, peers, allEntityFiles, forwardInfoStories) = itemAndPeers
             
             guard let peer else {
@@ -1270,7 +1275,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                 preferHighQualityStories: preferHighQualityStories,
                 boostsToUnrestrict: boostsToUnrestrict,
-                appliedBoosts: appliedBoosts
+                appliedBoosts: appliedBoosts,
+                sendPaidMessageStars: sendPaidMessageStars
             )
             
             for (storyId, story) in forwardInfoStories {
@@ -1436,9 +1442,11 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             TelegramEngine.EngineData.Item.NotificationSettings.Global.Result,
             TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.Result,
             TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict.Result,
-            TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result)
+            TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result,
+            TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.Result
+        )
         
-        init(data: (TelegramEngine.EngineData.Item.Peer.Peer.Result, TelegramEngine.EngineData.Item.Peer.Presence.Result, TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable.Result, TelegramEngine.EngineData.Item.Peer.CanViewStats.Result, TelegramEngine.EngineData.Item.Peer.NotificationSettings.Result, TelegramEngine.EngineData.Item.NotificationSettings.Global.Result, TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.Result, TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict.Result, TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result)) {
+        init(data: (TelegramEngine.EngineData.Item.Peer.Peer.Result, TelegramEngine.EngineData.Item.Peer.Presence.Result, TelegramEngine.EngineData.Item.Peer.AreVoiceMessagesAvailable.Result, TelegramEngine.EngineData.Item.Peer.CanViewStats.Result, TelegramEngine.EngineData.Item.Peer.NotificationSettings.Result, TelegramEngine.EngineData.Item.NotificationSettings.Global.Result, TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging.Result, TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict.Result, TelegramEngine.EngineData.Item.Peer.AppliedBoosts.Result, TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars.Result)) {
             self.data = data
         }
     }
@@ -1544,7 +1552,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         TelegramEngine.EngineData.Item.NotificationSettings.Global(),
                         TelegramEngine.EngineData.Item.Peer.IsPremiumRequiredForMessaging(id: peerId),
                         TelegramEngine.EngineData.Item.Peer.BoostsToUnrestrict(id: peerId),
-                        TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: peerId)
+                        TelegramEngine.EngineData.Item.Peer.AppliedBoosts(id: peerId),
+                        TelegramEngine.EngineData.Item.Peer.SendPaidMessageStars(id: peerId)
                     ) |> map { PeerData(data: $0) })
                     self.currentPeerData = currentPeerData
                     
@@ -1563,7 +1572,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                 self.listState = state
                 
                 let stateValue: StoryContentContextState
-                if let focusedIndex, let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts) = data?.data, let peer {
+                if let focusedIndex, let (peer, presence, areVoiceMessagesAvailable, canViewStats, notificationSettings, globalNotificationSettings, isPremiumRequiredForMessaging, boostsToUnrestrict, appliedBoosts, sendPaidMessageStars) = data?.data, let peer {
                     let isMuted = resolvedAreStoriesMuted(globalSettings: globalNotificationSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: [])
                     let additionalPeerData = StoryContentContextState.AdditionalPeerData(
                         isMuted: isMuted,
@@ -1573,7 +1582,8 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                         isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                         preferHighQualityStories: preferHighQualityStories,
                         boostsToUnrestrict: boostsToUnrestrict,
-                        appliedBoosts: appliedBoosts
+                        appliedBoosts: appliedBoosts,
+                        sendPaidMessageStars: sendPaidMessageStars
                     )
                     
                     let item = state.items[focusedIndex]
@@ -1876,7 +1886,7 @@ public func preloadStoryMedia(context: AccountContext, info: StoryPreloadInfo) -
             for reaction in availableReactions.reactions {
                 for value in builtinReactions {
                     if case .builtin(value) = reaction.value {
-                        files.append(reaction.selectAnimation)
+                        files.append(reaction.selectAnimation._parse())
                     }
                 }
             }
@@ -2110,7 +2120,7 @@ public func waitUntilStoryMediaPreloaded(context: AccountContext, peerId: Engine
                 for reaction in availableReactions.reactions {
                     for value in builtinReactions {
                         if case .builtin(value) = reaction.value {
-                            files.append(reaction.selectAnimation)
+                            files.append(reaction.selectAnimation._parse())
                         }
                     }
                 }
@@ -2462,7 +2472,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: nil,
-                            appliedBoosts: nil
+                            appliedBoosts: nil,
+                            sendPaidMessageStars: cachedUserData.sendPaidMessageStars
                         )
                     } else if let cachedChannelData = cachedPeerDataView.cachedPeerData as? CachedChannelData {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
@@ -2473,7 +2484,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: cachedChannelData.boostsToUnrestrict,
-                            appliedBoosts: cachedChannelData.appliedBoosts
+                            appliedBoosts: cachedChannelData.appliedBoosts,
+                            sendPaidMessageStars: cachedChannelData.sendPaidMessageStars
                         )
                     } else {
                         additionalPeerData = StoryContentContextState.AdditionalPeerData(
@@ -2484,7 +2496,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                             isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                             preferHighQualityStories: preferHighQualityStories,
                             boostsToUnrestrict: nil,
-                            appliedBoosts: nil
+                            appliedBoosts: nil,
+                            sendPaidMessageStars: nil
                         )
                     }
                 }
@@ -2497,7 +2510,8 @@ public final class RepostStoriesContentContextImpl: StoryContentContext {
                         isPremiumRequiredForMessaging: isPremiumRequiredForMessaging,
                         preferHighQualityStories: preferHighQualityStories,
                         boostsToUnrestrict: nil,
-                        appliedBoosts: nil
+                        appliedBoosts: nil,
+                        sendPaidMessageStars: nil
                     )
                 }
                 

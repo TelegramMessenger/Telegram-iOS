@@ -11,6 +11,8 @@ import StickerResources
 import SolidRoundedButtonNode
 import MediaEditor
 import DrawingUI
+import TelegramPresentationData
+import AnimatedCountLabelNode
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -607,9 +609,117 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         return button
     }
     
+    public func sendStarsButtonAction(_ action: @escaping () -> Void) -> any UIView & TGPhotoSendStarsButtonView {
+        let button = SendStarsButtonView()
+        button.pressed = action
+        return button
+    }
+    
     public func drawingEntitiesView(with size: CGSize) -> UIView & TGPhotoDrawingEntitiesView {
         let view = DrawingEntitiesView(context: self.context, size: size)
         return view
+    }
+}
+
+private class SendStarsButtonView: HighlightTrackingButton, TGPhotoSendStarsButtonView {
+    private let backgroundView: UIView
+    private let textNode: ImmediateAnimatedCountLabelNode
+    
+    fileprivate var pressed: (() -> Void)?
+    
+    override init(frame: CGRect) {
+        self.backgroundView = UIView()
+        self.backgroundView.isUserInteractionEnabled = false
+        
+        self.textNode = ImmediateAnimatedCountLabelNode()
+        self.textNode.isUserInteractionEnabled = false
+        
+        super.init(frame: frame)
+        
+        self.addSubview(self.backgroundView)
+        self.addSubview(self.textNode.view)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            guard let self else {
+                return
+            }
+            if highlighted {
+                self.backgroundView.layer.removeAnimation(forKey: "opacity")
+                self.backgroundView.alpha = 0.4
+                self.textNode.layer.removeAnimation(forKey: "opacity")
+                self.textNode.alpha = 0.4
+            } else {
+                self.backgroundView.alpha = 1.0
+                self.backgroundView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                self.textNode.alpha = 1.0
+                self.textNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+            }
+        }
+        
+        self.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+    }
+    
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    deinit {
+        print()
+    }
+    
+    @objc private func buttonPressed() {
+        self.pressed?()
+    }
+    
+    func updateFrame(_ frame: CGRect) {
+        let transition: ContainedViewLayoutTransition
+        if self.frame.width.isZero {
+            transition = .immediate
+        } else {
+            transition = .animated(duration: 0.4, curve: .spring)
+        }
+        transition.updateFrame(view: self, frame: frame)
+    }
+    
+    func updateCount(_ count: Int64) -> CGSize {
+        let text = "\(count)"
+        let transition: ContainedViewLayoutTransition
+        if self.backgroundView.frame.width.isZero {
+            transition = .immediate
+        } else {
+            transition = .animated(duration: 0.4, curve: .spring)
+        }
+        
+        var segments: [AnimatedCountLabelNode.Segment] = []
+        let font = Font.with(size: 17.0, design: .round, weight: .semibold, traits: .monospacedNumbers)
+        let badgeString = NSMutableAttributedString(string: "⭐️ ", font: font, textColor: .white)
+        if let range = badgeString.string.range(of: "⭐️") {
+            badgeString.addAttribute(.attachment, value: PresentationResourcesChat.chatPlaceholderStarIcon(defaultDarkPresentationTheme)!, range: NSRange(range, in: badgeString.string))
+            badgeString.addAttribute(.baselineOffset, value: 1.0, range: NSRange(range, in: badgeString.string))
+        }
+        segments.append(.text(0, badgeString))
+        for char in text {
+            if let intValue = Int(String(char)) {
+                segments.append(.number(intValue, NSAttributedString(string: String(char), font: font, textColor: .white)))
+            }
+        }
+        
+        self.textNode.segments = segments
+        
+        let buttonInset: CGFloat = 14.0
+        let textSize = self.textNode.updateLayout(size: CGSize(width: 100.0, height: 100.0), animated: transition.isAnimated)
+        let width = textSize.width + buttonInset * 2.0
+        let buttonSize = CGSize(width: width, height: 45.0)
+        let titleOffset: CGFloat = 0.0
+        
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0) + titleOffset, y: floorToScreenPixels((buttonSize.height - textSize.height) / 2.0)), size: textSize))
+        
+        let backgroundSize = CGSize(width: width - 11.0, height: 33.0)
+        transition.updateFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - backgroundSize.width) / 2.0), y: floorToScreenPixels((buttonSize.height - backgroundSize.height) / 2.0)), size: backgroundSize))
+        self.backgroundView.layer.cornerRadius = backgroundSize.height / 2.0
+        self.backgroundView.backgroundColor = UIColor(rgb: 0x007aff)
+        
+        return buttonSize;
     }
 }
 

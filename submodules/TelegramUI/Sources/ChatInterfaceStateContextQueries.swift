@@ -275,9 +275,10 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> castError(ChatContextQueryError.self)
             return signal |> then(commands)
         case let .contextRequest(addressName, query):
-            guard let peer else {
+            guard let chatPeerId = chatLocation.peerId else {
                 return .single({ _ in return .contextRequestResult(nil, nil) })
             }
+        
             var delayRequest = true
             var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
@@ -294,7 +295,6 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .contextRequestResult(nil, nil) })
             }
             
-            let chatPeer = peer
             let contextBot = context.engine.peers.resolvePeerByName(name: addressName, referrer: nil)
             |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
                 guard case let .result(result) = result else {
@@ -305,7 +305,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
-                    let contextResults = context.engine.messages.requestChatContextResults(botId: user.id, peerId: chatPeer.id, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
+                    let contextResults = context.engine.messages.requestChatContextResults(botId: user.id, peerId: chatPeerId, query: query, location: context.sharedContext.locationManager.flatMap { locationManager -> Signal<(Double, Double)?, NoError> in
                         return `deferred` {
                             Queue.mainQueue().async {
                                 requestBotLocationStatus(user.id)
@@ -388,7 +388,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                         for stringRepresentation in stringRepresentations {
                             if stringRepresentation == query {
-                                result.append((stringRepresentation, item.file, stringRepresentation))
+                                result.append((stringRepresentation, item.file._parse(), stringRepresentation))
                                 break
                             }
                         }
@@ -438,7 +438,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                             let stringRepresentations = item.getStringRepresentationsOfIndexKeys()
                             for stringRepresentation in stringRepresentations {
                                 if let keyword = allEmoticons[stringRepresentation] {
-                                    result.append((stringRepresentation, item.file, keyword))
+                                    result.append((stringRepresentation, item.file._parse(), keyword))
                                     break
                                 }
                             }

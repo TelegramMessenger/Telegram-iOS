@@ -10,6 +10,8 @@
 
 #import "TGMediaAssetsController.h"
 
+#import "TGPhotoPaintStickersContext.h"
+
 @interface TGPhotoToolbarView ()
 {
     id<LegacyComponentsContext> _context;
@@ -19,6 +21,7 @@
     UIView *_buttonsWrapperView;
     TGModernButton *_cancelButton;
     TGModernButton *_doneButton;
+    UIView<TGPhotoSendStarsButtonView> *_starsDoneButton;
     
     UILabel *_infoLabel;
     
@@ -32,7 +35,7 @@
 
 @implementation TGPhotoToolbarView
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -56,12 +59,24 @@
         [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_cancelButton];
         
-        _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
-        _doneButton.exclusiveTouch = true;
-        _doneButton.adjustsImageWhenHighlighted = false;
-        [self setDoneButtonType:doneButton];
-        [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        [_backgroundView addSubview:_doneButton];
+        if (stickersContext != nil) {
+            __weak TGPhotoToolbarView *weakSelf = self;
+            _starsDoneButton = [stickersContext sendStarsButtonAction:^{
+                __strong TGPhotoToolbarView *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                [strongSelf doneButtonPressed];
+            }];
+            _starsDoneButton.exclusiveTouch = true;
+            [_backgroundView addSubview:_starsDoneButton];
+        } else {
+            _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
+            _doneButton.exclusiveTouch = true;
+            _doneButton.adjustsImageWhenHighlighted = false;
+            [self setDoneButtonType:doneButton];
+            [_doneButton addTarget:self action:@selector(doneButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [_backgroundView addSubview:_doneButton];
+        }
         
         _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(doneButtonLongPressed:)];
         _longPressGestureRecognizer.minimumPressDuration = 0.4;
@@ -658,52 +673,71 @@
     CGFloat offset = 8.0f;
     if (self.frame.size.width > self.frame.size.height)
     {
-        if (buttons.count == 1)
-        {
-            UIView *button = buttons.firstObject;
-            button.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - button.frame.size.width / 2), offset, button.frame.size.width, button.frame.size.height);
+        _cancelButton.frame = CGRectMake(0, 0, 49, 49);
+        
+        CGFloat leftEdge = _cancelButton.frame.size.width;
+        CGFloat rightEdge = 0.0f;
+
+        if (_starsDoneButton != nil) {
+            CGSize buttonSize = [_starsDoneButton updateCount:_sendPaidMessageStars];
+            rightEdge = buttonSize.width + 2.0f;
+            [_starsDoneButton updateFrame:CGRectMake(self.frame.size.width - rightEdge, 2.0f, buttonSize.width, buttonSize.height)];
+        } else {
+            rightEdge = _cancelButton.frame.size.width;
         }
-        else if (buttons.count == 2)
-        {
+
+        CGFloat availableWidth = self.frame.size.width - leftEdge - rightEdge;
+        CGFloat startX = leftEdge;
+        CGFloat sideOffset = 5.0f;
+        
+        if (buttons.count == 1) {
+            UIView *button = buttons.firstObject;
+            CGFloat buttonX = startX + (availableWidth - button.frame.size.width) / 2;
+            button.frame = CGRectMake(buttonX, offset, button.frame.size.width, button.frame.size.height);
+        }
+        else if (buttons.count == 2) {
             UIView *leftButton = buttons.firstObject;
             UIView *rightButton = buttons.lastObject;
             
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 5 * 2 - 5 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
+            CGFloat leftButtonX = startX + availableWidth / 3 - leftButton.frame.size.width / 2 - sideOffset;
+            CGFloat rightButtonX = startX + 2 * availableWidth / 3 - rightButton.frame.size.width / 2 + sideOffset;
+            
+            leftButton.frame = CGRectMake(leftButtonX, offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            rightButton.frame = CGRectMake(rightButtonX, offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
-        else if (buttons.count == 3)
-        {
+        else if (buttons.count == 3) {
             UIView *leftButton = buttons.firstObject;
             UIView *centerButton = [buttons objectAtIndex:1];
             UIView *rightButton = buttons.lastObject;
             
-            centerButton.frame = CGRectMake(CGFloor(self.frame.size.width / 2 - centerButton.frame.size.width / 2), offset, centerButton.frame.size.width, centerButton.frame.size.height);
-
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 6 * 2 - 10 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            CGFloat leftButtonX = startX + availableWidth / 4 - leftButton.frame.size.width / 2 - sideOffset;
+            CGFloat centerButtonX = startX + availableWidth / 2 - centerButton.frame.size.width / 2;
+            CGFloat rightButtonX = startX + 3 * availableWidth / 4 - rightButton.frame.size.width / 2 + sideOffset;
             
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
+            leftButton.frame = CGRectMake(leftButtonX, offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            centerButton.frame = CGRectMake(centerButtonX, offset, centerButton.frame.size.width, centerButton.frame.size.height);
+            rightButton.frame = CGRectMake(rightButtonX, offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
-        else if (buttons.count == 4)
-        {
+        else if (buttons.count == 4) {
             UIView *leftButton = buttons.firstObject;
             UIView *centerLeftButton = [buttons objectAtIndex:1];
             UIView *centerRightButton = [buttons objectAtIndex:2];
             UIView *rightButton = buttons.lastObject;
             
-            leftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 8 * 2 - 3 - leftButton.frame.size.width / 2), offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            CGFloat leftButtonX = startX + availableWidth / 5 - leftButton.frame.size.width / 2 - sideOffset;
+            CGFloat centerLeftButtonX = startX + 2 * availableWidth / 5 - centerLeftButton.frame.size.width / 2 - TGScreenPixelFloor(sideOffset / 2.0);
+            CGFloat centerRightButtonX = startX + 3 * availableWidth / 5 - centerRightButton.frame.size.width / 2 + TGScreenPixelFloor(sideOffset / 2.0);
+            CGFloat rightButtonX = startX + 4 * availableWidth / 5 - rightButton.frame.size.width / 2 + sideOffset;
             
-            centerLeftButton.frame = CGRectMake(CGFloor(self.frame.size.width / 10 * 4 + 5 - centerLeftButton.frame.size.width / 2), offset, centerLeftButton.frame.size.width, centerLeftButton.frame.size.height);
-            
-            centerRightButton.frame = CGRectMake(CGCeil(self.frame.size.width - centerLeftButton.frame.origin.x - centerRightButton.frame.size.width), offset, centerRightButton.frame.size.width, centerRightButton.frame.size.height);
-            
-            rightButton.frame = CGRectMake(CGCeil(self.frame.size.width - leftButton.frame.origin.x - rightButton.frame.size.width), offset, rightButton.frame.size.width, rightButton.frame.size.height);
+            leftButton.frame = CGRectMake(leftButtonX, offset, leftButton.frame.size.width, leftButton.frame.size.height);
+            centerLeftButton.frame = CGRectMake(centerLeftButtonX, offset, centerLeftButton.frame.size.width, centerLeftButton.frame.size.height);
+            centerRightButton.frame = CGRectMake(centerRightButtonX, offset, centerRightButton.frame.size.width, centerRightButton.frame.size.height);
+            rightButton.frame = CGRectMake(rightButtonX, offset, rightButton.frame.size.width, rightButton.frame.size.height);
         }
         
-        _cancelButton.frame = CGRectMake(0, 0, 49, 49);
         CGFloat offset = 49.0f;
         if (_doneButton.frame.size.width > 49.0f)
             offset = 60.0f;
-        
         _doneButton.frame = CGRectMake(self.frame.size.width - offset, 49.0f - offset, _doneButton.frame.size.width, _doneButton.frame.size.height);
         
         _infoLabel.frame = CGRectMake(49.0f + 10.0f, 0.0f, self.frame.size.width - (49.0f + 10.0f) * 2.0f, 49.0f);

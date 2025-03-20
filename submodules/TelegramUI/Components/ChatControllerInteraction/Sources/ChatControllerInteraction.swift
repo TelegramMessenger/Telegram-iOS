@@ -269,6 +269,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let editMessageFactCheck: (MessageId) -> Void
     public let sendGift: (EnginePeer.Id) -> Void
     public let openUniqueGift: (String) -> Void
+    public let openMessageFeeException: () -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -301,6 +302,29 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public var enableFullTranslucency: Bool = true
     public var chatIsRotated: Bool = true
     public var canReadHistory: Bool = false
+    
+    private var isOpeningMediaValue: Bool = false
+    public var isOpeningMedia: Bool {
+        return self.isOpeningMediaValue
+    }
+    private var isOpeningMediaDisposable: Disposable?
+    public var isOpeningMediaSignal: Signal<Bool, NoError>? {
+        didSet {
+            self.isOpeningMediaDisposable?.dispose()
+            self.isOpeningMediaDisposable = nil
+            self.isOpeningMediaValue = false
+            
+            if let isOpeningMediaSignal = self.isOpeningMediaSignal {
+                self.isOpeningMediaValue = true
+                self.isOpeningMediaDisposable = (isOpeningMediaSignal |> filter { !$0 } |> take(1) |> timeout(1.0, queue: .mainQueue(), alternate: .single(false)) |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.isOpeningMediaValue = false
+                })
+            }
+        }
+    }
     
     public init(
         openMessage: @escaping (Message, OpenMessageParams) -> Bool,
@@ -404,6 +428,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         editMessageFactCheck: @escaping (MessageId) -> Void,
         sendGift: @escaping (EnginePeer.Id) -> Void,
         openUniqueGift: @escaping (String) -> Void,
+        openMessageFeeException: @escaping () -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -518,6 +543,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.editMessageFactCheck = editMessageFactCheck
         self.sendGift = sendGift
         self.openUniqueGift = openUniqueGift
+        self.openMessageFeeException = openMessageFeeException
         
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
@@ -534,5 +560,9 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.stickerSettings = stickerSettings
 
         self.presentationContext = presentationContext
+    }
+    
+    deinit {
+        self.isOpeningMediaDisposable?.dispose()
     }
 }

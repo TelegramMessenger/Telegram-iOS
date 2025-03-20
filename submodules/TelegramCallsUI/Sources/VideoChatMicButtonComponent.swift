@@ -326,6 +326,11 @@ final class VideoChatMicButtonComponent: Component {
             let previousComponent = self.component
             self.component = component
             
+            if let previousComponent, previousComponent.call != component.call {
+                self.audioLevelDisposable?.dispose()
+                self.audioLevelDisposable = nil
+            }
+            
             let alphaTransition: ComponentTransition = transition.animation.isImmediate ? .immediate : .easeInOut(duration: 0.2)
             
             let titleText: String

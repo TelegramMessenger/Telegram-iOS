@@ -14,6 +14,7 @@ import TextFormat
 import ItemShimmeringLoadingComponent
 import AvatarNode
 import PeerInfoCoverComponent
+import Markdown
 
 public final class GiftItemComponent: Component {
     public enum Subject: Equatable {
@@ -92,43 +93,61 @@ public final class GiftItemComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let peer: GiftItemComponent.Peer?
     let subject: GiftItemComponent.Subject
     let title: String?
     let subtitle: String?
+    let label: String?
     let ribbon: Ribbon?
     let isLoading: Bool
     let isHidden: Bool
     let isSoldOut: Bool
     let isSelected: Bool
+    let isPinned: Bool
+    let isEditing: Bool
     let mode: Mode
+    let action: (() -> Void)?
+    let contextAction: ((UIView, ContextGesture) -> Void)?
     
     public init(
         context: AccountContext,
         theme: PresentationTheme,
+        strings: PresentationStrings,
         peer: GiftItemComponent.Peer? = nil,
         subject: GiftItemComponent.Subject,
         title: String? = nil,
         subtitle: String? = nil,
+        label: String? = nil,
         ribbon: Ribbon? = nil,
         isLoading: Bool = false,
         isHidden: Bool = false,
         isSoldOut: Bool = false,
         isSelected: Bool = false,
-        mode: Mode = .generic
+        isPinned: Bool = false,
+        isEditing: Bool = false,
+        mode: Mode = .generic,
+        action: (() -> Void)? = nil,
+        contextAction: ((UIView, ContextGesture) -> Void)? = nil
     ) {
         self.context = context
         self.theme = theme
+        self.strings = strings
         self.peer = peer
         self.subject = subject
         self.title = title
         self.subtitle = subtitle
+        self.label = label
         self.ribbon = ribbon
         self.isLoading = isLoading
         self.isHidden = isHidden
         self.isSoldOut = isSoldOut
         self.isSelected = isSelected
+        self.isPinned = isPinned
+        self.isEditing = isEditing
         self.mode = mode
+        self.action = action
+        self.contextAction = contextAction
     }
 
     public static func ==(lhs: GiftItemComponent, rhs: GiftItemComponent) -> Bool {
@@ -138,10 +157,16 @@ public final class GiftItemComponent: Component {
         if lhs.theme !== rhs.theme {
             return false
         }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
         if lhs.peer != rhs.peer {
             return false
         }
         if lhs.subject != rhs.subject {
+            return false
+        }
+        if lhs.label != rhs.label {
             return false
         }
         if lhs.title != rhs.title {
@@ -165,15 +190,26 @@ public final class GiftItemComponent: Component {
         if lhs.isSelected != rhs.isSelected {
             return false
         }
+        if lhs.isPinned != rhs.isPinned {
+            return false
+        }
+        if lhs.isEditing != rhs.isEditing {
+            return false
+        }
         if lhs.mode != rhs.mode {
+            return false
+        }
+        if (lhs.contextAction == nil) != (rhs.contextAction == nil) {
             return false
         }
         return true
     }
 
-    public final class View: UIView {
+    public final class View: ContextControllerSourceView {
         private var component: GiftItemComponent?
         private weak var componentState: EmptyComponentState?
+        
+        private let containerButton = HighlightTrackingButton()
         
         private let backgroundLayer = SimpleLayer()
         private var loadingBackground: ComponentView<Empty>?
@@ -184,6 +220,7 @@ public final class GiftItemComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
+        private let label = ComponentView<Empty>()
         private let ribbon = UIImageView()
         private let ribbonText = ComponentView<Empty>()
         
@@ -193,8 +230,9 @@ public final class GiftItemComponent: Component {
         private var disposables = DisposableSet()
         private var fetchedFiles = Set<Int64>()
         
-        private var hiddenIconBackground: UIVisualEffectView?
+        private var iconBackground: UIVisualEffectView?
         private var hiddenIcon: UIImageView?
+        private var pinnedIcon: UIImageView?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -205,6 +243,16 @@ public final class GiftItemComponent: Component {
                 self.backgroundLayer.cornerCurve = .circular
             }
             self.backgroundLayer.masksToBounds = true
+            
+            self.activated = { [weak self] gesture, _ in
+                guard let self, let component = self.component else {
+                    gesture.cancel()
+                    return
+                }
+                component.contextAction?(self, gesture)
+            }
+            
+            self.containerButton.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -215,23 +263,32 @@ public final class GiftItemComponent: Component {
             self.disposables.dispose()
         }
         
+        @objc private func buttonPressed() {
+            self.component?.action?()
+        }
+        
         func update(component: GiftItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: ComponentTransition) -> CGSize {
             let isFirstTime = self.component == nil
             let previousComponent = self.component
             self.component = component
             self.componentState = state
             
+            self.isGestureEnabled = component.contextAction != nil
+            
             var themeUpdated = false
             if previousComponent?.theme !== component.theme {
                 themeUpdated = true
             }
             
-            let size: CGSize
+            var size: CGSize
             let iconSize: CGSize
             let cornerRadius: CGFloat
             switch component.mode {
             case .generic:
                 size = CGSize(width: availableSize.width, height: component.title != nil ? 178.0 : 154.0)
+                if let _ = component.label {
+                    size.height += 23.0
+                }
                 iconSize = CGSize(width: 88.0, height: 88.0)
                 cornerRadius = 10.0
             case .profile:
@@ -460,8 +517,7 @@ public final class GiftItemComponent: Component {
                     price = priceValue
                 case .uniqueGift:
                     buttonColor = UIColor.white
-                    starsColor = UIColor.white
-                    price = ""
+                    price = component.strings.Gift_Options_Gift_Transfer
                 }
                 
                 let buttonSize = self.button.update(
@@ -477,12 +533,55 @@ public final class GiftItemComponent: Component {
                     environment: {},
                     containerSize: availableSize
                 )
-                let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - 10.0), size: buttonSize)
+                var bottomOffset: CGFloat = 10.0
+                if let _ = component.label {
+                    bottomOffset += 23.0
+                }
+                let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: size.height - buttonSize.height - bottomOffset), size: buttonSize)
                 if let buttonView = self.button.view {
                     if buttonView.superview == nil {
                         self.addSubview(buttonView)
                     }
                     transition.setFrame(view: buttonView, frame: buttonFrame)
+                }
+                
+                if let label = component.label {
+                    let labelColor = component.theme.overallDarkAppearance ? UIColor(rgb: 0xffc337) : UIColor(rgb: 0xd3720a)
+                    let attributes = MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: Font.regular(11.0), textColor: labelColor),
+                        bold: MarkdownAttributeSet(font: Font.semibold(11.0), textColor: labelColor),
+                        link: MarkdownAttributeSet(font: Font.regular(11.0), textColor: labelColor),
+                        linkAttribute: { contents in
+                            return (TelegramTextAttributes.URL, contents)
+                        }
+                    )
+                    let labelText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(label, attributes: attributes))
+                    if let range = labelText.string.range(of: "#") {
+                        labelText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: 0, file: nil, custom: .stars(tinted: false)), range: NSRange(range, in: labelText.string))
+                    }
+                    
+                    let labelSize = self.label.update(
+                        transition: transition,
+                        component: AnyComponent(
+                            MultilineTextWithEntitiesComponent(
+                                context: component.context,
+                                animationCache: component.context.animationCache,
+                                animationRenderer: component.context.animationRenderer,
+                                placeholderColor: .white,
+                                text: .plain(labelText),
+                                horizontalAlignment: .center
+                            )
+                        ),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    let labelFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - labelSize.width) / 2.0), y: 178.0), size: labelSize)
+                    if let labelView = self.label.view {
+                        if labelView.superview == nil {
+                            self.addSubview(labelView)
+                        }
+                        transition.setFrame(view: labelView, frame: labelFrame)
+                    }
                 }
             }
             
@@ -531,7 +630,7 @@ public final class GiftItemComponent: Component {
                 }
             }
             
-            if let peer = component.peer {
+            if let peer = component.peer, !component.isPinned {
                 let avatarNode: AvatarNode
                 if let current = self.avatarNode {
                     avatarNode = current
@@ -549,6 +648,9 @@ public final class GiftItemComponent: Component {
                 }
                 
                 avatarNode.frame = CGRect(origin: CGPoint(x: 5.0, y: 5.0), size: CGSize(width: 20.0, height: 20.0))
+            } else if let avatarNode = self.avatarNode {
+                self.avatarNode = nil
+                avatarNode.view.removeFromSuperview()
             }
             
             if let backgroundColor, let _ = secondBackgroundColor {
@@ -558,50 +660,110 @@ public final class GiftItemComponent: Component {
             }
             
             transition.setFrame(layer: self.backgroundLayer, frame: CGRect(origin: .zero, size: size))
+            transition.setFrame(view: self.containerButton, frame: CGRect(origin: .zero, size: size))
             
-            if component.isHidden {
-                let hiddenIconBackground: UIVisualEffectView
-                let hiddenIcon: UIImageView
-                if let currentBackground = self.hiddenIconBackground, let currentIcon = self.hiddenIcon {
-                    hiddenIconBackground = currentBackground
-                    hiddenIcon = currentIcon
+            var iconBackgroundSize: CGSize?
+            if component.isEditing {
+                if !component.isPinned && backgroundColor != nil {
+                    iconBackgroundSize = CGSize(width: 48.0, height: 48.0)
+                }
+            } else {
+                if component.isHidden {
+                    iconBackgroundSize = CGSize(width: 30.0, height: 30.0)
+                }
+            }
+            
+            if let iconBackgroundSize {
+                let iconBackground: UIVisualEffectView
+                var iconBackgroundTransition = transition
+                if let currentBackground = self.iconBackground {
+                    iconBackground = currentBackground
                 } else {
+                    iconBackgroundTransition = .immediate
+                    
                     let blurEffect: UIBlurEffect
                     if #available(iOS 13.0, *) {
                         blurEffect = UIBlurEffect(style: .systemThinMaterialDark)
                     } else {
                         blurEffect = UIBlurEffect(style: .dark)
                     }
-                    hiddenIconBackground = UIVisualEffectView(effect: blurEffect)
-                    hiddenIconBackground.clipsToBounds = true
-                    hiddenIconBackground.layer.cornerRadius = 15.0
-                    self.hiddenIconBackground = hiddenIconBackground
+                    iconBackground = UIVisualEffectView(effect: blurEffect)
+                    iconBackground.clipsToBounds = true
+                    self.iconBackground = iconBackground
                     
-                    hiddenIcon = UIImageView(image: generateTintedImage(image: UIImage(bundleImageName: "Peer Info/HiddenIcon"), color: .white))
-                    self.hiddenIcon = hiddenIcon
-                    
-                    self.addSubview(hiddenIconBackground)
-                    hiddenIconBackground.contentView.addSubview(hiddenIcon)
+                    self.addSubview(iconBackground)
                     
                     if !isFirstTime {
-                        hiddenIconBackground.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
-                        hiddenIconBackground.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        iconBackground.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        iconBackground.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                iconBackgroundTransition.containedViewLayoutTransition.animateView {
+                    iconBackground.frame = iconBackgroundSize.centered(around: animationFrame.center)
+                    iconBackground.layer.cornerRadius = iconBackgroundSize.width / 2.0
+                }
+            } else if let iconBackground = self.iconBackground {
+                self.iconBackground = nil
+                iconBackground.layer.animateAlpha(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    iconBackground.removeFromSuperview()
+                })
+                iconBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            }
+            
+            if component.isPinned || (component.isEditing && backgroundColor != nil) {
+                let pinnedIcon: UIImageView
+                if let currentIcon = self.pinnedIcon {
+                    pinnedIcon = currentIcon
+                } else {
+                    pinnedIcon = UIImageView(image: UIImage(bundleImageName: !component.isPinned ? "Peer Info/PinnedLargeIcon" : "Peer Info/PinnedIcon")?.withRenderingMode(.alwaysTemplate))
+                    self.pinnedIcon = pinnedIcon
+                    self.addSubview(pinnedIcon)
+                    
+                    if !isFirstTime {
+                        pinnedIcon.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        pinnedIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                }
+                
+                if component.isPinned {
+                    pinnedIcon.frame = CGRect(origin: CGPoint(x: 3.0, y: 3.0), size: CGSize(width: 24.0, height: 24.0))
+                    pinnedIcon.tintColor = backgroundColor == nil ? component.theme.list.itemSecondaryTextColor : .white
+                } else {
+                    let iconSize = CGSize(width: 48.0, height: 48.0)
+                    pinnedIcon.frame = iconSize.centered(around: animationFrame.center)
+                    pinnedIcon.tintColor = .white
+                }
+            } else if let pinnedIcon = self.pinnedIcon {
+                self.pinnedIcon = nil
+                pinnedIcon.layer.animateAlpha(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    pinnedIcon.removeFromSuperview()
+                })
+                pinnedIcon.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            }
+                        
+            if component.isHidden && !component.isEditing {
+                let hiddenIcon: UIImageView
+                if let currentIcon = self.hiddenIcon {
+                    hiddenIcon = currentIcon
+                } else {
+                    hiddenIcon = UIImageView(image: generateTintedImage(image: UIImage(bundleImageName: "Peer Info/HiddenIcon"), color: .white))
+                    self.hiddenIcon = hiddenIcon
+                    self.addSubview(hiddenIcon)
+                    
+                    if !isFirstTime {
+                        hiddenIcon.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                        hiddenIcon.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 }
                 
                 let iconSize = CGSize(width: 30.0, height: 30.0)
-                hiddenIconBackground.frame = iconSize.centered(around: animationFrame.center)
-                hiddenIcon.frame = CGRect(origin: .zero, size: iconSize)
-            } else {
-                if let hiddenIconBackground = self.hiddenIconBackground {
-                    self.hiddenIconBackground = nil
-                    self.hiddenIcon = nil
-                    
-                    hiddenIconBackground.layer.animateAlpha(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                        hiddenIconBackground.removeFromSuperview()
-                    })
-                    hiddenIconBackground.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                }
+                hiddenIcon.frame = iconSize.centered(around: animationFrame.center)
+            } else if let hiddenIcon = self.hiddenIcon {
+                self.hiddenIcon = nil
+                hiddenIcon.layer.animateAlpha(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                    hiddenIcon.removeFromSuperview()
+                })
+                hiddenIcon.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
             }
             
             if case .grid = component.mode {
@@ -641,6 +803,13 @@ public final class GiftItemComponent: Component {
                 }
             }
             
+            if let _ = component.action {
+                self.addSubview(self.containerButton)
+                self.containerButton.isUserInteractionEnabled = true
+            } else {
+                self.containerButton.isUserInteractionEnabled = false
+            }
+                        
             return size
         }
     }

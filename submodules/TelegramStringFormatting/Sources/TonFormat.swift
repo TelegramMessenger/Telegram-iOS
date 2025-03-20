@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramCore
 import TelegramPresentationData
 
 let walletAddressLength: Int = 48
@@ -78,6 +79,20 @@ public func formatTonAmountText(_ value: Int64, dateTimeFormat: PresentationDate
     return balanceText
 }
 
+public func formatStarsAmountText(_ amount: StarsAmount, dateTimeFormat: PresentationDateTimeFormat, showPlus: Bool = false) -> String {
+    var balanceText = presentationStringsFormattedNumber(Int32(amount.value), dateTimeFormat.groupingSeparator)
+    let fraction = Double(amount.nanos) / 10e6
+    if fraction > 0.0 {
+        balanceText.append(dateTimeFormat.decimalSeparator)
+        balanceText.append("\(Int32(fraction))")
+    }
+    if amount.value < 0 {
+    } else if showPlus {
+        balanceText.insert("+", at: balanceText.startIndex)
+    }
+    return balanceText
+}
+
 private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
 public func isValidTonAddress(_ address: String, exactLength: Bool = false) -> Bool {
     if address.count > walletAddressLength || address.rangeOfCharacter(from: invalidAddressCharacters) != nil {
@@ -89,10 +104,9 @@ public func isValidTonAddress(_ address: String, exactLength: Bool = false) -> B
     return true
 }
 
-private let amountDelimeterCharacters = CharacterSet(charactersIn: "0123456789-+").inverted
-public func tonAmountAttributedString(_ string: String, integralFont: UIFont, fractionalFont: UIFont, color: UIColor) -> NSAttributedString {
+public func tonAmountAttributedString(_ string: String, integralFont: UIFont, fractionalFont: UIFont, color: UIColor, decimalSeparator: String) -> NSAttributedString {
     let result = NSMutableAttributedString()
-    if let range = string.rangeOfCharacter(from: amountDelimeterCharacters) {
+    if let range = string.range(of: decimalSeparator) {
         let integralPart = String(string[..<range.lowerBound])
         let fractionalPart = String(string[range.lowerBound...])
         result.append(NSAttributedString(string: integralPart, font: integralFont, textColor: color))

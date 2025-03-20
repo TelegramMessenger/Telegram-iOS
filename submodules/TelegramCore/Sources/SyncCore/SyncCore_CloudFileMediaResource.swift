@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 import TelegramApi
+import FlatBuffers
+import FlatSerialization
 
 public struct CloudFileMediaResourceId: Hashable, Equatable {
     let datacenterId: Int
@@ -954,5 +956,269 @@ public final class WallpaperDataResource: TelegramMediaResource {
             return false
         }
         return true
+    }
+}
+
+public func TelegramMediaResource_parse(flatBuffersData data: Data) throws -> TelegramMediaResource {
+    var byteBuffer = ByteBuffer(data: data)
+    let flatBuffersObject: TelegramCore_TelegramMediaResource = FlatBuffers_getRoot(byteBuffer: &byteBuffer)
+    
+    return try TelegramMediaResource_parse(flatBuffersObject: flatBuffersObject)
+}
+    
+public func TelegramMediaResource_parse(flatBuffersObject: TelegramCore_TelegramMediaResource) throws -> TelegramMediaResource {
+    switch flatBuffersObject.valueType {
+    case .telegrammediaresourceCloudfilemediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudFileMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return CloudFileMediaResource(
+            datacenterId: Int(value.datacenterId),
+            volumeId: value.volumeId,
+            localId: value.localId,
+            secret: value.secret,
+            size: value.size == 0 ? nil : value.size,
+            fileReference: value.fileReference.isEmpty ? nil : Data(value.fileReference)
+        )
+    case .telegrammediaresourceClouddocumentsizemediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return CloudDocumentSizeMediaResource(
+            datacenterId: value.datacenterId,
+            documentId: value.documentId,
+            accessHash: value.accessHash,
+            sizeSpec: value.sizeSpec,
+            fileReference: value.fileReference.isEmpty ? nil : Data(value.fileReference)
+        )
+    case .telegrammediaresourceCloudphotosizemediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return CloudPhotoSizeMediaResource(
+            datacenterId: value.datacenterId,
+            photoId: value.photoId,
+            accessHash: value.accessHash,
+            sizeSpec: value.sizeSpec,
+            size: value.size == 0 ? nil : value.size,
+            fileReference: value.fileReference.isEmpty ? nil : Data(value.fileReference)
+        )
+    case .telegrammediaresourceCloudpeerphotosizemediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        let sizeSpec: CloudPeerPhotoSizeSpec
+        switch value.sizeSpec {
+        case .small:
+            sizeSpec = .small
+        case .fullSize:
+            sizeSpec = .fullSize
+        }
+        return CloudPeerPhotoSizeMediaResource(
+            datacenterId: value.datacenterId,
+            photoId: value.photoId == Int64.min ? nil : value.photoId,
+            sizeSpec: sizeSpec,
+            volumeId: value.volumeId == Int64.min ? nil : value.volumeId,
+            localId: value.localId == Int32.min ? nil : value.localId
+        )
+    case .telegrammediaresourceCloudstickerpackthumbnailmediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return CloudStickerPackThumbnailMediaResource(
+            datacenterId: value.datacenterId,
+            thumbVersion: value.thumbVersion == Int32.min ? nil : value.thumbVersion,
+            volumeId: value.volumeId == Int64.min ? nil : value.volumeId,
+            localId: value.localId == Int32.min ? nil : value.localId
+        )
+    case .telegrammediaresourceClouddocumentmediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return CloudDocumentMediaResource(
+            datacenterId: Int(value.datacenterId),
+            fileId: value.fileId,
+            accessHash: value.accessHash,
+            size: value.size == 0 ? nil : value.size,
+            fileReference: value.fileReference.isEmpty ? nil : Data(value.fileReference),
+            fileName: value.fileName
+        )
+    case .telegrammediaresourceLocalfilemediaresource:
+        guard let value = flatBuffersObject.value(type: TelegramCore_TelegramMediaResource_LocalFileMediaResource.self) else {
+            throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+        }
+        return LocalFileMediaResource(
+            fileId: value.fileId,
+            size: value.size == Int64.min ? nil : value.size,
+            isSecretRelated: value.isSecretRelated
+        )
+    case .none_:
+        throw FlatBuffersError.missingRequiredField(file: #file, line: #line)
+    }
+}
+
+public func TelegramMediaResource_serialize(resource: TelegramMediaResource, flatBuffersBuilder builder: inout FlatBufferBuilder) -> Offset? {
+    switch resource {
+    case let resource as CloudFileMediaResource:
+        let fileReferenceOffset = resource.fileReference.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_TelegramMediaResource_CloudFileMediaResource.startTelegramMediaResource_CloudFileMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_CloudFileMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudFileMediaResource.add(volumeId: resource.volumeId, &builder)
+        TelegramCore_TelegramMediaResource_CloudFileMediaResource.add(localId: resource.localId, &builder)
+        TelegramCore_TelegramMediaResource_CloudFileMediaResource.add(secret: resource.secret, &builder)
+        TelegramCore_TelegramMediaResource_CloudFileMediaResource.add(size: resource.size ?? 0, &builder)
+        
+        if let fileReferenceOffset {
+            TelegramCore_TelegramMediaResource_CloudFileMediaResource.addVectorOf(fileReference: fileReferenceOffset, &builder)
+        }
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudFileMediaResource.endTelegramMediaResource_CloudFileMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceCloudfilemediaresource, valueOffset: offset)
+    case let resource as CloudDocumentSizeMediaResource:
+        let sizeSpecOffset = builder.create(string: resource.sizeSpec)
+        let fileReferenceOffset = resource.fileReference.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.startTelegramMediaResource_CloudDocumentSizeMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.add(documentId: resource.documentId, &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.add(accessHash: resource.accessHash, &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.add(sizeSpec: sizeSpecOffset, &builder)
+        if let fileReferenceOffset {
+            TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.addVectorOf(fileReference: fileReferenceOffset, &builder)
+        }
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.endTelegramMediaResource_CloudDocumentSizeMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceClouddocumentsizemediaresource, valueOffset: offset)
+    case let resource as CloudPhotoSizeMediaResource:
+        let sizeSpecOffset = builder.create(string: resource.sizeSpec)
+        let fileReferenceOffset = resource.fileReference.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.startTelegramMediaResource_CloudPhotoSizeMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(photoId: resource.photoId, &builder)
+        TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(accessHash: resource.accessHash, &builder)
+        TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(sizeSpec: sizeSpecOffset, &builder)
+        TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.add(size: resource.size ?? 0, &builder)
+        if let fileReferenceOffset {
+            TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.addVectorOf(fileReference: fileReferenceOffset, &builder)
+        }
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.endTelegramMediaResource_CloudPhotoSizeMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceCloudphotosizemediaresource, valueOffset: offset)
+    case let resource as CloudPeerPhotoSizeMediaResource:
+        let start = TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.startTelegramMediaResource_CloudPeerPhotoSizeMediaResource(&builder)
+        
+        let sizeSpec: TelegramCore_CloudPeerPhotoSizeSpec
+        switch resource.sizeSpec {
+        case .small:
+            sizeSpec = .small
+        case .fullSize:
+            sizeSpec = .fullSize
+        }
+        
+        TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.add(photoId: resource.photoId ?? Int64.min, &builder)
+        TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.add(sizeSpec: sizeSpec, &builder)
+        TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.add(volumeId: resource.volumeId ?? Int64.min, &builder)
+        TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.add(localId: resource.localId ?? Int32.min, &builder)
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.endTelegramMediaResource_CloudPeerPhotoSizeMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceCloudpeerphotosizemediaresource, valueOffset: offset)
+    case let resource as CloudStickerPackThumbnailMediaResource:
+        let start = TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.startTelegramMediaResource_CloudStickerPackThumbnailMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.add(thumbVersion: resource.thumbVersion ?? Int32.min, &builder)
+        TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.add(volumeId: resource.volumeId ?? Int64.min, &builder)
+        TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.add(localId: resource.localId ?? Int32.min, &builder)
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.endTelegramMediaResource_CloudStickerPackThumbnailMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceCloudstickerpackthumbnailmediaresource, valueOffset: offset)
+    case let resource as CloudDocumentMediaResource:
+        let fileNameOffset = resource.fileName.flatMap { builder.create(string: $0) }
+        let fileReferenceOffset = resource.fileReference.flatMap { builder.createVector(bytes: $0) }
+        
+        let start = TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.startTelegramMediaResource_CloudDocumentMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.add(datacenterId: Int32(resource.datacenterId), &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.add(fileId: resource.fileId, &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.add(accessHash: resource.accessHash, &builder)
+        TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.add(size: resource.size ?? 0, &builder)
+        if let fileReferenceOffset {
+            TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.addVectorOf(fileReference: fileReferenceOffset, &builder)
+        }
+        if let fileNameOffset {
+            TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.add(fileName: fileNameOffset, &builder)
+        }
+        
+        let offset = TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.endTelegramMediaResource_CloudDocumentMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceClouddocumentmediaresource, valueOffset: offset)
+    case let resource as LocalFileMediaResource:
+        let start = TelegramCore_TelegramMediaResource_LocalFileMediaResource.startTelegramMediaResource_LocalFileMediaResource(&builder)
+        
+        TelegramCore_TelegramMediaResource_LocalFileMediaResource.add(fileId: resource.fileId, &builder)
+        TelegramCore_TelegramMediaResource_LocalFileMediaResource.add(size: resource.size ?? Int64.min, &builder)
+        TelegramCore_TelegramMediaResource_LocalFileMediaResource.add(isSecretRelated: resource.isSecretRelated, &builder)
+        
+        let offset = TelegramCore_TelegramMediaResource_LocalFileMediaResource.endTelegramMediaResource_LocalFileMediaResource(&builder, start: start)
+        return TelegramCore_TelegramMediaResource.createTelegramMediaResource(&builder, valueType: .telegrammediaresourceLocalfilemediaresource, valueOffset: offset)
+    default:
+        assertionFailure()
+        return nil
+    }
+}
+
+public extension TelegramCore_TelegramMediaResource {
+    var id: MediaResourceId {
+        switch self.valueType {
+        case .telegrammediaresourceCloudfilemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudFileMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudFileMediaResourceId(datacenterId: Int(value.datacenterId), volumeId: value.volumeId, localId: value.localId, secret: value.secret).uniqueId)
+        case .telegrammediaresourceClouddocumentsizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudDocumentSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudDocumentSizeMediaResourceId(datacenterId: Int32(value.datacenterId), documentId: value.documentId, sizeSpec: value.sizeSpec).uniqueId)
+        case .telegrammediaresourceCloudphotosizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudPhotoSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudPhotoSizeMediaResourceId(datacenterId: Int32(value.datacenterId), photoId: value.photoId, sizeSpec: value.sizeSpec).uniqueId)
+        case .telegrammediaresourceCloudpeerphotosizemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudPeerPhotoSizeMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            let sizeSpec: CloudPeerPhotoSizeSpec
+            switch value.sizeSpec {
+            case .small:
+                sizeSpec = .small
+            case .fullSize:
+                sizeSpec = .fullSize
+            }
+            return MediaResourceId(CloudPeerPhotoSizeMediaResourceId(datacenterId: Int32(value.datacenterId), photoId: value.photoId, sizeSpec: sizeSpec, volumeId: value.volumeId, localId: value.localId).uniqueId)
+        case .telegrammediaresourceCloudstickerpackthumbnailmediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudStickerPackThumbnailMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudStickerPackThumbnailMediaResourceId(datacenterId: Int32(value.datacenterId), thumbVersion: value.thumbVersion, volumeId: value.volumeId, localId: value.localId).uniqueId)
+        case .telegrammediaresourceClouddocumentmediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_CloudDocumentMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(CloudDocumentMediaResourceId(datacenterId: Int(value.datacenterId), fileId: value.fileId).uniqueId)
+        case .telegrammediaresourceLocalfilemediaresource:
+            guard let value = self.value(type: TelegramCore_TelegramMediaResource_LocalFileMediaResource.self) else {
+                return MediaResourceId("")
+            }
+            return MediaResourceId(LocalFileMediaResourceId(fileId: value.fileId).uniqueId)
+        case .none_:
+            return MediaResourceId("")
+        }
     }
 }

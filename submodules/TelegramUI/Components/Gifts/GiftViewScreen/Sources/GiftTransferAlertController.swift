@@ -150,6 +150,7 @@ private final class GiftTransferAlertContentNode: AlertContentNode {
                 GiftItemComponent(
                     context: self.context,
                     theme: self.presentationTheme,
+                    strings: self.strings,
                     peer: nil,
                     subject: .uniqueGift(gift: self.gift),
                     mode: .thumbnail
@@ -258,10 +259,10 @@ public func giftTransferAlertController(context: AccountContext, gift: StarGift.
     let text: String
     let buttonText: String
     if transferStars > 0 {
-        text = strings.Gift_Transfer_Confirmation_Text("\(gift.title) #\(gift.number)", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), strings.Gift_Transfer_Confirmation_Text_Stars(Int32(transferStars))).string
+        text = strings.Gift_Transfer_Confirmation_Text("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), strings.Gift_Transfer_Confirmation_Text_Stars(Int32(transferStars))).string
         buttonText = "\(strings.Gift_Transfer_Confirmation_Transfer)  $  \(transferStars)"
     } else {
-        text = strings.Gift_Transfer_Confirmation_TextFree("\(gift.title) #\(gift.number)", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)).string
+        text = strings.Gift_Transfer_Confirmation_TextFree("\(gift.title) #\(presentationStringsFormattedNumber(gift.number, presentationData.dateTimeFormat.groupingSeparator))", peer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)).string
         buttonText = strings.Gift_Transfer_Confirmation_TransferFree
     }
     

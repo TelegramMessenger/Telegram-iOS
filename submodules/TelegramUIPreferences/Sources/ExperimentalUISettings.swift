@@ -32,7 +32,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var knockoutWallpaper: Bool
     public var foldersTabAtBottom: Bool
     public var playerEmbedding: Bool
-    public var playlistPlayback: Bool
     public var preferredVideoCodec: String?
     public var disableVideoAspectScaling: Bool
     public var enableVoipTcp: Bool
@@ -62,10 +61,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var dynamicStreaming: Bool
     public var enableLocalTranslation: Bool
     public var autoBenchmarkReflectors: Bool?
-    public var conferenceCalls: Bool
     public var playerV2: Bool
     public var devRequests: Bool
     public var fakeAds: Bool
+    public var conferenceDebug: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -76,7 +75,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
             knockoutWallpaper: false,
             foldersTabAtBottom: false,
             playerEmbedding: false,
-            playlistPlayback: false,
             preferredVideoCodec: nil,
             disableVideoAspectScaling: false,
             enableVoipTcp: false,
@@ -106,10 +104,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
             dynamicStreaming: false,
             enableLocalTranslation: false,
             autoBenchmarkReflectors: nil,
-            conferenceCalls: false,
             playerV2: false,
             devRequests: false,
-            fakeAds: false
+            fakeAds: false,
+            conferenceDebug: false
         )
     }
     
@@ -121,7 +119,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         knockoutWallpaper: Bool,
         foldersTabAtBottom: Bool,
         playerEmbedding: Bool,
-        playlistPlayback: Bool,
         preferredVideoCodec: String?,
         disableVideoAspectScaling: Bool,
         enableVoipTcp: Bool,
@@ -151,10 +148,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
         dynamicStreaming: Bool,
         enableLocalTranslation: Bool,
         autoBenchmarkReflectors: Bool?,
-        conferenceCalls: Bool,
         playerV2: Bool,
         devRequests: Bool,
-        fakeAds: Bool
+        fakeAds: Bool,
+        conferenceDebug: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -163,7 +160,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.knockoutWallpaper = knockoutWallpaper
         self.foldersTabAtBottom = foldersTabAtBottom
         self.playerEmbedding = playerEmbedding
-        self.playlistPlayback = playlistPlayback
         self.preferredVideoCodec = preferredVideoCodec
         self.disableVideoAspectScaling = disableVideoAspectScaling
         self.enableVoipTcp = enableVoipTcp
@@ -193,10 +189,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = dynamicStreaming
         self.enableLocalTranslation = enableLocalTranslation
         self.autoBenchmarkReflectors = autoBenchmarkReflectors
-        self.conferenceCalls = conferenceCalls
         self.playerV2 = playerV2
         self.devRequests = devRequests
         self.fakeAds = fakeAds
+        self.conferenceDebug = conferenceDebug
     }
     
     public init(from decoder: Decoder) throws {
@@ -209,7 +205,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.knockoutWallpaper = (try container.decodeIfPresent(Int32.self, forKey: "knockoutWallpaper") ?? 0) != 0
         self.foldersTabAtBottom = (try container.decodeIfPresent(Int32.self, forKey: "foldersTabAtBottom") ?? 0) != 0
         self.playerEmbedding = (try container.decodeIfPresent(Int32.self, forKey: "playerEmbedding") ?? 0) != 0
-        self.playlistPlayback = (try container.decodeIfPresent(Int32.self, forKey: "playlistPlayback") ?? 0) != 0
         self.preferredVideoCodec = try container.decodeIfPresent(String.self.self, forKey: "preferredVideoCodec")
         self.disableVideoAspectScaling = (try container.decodeIfPresent(Int32.self, forKey: "disableVideoAspectScaling") ?? 0) != 0
         self.enableVoipTcp = (try container.decodeIfPresent(Int32.self, forKey: "enableVoipTcp") ?? 0) != 0
@@ -239,10 +234,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.dynamicStreaming = try container.decodeIfPresent(Bool.self, forKey: "dynamicStreaming_v2") ?? false
         self.enableLocalTranslation = try container.decodeIfPresent(Bool.self, forKey: "enableLocalTranslation") ?? false
         self.autoBenchmarkReflectors = try container.decodeIfPresent(Bool.self, forKey: "autoBenchmarkReflectors")
-        self.conferenceCalls = try container.decodeIfPresent(Bool.self, forKey: "conferenceCalls") ?? false
         self.playerV2 = try container.decodeIfPresent(Bool.self, forKey: "playerV2") ?? false
         self.devRequests = try container.decodeIfPresent(Bool.self, forKey: "devRequests") ?? false
         self.fakeAds = try container.decodeIfPresent(Bool.self, forKey: "fakeAds") ?? false
+        self.conferenceDebug = try container.decodeIfPresent(Bool.self, forKey: "conferenceDebug") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -255,7 +250,6 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.knockoutWallpaper ? 1 : 0) as Int32, forKey: "knockoutWallpaper")
         try container.encode((self.foldersTabAtBottom ? 1 : 0) as Int32, forKey: "foldersTabAtBottom")
         try container.encode((self.playerEmbedding ? 1 : 0) as Int32, forKey: "playerEmbedding")
-        try container.encode((self.playlistPlayback ? 1 : 0) as Int32, forKey: "playlistPlayback")
         try container.encodeIfPresent(self.preferredVideoCodec, forKey: "preferredVideoCodec")
         try container.encode((self.disableVideoAspectScaling ? 1 : 0) as Int32, forKey: "disableVideoAspectScaling")
         try container.encode((self.enableVoipTcp ? 1 : 0) as Int32, forKey: "enableVoipTcp")
@@ -285,10 +279,10 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.dynamicStreaming, forKey: "dynamicStreaming")
         try container.encode(self.enableLocalTranslation, forKey: "enableLocalTranslation")
         try container.encodeIfPresent(self.autoBenchmarkReflectors, forKey: "autoBenchmarkReflectors")
-        try container.encodeIfPresent(self.conferenceCalls, forKey: "conferenceCalls")
         try container.encodeIfPresent(self.playerV2, forKey: "playerV2")
         try container.encodeIfPresent(self.devRequests, forKey: "devRequests")
         try container.encodeIfPresent(self.fakeAds, forKey: "fakeAds")
+        try container.encodeIfPresent(self.conferenceDebug, forKey: "conferenceDebug")
     }
 }
 

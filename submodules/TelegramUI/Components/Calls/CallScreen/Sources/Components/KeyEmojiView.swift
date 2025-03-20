@@ -93,7 +93,7 @@ final class KeyEmojiView: HighlightTrackingButton {
         for i in 0 ..< self.emojiViews.count {
             let emojiView = self.emojiViews[i]
             emojiView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            emojiView.layer.animatePosition(from: CGPoint(x: CGFloat(i) * 30.0, y: 0.0), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            //emojiView.layer.animateScale(from: 0.2, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         }
     }
     
@@ -109,7 +109,7 @@ final class KeyEmojiView: HighlightTrackingButton {
     }
     
     private func update(params: Params, transition: ComponentTransition) -> CGSize {
-        let itemSpacing: CGFloat = 1.0
+        let itemSpacing: CGFloat = 0.0
         
         var height: CGFloat = 0.0
         var nextX = 0.0
@@ -118,7 +118,7 @@ final class KeyEmojiView: HighlightTrackingButton {
                 nextX += itemSpacing
             }
             let emojiView = self.emojiViews[i]
-            let itemSize = emojiView.update(string: emoji[i], fontSize: params.isExpanded ? 40.0 : 16.0, fontWeight: 0.0, color: .white, constrainedWidth: 100.0, transition: transition)
+            let itemSize = emojiView.update(string: emoji[i], fontSize: params.isExpanded ? 40.0 : 15.0, fontWeight: 0.0, color: .white, constrainedWidth: 100.0, transition: transition)
             if height == 0.0 {
                 height = itemSize.height
             }
@@ -144,7 +144,7 @@ func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosit
     let numPoints: Int = Int(ceil(Double(UIScreen.main.maximumFramesPerSecond) * duration))
     
     var keyframes: [CGPoint] = []
-    if abs(y1 - y3) < 5.0 && abs(x1 - x3) < 5.0 {
+    if abs(y1 - y3) < 5.0 || abs(x1 - x3) < 5.0 {
         for rawI in 0 ..< numPoints {
             let i = reverse ? (numPoints - 1 - rawI) : rawI
             let ks = CGFloat(i) / CGFloat(numPoints - 1)

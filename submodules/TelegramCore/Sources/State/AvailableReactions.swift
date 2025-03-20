@@ -2,6 +2,8 @@ import Foundation
 import TelegramApi
 import Postbox
 import SwiftSignalKit
+import FlatBuffers
+import FlatSerialization
 
 private func generateStarsReactionFile(kind: Int, isAnimatedSticker: Bool) -> TelegramMediaFile {
     let baseId: Int64 = 52343278047832950 + 10
@@ -27,7 +29,7 @@ private func generateStarsReactionFile(kind: Int, isAnimatedSticker: Bool) -> Te
     )
 }
 
-private func generateStarsReaction() -> AvailableReactions.Reaction {
+private let sharedStarsReaction: AvailableReactions.Reaction = {
     return AvailableReactions.Reaction(
         isEnabled: false,
         isPremium: false,
@@ -41,7 +43,7 @@ private func generateStarsReaction() -> AvailableReactions.Reaction {
         aroundAnimation: generateStarsReactionFile(kind: 5, isAnimatedSticker: true),
         centerAnimation: generateStarsReactionFile(kind: 6, isAnimatedSticker: true)
     )
-}
+}()
 
 public final class AvailableReactions: Equatable, Codable {
     public final class Reaction: Equatable, Codable {
@@ -51,12 +53,19 @@ public final class AvailableReactions: Equatable, Codable {
             case value
             case title
             case staticIcon
+            case staticIconData
             case appearAnimation
+            case appearAnimationData
             case selectAnimation
+            case selectAnimationData
             case activateAnimation
+            case activateAnimationData
             case effectAnimation
+            case effectAnimationData
             case aroundAnimation
+            case aroundAnimationData
             case centerAnimation
+            case centerAnimationData
             case isStars
         }
         
@@ -64,13 +73,13 @@ public final class AvailableReactions: Equatable, Codable {
         public let isPremium: Bool
         public let value: MessageReaction.Reaction
         public let title: String
-        public let staticIcon: TelegramMediaFile
-        public let appearAnimation: TelegramMediaFile
-        public let selectAnimation: TelegramMediaFile
-        public let activateAnimation: TelegramMediaFile
-        public let effectAnimation: TelegramMediaFile
-        public let aroundAnimation: TelegramMediaFile?
-        public let centerAnimation: TelegramMediaFile?
+        public let staticIcon: TelegramMediaFile.Accessor
+        public let appearAnimation: TelegramMediaFile.Accessor
+        public let selectAnimation: TelegramMediaFile.Accessor
+        public let activateAnimation: TelegramMediaFile.Accessor
+        public let effectAnimation: TelegramMediaFile.Accessor
+        public let aroundAnimation: TelegramMediaFile.Accessor?
+        public let centerAnimation: TelegramMediaFile.Accessor?
         
         public init(
             isEnabled: Bool,
@@ -89,13 +98,13 @@ public final class AvailableReactions: Equatable, Codable {
             self.isPremium = isPremium
             self.value = value
             self.title = title
-            self.staticIcon = staticIcon
-            self.appearAnimation = appearAnimation
-            self.selectAnimation = selectAnimation
-            self.activateAnimation = activateAnimation
-            self.effectAnimation = effectAnimation
-            self.aroundAnimation = aroundAnimation
-            self.centerAnimation = centerAnimation
+            self.staticIcon = TelegramMediaFile.Accessor(staticIcon)
+            self.appearAnimation = TelegramMediaFile.Accessor(appearAnimation)
+            self.selectAnimation = TelegramMediaFile.Accessor(selectAnimation)
+            self.activateAnimation = TelegramMediaFile.Accessor(activateAnimation)
+            self.effectAnimation = TelegramMediaFile.Accessor(effectAnimation)
+            self.aroundAnimation = aroundAnimation.flatMap(TelegramMediaFile.Accessor.init)
+            self.centerAnimation = centerAnimation.flatMap(TelegramMediaFile.Accessor.init)
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
@@ -149,29 +158,60 @@ public final class AvailableReactions: Equatable, Codable {
             }
             self.title = try container.decode(String.self, forKey: .title)
             
-            let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
-            self.staticIcon = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data)))
+            if let staticIconData = try container.decodeIfPresent(Data.self, forKey: .staticIconData) {
+                var byteBuffer = ByteBuffer(data: staticIconData)
+                self.staticIcon = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, staticIconData)
+            } else {
+                let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
+                self.staticIcon = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data))))
+            }
             
-            let appearAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .appearAnimation)
-            self.appearAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: appearAnimationData.data)))
+            if let appearAnimationData = try container.decodeIfPresent(Data.self, forKey: .appearAnimationData) {
+                var byteBuffer = ByteBuffer(data: appearAnimationData)
+                self.appearAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, appearAnimationData)
+            } else {
+                let appearAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .appearAnimation)
+                self.appearAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: appearAnimationData.data))))
+            }
             
-            let selectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .selectAnimation)
-            self.selectAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: selectAnimationData.data)))
+            if let selectAnimationData = try container.decodeIfPresent(Data.self, forKey: .selectAnimationData) {
+                var byteBuffer = ByteBuffer(data: selectAnimationData)
+                self.selectAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, selectAnimationData)
+            } else {
+                let selectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .selectAnimation)
+                self.selectAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: selectAnimationData.data))))
+            }
             
-            let activateAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .activateAnimation)
-            self.activateAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: activateAnimationData.data)))
+            if let activateAnimationData = try container.decodeIfPresent(Data.self, forKey: .activateAnimationData) {
+                var byteBuffer = ByteBuffer(data: activateAnimationData)
+                self.activateAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, activateAnimationData)
+            } else {
+                let activateAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .activateAnimation)
+                self.activateAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: activateAnimationData.data))))
+            }
             
-            let effectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation)
-            self.effectAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data)))
+            if let effectAnimationData = try container.decodeIfPresent(Data.self, forKey: .effectAnimationData) {
+                var byteBuffer = ByteBuffer(data: effectAnimationData)
+                self.effectAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, effectAnimationData)
+            } else {
+                let effectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation)
+                self.effectAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data))))
+            }
             
-            if let aroundAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .aroundAnimation) {
-                self.aroundAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: aroundAnimationData.data)))
+            if let aroundAnimationData = try container.decodeIfPresent(Data.self, forKey: .aroundAnimationData) {
+                var byteBuffer = ByteBuffer(data: aroundAnimationData)
+                self.aroundAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, aroundAnimationData)
+            } else if let aroundAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .aroundAnimation) {
+                self.aroundAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: aroundAnimationData.data))))
             } else {
                 self.aroundAnimation = nil
             }
-            
-            if let centerAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .centerAnimation) {
-                self.centerAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: centerAnimationData.data)))
+                
+            if let centerAnimationData = try container.decodeIfPresent(Data.self, forKey: .centerAnimationData) {
+                var byteBuffer = ByteBuffer(data: centerAnimationData)
+                self.centerAnimation = TelegramMediaFile.Accessor(FlatBuffers_getRoot(byteBuffer: &byteBuffer) as TelegramCore_TelegramMediaFile, centerAnimationData)
+            } else if let centerAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .centerAnimation) {
+                self.centerAnimation = TelegramMediaFile.Accessor(TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: centerAnimationData.data))))
             } else {
                 self.centerAnimation = nil
             }
@@ -193,16 +233,31 @@ public final class AvailableReactions: Equatable, Codable {
             }
             try container.encode(self.title, forKey: .title)
             
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.staticIcon), forKey: .staticIcon)
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.appearAnimation), forKey: .appearAnimation)
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.selectAnimation), forKey: .selectAnimation)
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.activateAnimation), forKey: .activateAnimation)
-            try container.encode(PostboxEncoder().encodeObjectToRawData(self.effectAnimation), forKey: .effectAnimation)
+            let encodeFileItem: (TelegramMediaFile.Accessor, CodingKeys) throws -> Void = { file, key in
+                if let serializedFile = file._wrappedData {
+                    try container.encode(serializedFile, forKey: key)
+                } else if let file = file._wrappedFile {
+                    var builder = FlatBufferBuilder(initialSize: 1024)
+                    let value = file.encodeToFlatBuffers(builder: &builder)
+                    builder.finish(offset: value)
+                    let serializedFile = builder.data
+                    try container.encode(serializedFile, forKey: key)
+                } else {
+                    preconditionFailure()
+                }
+            }
+            
+            try encodeFileItem(self.staticIcon, .staticIconData)
+            try encodeFileItem(self.appearAnimation, .appearAnimationData)
+            try encodeFileItem(self.selectAnimation, .selectAnimationData)
+            try encodeFileItem(self.activateAnimation, .activateAnimationData)
+            try encodeFileItem(self.effectAnimation, .effectAnimationData)
+            
             if let aroundAnimation = self.aroundAnimation {
-                try container.encode(PostboxEncoder().encodeObjectToRawData(aroundAnimation), forKey: .aroundAnimation)
+                try encodeFileItem(aroundAnimation, .aroundAnimationData)
             }
             if let centerAnimation = self.centerAnimation {
-                try container.encode(PostboxEncoder().encodeObjectToRawData(centerAnimation), forKey: .centerAnimation)
+                try encodeFileItem(centerAnimation, .centerAnimationData)
             }
         }
     }
@@ -223,7 +278,7 @@ public final class AvailableReactions: Equatable, Codable {
         
         var reactions = reactions
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
-        reactions.append(generateStarsReaction())
+        reactions.append(sharedStarsReaction)
         self.reactions = reactions
     }
     
@@ -244,7 +299,7 @@ public final class AvailableReactions: Equatable, Codable {
         
         var reactions = try container.decode([Reaction].self, forKey: .reactions)
         reactions.removeAll(where: { if case .stars = $0.value { return true } else { return false } })
-        reactions.append(generateStarsReaction())
+        reactions.append(sharedStarsReaction)
         self.reactions = reactions
     }
     
@@ -324,27 +379,27 @@ func _internal_setCachedAvailableReactions(transaction: Transaction, availableRe
 }
 
 func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    let starsReaction = generateStarsReaction()
-    let mapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile>] = [
+    let starsReaction = sharedStarsReaction
+    let mapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile.Accessor>] = [
         "star_reaction_activate.tgs": \.activateAnimation,
         "star_reaction_appear.tgs": \.appearAnimation,
         "star_reaction_effect.tgs": \.effectAnimation,
         "star_reaction_select.tgs": \.selectAnimation,
         "star_reaction_static_icon.webp": \.staticIcon
     ]
-    let optionalMapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile?>] = [
+    let optionalMapping: [String: KeyPath<AvailableReactions.Reaction, TelegramMediaFile.Accessor?>] = [
         "star_reaction_center.tgs": \.centerAnimation,
         "star_reaction_effect.tgs": \.aroundAnimation
     ]
     for (key, path) in mapping {
         if let filePath = Bundle.main.path(forResource: key, ofType: nil), let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
-            postbox.mediaBox.storeResourceData(starsReaction[keyPath: path].resource.id, data: data)
+            postbox.mediaBox.storeResourceData(starsReaction[keyPath: path]._parse().resource.id, data: data)
         }
     }
     for (key, path) in optionalMapping {
         if let filePath = Bundle.main.path(forResource: key, ofType: nil), let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
             if let file = starsReaction[keyPath: path] {
-                postbox.mediaBox.storeResourceData(file.resource.id, data: data)
+                postbox.mediaBox.storeResourceData(file._parse().resource.id, data: data)
             }
         }
     }
@@ -380,16 +435,16 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                         var resources: [MediaResource] = []
                         
                         for reaction in availableReactions.reactions {
-                            resources.append(reaction.staticIcon.resource)
-                            resources.append(reaction.appearAnimation.resource)
-                            resources.append(reaction.selectAnimation.resource)
-                            resources.append(reaction.activateAnimation.resource)
-                            resources.append(reaction.effectAnimation.resource)
+                            resources.append(reaction.staticIcon._parse().resource)
+                            resources.append(reaction.appearAnimation._parse().resource)
+                            resources.append(reaction.selectAnimation._parse().resource)
+                            resources.append(reaction.activateAnimation._parse().resource)
+                            resources.append(reaction.effectAnimation._parse().resource)
                             if let centerAnimation = reaction.centerAnimation {
-                                resources.append(centerAnimation.resource)
+                                resources.append(centerAnimation._parse().resource)
                             }
                             if let aroundAnimation = reaction.aroundAnimation {
-                                resources.append(aroundAnimation.resource)
+                                resources.append(aroundAnimation._parse().resource)
                             }
                         }
                         

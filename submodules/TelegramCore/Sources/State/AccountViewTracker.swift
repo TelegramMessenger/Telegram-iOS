@@ -1462,24 +1462,32 @@ public final class AccountViewTracker {
                                 slice.append(inputPeers[i])
                             }
                             startIndex += batchCount
-                            requests.append(account.network.request(Api.functions.users.getIsPremiumRequiredToContact(id: slice.map(\.1)))
-                            |> `catch` { _ -> Signal<[Api.Bool], NoError> in
+                            requests.append(account.network.request(Api.functions.users.getRequirementsToContact(id: slice.map(\.1)))
+                            |> `catch` { _ -> Signal<[Api.RequirementToContact], NoError> in
                                 return .single([])
                             }
                             |> mapToSignal { result -> Signal<Never, NoError> in
                                 return account.postbox.transaction { transaction in
                                     for i in 0 ..< result.count {
                                         if i < slice.count {
+                                            let peerId = slice[i].0
                                             let value = result[i]
-                                            transaction.updatePeerCachedData(peerIds: Set([slice[i].0]), update: { _, cachedData in
-                                                var cachedData = cachedData as? CachedUserData ?? CachedUserData(about: nil, botInfo: nil, editableBotInfo: nil, peerStatusSettings: nil, pinnedMessageId: nil, isBlocked: false, commonGroupCount: 0, voiceCallsAvailable: true, videoCallsAvailable: true, callsPrivate: true, canPinMessages: true, hasScheduledMessages: true, autoremoveTimeout: .unknown, themeEmoticon: nil, photo: .unknown, personalPhoto: .unknown, fallbackPhoto: .unknown, premiumGiftOptions: [], voiceMessagesAvailable: true, wallpaper: nil, flags: [], businessHours: nil, businessLocation: nil, greetingMessage: nil, awayMessage: nil, connectedBot: nil, businessIntro: .unknown, birthday: nil, personalChannel: .unknown, botPreview: nil, starGiftsCount: nil, starRefProgram: nil, verification: nil)
+                                            transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData in
+                                                var cachedData = cachedData as? CachedUserData ?? CachedUserData(about: nil, botInfo: nil, editableBotInfo: nil, peerStatusSettings: nil, pinnedMessageId: nil, isBlocked: false, commonGroupCount: 0, voiceCallsAvailable: true, videoCallsAvailable: true, callsPrivate: true, canPinMessages: true, hasScheduledMessages: true, autoremoveTimeout: .unknown, themeEmoticon: nil, photo: .unknown, personalPhoto: .unknown, fallbackPhoto: .unknown, voiceMessagesAvailable: true, wallpaper: nil, flags: [], businessHours: nil, businessLocation: nil, greetingMessage: nil, awayMessage: nil, connectedBot: nil, businessIntro: .unknown, birthday: nil, personalChannel: .unknown, botPreview: nil, starGiftsCount: nil, starRefProgram: nil, verification: nil, sendPaidMessageStars: nil)
                                                 var flags = cachedData.flags
-                                                if case .boolTrue = value {
-                                                    flags.insert(.premiumRequired)
-                                                } else {
+                                                var sendPaidMessageStars = cachedData.sendPaidMessageStars
+                                                switch value {
+                                                case .requirementToContactEmpty:
                                                     flags.remove(.premiumRequired)
+                                                    sendPaidMessageStars = nil
+                                                case .requirementToContactPremium:
+                                                    flags.insert(.premiumRequired)
+                                                    sendPaidMessageStars = nil
+                                                case let .requirementToContactPaidMessages(starsAmount):
+                                                    flags.remove(.premiumRequired)
+                                                    sendPaidMessageStars = StarsAmount(value: starsAmount, nanos: 0)
                                                 }
-                                                cachedData = cachedData.withUpdatedFlags(flags)
+                                                cachedData = cachedData.withUpdatedFlags(flags).withUpdatedSendPaidMessageStars(sendPaidMessageStars)
                                                 return cachedData
                                             })
                                         }

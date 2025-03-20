@@ -8,6 +8,12 @@ import AccountContext
 import UndoUI
 
 open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGestureRecognizerDelegate {
+    public enum CustomDismissType {
+        case `default`
+        case simpleAnimation
+        case pip
+    }
+    
     private let context: AccountContext
     
     public var statusBar: StatusBar?
@@ -27,7 +33,7 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
     public var scrollView: UIScrollView
     public var pager: GalleryPagerNode
     
-    public var beginCustomDismiss: (Bool) -> Void = { _ in }
+    public var beginCustomDismiss: (GalleryControllerNode.CustomDismissType) -> Void = { _ in }
     public var completeCustomDismiss: (Bool) -> Void = { _ in }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
@@ -128,9 +134,9 @@ open class GalleryControllerNode: ASDisplayNode, ASScrollViewDelegate, ASGesture
             }
         }
                 
-        self.pager.beginCustomDismiss = { [weak self] simpleAnimation in
+        self.pager.beginCustomDismiss = { [weak self] animationType in
             if let strongSelf = self {
-                strongSelf.beginCustomDismiss(simpleAnimation)
+                strongSelf.beginCustomDismiss(animationType)
             }
         }
         

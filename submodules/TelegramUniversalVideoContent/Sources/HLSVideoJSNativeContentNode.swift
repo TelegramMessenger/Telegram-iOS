@@ -447,6 +447,7 @@ private final class SharedHLSVideoJSContext: NSObject {
                     }
                     guard let instance = self.contextReferences[instanceId]?.contentNode else {
                         self.contextReferences.removeValue(forKey: instanceId)
+                        self.cleanupContextsIfEmpty()
                         return
                     }
                     guard let eventData = message["data"] as? [String: Any] else {
@@ -484,6 +485,10 @@ private final class SharedHLSVideoJSContext: NSObject {
             self.jsContext = nil
         }
         self.isJsContextReady = false
+        
+        self.videoElements.removeAll()
+        self.mediaSources.removeAll()
+        self.sourceBuffers.removeAll()
     }
     
     private func bridgeInvoke(
@@ -848,21 +853,32 @@ private final class SharedHLSVideoJSContext: NSObject {
                 
                 self.jsContext?.evaluateJavaScript("window.hlsPlayer_destroyInstance(\(contextInstanceId));")
                 
-                if self.contextReferences.isEmpty {
-                    if self.emptyTimer == nil {
-                        self.emptyTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false, block: { [weak self] timer in
-                            guard let self else {
-                                return
-                            }
-                            if self.emptyTimer === timer {
-                                self.emptyTimer = nil
-                            }
-                            if self.contextReferences.isEmpty {
-                                self.disposeJsContext()
-                            }
-                        })
+                self.cleanupContextsIfEmpty()
+            }
+        }
+    }
+    
+    private func cleanupContextsIfEmpty() {
+        if self.contextReferences.isEmpty {
+            if self.emptyTimer == nil {
+                let disposeTimeout: Double
+                #if DEBUG
+                disposeTimeout = 0.5
+                #else
+                disposeTimeout = 10.0
+                #endif
+                
+                self.emptyTimer = Foundation.Timer.scheduledTimer(withTimeInterval: disposeTimeout, repeats: false, block: { [weak self] timer in
+                    guard let self else {
+                        return
                     }
-                }
+                    if self.emptyTimer === timer {
+                        self.emptyTimer = nil
+                    }
+                    if self.contextReferences.isEmpty {
+                        self.disposeJsContext()
+                    }
+                })
             }
         }
     }
@@ -894,6 +910,7 @@ private final class SharedHLSVideoJSContext: NSObject {
         for (instanceId, urlPrefix) in pendingInitializeInstanceIds {
             guard let _ = self.contextReferences[instanceId]?.contentNode else {
                 self.contextReferences.removeValue(forKey: instanceId)
+                self.cleanupContextsIfEmpty()
                 continue
             }
             userScriptJs.append("window.hlsPlayer_makeInstance(\(instanceId));\n")
@@ -1105,7 +1122,7 @@ final class HLSVideoJSNativeContentNode: ASDisplayNode, UniversalVideoContentNod
 
         let thumbnailVideoReference = HLSVideoContent.minimizedHLSQuality(file: fileReference, codecConfiguration: self.codecConfiguration)?.file ?? fileReference
         
-        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: thumbnailVideoReference, previewSourceFileReference: nil, imageReference: nil, onlyFullSize: onlyFullSizeThumbnail, useLargeThumbnail: useLargeThumbnail, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail || fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
+        self.imageNode.setSignal(internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, videoReference: thumbnailVideoReference, previewSourceFileReference: fileReference, imageReference: nil, onlyFullSize: onlyFullSizeThumbnail, useLargeThumbnail: useLargeThumbnail, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail || fileReference.media.isInstantVideo) |> map { [weak self] getSize, getData in
             Queue.mainQueue().async {
                 if let strongSelf = self, strongSelf.dimensions == nil {
                     if let dimensions = getSize() {

@@ -105,6 +105,7 @@ public struct StandaloneSendEnqueueMessage {
     public var forwardOptions: ForwardOptions?
     public var isSilent: Bool = false
     public var groupingKey: Int64? = nil
+    public var sendPaidMessageStars: StarsAmount? = nil
     
     public init(
         content: Content,
@@ -128,6 +129,7 @@ public func standaloneSendEnqueueMessages(
     struct MessageResult {
         var result: PendingMessageUploadedContentResult
         var media: [Media]
+        var attributes: [MessageAttribute]
     }
     
     let signals: [Signal<MessageResult, PendingMessageUploadError>] = messages.map { message in
@@ -177,7 +179,10 @@ public func standaloneSendEnqueueMessages(
         if message.isSilent {
             attributes.append(NotificationInfoMessageAttribute(flags: .muted))
         }
-        
+        if let sendPaidMessageStars = message.sendPaidMessageStars {
+            attributes.append(PaidStarsMessageAttribute(stars: sendPaidMessageStars, postponeSending: false))
+        }
+                
         let content = messageContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: auxiliaryMethods, transformOutgoingMessageMedia: { _, _, _, _ in
             return .single(nil)
         }, messageMediaPreuploadManager: MessageMediaPreuploadManager(), revalidationContext: MediaReferenceRevalidationContext(), forceReupload: false, isGrouped: false, passFetchProgress: true, forceNoBigParts: false, peerId: peerId, messageId: nil, attributes: attributes, text: text, media: media)
@@ -190,7 +195,7 @@ public func standaloneSendEnqueueMessages(
         }
         return contentResult
         |> map { contentResult in
-            return MessageResult(result: contentResult, media: media)
+            return MessageResult(result: contentResult, media: media, attributes: attributes)
         }
     }
     
@@ -200,7 +205,7 @@ public func standaloneSendEnqueueMessages(
     }
     |> mapToSignal { contentResults -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> in
         var progressSum: Float = 0.0
-        var allResults: [(result: PendingMessageUploadedContentAndReuploadInfo, media: [Media])] = []
+        var allResults: [(result: PendingMessageUploadedContentAndReuploadInfo, media: [Media], attributes: [MessageAttribute])] = []
         var allDone = true
         for result in contentResults {
             switch result.result {
@@ -208,13 +213,13 @@ public func standaloneSendEnqueueMessages(
                 allDone = false
                 progressSum += value.progress
             case let .content(content):
-                allResults.append((content, result.media))
+                allResults.append((content, result.media, result.attributes))
             }
         }
         if allDone {
             var sendSignals: [Signal<Never, StandaloneSendMessagesError>] = []
             
-            for (content, media) in allResults {
+            for (content, media, attributes) in allResults {
                 var text: String = ""
                 switch content.content {
                 case let .text(textValue):
@@ -234,7 +239,7 @@ public func standaloneSendEnqueueMessages(
                     peerId: peerId,
                     content: content,
                     text: text,
-                    attributes: [],
+                    attributes: attributes,
                     media: media,
                     threadId: threadId
                 ))
@@ -327,6 +332,7 @@ private func sendUploadedMessageContent(
             var videoTimestamp: Int32?
             var sendAsPeerId: PeerId?
             var bubbleUpEmojiOrStickersets = false
+            var allowPaidStars: Int64?
             
             var flags: Int32 = 0
 
@@ -364,6 +370,8 @@ private func sendUploadedMessageContent(
                 } else if let attribute = attribute as? ForwardVideoTimestampAttribute {
                     flags |= Int32(1 << 20)
                     videoTimestamp = attribute.timestamp
+                } else if let attribute = attribute as? PaidStarsMessageAttribute {
+                    allowPaidStars = attribute.stars.value
                 }
             }
             
@@ -388,6 +396,11 @@ private func sendUploadedMessageContent(
                 sendAsInputPeer = inputPeer
                 flags |= (1 << 13)
             }
+            
+            if let _ = allowPaidStars {
+                flags |= 1 << 21
+            }
+            
             
             let dependencyTag: PendingMessageRequestDependencyTag? = nil//(messageId: messageId)
             
@@ -414,7 +427,7 @@ private func sendUploadedMessageContent(
                         }
                     }
                 
-                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), info: .acknowledgement, tag: dependencyTag)
+                    sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars), info: .acknowledgement, tag: dependencyTag)
                 case let .media(inputMedia, text):
                     if bubbleUpEmojiOrStickersets {
                         flags |= Int32(1 << 15)
@@ -436,7 +449,7 @@ private func sendUploadedMessageContent(
                         }
                     }
                     
-                sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil), tag: dependencyTag)
+                sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars), tag: dependencyTag)
                     |> map(NetworkRequestResult.result)
                 case let .forward(sourceInfo):
                     var topMsgId: Int32?
@@ -446,7 +459,7 @@ private func sendUploadedMessageContent(
                     }
                 
                     if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: videoTimestamp), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, videoTimestamp: videoTimestamp, allowPaidStars: allowPaidStars), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     } else {
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -472,7 +485,7 @@ private func sendUploadedMessageContent(
                         }
                     }
                 
-                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil))
+                    sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyTo: replyTo, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, allowPaidStars: allowPaidStars))
                     |> map(NetworkRequestResult.result)
                 case .messageScreenshot:
                     let replyTo: Api.InputReplyTo
@@ -584,6 +597,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
             var replyToStoryId: StoryId?
             var scheduleTime: Int32?
             var sendAsPeerId: PeerId?
+            var allowPaidStars: Int64?
             
             var flags: Int32 = 0
             flags |= (1 << 7)
@@ -608,6 +622,8 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                     scheduleTime = attribute.scheduleTime
                 } else if let attribute = attribute as? SendAsMessageAttribute {
                     sendAsPeerId = attribute.peerId
+                } else if let attribute = attribute as? PaidStarsMessageAttribute {
+                    allowPaidStars = attribute.stars.value
                 }
             }
             
@@ -620,6 +636,11 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                 sendAsInputPeer = inputPeer
                 flags |= (1 << 13)
             }
+            
+            if let _ = allowPaidStars {
+                flags |= 1 << 21
+            }
+            
             
             let sendMessageRequest: Signal<Api.Updates, NoError>
             switch content {
@@ -640,7 +661,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                     }
                 
-                sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil))
+                sendMessageRequest = account.network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }
@@ -661,7 +682,7 @@ private func sendMessageContent(account: Account, peerId: PeerId, attributes: [M
                         replyTo = .inputReplyToMessage(flags: flags, replyToMsgId: threadId, topMsgId: threadId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                     }
                 
-                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil))
+                    sendMessageRequest = account.network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyTo: replyTo, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer, quickReplyShortcut: nil, effect: nil, allowPaidStars: allowPaidStars))
                     |> `catch` { _ -> Signal<Api.Updates, NoError> in
                         return .complete()
                     }

@@ -102,6 +102,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     let backgroundBannerView: UIView
     let backgroundCover = ComponentView<Empty>()
+    let giftsCover = ComponentView<Empty>()
     var didSetupBackgroundCover = false
     let buttonsContainerNode: SparseNode
     let buttonsBackgroundNode: NavigationBackgroundNode
@@ -254,6 +255,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.buttonsContainerNode.clipsToBounds = true
         
         self.buttonsBackgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true, enableSaturation: false)
+        self.buttonsBackgroundNode.isUserInteractionEnabled = false
         self.buttonsContainerNode.addSubnode(self.buttonsBackgroundNode)
         self.buttonsMaskView = UIView()
         self.buttonsBackgroundNode.view.mask = self.buttonsMaskView
@@ -491,7 +493,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentStatusIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, threadData: MessageHistoryThreadData?, peerNotificationSettings: TelegramPeerNotificationSettings?, threadNotificationSettings: TelegramPeerNotificationSettings?, globalNotificationSettings: EngineGlobalNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, profileGiftsContext: ProfileGiftsContext?, metrics: LayoutMetrics, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition, additive: Bool, animateHeader: Bool) -> CGFloat {
         if self.appliedCustomNavigationContentNode !== self.customNavigationContentNode {
             if let previous = self.appliedCustomNavigationContentNode {
                 transition.updateAlpha(node: previous, alpha: 0.0, completion: { [weak previous] _ in
@@ -555,7 +557,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .fake
             } else if peer.isScam {
                 credibilityIcon = .scam
-            } else if let emojiStatus = peer.emojiStatus, !premiumConfiguration.isPremiumDisabled {
+            } else if let emojiStatus = peer.emojiStatus {
                 statusIcon = .emojiStatus(emojiStatus)
             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings || self.isMyProfile) {
                 credibilityIcon = .premium
@@ -923,13 +925,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(strongSelf.titleStatusIconView, uniqueGiftSlug)
+                        if let uniqueGiftSlug, !self.isSettings {
+                            self.openUniqueGift?(self.titleStatusIconView, uniqueGiftSlug)
                         } else {
-                            strongSelf.displayPremiumIntro?(strongSelf.titleStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
+                            self.displayPremiumIntro?(self.titleStatusIconView, currentEmojiStatus, self.emojiStatusFileAndPackTitle.get(), false)
                         }
                     },
                     emojiFileUpdated: { [weak self] emojiFile in
@@ -952,7 +954,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                     }
                                     |> mapToSignal { result -> Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError> in
                                         if case let .result(_, items, _) = result {
-                                            return .single(items.first.flatMap { ($0.file, result) })
+                                            return .single(items.first.flatMap { ($0.file._parse(), result) })
                                         } else {
                                             return .complete()
                                         }
@@ -984,13 +986,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     isVisibleForAnimations: true,
                     useSharedAnimation: true,
                     action: { [weak self] in
-                        guard let strongSelf = self else {
+                        guard let self else {
                             return
                         }
-                        if let uniqueGiftSlug {
-                            strongSelf.openUniqueGift?(strongSelf.titleExpandedStatusIconView, uniqueGiftSlug)
+                        if let uniqueGiftSlug, !self.isSettings {
+                            self.openUniqueGift?(self.titleExpandedStatusIconView, uniqueGiftSlug)
                         } else {
-                            strongSelf.displayPremiumIntro?(strongSelf.titleExpandedStatusIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
+                            self.displayPremiumIntro?(self.titleExpandedStatusIconView, currentEmojiStatus, self.emojiStatusFileAndPackTitle.get(), true)
                         }
                     }
                 )),
@@ -2276,6 +2278,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let backgroundCoverSubject: PeerInfoCoverComponent.Subject?
         var backgroundCoverAnimateIn = false
         var backgroundDefaultHeight: CGFloat = 254.0
+        var hasBackground = false
         if let status = peer?.emojiStatus, case .starGift = status.content {
             backgroundCoverSubject = .status(status)
             if !self.didSetupBackgroundCover {
@@ -2287,8 +2290,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if !buttonKeys.isEmpty {
                 backgroundDefaultHeight = 327.0
             }
+            hasBackground = true
         } else if let peer {
             backgroundCoverSubject = .peer(EnginePeer(peer))
+            if peer.profileColor != nil {
+                hasBackground = true
+            }
         } else {
             backgroundCoverSubject = nil
         }
@@ -2300,7 +2307,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subject: backgroundCoverSubject,
                 files: [:],
                 isDark: presentationData.theme.overallDarkAppearance,
-                avatarCenter: apparentAvatarFrame.center,
+                avatarCenter: apparentAvatarFrame.center.offsetBy(dx: bannerInset, dy: 0.0),
                 avatarScale: avatarScale,
                 defaultHeight: backgroundDefaultHeight,
                 gradientCenter: CGPoint(x: 0.5, y: buttonKeys.isEmpty ? 0.5 : 0.45),
@@ -2315,9 +2322,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 self.backgroundBannerView.addSubview(backgroundCoverView)
             }
             if additive {
-                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -3.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             } else {
-                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
+                transition.updateFrame(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: -bannerInset, y: bannerFrame.height - backgroundCoverSize.height - bannerInset), size: backgroundCoverSize))
             }
             if backgroundCoverAnimateIn {
                 if !self.isAvatarExpanded {
@@ -2333,6 +2340,45 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         self.invokeDisplayGiftInfo()
                     }
                 }
+            }
+        }
+        
+        if let profileGiftsContext, let peer {
+            let giftsCoverSize = self.giftsCover.update(
+                transition: ComponentTransition(transition),
+                component: AnyComponent(PeerInfoGiftsCoverComponent(
+                    context: self.context,
+                    peerId: peer.id,
+                    giftsContext: profileGiftsContext,
+                    hasBackground: hasBackground,
+                    avatarCenter: apparentAvatarFrame.center,
+                    defaultHeight: backgroundDefaultHeight,
+                    avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
+                    statusBarHeight: statusBarHeight,
+                    topLeftButtonsSize: CGSize(width: (self.isSettings ? 57.0 : 47.0), height: 46.0),
+                    topRightButtonsSize: CGSize(width: 76.0 + (self.isMyProfile ? 38.0 : 0.0), height: 46.0),
+                    titleWidth: max(140.0, titleFrame.width) + 42.0,
+                    bottomHeight: !buttonKeys.isEmpty ? 81.0 : 30.0,
+                    action: { [weak self] gift in
+                        guard let self, case let .unique(gift) = gift.gift else {
+                            return
+                        }
+                        self.openUniqueGift?(self.view, gift.slug)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: width, height: apparentBackgroundHeight)
+            )
+            if let giftsCoverView = self.giftsCover.view as? PeerInfoGiftsCoverComponent.View {
+                if giftsCoverView.superview == nil {
+                    self.view.insertSubview(giftsCoverView, aboveSubview: self.backgroundBannerView)
+                }
+                if additive {
+                    transition.updateFrameAdditive(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: giftsCoverSize))
+                } else {
+                    transition.updateFrame(view: giftsCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: giftsCoverSize))
+                }
+                navigationTransition.updateAlpha(layer: giftsCoverView.layer, alpha: backgroundBannerAlpha)
             }
         }
         
@@ -2452,6 +2498,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let result = self.buttonsContainerNode.view.hitTest(self.view.convert(point, to: self.buttonsContainerNode.view), with: event) {
             return result
+        }
+        
+        if let giftsCoverView = self.giftsCover.view, giftsCoverView.alpha > 0.0, giftsCoverView.point(inside: self.view.convert(point, to: giftsCoverView), with: event) {
+            return giftsCoverView
         }
         
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {

@@ -48,7 +48,7 @@ final class AvatarEditorPreviewView: UIView {
                 var files: [TelegramMediaFile] = []
                 for item in view.items.prefix(8) {
                     if let mediaItem = item.contents.get(RecentMediaItem.self) {
-                        let file = mediaItem.media
+                        let file = mediaItem.media._parse()
                         files.append(file)
                         
                         self.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())

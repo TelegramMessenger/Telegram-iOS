@@ -495,7 +495,7 @@ func managedRecentReactions(postbox: Postbox, network: Network) -> Signal<Void, 
                             guard let file = files[fileId] else {
                                 continue
                             }
-                            item = RecentReactionItem(.custom(file))
+                            item = RecentReactionItem(.custom(TelegramMediaFile.Accessor(file)))
                         case .stars:
                             item = RecentReactionItem(.stars)
                         }
@@ -552,7 +552,7 @@ func managedTopReactions(postbox: Postbox, network: Network) -> Signal<Void, NoE
                             guard let file = files[fileId] else {
                                 continue
                             }
-                            item = RecentReactionItem(.custom(file))
+                            item = RecentReactionItem(.custom(TelegramMediaFile.Accessor(file)))
                         case .stars:
                             item = RecentReactionItem(.stars)
                         }
@@ -609,7 +609,7 @@ func managedDefaultTagReactions(postbox: Postbox, network: Network) -> Signal<Vo
                             guard let file = files[fileId] else {
                                 continue
                             }
-                            item = RecentReactionItem(.custom(file))
+                            item = RecentReactionItem(.custom(TelegramMediaFile.Accessor(file)))
                         case .stars:
                             item = RecentReactionItem(.stars)
                         }

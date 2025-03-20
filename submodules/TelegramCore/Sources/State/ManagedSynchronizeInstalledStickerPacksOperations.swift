@@ -569,7 +569,7 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                                     let items = transaction.getItemCollectionItems(collectionId: id)
                                     for item in items {
                                         if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
-                                           let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                           let entry = CodableEntry(RecentMediaItem(stickerItem.file._parse())) {
                                             premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
                                         }
                                     }
@@ -690,7 +690,7 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                             let items = transaction.getItemCollectionItems(collectionId: id)
                             for item in items {
                                 if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
-                                   let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                   let entry = CodableEntry(RecentMediaItem(stickerItem.file._parse())) {
                                     premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
                                 }
                             }

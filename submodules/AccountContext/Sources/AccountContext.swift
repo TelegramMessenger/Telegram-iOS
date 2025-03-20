@@ -593,6 +593,7 @@ public enum PeerInfoControllerMode {
     case myProfile
     case gifts
     case myProfileGifts
+    case groupsInCommon
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -1100,6 +1101,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeStarsStatisticsScreen(context: AccountContext, peerId: EnginePeer.Id, revenueContext: StarsRevenueStatsContext) -> ViewController
     func makeStarsAmountScreen(context: AccountContext, initialValue: Int64?, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsWithdrawalScreen(context: AccountContext, stats: StarsRevenueStats, completion: @escaping (Int64) -> Void) -> ViewController
+    func makeStarsWithdrawalScreen(context: AccountContext, completion: @escaping (Int64) -> Void) -> ViewController
     func makeStarsGiftScreen(context: AccountContext, message: EngineMessage) -> ViewController
     func makeStarsGiveawayBoostScreen(context: AccountContext, peerId: EnginePeer.Id, boost: ChannelBoostersContext.State.Boost) -> ViewController
     func makeStarsIntroScreen(context: AccountContext) -> ViewController
@@ -1115,6 +1117,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeMiniAppListScreenInitialData(context: AccountContext) -> Signal<MiniAppListScreenInitialData, NoError>
     func makeMiniAppListScreen(context: AccountContext, initialData: MiniAppListScreenInitialData) -> ViewController
+    
+    func makeIncomingMessagePrivacyScreen(context: AccountContext, value: GlobalPrivacySettings.NonContactChatsPrivacy, exceptions: SelectivePrivacySettings, update: @escaping (GlobalPrivacySettings.NonContactChatsPrivacy) -> Void) -> ViewController
     
     func openWebApp(context: AccountContext, parentController: ViewController, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, botPeer: EnginePeer, chatPeer: EnginePeer?, threadId: Int64?, buttonText: String, url: String, simple: Bool, source: ChatOpenWebViewSource, skipTermsOfService: Bool, payload: String?)
     
@@ -1343,6 +1347,58 @@ public struct StickersSearchConfiguration {
     public static func with(appConfiguration: AppConfiguration) -> StickersSearchConfiguration {
         if let data = appConfiguration.data, let suggestOnlyApi = data["stickers_emoji_suggest_only_api"] as? Bool {
             return StickersSearchConfiguration(disableLocalSuggestions: suggestOnlyApi)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
+public struct StarsSubscriptionConfiguration {
+    static var defaultValue: StarsSubscriptionConfiguration {
+        return StarsSubscriptionConfiguration(
+            maxFee: 2500,
+            usdWithdrawRate: 1200,
+            paidMessageMaxAmount: 10000,
+            paidMessageCommissionPermille: 850,
+            paidMessagesAvailable: false
+        )
+    }
+        
+    public let maxFee: Int64
+    public let usdWithdrawRate: Int64
+    public let paidMessageMaxAmount: Int64
+    public let paidMessageCommissionPermille: Int32
+    public let paidMessagesAvailable: Bool
+    
+    fileprivate init(
+        maxFee: Int64,
+        usdWithdrawRate: Int64,
+        paidMessageMaxAmount: Int64,
+        paidMessageCommissionPermille: Int32,
+        paidMessagesAvailable: Bool
+    ) {
+        self.maxFee = maxFee
+        self.usdWithdrawRate = usdWithdrawRate
+        self.paidMessageMaxAmount = paidMessageMaxAmount
+        self.paidMessageCommissionPermille = paidMessageCommissionPermille
+        self.paidMessagesAvailable = paidMessagesAvailable
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> StarsSubscriptionConfiguration {
+        if let data = appConfiguration.data {
+            let maxFee = (data["stars_subscription_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.maxFee
+            let usdWithdrawRate = (data["stars_usd_withdraw_rate_x1000"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.usdWithdrawRate
+            let paidMessageMaxAmount = (data["stars_paid_message_amount_max"] as? Double).flatMap(Int64.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageMaxAmount
+            let paidMessageCommissionPermille = (data["stars_paid_message_commission_permille"] as? Double).flatMap(Int32.init) ?? StarsSubscriptionConfiguration.defaultValue.paidMessageCommissionPermille
+            let paidMessagesAvailable = (data["stars_paid_messages_available"] as? Bool) ?? StarsSubscriptionConfiguration.defaultValue.paidMessagesAvailable
+            
+            return StarsSubscriptionConfiguration(
+                maxFee: maxFee,
+                usdWithdrawRate: usdWithdrawRate,
+                paidMessageMaxAmount: paidMessageMaxAmount,
+                paidMessageCommissionPermille: paidMessageCommissionPermille,
+                paidMessagesAvailable: paidMessagesAvailable
+            )
         } else {
             return .defaultValue
         }
