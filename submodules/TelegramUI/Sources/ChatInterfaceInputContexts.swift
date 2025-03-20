@@ -173,23 +173,7 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
                 let isTextEmpty = chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0
                 let hasForward = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
-                
-                if case .scheduledMessages = chatPresentationInterfaceState.subject {
-                } else {
-                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
-                    var showPremiumGift = false
-                    if !premiumConfiguration.isPremiumDisabled {
-                        if chatPresentationInterfaceState.hasBirthdayToday {
-                            showPremiumGift = true
-                        } else if premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField {
-                            showPremiumGift = true
-                        }
-                    }
-                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && chatPresentationInterfaceState.suggestPremiumGift {
-                        accessoryItems.append(.gift)
-                    }
-                }
-                
+                  
                 var extendedSearchLayout = false
                 loop: for (_, result) in chatPresentationInterfaceState.inputQueryResults {
                     if case let .contextRequestResult(peer, _) = result, peer != nil {
@@ -205,6 +189,22 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         } else if currentAutoremoveTimeout != nil && chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
                             accessoryItems.append(.messageAutoremoveTimeout(currentAutoremoveTimeout))
                         }
+                    }
+                }
+                
+                if case .scheduledMessages = chatPresentationInterfaceState.subject {
+                } else {
+                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                    var showPremiumGift = false
+                    if !premiumConfiguration.isPremiumDisabled {
+                        if chatPresentationInterfaceState.hasBirthdayToday {
+                            showPremiumGift = true
+                        } else if premiumConfiguration.showPremiumGiftInAttachMenu && premiumConfiguration.showPremiumGiftInTextField {
+                            showPremiumGift = true
+                        }
+                    }
+                    if isTextEmpty, showPremiumGift, let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, !peer.isDeleted && peer.botInfo == nil && !peer.flags.contains(.isSupport) && chatPresentationInterfaceState.suggestPremiumGift {
+                        accessoryItems.append(.gift)
                     }
                 }
                    
