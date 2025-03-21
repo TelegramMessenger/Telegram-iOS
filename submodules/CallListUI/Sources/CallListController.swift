@@ -206,6 +206,9 @@ public final class CallListController: TelegramBaseController {
     }
 
     private func createGroupCall() {
+        guard !self.presentAccountFrozenInfoIfNeeded() else {
+            return
+        }
         let controller = InviteLinkInviteController(context: self.context, updatedPresentationData: nil, mode: .groupCall(link: "https://t.me/call/+abbfbffll123", isRecentlyCreated: true), parentNavigationController: self.navigationController as? NavigationController, completed: { [weak self] result in
             guard let self else {
                 return
@@ -233,8 +236,11 @@ public final class CallListController: TelegramBaseController {
                 strongSelf.call(peerId, isVideo: isVideo)
             }
         }, joinGroupCall: { [weak self] peerId, activeCall in
-            if let strongSelf = self {
-                strongSelf.joinGroupCall(peerId: peerId, invite: nil, activeCall: activeCall)
+            if let self {
+                guard !self.presentAccountFrozenInfoIfNeeded() else {
+                    return
+                }
+                self.joinGroupCall(peerId: peerId, invite: nil, activeCall: activeCall)
             }
         }, openInfo: { [weak self] peerId, messages in
             if let strongSelf = self {
@@ -410,6 +416,9 @@ public final class CallListController: TelegramBaseController {
     }
     
     private func beginCallImpl() {
+        guard !self.presentAccountFrozenInfoIfNeeded() else {
+            return
+        }
         let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: self.context, title: { $0.Calls_NewCall }, displayCallIcons: true))
         controller.navigationPresentation = .modal
         self.createActionDisposable.set((controller.result
@@ -438,6 +447,23 @@ public final class CallListController: TelegramBaseController {
         if let navigationController = self.context.sharedContext.mainWindow?.viewController as? NavigationController {
             navigationController.pushViewController(controller)
         }
+    }
+    
+    private func presentAccountFrozenInfoIfNeeded(delay: Bool = false) -> Bool {
+        if self.context.isFrozen {
+            let present = {
+                self.push(self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context))
+            }
+            if delay {
+                Queue.mainQueue().after(0.3) {
+                    present()
+                }
+            } else {
+                present()
+            }
+            return true
+        }
+        return false
     }
     
     @objc func editPressed() {
@@ -493,6 +519,9 @@ public final class CallListController: TelegramBaseController {
     }
     
     private func call(_ peerId: EnginePeer.Id, isVideo: Bool, began: (() -> Void)? = nil) {
+        guard !self.presentAccountFrozenInfoIfNeeded() else {
+            return
+        }
         self.peerViewDisposable.set((self.context.account.viewTracker.peerView(peerId)
             |> take(1)
             |> deliverOnMainQueue).startStrict(next: { [weak self] view in

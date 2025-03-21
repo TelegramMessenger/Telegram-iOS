@@ -4359,6 +4359,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 shareButtonNode.morePressed = { [weak strongSelf] in
                     strongSelf?.openMessageContextMenu()
                 }
+                shareButtonNode.longPressAction = { [weak strongSelf] node, gesture in
+                    strongSelf?.openQuickShare(node: node, gesture: gesture)
+                }
             }
         } else if let shareButtonNode = strongSelf.shareButtonNode {
             strongSelf.shareButtonNode = nil
@@ -5780,6 +5783,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 item.controllerInteraction.openMessageShareMenu(item.message.id)
             }
+        }
+    }
+                                               
+    private func openQuickShare(node: ASDisplayNode, gesture: ContextGesture) {
+        if let item = self.item {
+            item.controllerInteraction.displayQuickShare(node, gesture)
         }
     }
     

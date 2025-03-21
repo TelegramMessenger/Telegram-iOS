@@ -212,7 +212,7 @@ extension ChatControllerImpl {
         let premiumGiftOptions: [CachedPremiumGiftOption]
         
         var showPremiumGift = false
-        if !premiumConfiguration.isPremiumDisabled {
+        if !premiumConfiguration.isPremiumDisabled && self.presentationInterfaceState.disallowedGifts != TelegramDisallowedGifts.All {
             if self.presentationInterfaceState.alwaysShowGiftButton {
                 showPremiumGift = true
             } else if self.presentationInterfaceState.hasBirthdayToday {

@@ -468,6 +468,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stars/StarsBalanceOverlayComponent",
         "//submodules/TelegramUI/Components/Settings/AccountFreezeInfoScreen",
         "//submodules/TelegramUI/Components/JoinSubjectScreen",
+        "//submodules/TelegramUI/Components/Chat/QuickShareScreen",
         "//third-party/recaptcha:RecaptchaEnterprise",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

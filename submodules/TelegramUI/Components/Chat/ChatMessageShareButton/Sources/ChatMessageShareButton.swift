@@ -9,8 +9,12 @@ import TelegramCore
 import Postbox
 import WallpaperBackgroundNode
 import ChatMessageItemCommon
+import ContextUI
 
 public class ChatMessageShareButton: ASDisplayNode {
+    private let referenceNode: ContextReferenceContentNode
+    private let containerNode: ContextControllerSourceNode
+    
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private var backgroundBlurView: PortalView?
     
@@ -33,15 +37,24 @@ public class ChatMessageShareButton: ASDisplayNode {
     
     public var pressed: (() -> Void)?
     public var morePressed: (() -> Void)?
+    public var longPressAction: ((ASDisplayNode, ContextGesture) -> Void)?
     
     override public init() {
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        
         self.topButton = HighlightTrackingButtonNode()
         self.topIconNode = ASImageNode()
         self.topIconNode.displaysAsynchronously = false
+        self.topIconNode.isUserInteractionEnabled = false
         
         super.init()
         
         self.allowsGroupOpacity = true
+        
+        self.containerNode.addSubnode(self.referenceNode)
+        self.topButton.addSubnode(self.containerNode)
         
         self.addSubnode(self.topIconNode)
         self.addSubnode(self.topButton)
@@ -62,6 +75,19 @@ public class ChatMessageShareButton: ASDisplayNode {
                 self.textNode?.alpha = 1.0
                 self.textNode?.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
             }
+        }
+        
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.longPressAction else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.longPressAction?(strongSelf.containerNode, gesture)
         }
     }
     
@@ -238,6 +264,8 @@ public class ChatMessageShareButton: ASDisplayNode {
             self.topIconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0) + self.topIconOffset.x, y: floor((size.width - image.size.width) / 2.0) - (offsetIcon ? 1.0 : 0.0) + self.topIconOffset.y), size: image.size)
         }
         self.topButton.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.width))
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.width))
+        self.referenceNode.frame = self.containerNode.bounds
         
         if let bottomIconNode = self.bottomIconNode, let bottomButton = self.bottomButton, let bottomImage = bottomIconNode.image {
             bottomIconNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - bottomImage.size.width) / 2.0), y: size.height - size.width + floorToScreenPixels((size.width - bottomImage.size.height) / 2.0)), size: bottomImage.size)

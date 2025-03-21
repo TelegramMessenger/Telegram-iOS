@@ -97,7 +97,7 @@ private final class SheetContent: CombinedComponent {
             
             let title = title.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Too Many Pinned Gifts", font: titleFont, textColor: textColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Unpin_Title, font: titleFont, textColor: textColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1,
                     lineSpacing: 0.1
@@ -112,7 +112,7 @@ private final class SheetContent: CombinedComponent {
             
             let text = text.update(
                 component: BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Select a gift to unpin below:", font: subtitleFont, textColor: secondaryTextColor)),
+                    text: .plain(NSAttributedString(string: strings.Gift_Unpin_Subtitle, font: subtitleFont, textColor: secondaryTextColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1,
                     lineSpacing: 0.2
@@ -190,6 +190,42 @@ private final class SheetContent: CombinedComponent {
             }
             contentSize.height += 14.0
             
+            
+            
+            var giftTitle: String?
+            if let selectedGift = state.selectedGift, let gift = component.gifts.first(where: { $0.reference == selectedGift }) {
+                if case let .unique(uniqueGift) = gift.gift {
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    giftTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
+                }
+            }
+            
+            let buttonContent: AnyComponentWithIdentity<Empty>
+            if let giftTitle {
+                buttonContent = AnyComponentWithIdentity(
+                    id: AnyHashable("unpinGift"),
+                    component: AnyComponent(
+                        VStack([
+                            AnyComponentWithIdentity(
+                                id: AnyHashable("unpin"),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Unpin, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
+                            ),
+                            AnyComponentWithIdentity(
+                                id: AnyHashable(giftTitle),
+                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftTitle, font: Font.regular(13.0), textColor: theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center))))
+                            )
+                        ], spacing: 0.0)
+                    )
+                )
+            } else {
+                buttonContent = AnyComponentWithIdentity(
+                    id: AnyHashable("unpin"),
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Unpin, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
+                    )
+                )
+            }
+            
             let button = button.update(
                 component: ButtonComponent(
                     background: ButtonComponent.Background(
@@ -197,10 +233,7 @@ private final class SheetContent: CombinedComponent {
                         foreground: theme.list.itemCheckColors.foregroundColor,
                         pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
                     ),
-                    content: AnyComponentWithIdentity(
-                        id: AnyHashable("unpin"),
-                        component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Unpin", font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
-                    ),
+                    content: buttonContent,
                     isEnabled: state.selectedGift != nil,
                     displaysProgress: false,
                     action: { [weak state] in

@@ -375,6 +375,48 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
         cancelContextGestures(view: scrollView)
     }
     
+    private func displayUnpinScreen(gift: ProfileGiftsContext.State.StarGift, completion: (() -> Void)? = nil) {
+        guard let gifts = self.profileGifts.currentState?.gifts.filter({ $0.pinnedToTop }), let presentationData = self.currentParams?.presentationData else {
+            return
+        }
+        let controller = GiftUnpinScreen(
+            context: context,
+            gifts: gifts,
+            completion: { [weak self] unpinnedReference in
+                guard let self else {
+                    return
+                }
+                completion?()
+                
+                var replacingTitle = ""
+                for gift in gifts {
+                    if gift.reference == unpinnedReference, case let .unique(uniqueGift) = gift.gift {
+                        replacingTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
+                    }
+                }
+                
+                var updatedPinnedGifts = self.pinnedReferences
+                if let index = updatedPinnedGifts.firstIndex(of: unpinnedReference), let reference = gift.reference {
+                    updatedPinnedGifts[index] = reference
+                }
+                self.profileGifts.updatePinnedToTopStarGifts(references: updatedPinnedGifts)
+                
+                var title = ""
+                if case let .unique(uniqueGift) = gift.gift {
+                    title = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
+                }
+                                                       
+                let _ = self.scrollToTop()
+                Queue.mainQueue().after(0.35) {
+                    let toastTitle = presentationData.strings.PeerInfo_Gifts_ToastPinned_TitleNew(title).string
+                    let toastText = presentationData.strings.PeerInfo_Gifts_ToastPinned_ReplacingText(replacingTitle).string
+                    self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                }
+            }
+        )
+        self.parentController?.push(controller)
+    }
+    
     private var notify = false
     func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
         if let starsProducts = self.starsProducts, let params = self.currentParams {
@@ -445,8 +487,12 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             ribbonText = nil
                         }
                     case let .unique(gift):
-                        ribbonFont = .monospaced
-                        ribbonText = "#\(gift.number)"
+                        if product.pinnedToTop {
+                            ribbonFont = .monospaced
+                            ribbonText = "#\(gift.number)"
+                        } else {
+                            ribbonText = params.presentationData.strings.PeerInfo_Gifts_OneOf(compactNumericCountString(Int(gift.availability.issued), decimalSeparator: params.presentationData.dateTimeFormat.decimalSeparator)).string
+                        }
                         for attribute in gift.attributes {
                             if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
                                 ribbonColor = .custom(outerColor, innerColor)
@@ -546,48 +592,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                                 guard let self else {
                                                     return false
                                                 }
-                                                if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
-                                                    if let gifts = self.profileGifts.currentState?.gifts.filter({ $0.pinnedToTop }) {
-                                                        let controller = GiftUnpinScreen(
-                                                            context: context,
-                                                            gifts: gifts,
-                                                            completion: { [weak self] unpinnedReference in
-                                                                guard let self else {
-                                                                    return
-                                                                }
-                                                                dismissImpl?()
-                                                                
-                                                                var replacingTitle = ""
-                                                                for gift in gifts {
-                                                                    if gift.reference == unpinnedReference, case let .unique(uniqueGift) = gift.gift {
-                                                                        replacingTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, params.presentationData.dateTimeFormat.groupingSeparator))"
-                                                                    }
-                                                                }
-                                                                
-                                                                var updatedPinnedGifts = self.pinnedReferences
-                                                                if let index = updatedPinnedGifts.firstIndex(of: unpinnedReference), let reference = product.reference {
-                                                                    updatedPinnedGifts[index] = reference
-                                                                }
-                                                                self.profileGifts.updatePinnedToTopStarGifts(references: updatedPinnedGifts)
-                                                                
-                                                                var title = ""
-                                                                if case let .unique(uniqueGift) = product.gift {
-                                                                    title = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, params.presentationData.dateTimeFormat.groupingSeparator))"
-                                                                }
-                                                                                                       
-                                                                let _ = self.scrollToTop()
-                                                                Queue.mainQueue().after(0.35) {
-                                                                    let toastTitle = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_TitleNew(title).string
-                                                                    let toastText = params.presentationData.strings.PeerInfo_Gifts_ToastPinned_ReplacingText(replacingTitle).string
-                                                                    self.parentController?.present(UndoOverlayController(presentationData: params.presentationData, content: .universal(animation: "anim_toastpin", scale: 0.06, colors: [:], title: toastTitle, text: toastText, customUndoText: nil, timeout: 5), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
-                                                                }
-                                                            }
-                                                        )
-                                                        self.parentController?.push(controller)
-                                                    }
-                                                    return false
-                                                }
                                                 if let reference = product.reference {
+                                                    if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                                                        self.displayUnpinScreen(gift: product, completion: {
+                                                            dismissImpl?()
+                                                        })
+                                                        return false
+                                                    }
                                                     self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
                                                     
                                                     var title = ""
@@ -1059,15 +1070,16 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                             return
                         }
                         let pinnedToTop = !gift.pinnedToTop
-                        
-                        if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
-                            self.parentController?.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.PeerInfo_Gifts_ToastPinLimit_Text(Int32(self.maxPinnedCount)), timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        guard let reference = gift.reference else {
                             return
                         }
                         
-                        if let reference = gift.reference {
-                            self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
+                        if pinnedToTop && self.pinnedReferences.count >= self.maxPinnedCount {
+                            self.displayUnpinScreen(gift: gift)
+                            return
                         }
+                        
+                        self.profileGifts.updateStarGiftPinnedToTop(reference: reference, pinnedToTop: pinnedToTop)
                         
                         let toastTitle: String?
                         let toastText: String

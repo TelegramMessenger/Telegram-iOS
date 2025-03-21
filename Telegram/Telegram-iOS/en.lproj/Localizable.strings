@@ -14036,6 +14036,7 @@ Sorry for the inconvenience.";
 "Privacy.Gifts.PremiumToast.Action" = "Open";
 
 "Gift.Send.ErrorDisallowed" = "**%@** doesn't accept this kind of gifts.";
+"Gift.Send.GiftsDisallowed" = "%@ doesn't accept gifts.";
 
 "ChatbotSetup.Rights.ManageMessages" = "Manage Messages";
 "ChatbotSetup.Rights.ReadMessages" = "Read Messages";
@@ -14089,3 +14090,7 @@ Sorry for the inconvenience.";
 
 "ChatList.FrozenAccount.Title" = "Your account is frozen";
 "ChatList.FrozenAccount.Text" = "Tap to view details and submit an appeal.";
+
+"Gift.Unpin.Title" = "Too Manu Pinned Gifts";
+"Gift.Unpin.Subtitle" = "Select a gift to unpin below:";
+"Gift.Unpin.Unpin" = "Unpin";

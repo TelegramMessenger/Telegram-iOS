@@ -224,6 +224,8 @@ final class GiftOptionsScreenComponent: Component {
         
         private var starsItemsOrigin: CGFloat = 0.0
         
+        private var dismissed = false
+        
         private var chevronImage: (UIImage, PresentationTheme)?
         
         override init(frame: CGRect) {
@@ -262,7 +264,7 @@ final class GiftOptionsScreenComponent: Component {
         
         var nextScrollTransition: ComponentTransition?
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            self.updateScrolling(transition: self.nextScrollTransition ?? .immediate)
+            self.updateScrolling(interactive: true, transition: self.nextScrollTransition ?? .immediate)
         }
         
         private func dismissAllTooltips(controller: ViewController) {
@@ -279,7 +281,7 @@ final class GiftOptionsScreenComponent: Component {
             })
         }
         
-        private func updateScrolling(transition: ComponentTransition) {
+        private func updateScrolling(interactive: Bool = false, transition: ComponentTransition) {
             guard let environment = self.environment, let component = self.component else {
                 return
             }
@@ -493,6 +495,11 @@ final class GiftOptionsScreenComponent: Component {
                     self.starsItems.removeValue(forKey: id)
                 }
             }
+            
+            let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
+            if interactive, bottomContentOffset < 200.0, case .transfer = self.starsFilter {
+                self.state?.starGiftsContext.loadMore()
+            }
         }
         
         func transferGift(_ transferGift: StarGift.UniqueGift) {
@@ -692,8 +699,18 @@ final class GiftOptionsScreenComponent: Component {
             }
             self.component = component
             
-            if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts == .All {
-                controller()?.dismiss()
+            let theme = environment.theme
+            let strings = environment.strings
+            
+            if let disallowedGifts = self.state?.disallowedGifts, disallowedGifts == .All, let controller = controller(), !self.dismissed {
+                if let navigationController = controller.navigationController as? NavigationController, let peer = state.peer {
+                    Queue.mainQueue().after(0.3) {
+                        let alertController = textAlertController(context: component.context, title: nil, text: strings.Gift_Send_GiftsDisallowed(peer.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: strings.Common_OK, action: {})])
+                        (navigationController.viewControllers.last as? ViewController)?.present(alertController, in: .window(.root))
+                    }
+                }
+                controller.dismiss()
+                self.dismissed = true
             }
             
             if (state.starGifts ?? []).isEmpty && !(state.transferStarGifts ?? []).isEmpty {
@@ -703,10 +720,7 @@ final class GiftOptionsScreenComponent: Component {
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
-            
-            let theme = environment.theme
-            let strings = environment.strings
-            
+                        
             let textColor = theme.list.itemPrimaryTextColor
             let accentColor = theme.list.itemAccentColor
             
@@ -1324,7 +1338,7 @@ final class GiftOptionsScreenComponent: Component {
         fileprivate var premiumProducts: [PremiumGiftProduct]?
         fileprivate var starGifts: [StarGift]?
         
-        private let starGiftsContext: ProfileGiftsContext
+        fileprivate let starGiftsContext: ProfileGiftsContext
         fileprivate var transferStarGifts: [ProfileGiftsContext.State.StarGift]?
         
         init(

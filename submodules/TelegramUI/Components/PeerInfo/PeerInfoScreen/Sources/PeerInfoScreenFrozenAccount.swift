@@ -7,16 +7,9 @@ import AsyncDisplayKit
 import Display
 import AccountContext
 
-extension ChatControllerImpl {
+extension PeerInfoScreenImpl {
     func presentAccountFrozenInfoIfNeeded(delay: Bool = false) -> Bool {
         if self.context.isFrozen {
-            let accountFreezeConfiguration = AccountFreezeConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
-            if let freezeAppealUrl = accountFreezeConfiguration.freezeAppealUrl {
-                let components = freezeAppealUrl.components(separatedBy: "/")
-                if let username = components.last, let peer = self.presentationInterfaceState.renderedPeer?.peer, peer.addressName == username {
-                    return false
-                }
-            }
             let present = {
                 self.push(self.context.sharedContext.makeAccountFreezeInfoScreen(context: self.context))
             }
