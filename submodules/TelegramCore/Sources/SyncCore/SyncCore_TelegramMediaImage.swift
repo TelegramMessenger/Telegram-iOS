@@ -601,6 +601,17 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
         TelegramCore_TelegramMediaImageRepresentation.add(hasVideo: self.hasVideo, &builder)
         TelegramCore_TelegramMediaImageRepresentation.add(isPersonal: self.isPersonal, &builder)
         
+        let mappedTypeHint: TelegramCore_TelegramMediaImageRepresentation_TypeHint
+        switch self.typeHint {
+        case .generic:
+            mappedTypeHint = .generic
+        case .animated:
+            mappedTypeHint = .animated
+        case .video:
+            mappedTypeHint = .video
+        }
+        TelegramCore_TelegramMediaImageRepresentation.add(typeHint: mappedTypeHint, &builder)
+        
         return TelegramCore_TelegramMediaImageRepresentation.endTelegramMediaImageRepresentation(&builder, start: start)
     }
     
