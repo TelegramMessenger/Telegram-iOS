@@ -210,6 +210,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
     let openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)?
     let adButtonAction: ((ASDisplayNode) -> Void)?
+    let visibilityUpdated: ((Bool) -> Void)?
     
     public let selectable: Bool
     
@@ -254,7 +255,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         animationRenderer: MultiAnimationRenderer? = nil,
         storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)? = nil,
         openStories: ((ContactsPeerItemPeer, ASDisplayNode) -> Void)? = nil,
-        adButtonAction: ((ASDisplayNode) -> Void)? = nil
+        adButtonAction: ((ASDisplayNode) -> Void)? = nil,
+        visibilityUpdated: ((Bool) -> Void)? = nil
     ) {
         self.presentationData = presentationData
         self.style = style
@@ -294,6 +296,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
         self.storyStats = storyStats
         self.openStories = openStories
         self.adButtonAction = adButtonAction
+        self.visibilityUpdated = visibilityUpdated
         
         if let index = index {
             var letter: String = "#"
@@ -538,6 +541,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     )
                 }
                 self.statusNode.visibilityRect = self.visibilityStatus == false ? CGRect.zero : CGRect.infinite
+                
+                self.item?.visibilityUpdated?(self.visibilityStatus)
             }
         }
     }
@@ -1799,14 +1804,17 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     adButton = current
                                 } else {
                                     adButton = HighlightableButtonNode()
-                                    adButton.setImage(UIImage(bundleImageName: "Components/AdMock"), for: .normal)
                                     strongSelf.addSubnode(adButton)
                                     strongSelf.adButton = adButton
                                     
                                     adButton.addTarget(strongSelf, action: #selector(strongSelf.adButtonPressed), forControlEvents: .touchUpInside)
                                 }
-                                
-                                adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - 31.0 - 13.0, y: 11.0), size: CGSize(width: 31.0, height: 15.0))
+                                if updatedTheme != nil || adButton.image(for: .normal) == nil {
+                                    adButton.setImage(PresentationResourcesChatList.searchAdIcon(item.presentationData.theme, strings: item.presentationData.strings), for: .normal)
+                                }
+                                if let icon = adButton.image(for: .normal) {
+                                    adButton.frame = CGRect(origin: CGPoint(x: params.width - 20.0 - icon.size.width - 13.0, y: 11.0), size: icon.size).insetBy(dx: -11.0, dy: -11.0)
+                                }
                             } else if let adButton = strongSelf.adButton {
                                 strongSelf.adButton = nil
                                 adButton.removeFromSupernode()

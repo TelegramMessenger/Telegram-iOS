@@ -1529,11 +1529,7 @@ public extension TelegramEngine {
         public func searchAdPeers(query: String) -> Signal<[AdPeer], NoError> {
             return _internal_searchAdPeers(account: self.account, query: query)
         }
-        
-        public func markAsSeen(ad opaqueId: Data) -> Signal<Never, NoError> {
-            return _internal_markAsSeen(account: self.account, opaqueId: opaqueId)
-        }
-        
+                
         public func isPremiumRequiredToContact(_ peerIds: [EnginePeer.Id]) -> Signal<[EnginePeer.Id: RequirementToContact], NoError> {
             return _internal_updateIsPremiumRequiredToContact(account: self.account, peerIds: peerIds)
         }
@@ -1671,6 +1667,14 @@ public extension TelegramEngine {
         
         public func botsWithBiometricState() -> Signal<Set<EnginePeer.Id>, NoError> {
             return _internal_botsWithBiometricState(account: self.account)
+        }
+        
+        public func setBotStorageValue(peerId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, BotStorageError> {
+            return _internal_setBotStorageValue(account: self.account, peerId: peerId, key: key, value: value)
+        }
+
+        public func clearBotStorage(peerId: EnginePeer.Id) -> Signal<Never, BotStorageError> {
+            return _internal_clearBotStorage(account: self.account, peerId: peerId)
         }
         
         public func toggleChatManagingBotIsPaused(chatId: EnginePeer.Id) {

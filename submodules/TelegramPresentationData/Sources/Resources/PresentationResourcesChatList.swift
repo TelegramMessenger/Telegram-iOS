@@ -535,4 +535,38 @@ public struct PresentationResourcesChatList {
             })
         })
     }
+    
+    public static func searchAdIcon(_ theme: PresentationTheme, strings: PresentationStrings) -> UIImage? {
+        return theme.image(PresentationResourceKey.searchAdIcon.rawValue, { theme in
+            let titleString = NSAttributedString(string: strings.ChatList_Search_Ad, font: Font.regular(11.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .center)
+            let stringRect = titleString.boundingRect(with: CGSize(width: 200.0, height: 20.0), options: .usesLineFragmentOrigin, context: nil)
+            
+            return generateImage(CGSize(width: floor(stringRect.width) + 18.0, height: 15.0), rotatedContext: { size, context in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.clear(bounds)
+                
+                context.setFillColor(theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor)
+                context.addPath(UIBezierPath(roundedRect: bounds, cornerRadius: size.height / 2.0).cgPath)
+                context.fillPath()
+                
+                context.setFillColor(theme.list.itemAccentColor.cgColor)
+                
+                let circleSize = CGSize(width: 2.0 - UIScreenPixel, height: 2.0 - UIScreenPixel)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 8.0, y: 3.0 + UIScreenPixel), size: circleSize))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 8.0, y: 7.0 - UIScreenPixel), size: circleSize))
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - 8.0, y: 10.0), size: circleSize))
+                
+                let textRect = CGRect(
+                    x: 5.0,
+                    y: (size.height - stringRect.height) / 2.0 - UIScreenPixel,
+                    width: stringRect.width,
+                    height: stringRect.height
+                )
+                           
+                UIGraphicsPushContext(context)
+                titleString.draw(in: textRect)
+                UIGraphicsPopContext()
+            })
+        })
+    }
 }

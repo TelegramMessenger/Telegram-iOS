@@ -23,6 +23,7 @@ protocol ChatListSearchPaneNode: ASDisplayNode {
     func updateSelectedMessages(animated: Bool)
     func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)?
     func didBecomeFocused()
+    func removeAds()
     var searchCurrentMessages: [EngineMessage]? { get }
 }
 

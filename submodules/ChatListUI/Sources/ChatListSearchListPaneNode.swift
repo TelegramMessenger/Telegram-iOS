@@ -858,19 +858,12 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     context.engine.messages.markAdAction(opaqueId: peer.opaqueId, media: false, fullscreen: false)
                 }, disabledAction: { _ in
                     interaction.disabledPeerSelected(peer.peer, nil, .generic)
-                }, contextAction: peerContextAction.flatMap { peerContextAction in
-                    return { node, gesture, location in
-                        peerContextAction(peer.peer, .search(nil), node, gesture, location)
-                    }
-                }, animationCache: interaction.animationCache, animationRenderer: interaction.animationRenderer, storyStats: nil, openStories: { itemPeer, sourceNode in
-                    guard case let .peer(_, chatPeer) = itemPeer, let peer = chatPeer else {
-                        return
-                    }
-                    if let sourceNode = sourceNode as? ContactsPeerItemNode {
-                        openStories(peer.id, sourceNode.avatarNode)
-                    }
-                }, adButtonAction: { node in
+                }, animationCache: interaction.animationCache, animationRenderer: interaction.animationRenderer, storyStats: nil, adButtonAction: { node in
                     interaction.openAdInfo(node, peer)
+                }, visibilityUpdated: { isVisible in
+                    if isVisible {
+                        context.engine.messages.markAdAsSeen(opaqueId: peer.opaqueId)
+                    }
                 })
             case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType, storyStats, requiresPremiumForMessaging, isSelf):
                 let primaryPeer: EnginePeer
@@ -1613,6 +1606,13 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     
     private var deletedMessagesDisposable: Disposable?
     
+    private var adsHiddenPromise = ValuePromise<Bool>(false)
+    private var adsHidden = false {
+        didSet {
+            self.adsHiddenPromise.set(self.adsHidden)
+        }
+    }
+    
     private var searchQueryValue: String?
     private var searchOptionsValue: ChatListSearchOptions?
     
@@ -1953,6 +1953,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         let previousRecentlySearchedPeersState = Atomic<SearchedPeersState?>(value: nil)
         let hadAnySearchMessages = Atomic<Bool>(value: false)
+        
+        let adsHiddenPromise = self.adsHiddenPromise
         
         let foundItems: Signal<([ChatListSearchEntry], Bool)?, NoError> = combineLatest(queue: .mainQueue(), searchQuery, searchOptions, self.searchScopePromise.get(), downloadItems)
         |> mapToSignal { [weak self] query, options, searchScope, downloadItems -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
@@ -2726,9 +2728,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 selectionPromise.get(),
                 resolvedMessage,
                 fixedRecentlySearchedPeers,
-                foundThreads
+                foundThreads,
+                adsHiddenPromise.get()
             )
-            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, foundPublicMessages, presentationData, searchState, selectionState, resolvedMessage, recentPeers, allAndFoundThreads -> ([ChatListSearchEntry], Bool)? in
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, foundPublicMessages, presentationData, searchState, selectionState, resolvedMessage, recentPeers, allAndFoundThreads, adsHidden -> ([ChatListSearchEntry], Bool)? in
                 let isSearching = foundRemotePeers.3 || foundRemoteMessages.1 || foundPublicMessages.1
                 var entries: [ChatListSearchEntry] = []
                 var index = 0
@@ -3046,11 +3049,13 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
                 var numberOfGlobalPeers = 0
                 index = 0
-                for peer in foundRemotePeers.2 {
-                    if !existingPeerIds.contains(peer.peer.id) {
-                        existingPeerIds.insert(peer.peer.id)
-                        entries.append(.adPeer(peer, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType, finalQuery))
-                        index += 1
+                if !adsHidden {
+                    for peer in foundRemotePeers.2 {
+                        if !existingPeerIds.contains(peer.peer.id) {
+                            existingPeerIds.insert(peer.peer.id)
+                            entries.append(.adPeer(peer, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, globalExpandType, finalQuery))
+                            index += 1
+                        }
                     }
                 }
                 
@@ -3448,6 +3453,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
         let previousExpandGlobalSearch = Atomic<Bool>(value: false)
+        let previousAdsHidden = Atomic<Bool>(value: false)
         
         self.searchQueryDisposable = (searchQuery
         |> deliverOnMainQueue).startStrict(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
@@ -3536,6 +3542,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let strongSelf = self {
                 let previousSelectedMessageIds = previousSelectedMessages.swap(strongSelf.selectedMessages)
                 let previousExpandGlobalSearch = previousExpandGlobalSearch.swap(strongSelf.searchStateValue.expandGlobalSearch)
+                let previousAdsHidden = previousAdsHidden.swap(strongSelf.adsHidden)
                 
                 var entriesAndFlags = foundItems?.0
                 
@@ -3572,8 +3579,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let selectionChanged = (previousSelectedMessageIds == nil) != (strongSelf.selectedMessages == nil)
                 let expandGlobalSearchChanged = previousExpandGlobalSearch != strongSelf.searchStateValue.expandGlobalSearch
+                let adsHiddenChanged = previousAdsHidden != strongSelf.adsHidden
                 
-                let animated = selectionChanged || expandGlobalSearchChanged
+                let animated = selectionChanged || expandGlobalSearchChanged || adsHiddenChanged
                 let firstTime = previousEntries == nil
                 var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags != nil, isEmpty: !isSearching && (entriesAndFlags?.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, requestPeerType: requestPeerType, location: location, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture, location in
                     interaction.peerContextAction?(message, node, rect, gesture, location)
@@ -4907,6 +4915,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.selectedMessages = self.interaction.getSelectedMessageIds()
         self.mediaNode.selectedMessageIds = self.selectedMessages
         self.mediaNode.updateSelectedMessages(animated: animated)
+    }
+    
+    func removeAds() {
+        self.adsHidden = true
     }
     
     private func enqueueRecentTransition(_ transition: ChatListSearchContainerRecentTransition, firstTime: Bool) {
