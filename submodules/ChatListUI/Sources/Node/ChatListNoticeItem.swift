@@ -165,7 +165,7 @@ final class ChatListNoticeItemNode: ItemListRevealOptionsItemNode {
             
             let sideInset: CGFloat = params.leftInset + 16.0
             let rightInset: CGFloat = sideInset + 24.0
-            var titleRightInset = rightInset
+            var titleRightInset = rightInset - 4.0
             let verticalInset: CGFloat = 9.0
             var spacing: CGFloat = 0.0
             

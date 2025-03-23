@@ -3049,7 +3049,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                 }
             )
-            controller.present(alertController, in: .window(.root))
+            controller.present(alertController, in: .current)
             
             dismissAlertImpl = { [weak alertController] in
                 alertController?.dismissAnimated()

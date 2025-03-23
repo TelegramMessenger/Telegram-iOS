@@ -1441,7 +1441,6 @@ public final class ChatListNode: ListView {
                 return
             }
             var didBeginSelecting = false
-            var count = 0
             strongSelf.updateState { [weak self] state in
                 var state = state
                 if state.selectedPeerIds.contains(peer.id) {
@@ -1457,10 +1456,8 @@ public final class ChatListNode: ListView {
                         self?.reachedSelectionLimit?(Int32(state.selectedPeerIds.count))
                     }
                 }
-                count = state.selectedPeerIds.count
                 return state
             }
-            strongSelf.selectionCountChanged?(count)
             if didBeginSelecting {
                 strongSelf.didBeginSelectingChats?()
             }
@@ -3461,6 +3458,7 @@ public final class ChatListNode: ListView {
         if state != self.currentState {
             self.currentState = state
             self.statePromise.set(state)
+            self.selectionCountChanged?(state.selectedPeerIds.count)
         }
     }
     

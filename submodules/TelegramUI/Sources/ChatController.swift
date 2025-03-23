@@ -6376,6 +6376,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     isPremiumRequiredForMessaging = .single(false)
                 }
                 
+                let globalPrivacySettings = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy())
+                
                 self.titleDisposable.set(nil)
                 self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(),
                     peerView,
@@ -6386,9 +6388,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     hasSearchTags,
                     hasSavedChats,
                     isPremiumRequiredForMessaging,
-                    managingBot
+                    managingBot,
+                    globalPrivacySettings
                 )
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, messageAndTopic, savedMessagesPeer, onlineMemberCount, hasScheduledMessages, hasSearchTags, hasSavedChats, isPremiumRequiredForMessaging, managingBot, globalPrivacySettings in
                     if let strongSelf = self {
                         strongSelf.hasScheduledMessages = hasScheduledMessages
                         
@@ -6407,7 +6410,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     businessIntro = value
                                 }
                                 if cachedData.disallowedGifts != .All {
-                                    alwaysShowGiftButton = cachedData.flags.contains(.displayGiftButton)
+                                    alwaysShowGiftButton = globalPrivacySettings.displayGiftButton || cachedData.flags.contains(.displayGiftButton)
                                 }
                                 disallowedGifts = cachedData.disallowedGifts
                             } else if let cachedData = peerView.cachedData as? CachedGroupData {

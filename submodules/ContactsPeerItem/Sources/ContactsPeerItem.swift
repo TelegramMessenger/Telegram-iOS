@@ -1094,6 +1094,15 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 additionalTitleInset += arrowButtonImage.size.width + 4.0
             }
             
+            var actionButtonTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if let buttonAction = item.buttonAction {
+                actionButtonTitleLayoutAndApply = makeActionButtonTitleLayuout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonAction.title, font: Font.semibold(15.0), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                if let (actionButtonTitleLayout, _) = actionButtonTitleLayoutAndApply {
+                    additionalTitleInset += actionButtonTitleLayout.size.width + 32.0
+                }
+            }
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var maxStatusWidth: CGFloat = params.width - leftInset - rightInset - badgeSize
@@ -1121,11 +1130,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 statusHeightComponent = 0.0
             } else {
                 statusHeightComponent = -1.0 + statusLayout.size.height
-            }
-            
-            var actionButtonTitleLayoutAndApply: (TextNodeLayout, () -> TextNode)?
-            if let buttonAction = item.buttonAction {
-                actionButtonTitleLayoutAndApply = makeActionButtonTitleLayuout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonAction.title, font: Font.semibold(15.0), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             }
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + statusHeightComponent), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))

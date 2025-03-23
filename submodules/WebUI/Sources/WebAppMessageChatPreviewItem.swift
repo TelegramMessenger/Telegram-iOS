@@ -32,6 +32,7 @@ final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem, ListItemCo
         let text: String
         let entities: TextEntitiesMessageAttribute?
         let media: [Media]
+        let replyMarkup: ReplyMarkupMessageAttribute?
         let botAddress: String
     }
     
@@ -201,6 +202,9 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 var attributes: [MessageAttribute] = []
                 if let entities = messageItem.entities {
                     attributes.append(entities)
+                }
+                if let replyMarkup = messageItem.replyMarkup {
+                    attributes.append(replyMarkup)
                 }
                 
                 attributes.append(InlineBotMessageAttribute(peerId: botPeerId, title: nil))
