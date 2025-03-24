@@ -2,6 +2,7 @@ import Foundation
 import Security
 import SwiftSignalKit
 import TelegramCore
+import AccountContext
 
 final class WebAppSecureStorage {
     enum Error {
@@ -14,13 +15,16 @@ final class WebAppSecureStorage {
     private init() {
     }
     
-    static private func keyPrefix(userId: EnginePeer.Id, botId: EnginePeer.Id) -> String {
-        return "WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
-        //return "A\(UInt64(bitPattern: userId.toInt64()))WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
+    static private func keyPrefix(context: AccountContext, botId: EnginePeer.Id) -> String {
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_webappsecurestorage_botwide_scope"] {
+            return "WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
+        } else {
+            return "A\(UInt64(bitPattern: context.account.peerId.toInt64()))WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
+        }
     }
     
-    static private func makeQuery(userId: EnginePeer.Id, botId: EnginePeer.Id, key: String) -> [String: Any] {
-        let identifier = self.keyPrefix(userId: userId, botId: botId) + key
+    static private func makeQuery(context: AccountContext, botId: EnginePeer.Id, key: String) -> [String: Any] {
+        let identifier = self.keyPrefix(context: context, botId: botId) + key
         return [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identifier,
@@ -28,7 +32,7 @@ final class WebAppSecureStorage {
         ]
     }
     
-    static private func countKeys(userId: EnginePeer.Id, botId: EnginePeer.Id) -> Int {
+    static private func countKeys(context: AccountContext, botId: EnginePeer.Id) -> Int {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "TMASecureStorage",
@@ -40,7 +44,7 @@ final class WebAppSecureStorage {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         
         if status == errSecSuccess, let items = result as? [[String: Any]] {
-            let relevantPrefix = self.keyPrefix(userId: userId, botId: botId)
+            let relevantPrefix = self.keyPrefix(context: context, botId: botId)
             let count = items.filter {
                 if let account = $0[kSecAttrAccount as String] as? String {
                     return account.hasPrefix(relevantPrefix)
@@ -53,8 +57,8 @@ final class WebAppSecureStorage {
         return 0
     }
     
-    static func setValue(userId: EnginePeer.Id, botId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, WebAppSecureStorage.Error> {
-        var query = makeQuery(userId: userId, botId: botId, key: key)
+    static func setValue(context: AccountContext, botId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, WebAppSecureStorage.Error> {
+        var query = makeQuery(context: context, botId: botId, key: key)
         if value == nil {
             let status = SecItemDelete(query as CFDictionary)
             if status == errSecSuccess || status == errSecItemNotFound {
@@ -82,7 +86,7 @@ final class WebAppSecureStorage {
                 return .fail(.unknown)
             }
         } else if status == errSecItemNotFound {
-            let currentCount = countKeys(userId: userId, botId: botId)
+            let currentCount = countKeys(context: context, botId: botId)
             if currentCount >= maxKeyCount {
                 return .fail(.quotaExceeded)
             }
@@ -100,8 +104,8 @@ final class WebAppSecureStorage {
         }
     }
     
-    static func getValue(userId: EnginePeer.Id, botId: EnginePeer.Id, key: String) -> Signal<String?, WebAppSecureStorage.Error> {
-        var query = makeQuery(userId: userId, botId: botId, key: key)
+    static func getValue(context: AccountContext, botId: EnginePeer.Id, key: String) -> Signal<String?, WebAppSecureStorage.Error> {
+        var query = makeQuery(context: context, botId: botId, key: key)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         
@@ -117,7 +121,7 @@ final class WebAppSecureStorage {
         }
     }
     
-    static func clearStorage(userId: EnginePeer.Id, botId: EnginePeer.Id) -> Signal<Never, WebAppSecureStorage.Error> {
+    static func clearStorage(context: AccountContext, botId: EnginePeer.Id) -> Signal<Never, WebAppSecureStorage.Error> {
         let serviceQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "TMASecureStorage",
@@ -129,7 +133,7 @@ final class WebAppSecureStorage {
         let status = SecItemCopyMatching(serviceQuery as CFDictionary, &result)
         
         if status == errSecSuccess, let items = result as? [[String: Any]] {
-            let relevantPrefix = self.keyPrefix(userId: userId, botId: botId)
+            let relevantPrefix = self.keyPrefix(context: context, botId: botId)
             
             for item in items {
                 if let account = item[kSecAttrAccount as String] as? String, account.hasPrefix(relevantPrefix) {

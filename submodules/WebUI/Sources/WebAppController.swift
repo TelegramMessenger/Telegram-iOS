@@ -1646,7 +1646,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
                             return
                         }
-                        let _ = (WebAppSecureStorage.setValue(userId: self.context.account.peerId, botId: controller.botId, key: key, value: effectiveValue)
+                        let _ = (WebAppSecureStorage.setValue(context: self.context, botId: controller.botId, key: key, value: effectiveValue)
                         |> deliverOnMainQueue).start(error: { [weak self] error in
                             var errorValue = "UNKNOWN_ERROR"
                             if case .quotaExceeded = error {
@@ -1674,7 +1674,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             case "web_app_secure_storage_get_key":
                 if let json, let requestId = json["req_id"] as? String {
                     if let key = json["key"] as? String {
-                        let _ = (WebAppSecureStorage.getValue(userId: self.context.account.peerId, botId: controller.botId, key: key)
+                        let _ = (WebAppSecureStorage.getValue(context: self.context, botId: controller.botId, key: key)
                         |> deliverOnMainQueue).start(next: { [weak self] value in
                             let data: JSON = [
                                 "req_id": requestId,
@@ -1692,7 +1692,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             case "web_app_secure_storage_clear":
                 if let json, let requestId = json["req_id"] as? String {
-                    let _ = (WebAppSecureStorage.clearStorage(userId: self.context.account.peerId, botId: controller.botId)
+                    let _ = (WebAppSecureStorage.clearStorage(context: self.context, botId: controller.botId)
                     |> deliverOnMainQueue).start(completed: { [weak self] in
                         let data: JSON = [
                             "req_id": requestId
