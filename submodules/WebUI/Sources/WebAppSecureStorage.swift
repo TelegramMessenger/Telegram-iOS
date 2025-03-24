@@ -16,11 +16,7 @@ final class WebAppSecureStorage {
     }
     
     static private func keyPrefix(context: AccountContext, botId: EnginePeer.Id) -> String {
-        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_webappsecurestorage_botwide_scope"] {
-            return "WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
-        } else {
-            return "A\(UInt64(bitPattern: context.account.peerId.toInt64()))WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
-        }
+        return "WebBot\(UInt64(bitPattern: botId.toInt64()))A\(UInt64(bitPattern: context.account.peerId.toInt64()))Key_"
     }
     
     static private func makeQuery(context: AccountContext, botId: EnginePeer.Id, key: String) -> [String: Any] {
