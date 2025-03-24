@@ -15,7 +15,8 @@ final class WebAppSecureStorage {
     }
     
     static private func keyPrefix(userId: EnginePeer.Id, botId: EnginePeer.Id) -> String {
-        return "A\(UInt64(bitPattern: userId.toInt64()))WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
+        return "WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
+        //return "A\(UInt64(bitPattern: userId.toInt64()))WebBot\(UInt64(bitPattern: botId.toInt64()))Key_"
     }
     
     static private func makeQuery(userId: EnginePeer.Id, botId: EnginePeer.Id, key: String) -> [String: Any] {
