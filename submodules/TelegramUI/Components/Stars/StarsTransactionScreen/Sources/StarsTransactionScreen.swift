@@ -1868,15 +1868,15 @@ public class StarsTransactionScreen: ViewControllerComponentContainer {
             guard let self, let navigationController = self.navigationController as? NavigationController else {
                 return
             }
+            self.dismissAnimated()
+            
             let _ = (context.engine.privacy.requestAccountPrivacySettings()
-            |> deliverOnMainQueue).start(next: { [weak self, weak navigationController] privacySettings in
+            |> deliverOnMainQueue).start(next: { [weak navigationController] privacySettings in
                 let controller = context.sharedContext.makeIncomingMessagePrivacyScreen(context: context, value: privacySettings.globalSettings.nonContactChatsPrivacy, exceptions: privacySettings.noPaidMessages, update: { settingValue in
                     let _ = context.engine.privacy.updateNonContactChatsPrivacy(value: settingValue).start()
                 })
-                navigationController?.pushViewController(controller)
-                
-                Queue.mainQueue().after(1.0) {
-                    self?.dismissAnimated()
+                Queue.mainQueue().after(0.4) {
+                    navigationController?.pushViewController(controller)
                 }
             })
         }

@@ -1558,25 +1558,46 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     controller.parentController()?.lockOrientation = lock
                 }
             case "web_app_device_storage_save_key":
-                if let json, let requestId = json["req_id"] as? String, let key = json["key"] as? String, let value = json["value"] {
-                    var effectiveValue: String?
-                    if let stringValue = value as? String {
-                        effectiveValue = stringValue
+                if let json, let requestId = json["req_id"] as? String {
+                    if let key = json["key"] as? String {
+                        let value = json["value"]
+                        
+                        var effectiveValue: String?
+                        if let stringValue = value as? String {
+                            effectiveValue = stringValue
+                        } else if value is NSNull {
+                            effectiveValue = nil
+                        } else {
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "error": "VALUE_INVALID"
+                            ]
+                            self.webView?.sendEvent(name: "device_storage_failed", data: data.string)
+                            return
+                        }
+                        let _ = self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue).start(error: { [weak self] error in
+                            var errorValue = "UNKNOWN_ERROR"
+                            if case .quotaExceeded = error {
+                                errorValue = "QUOTA_EXCEEDED"
+                            }
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "error": errorValue
+                            ]
+                            self?.webView?.sendEvent(name: "device_storage_failed", data: data.string)
+                        }, completed: { [weak self] in
+                            let data: JSON = [
+                                "req_id": requestId
+                            ]
+                            self?.webView?.sendEvent(name: "device_storage_key_saved", data: data.string)
+                        })
                     } else {
-                        effectiveValue = nil
-                    }
-                    let _ = self.context.engine.peers.setBotStorageValue(peerId: controller.botId, key: key, value: effectiveValue).start(error: { [weak self] _ in
                         let data: JSON = [
                             "req_id": requestId,
-                            "error": "UNKNOWN_ERROR"
+                            "error": "KEY_INVALID"
                         ]
-                        self?.webView?.sendEvent(name: "device_storage_failed", data: data.string)
-                    }, completed: { [weak self] in
-                        let data: JSON = [
-                            "req_id": requestId
-                        ]
-                        self?.webView?.sendEvent(name: "device_storage_key_saved", data: data.string)
-                    })
+                        self.webView?.sendEvent(name: "device_storage_failed", data: data.string)
+                    }
                 }
             case "web_app_device_storage_get_key":
                 if let json, let requestId = json["req_id"] as? String {
@@ -1605,6 +1626,78 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             "req_id": requestId
                         ]
                         self?.webView?.sendEvent(name: "device_storage_cleared", data: data.string)
+                    })
+                }
+            case "web_app_secure_storage_save_key":
+                if let json, let requestId = json["req_id"] as? String {
+                    if let key = json["key"] as? String {
+                        let value = json["value"]
+
+                        var effectiveValue: String?
+                        if let stringValue = value as? String {
+                            effectiveValue = stringValue
+                        } else if value is NSNull {
+                            effectiveValue = nil
+                        } else {
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "error": "VALUE_INVALID"
+                            ]
+                            self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                            return
+                        }
+                        let _ = (WebAppSecureStorage.setValue(userId: self.context.account.peerId, botId: controller.botId, key: key, value: effectiveValue)
+                        |> deliverOnMainQueue).start(error: { [weak self] error in
+                            var errorValue = "UNKNOWN_ERROR"
+                            if case .quotaExceeded = error {
+                                errorValue = "QUOTA_EXCEEDED"
+                            }
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "error": errorValue
+                            ]
+                            self?.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                        }, completed: { [weak self] in
+                            let data: JSON = [
+                                "req_id": requestId
+                            ]
+                            self?.webView?.sendEvent(name: "secure_storage_key_saved", data: data.string)
+                        })
+                    } else {
+                        let data: JSON = [
+                            "req_id": requestId,
+                            "error": "KEY_INVALID"
+                        ]
+                        self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                    }
+                }
+            case "web_app_secure_storage_get_key":
+                if let json, let requestId = json["req_id"] as? String {
+                    if let key = json["key"] as? String {
+                        let _ = (WebAppSecureStorage.getValue(userId: self.context.account.peerId, botId: controller.botId, key: key)
+                        |> deliverOnMainQueue).start(next: { [weak self] value in
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "value": value ?? NSNull()
+                            ]
+                            self?.webView?.sendEvent(name: "secure_storage_key_received", data: data.string)
+                        })
+                    } else {
+                        let data: JSON = [
+                            "req_id": requestId,
+                            "error": "KEY_INVALID"
+                        ]
+                        self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                    }
+                }
+            case "web_app_secure_storage_clear":
+                if let json, let requestId = json["req_id"] as? String {
+                    let _ = (WebAppSecureStorage.clearStorage(userId: self.context.account.peerId, botId: controller.botId)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        let data: JSON = [
+                            "req_id": requestId
+                        ]
+                        self?.webView?.sendEvent(name: "secure_storage_cleared", data: data.string)
                     })
                 }
             default:

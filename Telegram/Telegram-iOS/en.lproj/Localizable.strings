@@ -14096,3 +14096,13 @@ Sorry for the inconvenience.";
 "Gift.Unpin.Unpin" = "Unpin";
 
 "ChatList.Search.Ad" = "Ad";
+
+"Login.Fee.Title" = "SMS Fee";
+"Login.Fee.SmsCost.Title" = "High SMS Costs";
+"Login.Fee.SmsCost.Text" = "Telecom providers in your country (%@) charge Telegram very high prices for SMS.";
+"Login.Fee.Verification.Title" = "Verification Required";
+"Login.Fee.Verification.Text" = "Telegram needs to send you an SMS with a verification code to confirm your phone number.";
+"Login.Fee.Support.Title" = "Support via [Telegram Premium >]()";
+"Login.Fee.Support.Text" = "Sign up for a 1-week Telegram Premium subscription to help cover the SMS costs.";
+"Login.Fee.SignUp" = "Sign Up for %@";
+"Login.Fee.GetPremiumForAWeek" = "Get Telegram Premium for 1 week";
