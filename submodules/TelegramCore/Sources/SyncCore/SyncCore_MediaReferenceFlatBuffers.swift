@@ -75,7 +75,7 @@ public extension WebpageReference {
 }
 
 public extension PartialMediaReference {
-    init(flatBuffersObject: TelegramCore_PartialMediaReference) throws {
+    init?(flatBuffersObject: TelegramCore_PartialMediaReference) throws {
         switch flatBuffersObject.valueType {
         case .partialmediareferenceMessage:
             guard let value = flatBuffersObject.value(type: TelegramCore_PartialMediaReference_Message.self) else {
@@ -112,6 +112,8 @@ public extension PartialMediaReference {
     }
     
     func encodeToFlatBuffers(builder: inout FlatBufferBuilder) -> Offset {
+        let valueType: TelegramCore_PartialMediaReference_Value
+        let valueOffset: Offset
         switch self {
         case let .message(message):
             let messageOffset = message.encodeToFlatBuffers(builder: &builder)
@@ -119,28 +121,36 @@ public extension PartialMediaReference {
             if let messageOffset {
                 TelegramCore_PartialMediaReference_Message.add(message: messageOffset, &builder)
             }
-            return TelegramCore_PartialMediaReference_Message.endPartialMediaReference_Message(&builder, start: start)
+            valueType = .partialmediareferenceMessage
+            valueOffset = TelegramCore_PartialMediaReference_Message.endPartialMediaReference_Message(&builder, start: start)
         case let .webPage(webPage):
             let webpageOffset = webPage.encodeToFlatBuffers(builder: &builder)
             let start = TelegramCore_PartialMediaReference_WebPage.startPartialMediaReference_WebPage(&builder)
             if let webpageOffset {
                 TelegramCore_PartialMediaReference_WebPage.add(webPage: webpageOffset, &builder)
             }
-            return TelegramCore_PartialMediaReference_WebPage.endPartialMediaReference_WebPage(&builder, start: start)
+            valueType = .partialmediareferenceWebpage
+            valueOffset = TelegramCore_PartialMediaReference_WebPage.endPartialMediaReference_WebPage(&builder, start: start)
         case let .stickerPack(stickerPack):
             let stickerPackOffset = stickerPack.encodeToFlatBuffers(builder: &builder)
             let start = TelegramCore_PartialMediaReference_StickerPack.startPartialMediaReference_StickerPack(&builder)
             TelegramCore_PartialMediaReference_StickerPack.add(stickerPack: stickerPackOffset, &builder)
-            return TelegramCore_PartialMediaReference_StickerPack.endPartialMediaReference_StickerPack(&builder, start: start)
+            valueType = .partialmediareferenceStickerpack
+            valueOffset = TelegramCore_PartialMediaReference_StickerPack.endPartialMediaReference_StickerPack(&builder, start: start)
         case .savedGif:
             let start = TelegramCore_PartialMediaReference_SavedGif.startPartialMediaReference_SavedGif(&builder)
-            return TelegramCore_PartialMediaReference_SavedGif.endPartialMediaReference_SavedGif(&builder, start: start)
+            valueType = .partialmediareferenceSavedgif
+            valueOffset = TelegramCore_PartialMediaReference_SavedGif.endPartialMediaReference_SavedGif(&builder, start: start)
         case .savedSticker:
             let start = TelegramCore_PartialMediaReference_SavedSticker.startPartialMediaReference_SavedSticker(&builder)
-            return TelegramCore_PartialMediaReference_SavedSticker.endPartialMediaReference_SavedSticker(&builder, start: start)
+            valueType = .partialmediareferenceSavedsticker
+            valueOffset = TelegramCore_PartialMediaReference_SavedSticker.endPartialMediaReference_SavedSticker(&builder, start: start)
         case .recentSticker:
             let start = TelegramCore_PartialMediaReference_RecentSticker.startPartialMediaReference_RecentSticker(&builder)
-            return TelegramCore_PartialMediaReference_RecentSticker.endPartialMediaReference_RecentSticker(&builder, start: start)
+            valueType = .partialmediareferenceRecentsticker
+            valueOffset = TelegramCore_PartialMediaReference_RecentSticker.endPartialMediaReference_RecentSticker(&builder, start: start)
         }
+        
+        return TelegramCore_PartialMediaReference.createPartialMediaReference(&builder, valueType: valueType, valueOffset: valueOffset)
     }
 }

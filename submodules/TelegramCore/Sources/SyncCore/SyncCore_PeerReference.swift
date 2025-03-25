@@ -110,13 +110,13 @@ public enum PeerReference: PostboxCoding, Hashable, Equatable {
             let start = TelegramCore_PeerReference.startPeerReference(&builder)
             TelegramCore_PeerReference_Group.add(id: id, &builder)
             let offset = TelegramCore_PeerReference_Group.endPeerReference_Group(&builder, start: start)
-            return TelegramCore_PeerReference.createPeerReference(&builder, valueType: .peerreferenceUser, valueOffset: offset)
+            return TelegramCore_PeerReference.createPeerReference(&builder, valueType: .peerreferenceGroup, valueOffset: offset)
         case let .channel(id, accessHash):
             let start = TelegramCore_PeerReference.startPeerReference(&builder)
             TelegramCore_PeerReference_Channel.add(id: id, &builder)
             TelegramCore_PeerReference_Channel.add(accessHash: accessHash, &builder)
             let offset = TelegramCore_PeerReference_Channel.endPeerReference_Channel(&builder, start: start)
-            return TelegramCore_PeerReference.createPeerReference(&builder, valueType: .peerreferenceUser, valueOffset: offset)
+            return TelegramCore_PeerReference.createPeerReference(&builder, valueType: .peerreferenceChannel, valueOffset: offset)
         }
     }
 }

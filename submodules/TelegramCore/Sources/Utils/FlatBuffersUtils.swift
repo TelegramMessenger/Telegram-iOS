@@ -16,9 +16,9 @@ public func FlatBuffers_getRoot<T: FlatBufferObject & Verifiable>(
     options: VerifierOptions = .init()
 ) -> T {
     if flatBuffers_checkedGet {
-        return getRoot(byteBuffer: &byteBuffer)
-    } else {
         return try! getCheckedRoot(byteBuffer: &byteBuffer, fileId: fileId, options: options)
+    } else {
+        return getRoot(byteBuffer: &byteBuffer)
     }
 }
 
