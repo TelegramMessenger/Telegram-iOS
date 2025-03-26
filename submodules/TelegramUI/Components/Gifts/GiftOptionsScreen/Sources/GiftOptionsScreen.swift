@@ -142,16 +142,12 @@ final class GiftOptionsScreenComponent: Component {
         private var _effectiveStarGifts: ([StarGift], StarsFilter)?
         private var effectiveStarGifts: [StarGift]? {
             get {
-                if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter {
+                if let (currentGifts, currentFilter) = self._effectiveStarGifts, currentFilter == self.starsFilter && currentFilter != .transfer {
                     return currentGifts
                 } else if let allGifts = self.state?.starGifts {
                     if case .transfer = self.starsFilter {
-                        let filteredGifts: [StarGift] = self.state?.transferStarGifts?.compactMap { gift in
-                            if case .unique = gift.gift {
-                                return gift.gift
-                            } else {
-                                return nil
-                            }
+                        let filteredGifts: [StarGift] = self.state?.transferStarGifts?.map { gift in
+                            return gift.gift
                         } ?? []
                         self._effectiveStarGifts = (filteredGifts, self.starsFilter)
                         return filteredGifts
@@ -497,7 +493,7 @@ final class GiftOptionsScreenComponent: Component {
             }
             
             let bottomContentOffset = max(0.0, self.scrollView.contentSize.height - self.scrollView.contentOffset.y - self.scrollView.frame.height)
-            if interactive, bottomContentOffset < 200.0, case .transfer = self.starsFilter {
+            if interactive, bottomContentOffset < 320.0, case .transfer = self.starsFilter {
                 self.state?.starGiftsContext.loadMore()
             }
         }
@@ -1348,7 +1344,7 @@ final class GiftOptionsScreenComponent: Component {
         ) {
             self.context = context
             
-            self.starGiftsContext = ProfileGiftsContext(account: context.account, peerId: context.account.peerId)
+            self.starGiftsContext = ProfileGiftsContext(account: context.account, peerId: context.account.peerId, filter: [.unique, .displayed, .hidden])
             
             super.init()
             
@@ -1380,8 +1376,11 @@ final class GiftOptionsScreenComponent: Component {
                 }
                 
                 self.peer = peer
-                self.disallowedGifts = disallowedGifts ?? []
-                                
+                if peerId == context.account.peerId {
+                    self.disallowedGifts = []
+                } else {
+                    self.disallowedGifts = disallowedGifts ?? []
+                }
                 if peerId != context.account.peerId {
                     if availableProducts.isEmpty {
                         var premiumProducts: [PremiumGiftProduct] = []
@@ -1434,7 +1433,7 @@ final class GiftOptionsScreenComponent: Component {
                     
                     if let disallowedGifts, disallowedGifts.contains(.unique) {
                     } else {
-                        self.transferStarGifts = profileGiftsState.gifts.compactMap { gift in
+                        self.transferStarGifts = profileGiftsState.filteredGifts.compactMap { gift in
                             if case .unique = gift.gift {
                                 return gift
                             } else {

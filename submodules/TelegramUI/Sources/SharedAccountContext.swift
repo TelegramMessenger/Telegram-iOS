@@ -2796,7 +2796,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 } else {
                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.DisallowedGifts(id: peer.id))
                     |> deliverOnMainQueue).start(next: { disallowedGifts in
-                        if let disallowedGifts, disallowedGifts == TelegramDisallowedGifts.All {
+                        if let disallowedGifts, disallowedGifts == TelegramDisallowedGifts.All && peer.id != context.account.peerId {
                             let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.Gift_Send_GiftsDisallowed(EnginePeer(peer).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                             controller?.present(alertController, in: .window(.root))
                             return

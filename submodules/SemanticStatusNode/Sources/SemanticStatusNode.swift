@@ -400,14 +400,18 @@ public final class SemanticStatusNode: ASControlNode {
         
         super.init()
         
-        self.layer.addSublayer(self.hierarchyTrackingLayer)
-        
         self.isOpaque = false
         self.displaysAsynchronously = false
         
         if let image {
             self.setBackgroundImage(image, size: CGSize(width: 44.0, height: 44.0))
         }
+    }
+    
+    public override func didLoad() {
+        super.didLoad()
+        
+        self.layer.addSublayer(self.hierarchyTrackingLayer)
     }
     
     deinit {
