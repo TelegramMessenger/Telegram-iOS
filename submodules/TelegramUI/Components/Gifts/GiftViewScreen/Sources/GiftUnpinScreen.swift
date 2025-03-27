@@ -21,18 +21,21 @@ private final class SheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let gifts: [ProfileGiftsContext.State.StarGift]
+    let gift: ProfileGiftsContext.State.StarGift
+    let pinnedGifts: [ProfileGiftsContext.State.StarGift]
     let completion: (StarGiftReference) -> Void
     let dismiss: () -> Void
     
     init(
         context: AccountContext,
-        gifts: [ProfileGiftsContext.State.StarGift],
+        gift: ProfileGiftsContext.State.StarGift,
+        pinnedGifts: [ProfileGiftsContext.State.StarGift],
         completion: @escaping (StarGiftReference) -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.context = context
-        self.gifts = gifts
+        self.gift = gift
+        self.pinnedGifts = pinnedGifts
         self.completion = completion
         self.dismiss = dismiss
     }
@@ -41,7 +44,10 @@ private final class SheetContent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.gifts != rhs.gifts {
+        if lhs.gift != rhs.gift {
+            return false
+        }
+        if lhs.pinnedGifts != rhs.pinnedGifts {
             return false
         }
         return true
@@ -62,6 +68,8 @@ private final class SheetContent: CombinedComponent {
         let text = Child(BalancedTextComponent.self)
         let gifts = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let button = Child(ButtonComponent.self)
+        
+        var appliedSelectedGift: StarGiftReference?
                 
         return { context in
             let environment = context.environment[EnvironmentType.self]
@@ -134,18 +142,30 @@ private final class SheetContent: CombinedComponent {
             var updatedGifts: [_UpdatedChildComponent] = []
             var index = 0
             var nextOriginX = itemsSideInset
-            for gift in component.gifts {
+            for gift in component.pinnedGifts {
                 guard case let .unique(uniqueGift) = gift.gift else {
                     continue
                 }
+                var alpha: CGFloat = 1.0
+                var displayGift = uniqueGift
+                if let selectedGift = state.selectedGift {
+                    alpha = selectedGift == gift.reference ? 1.0 : 0.5
+                    if selectedGift == gift.reference {
+                        if case let .unique(uniqueGift) = component.gift.gift {
+                            displayGift = uniqueGift
+                        }
+                    }
+                }
+                
                 var ribbonColor: GiftItemComponent.Ribbon.Color = .blue
-                for attribute in uniqueGift.attributes {
+                for attribute in displayGift.attributes {
                     if case let .backdrop(_, innerColor, outerColor, _, _, _) = attribute {
                         ribbonColor = .custom(outerColor, innerColor)
                         break
                     }
                 }
                 
+                let inset: CGFloat = 2.0
                 updatedGifts.append(
                     gifts[index].update(
                         component: AnyComponent(
@@ -155,9 +175,8 @@ private final class SheetContent: CombinedComponent {
                                         context: component.context,
                                         theme: theme,
                                         strings: strings,
-                                        subject: .uniqueGift(gift: uniqueGift),
-                                        ribbon: GiftItemComponent.Ribbon(text: "#\(uniqueGift.number)", font: .monospaced, color: ribbonColor),
-                                        isSelected: state.selectedGift == gift.reference,
+                                        subject: .uniqueGift(gift: displayGift),
+                                        ribbon: GiftItemComponent.Ribbon(text: "#\(displayGift.number)", font: .monospaced, color: ribbonColor),
                                         mode: .grid
                                     )
                                 ),
@@ -166,65 +185,51 @@ private final class SheetContent: CombinedComponent {
                                     guard let state else {
                                         return
                                     }
-                                    state.selectedGift = gift.reference
+                                    if state.selectedGift == gift.reference {
+                                        state.selectedGift = nil
+                                    } else {
+                                        state.selectedGift = gift.reference
+                                    }
                                     state.updated(transition: .spring(duration: 0.3))
                                 },
                                 animateAlpha: false
                             )
                         ),
-                        availableSize: CGSize(width: width, height: width),
+                        availableSize: CGSize(width: width + inset * 2.0, height: width + inset * 2.0),
                         transition: context.transition
                     )
                 )
-                context.add(updatedGifts[index]
-                    .position(CGPoint(x: nextOriginX + updatedGifts[index].size.width / 2.0, y: contentSize.height + updatedGifts[index].size.height / 2.0))
-                )
                 
-                nextOriginX += updatedGifts[index].size.width + spacing
+                var updatedGift = updatedGifts[index]
+                    .position(CGPoint(x: nextOriginX + updatedGifts[index].size.width / 2.0 - inset, y: contentSize.height + updatedGifts[index].size.height / 2.0 - inset))
+                    .allowsGroupOpacity(true)
+                    .opacity(alpha)
+                
+                if gift.reference == state.selectedGift && appliedSelectedGift != gift.reference {
+                    updatedGift = updatedGift.update(ComponentTransition.Update({ _, view, transition in
+                        UIView.transition(with: view, duration: 0.3, options: [.transitionFlipFromLeft, .curveEaseOut], animations: {
+                            view.alpha = alpha
+                        })
+                    }))
+                } else if let appliedSelectedGift, appliedSelectedGift == gift.reference && gift.reference != state.selectedGift {
+                    updatedGift = updatedGift.update(ComponentTransition.Update({ _, view, transition in
+                        UIView.transition(with: view, duration: 0.3, options: [.transitionFlipFromRight, .curveEaseOut], animations: {
+                            view.alpha = alpha
+                        })
+                    }))
+                }
+                
+                context.add(updatedGift)
+                
+                nextOriginX += updatedGifts[index].size.width - inset * 2.0 + spacing
                 if nextOriginX > context.availableSize.width - itemsSideInset {
-                    contentSize.height += updatedGifts[index].size.height + spacing
+                    contentSize.height += updatedGifts[index].size.height - inset * 2.0 + spacing
                     nextOriginX = itemsSideInset
                 }
             
                 index += 1
             }
             contentSize.height += 14.0
-            
-            
-            
-            var giftTitle: String?
-            if let selectedGift = state.selectedGift, let gift = component.gifts.first(where: { $0.reference == selectedGift }) {
-                if case let .unique(uniqueGift) = gift.gift {
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    giftTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
-                }
-            }
-            
-            let buttonContent: AnyComponentWithIdentity<Empty>
-            if let giftTitle {
-                buttonContent = AnyComponentWithIdentity(
-                    id: AnyHashable("unpinGift"),
-                    component: AnyComponent(
-                        VStack([
-                            AnyComponentWithIdentity(
-                                id: AnyHashable("unpin"),
-                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Unpin, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center))))
-                            ),
-                            AnyComponentWithIdentity(
-                                id: AnyHashable(giftTitle),
-                                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftTitle, font: Font.regular(13.0), textColor: theme.list.itemCheckColors.foregroundColor.withAlphaComponent(0.7), paragraphAlignment: .center))))
-                            )
-                        ], spacing: 0.0)
-                    )
-                )
-            } else {
-                buttonContent = AnyComponentWithIdentity(
-                    id: AnyHashable("unpin"),
-                    component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Unpin, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
-                    )
-                )
-            }
             
             let button = button.update(
                 component: ButtonComponent(
@@ -233,7 +238,12 @@ private final class SheetContent: CombinedComponent {
                         foreground: theme.list.itemCheckColors.foregroundColor,
                         pressedColor: theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
                     ),
-                    content: buttonContent,
+                    content: AnyComponentWithIdentity(
+                        id: AnyHashable("unpin"),
+                        component: AnyComponent(
+                            MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Gift_Unpin_Replace, font: Font.semibold(17.0), textColor: theme.list.itemCheckColors.foregroundColor, paragraphAlignment: .center)))
+                        )
+                    ),
                     isEnabled: state.selectedGift != nil,
                     displaysProgress: false,
                     action: { [weak state] in
@@ -258,6 +268,8 @@ private final class SheetContent: CombinedComponent {
                                       
             let effectiveBottomInset: CGFloat = environment.metrics.isTablet ? 0.0 : environment.safeInsets.bottom
             contentSize.height += 5.0 + effectiveBottomInset
+            
+            appliedSelectedGift = state.selectedGift
                         
             return contentSize
         }
@@ -268,16 +280,19 @@ private final class SheetContainerComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let gifts: [ProfileGiftsContext.State.StarGift]
+    let gift: ProfileGiftsContext.State.StarGift
+    let pinnedGifts: [ProfileGiftsContext.State.StarGift]
     let completion: (StarGiftReference) -> Void
     
     init(
         context: AccountContext,
-        gifts: [ProfileGiftsContext.State.StarGift],
+        gift: ProfileGiftsContext.State.StarGift,
+        pinnedGifts: [ProfileGiftsContext.State.StarGift],
         completion: @escaping (StarGiftReference) -> Void
     ) {
         self.context = context
-        self.gifts = gifts
+        self.gift = gift
+        self.pinnedGifts = pinnedGifts
         self.completion = completion
     }
     
@@ -285,7 +300,10 @@ private final class SheetContainerComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.gifts != rhs.gifts {
+        if lhs.gift != rhs.gift {
+            return false
+        }
+        if lhs.pinnedGifts != rhs.pinnedGifts {
             return false
         }
         return true
@@ -306,7 +324,8 @@ private final class SheetContainerComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(SheetContent(
                         context: context.component.context,
-                        gifts: context.component.gifts,
+                        gift: context.component.gift,
+                        pinnedGifts: context.component.pinnedGifts,
                         completion: context.component.completion,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -374,24 +393,18 @@ private final class SheetContainerComponent: CombinedComponent {
 
 
 public class GiftUnpinScreen: ViewControllerComponentContainer {
-    private let context: AccountContext
-    private let gifts: [ProfileGiftsContext.State.StarGift]
-    private let completion: (StarGiftReference) -> Void
-        
     public init(
         context: AccountContext,
-        gifts: [ProfileGiftsContext.State.StarGift],
+        gift: ProfileGiftsContext.State.StarGift,
+        pinnedGifts: [ProfileGiftsContext.State.StarGift],
         completion: @escaping (StarGiftReference) -> Void
     ) {
-        self.context = context
-        self.gifts = gifts
-        self.completion = completion
-
         super.init(
             context: context,
             component: SheetContainerComponent(
                 context: context,
-                gifts: gifts,
+                gift: gift,
+                pinnedGifts: pinnedGifts,
                 completion: completion
             ),
             navigationBarAppearance: .none,

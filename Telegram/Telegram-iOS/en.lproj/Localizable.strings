@@ -14094,6 +14094,7 @@ Sorry for the inconvenience.";
 "Gift.Unpin.Title" = "Too Manu Pinned Gifts";
 "Gift.Unpin.Subtitle" = "Select a gift to unpin below:";
 "Gift.Unpin.Unpin" = "Unpin";
+"Gift.Unpin.Replace" = "Replace";
 
 "ChatList.Search.Ad" = "Ad";
 

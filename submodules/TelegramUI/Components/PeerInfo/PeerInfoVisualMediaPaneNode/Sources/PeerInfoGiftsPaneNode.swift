@@ -376,12 +376,13 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     }
     
     private func displayUnpinScreen(gift: ProfileGiftsContext.State.StarGift, completion: (() -> Void)? = nil) {
-        guard let gifts = self.profileGifts.currentState?.gifts.filter({ $0.pinnedToTop }), let presentationData = self.currentParams?.presentationData else {
+        guard let pinnedGifts = self.profileGifts.currentState?.gifts.filter({ $0.pinnedToTop }), let presentationData = self.currentParams?.presentationData else {
             return
         }
         let controller = GiftUnpinScreen(
-            context: context,
-            gifts: gifts,
+            context: self.context,
+            gift: gift,
+            pinnedGifts: pinnedGifts,
             completion: { [weak self] unpinnedReference in
                 guard let self else {
                     return
@@ -389,7 +390,7 @@ public final class PeerInfoGiftsPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 completion?()
                 
                 var replacingTitle = ""
-                for gift in gifts {
+                for gift in pinnedGifts {
                     if gift.reference == unpinnedReference, case let .unique(uniqueGift) = gift.gift {
                         replacingTitle = "\(uniqueGift.title) #\(presentationStringsFormattedNumber(uniqueGift.number, presentationData.dateTimeFormat.groupingSeparator))"
                     }

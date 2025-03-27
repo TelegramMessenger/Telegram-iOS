@@ -180,6 +180,7 @@ public final class _UpdatedChildComponent {
     var _opacity: CGFloat?
     var _cornerRadius: CGFloat?
     var _clipsToBounds: Bool?
+    var _allowsGroupOpacity: Bool?
     var _shadow: Shadow?
     
     fileprivate var transitionAppear: ComponentTransition.Appear?
@@ -259,6 +260,11 @@ public final class _UpdatedChildComponent {
 
     @discardableResult public func clipsToBounds(_ clipsToBounds: Bool) -> _UpdatedChildComponent {
         self._clipsToBounds = clipsToBounds
+        return self
+    }
+    
+    @discardableResult public func allowsGroupOpacity(_ allowsGroupOpacity: Bool) -> _UpdatedChildComponent {
+        self._allowsGroupOpacity = allowsGroupOpacity
         return self
     }
     
@@ -712,6 +718,9 @@ public extension CombinedComponent {
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0
                         updatedChild.view.clipsToBounds = updatedChild._clipsToBounds ?? false
                         updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0
+                        if let allowsGroupOpacity = updatedChild._allowsGroupOpacity {
+                            updatedChild.view.layer.allowsGroupOpacity = allowsGroupOpacity
+                        }
                         if let shadow = updatedChild._shadow {
                             updatedChild.view.layer.shadowColor = shadow.color.withAlphaComponent(1.0).cgColor
                             updatedChild.view.layer.shadowRadius = shadow.radius
