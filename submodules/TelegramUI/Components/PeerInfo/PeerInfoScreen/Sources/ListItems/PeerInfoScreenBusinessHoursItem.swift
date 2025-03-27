@@ -488,7 +488,7 @@ private final class PeerInfoScreenBusinessHoursItemNode: PeerInfoScreenItemNode 
                     animateContents: false
                 )),
                 environment: {},
-                containerSize: CGSize(width: 100.0, height: 100.0)
+                containerSize: CGSize(width: 200.0, height: 100.0)
             )
         } else {
             if let timezoneSwitchButton = self.timezoneSwitchButton {
