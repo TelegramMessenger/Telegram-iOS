@@ -420,7 +420,7 @@ public final class GiftItemComponent: Component {
             }
             
             var animationTransition = transition
-            if self.animationFile != animationFile, let emoji {
+            if self.animationLayer == nil || self.animationFile != animationFile, let emoji {
                 animationTransition = .immediate
                 self.animationFile = animationFile
                 if let animationLayer = self.animationLayer {
