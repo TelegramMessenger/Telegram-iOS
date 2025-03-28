@@ -1681,6 +1681,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 "value": value ?? NSNull()
                             ]
                             self?.webView?.sendEvent(name: "secure_storage_key_received", data: data.string)
+                        }, error: { [weak self] error in
+                            if case .canRestore = error {
+                                let data: JSON = [
+                                    "req_id": requestId,
+                                    "value": NSNull(),
+                                    "canRestore": true
+                                ]
+                                self?.webView?.sendEvent(name: "secure_storage_key_received", data: data.string)
+                            } else {
+                                let data: JSON = [
+                                    "req_id": requestId,
+                                    "value": NSNull()
+                                ]
+                                self?.webView?.sendEvent(name: "secure_storage_key_received", data: data.string)
+                            }
                         })
                     } else {
                         let data: JSON = [
@@ -1688,6 +1703,36 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             "error": "KEY_INVALID"
                         ]
                         self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                    }
+                }
+            case "web_app_secure_storage_restore_key":
+                if let json, let requestId = json["req_id"] as? String {
+                    if let key = json["key"] as? String {
+                        let _ = (WebAppSecureStorage.checkRestoreAvailability(context: self.context, botId: controller.botId, key: key)
+                        |> deliverOnMainQueue).start(next: { [weak self] storedKeys in
+                            guard let self else {
+                                return
+                            }
+                            guard !storedKeys.isEmpty else {
+                                let data: JSON = [
+                                    "req_id": requestId,
+                                    "error": "RESTORE_UNAVAILABLE"
+                                ]
+                                self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                                return
+                            }
+                            self.openSecureBotStorageTransfer(requestId: requestId, key: key, storedKeys: storedKeys)
+                        }, error: { [weak self] error in
+                            var errorValue = "UNKNOWN_ERROR"
+                            if case .storageNotEmpty = error {
+                                errorValue = "STORAGE_NOT_EMPTY"
+                            }
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "error": errorValue
+                            ]
+                            self?.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                        })
                     }
                 }
             case "web_app_secure_storage_clear":
@@ -2940,6 +2985,46 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let url = URL(string: "\(scheme)://t.me/\(addressName)\(appName)?startapp&addToHomeScreen")!
                 UIApplication.shared.open(url)
             })
+        }
+        
+        fileprivate func openSecureBotStorageTransfer(requestId: String, key: String, storedKeys: [WebAppSecureStorage.ExistingKey]) {
+            guard let controller = self.controller else {
+                return
+            }
+            
+            let transferController = WebAppSecureStorageTransferScreen(
+                context: self.context,
+                existingKeys: storedKeys,
+                completion: { [weak self] uuid in
+                    guard let self else {
+                        return
+                    }
+                    guard let uuid else {
+                        let data: JSON = [
+                            "req_id": requestId,
+                            "error": "RESTORE_CANCELLED"
+                        ]
+                        self.webView?.sendEvent(name: "secure_storage_failed", data: data.string)
+                        return
+                    }
+                    
+                    let _ = (WebAppSecureStorage.transferAllValues(context: self.context, fromUuid: uuid, botId: controller.botId)
+                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        let _ = (WebAppSecureStorage.getValue(context: self.context, botId: controller.botId, key: key)
+                        |> deliverOnMainQueue).start(next: { [weak self] value in
+                            let data: JSON = [
+                                "req_id": requestId,
+                                "value": value ?? NSNull()
+                            ]
+                            self?.webView?.sendEvent(name: "secure_storage_key_restored", data: data.string)
+                        })
+                    })
+                }
+            )
+            controller.parentController()?.push(transferController)
         }
         
         fileprivate func openLocationSettings() {

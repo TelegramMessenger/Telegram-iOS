@@ -416,6 +416,38 @@ func _internal_invokeBotCustomMethod(postbox: Postbox, network: Network, botId: 
     |> switchToLatest
 }
 
+public struct TelegramSecureBotStorageState: Codable, Equatable {
+    public let uuid: String
+   
+    public init(uuid: String) {
+        self.uuid = uuid
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.uuid = try container.decode(String.self, forKey: "uuid")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        try container.encode(self.uuid, forKey: "uuid")
+    }
+}
+
+func _internal_secureBotStorageUuid(account: Account) -> Signal<String, NoError> {
+    return account.postbox.transaction { transaction -> String in
+        if let current = transaction.getPreferencesEntry(key: PreferencesKeys.secureBotStorageState())?.get(TelegramSecureBotStorageState.self) {
+            return current.uuid
+        }
+        
+        let uuid = "\(Int64.random(in: 0 ..< .max))"
+        transaction.setPreferencesEntry(key: PreferencesKeys.secureBotStorageState(), value: PreferencesEntry(TelegramSecureBotStorageState(uuid: uuid)))
+        return uuid
+    }
+}
+
 private let maxBotStorageSize = 5 * 1024 * 1024
 public struct TelegramBotStorageState: Codable, Equatable {
     public struct KeyValue: Codable, Equatable {

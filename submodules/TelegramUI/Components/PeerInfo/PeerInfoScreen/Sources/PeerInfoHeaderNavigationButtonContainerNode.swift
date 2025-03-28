@@ -59,9 +59,11 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 continue
             }
             button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, canBeExpanded: canBeExpanded, transition: transition)
-            transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: accumulatedRightButtonOffset, y: 0.0))
-            if self.backgroundContentColor.alpha != 0.0 {
-                accumulatedRightButtonOffset -= 6.0
+            if !spec.isForExpandedView {
+                transition.updateSublayerTransformOffset(layer: button.layer, offset: CGPoint(x: accumulatedRightButtonOffset, y: 0.0))
+                if self.backgroundContentColor.alpha != 0.0 {
+                    accumulatedRightButtonOffset -= 6.0
+                }
             }
         }
         for (key, button) in self.rightButtonNodes {

@@ -309,6 +309,7 @@ private enum PreferencesKeyValues: Int32 {
     case businessLinks = 40
     case starGifts = 41
     case botStorageState = 42
+    case secureBotStorageState = 43
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -544,6 +545,12 @@ public struct PreferencesKeys {
         let key = ValueBoxKey(length: 4 + 8)
         key.setInt32(0, value: PreferencesKeyValues.botStorageState.rawValue)
         key.setInt64(4, value: peerId.toInt64())
+        return key
+    }
+    
+    public static func secureBotStorageState() -> ValueBoxKey {
+        let key = ValueBoxKey(length: 4 + 8)
+        key.setInt32(0, value: PreferencesKeyValues.secureBotStorageState.rawValue)
         return key
     }
 }

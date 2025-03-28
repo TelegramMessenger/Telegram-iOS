@@ -1669,6 +1669,10 @@ public extension TelegramEngine {
             return _internal_botsWithBiometricState(account: self.account)
         }
         
+        public func secureBotStorageUuid() -> Signal<String, NoError> {
+            return _internal_secureBotStorageUuid(account: self.account)
+        }
+        
         public func setBotStorageValue(peerId: EnginePeer.Id, key: String, value: String?) -> Signal<Never, BotStorageError> {
             return _internal_setBotStorageValue(account: self.account, peerId: peerId, key: key, value: value)
         }

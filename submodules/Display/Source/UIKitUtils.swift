@@ -763,6 +763,10 @@ public extension CALayer {
     static func colorInvert() -> NSObject? {
         return makeColorInvertFilter()
     }
+    
+    static func monochrome() -> NSObject? {
+        return makeMonochromeFilter()
+    }
 }
 
 public extension CALayer {

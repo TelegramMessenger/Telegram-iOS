@@ -47,6 +47,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Gifts/GiftAnimationComponent",
         "//submodules/TelegramUI/Components/ListItemComponentAdaptor",
         "//submodules/TelegramUI/Components/ListSectionComponent",
+        "//submodules/TelegramUI/Components/ListActionItemComponent",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemImpl",
         "//submodules/TelegramUI/Components/PremiumPeerShortcutComponent",
         "//submodules/DeviceLocationManager",
