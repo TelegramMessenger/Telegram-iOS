@@ -420,7 +420,7 @@ public final class GiftItemComponent: Component {
             }
             
             var animationTransition = transition
-            if self.animationLayer == nil || self.animationFile != animationFile, let emoji {
+            if self.animationLayer == nil || self.animationFile?.fileId != animationFile?.fileId, let emoji {
                 animationTransition = .immediate
                 self.animationFile = animationFile
                 if let animationLayer = self.animationLayer {
@@ -442,7 +442,12 @@ public final class GiftItemComponent: Component {
                 )
                 animationLayer.isVisibleForAnimations = true
                 self.animationLayer = animationLayer
-                self.layer.addSublayer(animationLayer)
+                
+                if let patternView = self.patternView.view {
+                    self.layer.insertSublayer(animationLayer, above: patternView.layer)
+                } else {
+                    self.layer.insertSublayer(animationLayer, above: self.backgroundLayer)
+                }
             }
             
             let animationFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: component.mode == .generic ? animationOffset : floorToScreenPixels((size.height - iconSize.height) / 2.0)), size: iconSize)
