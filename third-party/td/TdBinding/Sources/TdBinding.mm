@@ -2,6 +2,7 @@
 
 #include <td/e2e/e2e_api.h>
 
+#if DEBUG
 static NSString *hexStringFromData(NSData *data) {
     NSMutableString *string = [[NSMutableString alloc] initWithCapacity:data.length * 2];
     for (NSUInteger i = 0; i < data.length; i++) {
@@ -9,6 +10,7 @@ static NSString *hexStringFromData(NSData *data) {
     }
     return string;
 }
+#endif
 
 @interface TdKeyPair () {
     tde2e_api::PrivateKeyId _keyId;
