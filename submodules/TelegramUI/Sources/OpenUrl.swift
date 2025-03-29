@@ -998,6 +998,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/c/\(channel)?boost"
                         }
                     }
+                } else if parsedUrl.host == "call" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var slug: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "slug" {
+                                        slug = value
+                                    }
+                                }
+                            }
+                        }
+                        if let slug = slug {
+                            convertedUrl = "https://t.me/call/\(slug)"
+                        }
+                    }
                 }
             } else {
                 if parsedUrl.host == "importStickers" {

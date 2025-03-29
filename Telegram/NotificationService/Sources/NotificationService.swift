@@ -925,8 +925,14 @@ private final class NotificationServiceHandler {
                         var peer: EnginePeer?
                         var localContactId: String?
                     }
+                    
+                    struct ConferenceCallData {
+                        var id: Int64
+                        var updates: String
+                    }
 
                     var callData: CallData?
+                    var conferenceCallData: ConferenceCallData?
 
                     if let messageIdString = payloadJson["msg_id"] as? String {
                         messageId = Int32(messageIdString)
@@ -953,7 +959,24 @@ private final class NotificationServiceHandler {
                         }
                     }
 
-                    if let callIdString = payloadJson["call_id"] as? String, let callAccessHashString = payloadJson["call_ah"] as? String, let peerId = peerId, let updates = payloadJson["updates"] as? String {
+                    if let locKey = payloadJson["loc-key"] as? String, (locKey == "CONF_CALL_REQUEST" || locKey == "CONF_CALL_MISSED"), let callIdString = payloadJson["call_id"] as? String {
+                        if let callId = Int64(callIdString) {
+                            
+                            if let updates = payloadJson["updates"] as? String {
+                                var updateString = updates
+                                updateString = updateString.replacingOccurrences(of: "-", with: "+")
+                                updateString = updateString.replacingOccurrences(of: "_", with: "/")
+                                while updateString.count % 4 != 0 {
+                                    updateString.append("=")
+                                }
+                                if let updateData = Data(base64Encoded: updateString) {
+                                    if let callUpdate = AccountStateManager.extractIncomingCallUpdate(data: updateData) {
+                                        let _ = callUpdate
+                                    }
+                                }
+                            }
+                        }
+                    } else if let callIdString = payloadJson["call_id"] as? String, let callAccessHashString = payloadJson["call_ah"] as? String, let peerId = peerId, let updates = payloadJson["updates"] as? String {
                         if let callId = Int64(callIdString), let callAccessHash = Int64(callAccessHashString) {
                             var peer: EnginePeer?
                             

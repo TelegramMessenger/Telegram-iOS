@@ -162,6 +162,7 @@ public final class InviteLinkInviteController: ViewController {
     
     public enum CompletionResult {
         case linkCopied
+        case openCall
     }
     
     private var animatedIn = false

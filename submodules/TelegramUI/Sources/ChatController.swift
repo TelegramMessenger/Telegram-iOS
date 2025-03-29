@@ -133,6 +133,7 @@ import NotificationPeerExceptionController
 import AdsReportScreen
 import AdUI
 import ChatMessagePaymentAlertController
+import TelegramCallsUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1366,6 +1367,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.openPeer(peer: EnginePeer(peer), navigation: navigation, fromMessage: nil)
             }, callPeer: { [weak self] peerId, isVideo in
                 self?.controllerInteraction?.callPeer(peerId, isVideo)
+            }, openConferenceCall: { [weak self] message in
+                self?.controllerInteraction?.openConferenceCall(message)
             }, enqueueMessage: { [weak self] message in
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] fileReference, sourceNode, sourceRect in
@@ -2861,6 +2864,50 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 })
             }
+        }, openConferenceCall: { [weak self] message in
+            guard let self else {
+                return
+            }
+            
+            var action: TelegramMediaAction?
+            for media in message.media {
+                if let media = media as? TelegramMediaAction {
+                    action = media
+                    break
+                }
+            }
+            guard case let .conferenceCall(callId, duration, _) = action?.action else {
+                return
+            }
+            if duration != nil {
+                return
+            }
+            
+            if let currentGroupCallController = self.context.sharedContext as? VoiceChatController, case let .group(groupCall) = currentGroupCallController.call, let currentCallId = groupCall.callId, currentCallId == callId {
+                self.context.sharedContext.navigateToCurrentCall()
+                return
+            }
+            
+            let signal = self.context.engine.peers.joinCallInvitationInformation(messageId: message.id)
+            let _ = (signal
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] resolvedCallLink in
+                guard let self else {
+                    return
+                }
+                self.context.sharedContext.callManager?.joinConferenceCall(
+                    accountContext: self.context,
+                    initialCall: EngineGroupCallDescription(
+                        id: resolvedCallLink.id,
+                        accessHash: resolvedCallLink.accessHash,
+                        title: nil,
+                        scheduleTimestamp: nil,
+                        subscribedToScheduled: false,
+                        isStream: false
+                    ),
+                    reference: .message(id: message.id),
+                    mode: .joining
+                )
+            })
         }, longTap: { [weak self] action, params in
             if let self {
                 self.openLinkLongTap(action, params: params)

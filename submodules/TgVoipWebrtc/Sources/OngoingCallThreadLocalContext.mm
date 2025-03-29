@@ -42,6 +42,8 @@
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
 #include "rtc_base/logging.h"
 
+#import <TdBinding/TdBinding.h>
+
 @implementation OngoingCallConnectionDescription
 
 - (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId ip:(NSString * _Nonnull)ip ipv6:(NSString * _Nonnull)ipv6 port:(int32_t)port peerTag:(NSData * _Nonnull)peerTag {
@@ -2374,9 +2376,9 @@ private:
 statsLogPath:(NSString * _Nonnull)statsLogPath
 onMutedSpeechActivityDetected:(void (^ _Nullable)(bool))onMutedSpeechActivityDetected
 audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice
-encryptionKey:(NSData * _Nullable)encryptionKey
 isConference:(bool)isConference
-isActiveByDefault:(bool)isActiveByDefault {
+isActiveByDefault:(bool)isActiveByDefault
+encryptDecrypt:(NSData * _Nullable (^ _Nullable)(NSData * _Nonnull, bool))encryptDecrypt {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -2444,16 +2446,17 @@ isActiveByDefault:(bool)isActiveByDefault {
         
         std::string statsLogPathValue(statsLogPath.length == 0 ? "" : statsLogPath.UTF8String);
         
-        std::optional<tgcalls::EncryptionKey> mappedEncryptionKey;
-        if (encryptionKey) {
-            auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
-            memcpy(encryptionKeyValue->data(), encryptionKey.bytes, encryptionKey.length);
-            
-            #if DEBUG
-            NSLog(@"Encryption key: %@", [encryptionKey base64EncodedStringWithOptions:0]);
-            #endif
-            
-            mappedEncryptionKey = tgcalls::EncryptionKey(encryptionKeyValue, true);
+        std::function<std::vector<uint8_t>(std::vector<uint8_t> const &, bool)> mappedEncryptDecrypt;
+        if (encryptDecrypt) {
+            NSData * _Nullable (^encryptDecryptBlock)(NSData * _Nonnull, bool) = [encryptDecrypt copy];
+            mappedEncryptDecrypt = [encryptDecryptBlock](std::vector<uint8_t> const &message, bool isEncrypt) -> std::vector<uint8_t> {
+                NSData *mappedMessage = [[NSData alloc] initWithBytes:message.data() length:message.size()];
+                NSData *result = encryptDecryptBlock(mappedMessage, isEncrypt);
+                if (!result) {
+                    return std::vector<uint8_t>();
+                }
+                return std::vector<uint8_t>((uint8_t *)result.bytes, ((uint8_t *)result.bytes) + result.length);
+            };
         }
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
@@ -2681,7 +2684,7 @@ isActiveByDefault:(bool)isActiveByDefault {
                     }
                 }];
             },
-            .encryptionKey = mappedEncryptionKey,
+            .e2eEncryptDecrypt = mappedEncryptDecrypt,
             .isConference = isConference
         }));
     }

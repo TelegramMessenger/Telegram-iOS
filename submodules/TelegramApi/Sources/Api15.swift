@@ -349,6 +349,7 @@ public extension Api {
         case messageActionChatJoinedByLink(inviterId: Int64)
         case messageActionChatJoinedByRequest
         case messageActionChatMigrateTo(channelId: Int64)
+        case messageActionConferenceCall(flags: Int32, callId: Int64, duration: Int32?, otherParticipants: [Api.Peer]?)
         case messageActionContactSignUp
         case messageActionCustomAction(message: String)
         case messageActionEmpty
@@ -478,6 +479,19 @@ public extension Api {
                         buffer.appendInt32(-519864430)
                     }
                     serializeInt64(channelId, buffer: buffer, boxed: false)
+                    break
+                case .messageActionConferenceCall(let flags, let callId, let duration, let otherParticipants):
+                    if boxed {
+                        buffer.appendInt32(805187450)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(callId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(duration!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(otherParticipants!.count))
+                    for item in otherParticipants! {
+                        item.serialize(buffer, true)
+                    }}
                     break
                 case .messageActionContactSignUp:
                     if boxed {
@@ -834,6 +848,8 @@ public extension Api {
                 return ("messageActionChatJoinedByRequest", [])
                 case .messageActionChatMigrateTo(let channelId):
                 return ("messageActionChatMigrateTo", [("channelId", channelId as Any)])
+                case .messageActionConferenceCall(let flags, let callId, let duration, let otherParticipants):
+                return ("messageActionConferenceCall", [("flags", flags as Any), ("callId", callId as Any), ("duration", duration as Any), ("otherParticipants", otherParticipants as Any)])
                 case .messageActionContactSignUp:
                 return ("messageActionContactSignUp", [])
                 case .messageActionCustomAction(let message):
@@ -1053,6 +1069,28 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.MessageAction.messageActionChatMigrateTo(channelId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionConferenceCall(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt32() }
+            var _4: [Api.Peer]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+            } }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionConferenceCall(flags: _1!, callId: _2!, duration: _3, otherParticipants: _4)
             }
             else {
                 return nil

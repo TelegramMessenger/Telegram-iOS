@@ -169,6 +169,8 @@ public extension Api {
 public extension Api {
     enum InputGroupCall: TypeConstructorDescription {
         case inputGroupCall(id: Int64, accessHash: Int64)
+        case inputGroupCallInviteMessage(msgId: Int32)
+        case inputGroupCallSlug(slug: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -179,6 +181,18 @@ public extension Api {
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     break
+                case .inputGroupCallInviteMessage(let msgId):
+                    if boxed {
+                        buffer.appendInt32(-1945083841)
+                    }
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .inputGroupCallSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(-33127873)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -186,6 +200,10 @@ public extension Api {
         switch self {
                 case .inputGroupCall(let id, let accessHash):
                 return ("inputGroupCall", [("id", id as Any), ("accessHash", accessHash as Any)])
+                case .inputGroupCallInviteMessage(let msgId):
+                return ("inputGroupCallInviteMessage", [("msgId", msgId as Any)])
+                case .inputGroupCallSlug(let slug):
+                return ("inputGroupCallSlug", [("slug", slug as Any)])
     }
     }
     
@@ -198,6 +216,28 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputGroupCall.inputGroupCall(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputGroupCallInviteMessage(_ reader: BufferReader) -> InputGroupCall? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputGroupCall.inputGroupCallInviteMessage(msgId: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputGroupCallSlug(_ reader: BufferReader) -> InputGroupCall? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputGroupCall.inputGroupCallSlug(slug: _1!)
             }
             else {
                 return nil

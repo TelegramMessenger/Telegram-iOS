@@ -77,7 +77,7 @@ public final class VoiceChatJoinScreen: ViewController {
             if let call = call {
                 let peer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                 |> castError(GetCurrentGroupCallError.self)
-                return combineLatest(peer, context.engine.calls.getCurrentGroupCall(callId: call.id, accessHash: call.accessHash))
+                return combineLatest(peer, context.engine.calls.getCurrentGroupCall(reference: .id(id: call.id, accessHash: call.accessHash)))
                 |> map { peer, call -> (EnginePeer, GroupCallSummary)? in
                     if let peer = peer, let call = call {
                         return (peer, call)

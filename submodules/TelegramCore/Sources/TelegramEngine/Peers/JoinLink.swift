@@ -143,11 +143,15 @@ func _internal_joinLinkInformation(_ hash: String, account: Account) -> Signal<E
 }
 
 public final class JoinCallLinkInformation {
+    public let id: Int64
+    public let accessHash: Int64
     public let inviter: EnginePeer?
     public let members: [EnginePeer]
     public let totalMemberCount: Int
     
-    public init(inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+    public init(id: Int64, accessHash: Int64, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+        self.id = id
+        self.accessHash = accessHash
         self.inviter = inviter
         self.members = members
         self.totalMemberCount = totalMemberCount
@@ -155,29 +159,41 @@ public final class JoinCallLinkInformation {
 }
 
 func _internal_joinCallLinkInformation(_ hash: String, account: Account) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
-    //TODO:release
-    
-    let invite: Signal<Api.ChatInvite?, JoinLinkInfoError> = account.network.request(Api.functions.messages.checkChatInvite(hash: hash), automaticFloodWait: false)
-    |> map(Optional.init)
-    |> `catch` { error -> Signal<Api.ChatInvite?, JoinLinkInfoError> in
-        if error.errorDescription.hasPrefix("FLOOD_WAIT") {
-            return .fail(.flood)
-        } else {
-            return .single(nil)
+    return _internal_getCurrentGroupCall(account: account, reference: .link(slug: hash))
+    |> mapError { error -> JoinLinkInfoError in
+        switch error {
+        case .generic:
+            return .generic
         }
     }
-    
-    return invite
-    |> mapToSignal { result -> Signal<JoinCallLinkInformation, JoinLinkInfoError> in
-        if let result {
-            switch result {
-            case let .chatInvite(_, _, _, _, participantsCount, participants, _, _, _, _):
-                return .single(JoinCallLinkInformation(inviter: nil, members: participants?.map({ EnginePeer(TelegramUser(user: $0)) }) ?? [], totalMemberCount: Int(participantsCount)))
-            default:
-                return .fail(.generic)
-            }
-        } else {
+    |> mapToSignal { call -> Signal<JoinCallLinkInformation, JoinLinkInfoError> in
+        guard let call = call else {
             return .fail(.generic)
         }
+        var members: [EnginePeer] = []
+        for participant in call.topParticipants {
+            members.append(EnginePeer(participant.peer))
+        }
+        return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
+    }
+}
+
+func _internal_joinCallInvitationInformation(account: Account, messageId: MessageId) -> Signal<JoinCallLinkInformation, JoinLinkInfoError> {
+    return _internal_getCurrentGroupCall(account: account, reference: .message(id: messageId))
+    |> mapError { error -> JoinLinkInfoError in
+        switch error {
+        case .generic:
+            return .generic
+        }
+    }
+    |> mapToSignal { call -> Signal<JoinCallLinkInformation, JoinLinkInfoError> in
+        guard let call = call else {
+            return .fail(.generic)
+        }
+        var members: [EnginePeer] = []
+        for participant in call.topParticipants {
+            members.append(EnginePeer(participant.peer))
+        }
+        return .single(JoinCallLinkInformation(id: call.info.id, accessHash: call.info.accessHash, inviter: nil, members: members, totalMemberCount: call.info.participantCount))
     }
 }

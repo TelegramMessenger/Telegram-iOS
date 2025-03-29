@@ -307,6 +307,8 @@ extension ChatControllerImpl {
                         switch action.action {
                         case .phoneCall:
                             break
+                        case .conferenceCall:
+                            break
                         default:
                             hideReactionPanelTail = true
                         }

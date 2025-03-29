@@ -955,11 +955,17 @@ public enum JoinSubjectScreenMode {
     }
     
     public final class GroupCall {
+        public let id: Int64
+        public let accessHash: Int64
+        public let slug: String
         public let inviter: EnginePeer?
         public let members: [EnginePeer]
         public let totalMemberCount: Int
         
-        public init(inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+        public init(id: Int64, accessHash: Int64, slug: String, inviter: EnginePeer?, members: [EnginePeer], totalMemberCount: Int) {
+            self.id = id
+            self.accessHash = accessHash
+            self.slug = slug
             self.inviter = inviter
             self.members = members
             self.totalMemberCount = totalMemberCount

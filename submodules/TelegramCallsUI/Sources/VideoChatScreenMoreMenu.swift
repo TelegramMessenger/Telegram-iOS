@@ -175,7 +175,7 @@ extension VideoChatScreenComponent.View {
             }
         }
         
-        if case let .group(groupCall) = currentCall, let encryptionKey = groupCall.encryptionKeyValue {
+        /*if case let .group(groupCall) = currentCall, let encryptionKey = groupCall.encryptionKeyValue {
             //TODO:localize
             let emojiKey = resolvedEmojiKey(data: encryptionKey)
             items.append(.action(ContextMenuActionItem(text: "Encryption Key", textLayout: .secondLineWithValue(emojiKey.joined(separator: "")), icon: { theme in
@@ -202,7 +202,7 @@ extension VideoChatScreenComponent.View {
                 environment.controller()?.present(alertController, in: .window(.root))
             })))
             items.append(.separator)
-        }
+        }*/
         
         if let (availableOutputs, currentOutput) = self.audioOutputState, availableOutputs.count > 1 {
             var currentOutputTitle = ""

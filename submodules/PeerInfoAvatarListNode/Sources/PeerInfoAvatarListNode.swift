@@ -19,6 +19,7 @@ import AvatarVideoNode
 import ComponentFlow
 import ComponentDisplayAdapters
 import StorySetIndicatorComponent
+import HierarchyTrackingLayer
 
 private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     private var currentInHierarchy = false
@@ -224,6 +225,8 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     private var progress: Signal<Float?, NoError>?
     private var loadingProgressDisposable = MetaDisposable()
     private var hasProgress = false
+
+    private let hierarchyTrackingLayer = HierarchyTrackingLayer()
     
     public let isReady = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -312,6 +315,20 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 })
             }
         }))
+
+        self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
+            guard let self else {
+                return
+            }
+            if value {
+                self.setupVideoPlayback()
+            } else {
+                self.videoNode?.removeFromSupernode()
+                self.videoNode = nil
+                self.videoContent = nil
+            }
+        }
+        self.layer.addSublayer(self.hierarchyTrackingLayer)
     }
     
     deinit {
@@ -362,6 +379,9 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     
     private func setupVideoPlayback() {
         guard let videoContent = self.videoContent, let isCentral = self.isCentral, isCentral, self.videoNode == nil else {
+            return
+        }
+        if !self.hierarchyTrackingLayer.isInHierarchy {
             return
         }
         

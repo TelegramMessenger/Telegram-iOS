@@ -15,6 +15,7 @@ import ContextUI
 import TelegramBaseController
 import InviteLinksUI
 import UndoUI
+import TelegramCallsUI
 
 public enum CallListControllerMode {
     case tab
@@ -206,25 +207,53 @@ public final class CallListController: TelegramBaseController {
     }
 
     private func createGroupCall() {
-        let controller = InviteLinkInviteController(context: self.context, updatedPresentationData: nil, mode: .groupCall(link: "https://t.me/call/+abbfbffll123", isRecentlyCreated: true), parentNavigationController: self.navigationController as? NavigationController, completed: { [weak self] result in
+        let _ = (self.context.engine.calls.createConferenceCall()
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] call in
             guard let self else {
                 return
             }
-            if let result {
-                switch result {
-                case .linkCopied:
-                    //TODO:localize
-                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                    self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
-                        if case .undo = action {
-                            //TODO:release
-                        }
-                        return false
-                    }), in: .window(.root))
+            
+            let openCall: () -> Void = { [weak self] in
+                guard let self else {
+                    return
                 }
+                self.context.sharedContext.callManager?.joinConferenceCall(
+                    accountContext: self.context,
+                    initialCall: EngineGroupCallDescription(
+                        id: call.callInfo.id,
+                        accessHash: call.callInfo.accessHash,
+                        title: call.callInfo.title,
+                        scheduleTimestamp: nil,
+                        subscribedToScheduled: false,
+                        isStream: false
+                    ),
+                    reference: .id(id: call.callInfo.id, accessHash: call.callInfo.accessHash),
+                    mode: .joining
+                )
             }
+            
+            let controller = InviteLinkInviteController(context: self.context, updatedPresentationData: nil, mode: .groupCall(link: call.link, isRecentlyCreated: true), parentNavigationController: self.navigationController as? NavigationController, completed: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                if let result {
+                    switch result {
+                    case .linkCopied:
+                        //TODO:localize
+                        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_linkcopied", scale: 0.08, colors: ["info1.info1.stroke": UIColor.clear, "info2.info2.Fill": UIColor.clear], title: nil, text: "Call link copied.", customUndoText: "View Call", timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                            if case .undo = action {
+                                openCall()
+                            }
+                            return false
+                        }), in: .window(.root))
+                    case .openCall:
+                        openCall()
+                    }
+                }
+            })
+            self.present(controller, in: .window(.root), with: nil)
         })
-        self.present(controller, in: .window(.root), with: nil)
     }
     
     override public func loadDisplayNode() {

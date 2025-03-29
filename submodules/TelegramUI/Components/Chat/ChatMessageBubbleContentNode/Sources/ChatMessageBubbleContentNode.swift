@@ -151,6 +151,7 @@ public struct ChatMessageBubbleContentTapAction {
         case wallpaper
         case theme
         case call(peerId: PeerId, isVideo: Bool)
+        case conferenceCall(message: Message)
         case openMessage
         case timecode(Double, String)
         case tooltip(String, ASDisplayNode?, CGRect?)

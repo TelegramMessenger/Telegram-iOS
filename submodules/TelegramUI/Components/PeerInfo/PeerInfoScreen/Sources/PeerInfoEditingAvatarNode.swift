@@ -196,7 +196,9 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     self.videoContent = nil
                     self.videoNode = nil
                     
-                    videoNode.removeFromSupernode()
+                    DispatchQueue.main.async {
+                        videoNode.removeFromSupernode()
+                    }
                 }
             }
         } else if let videoNode = self.videoNode {

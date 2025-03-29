@@ -80,6 +80,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         switch call {
         case let .inputGroupCall(id, accessHash):
             return TelegramMediaAction(action: .groupPhoneCall(callId: id, accessHash: accessHash, scheduleDate: nil, duration: duration))
+        case .inputGroupCallSlug, .inputGroupCallInviteMessage:
+            return nil
         }
     case let .messageActionInviteToGroupCall(call, userIds):
         switch call {
@@ -87,6 +89,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
             return TelegramMediaAction(action: .inviteToGroupPhoneCall(callId: id, accessHash: accessHash, peerIds: userIds.map { userId in
                 PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
             }))
+        case .inputGroupCallSlug, .inputGroupCallInviteMessage:
+            return nil
         }
     case let .messageActionSetMessagesTTL(_, period, autoSettingFrom):
         return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period: period, autoSettingSource: autoSettingFrom.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }))
@@ -94,6 +98,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         switch call {
         case let .inputGroupCall(id, accessHash):
             return TelegramMediaAction(action: .groupPhoneCall(callId: id, accessHash: accessHash, scheduleDate: scheduleDate, duration: nil))
+        case .inputGroupCallSlug, .inputGroupCallInviteMessage:
+            return nil
         }
     case let .messageActionSetChatTheme(emoji):
         return TelegramMediaAction(action: .setChatTheme(emoji: emoji))
@@ -195,22 +201,28 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .paidMessagesRefunded(count: count, stars: stars))
     case let .messageActionPaidMessagesPrice(stars):
         return TelegramMediaAction(action: .paidMessagesPriceEdited(stars: stars))
+    case let .messageActionConferenceCall(_, callId, duration, otherParticipants):
+        return TelegramMediaAction(action: .conferenceCall(
+            callId: callId,
+            duration: duration,
+            otherParticipants: otherParticipants.flatMap({ return $0.map(\.peerId) }) ?? []
+        ))
     }
 }
 
 extension PhoneCallDiscardReason {
     init(apiReason: Api.PhoneCallDiscardReason) {
         switch apiReason {
-            case .phoneCallDiscardReasonBusy:
-                self = .busy
-            case .phoneCallDiscardReasonDisconnect:
-                self = .disconnect
-            case .phoneCallDiscardReasonHangup:
-                self = .hangup
-            case .phoneCallDiscardReasonMissed:
-                self = .missed
-            case .phoneCallDiscardReasonAllowGroupCall:
-                self = .hangup
+        case .phoneCallDiscardReasonBusy:
+            self = .busy
+        case .phoneCallDiscardReasonDisconnect:
+            self = .disconnect
+        case .phoneCallDiscardReasonHangup:
+            self = .hangup
+        case .phoneCallDiscardReasonMissed:
+            self = .missed
+        case .phoneCallDiscardReasonMigrateConferenceCall:
+            self = .hangup
         }
     }
 }

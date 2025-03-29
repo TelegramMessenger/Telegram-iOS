@@ -2793,7 +2793,7 @@ final class StorageUsageScreenComponent: Component {
                     let _ = self
                 },
                 callPeer: { _, _ in
-                    //self?.controllerInteraction?.callPeer(peerId)
+                }, openConferenceCall: { _ in
                 },
                 enqueueMessage: { _ in
                 },

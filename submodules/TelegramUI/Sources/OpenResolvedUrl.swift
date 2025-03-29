@@ -395,7 +395,12 @@ func openResolvedUrlImpl(
             let _ = (signal
             |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] resolvedCallLink in
                 navigationController?.pushViewController(context.sharedContext.makeJoinSubjectScreen(context: context, mode: JoinSubjectScreenMode.groupCall(JoinSubjectScreenMode.GroupCall(
-                    inviter: resolvedCallLink.inviter, members: resolvedCallLink.members, totalMemberCount: resolvedCallLink.totalMemberCount
+                    id: resolvedCallLink.id,
+                    accessHash: resolvedCallLink.accessHash,
+                    slug: link,
+                    inviter: resolvedCallLink.inviter,
+                    members: resolvedCallLink.members,
+                    totalMemberCount: resolvedCallLink.totalMemberCount
                 ))))
             })
         case let .localization(identifier):

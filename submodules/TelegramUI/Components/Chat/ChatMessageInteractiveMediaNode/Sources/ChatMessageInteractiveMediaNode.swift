@@ -1603,8 +1603,18 @@ public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTr
                                     }
                                 } else {
                                     onlyFullSizeVideoThumbnail = isSendingUpdated
+                                    let codecConfiguration = HLSCodecConfiguration(context: context)
                                     updateImageSignal = { synchronousLoad, _ in
-                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                        let videoReference: FileMediaReference = .message(message: MessageReference(message), media: file)
+                                        var hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)] = []
+                                        if let qualitySet = HLSQualitySet(baseFile: videoReference, codecConfiguration: codecConfiguration) {
+                                            for key in qualitySet.playlistFiles.keys.sorted() {
+                                                if let playlist = qualitySet.playlistFiles[key], let file = qualitySet.qualityFiles[key] {
+                                                    hlsFiles.append((playlist.media, file.media))
+                                                }
+                                            }
+                                        }
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: videoReference, hlsFiles: hlsFiles, onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
                                     }
                                     updateBlurredImageSignal = { synchronousLoad, _ in
                                         return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
