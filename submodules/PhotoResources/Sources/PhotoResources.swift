@@ -448,7 +448,226 @@ private func chatMessageImageFileThumbnailDatas(account: Account, userLocation: 
     return signal
 }
 
-private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, previewSourceFileReference: FileMediaReference?, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
+private func fileQualityPreloadData(postbox: Postbox, playlistFile: FileMediaReference, videoFile: FileMediaReference, userLocation: MediaResourceUserLocation, autofetchPlaylist: Bool, isOnce: Bool) -> Signal<(FileMediaReference, Range<Int64>)?, NoError> {
+    let playlistData: Signal<Range<Int64>?, NoError> = Signal { subscriber in
+        var fetchDisposable: Disposable?
+        if autofetchPlaylist {
+            fetchDisposable = freeMediaFileResourceInteractiveFetched(postbox: postbox, userLocation: userLocation, fileReference: playlistFile, resource: playlistFile.media.resource).start()
+        }
+        let dataDisposable = postbox.mediaBox.resourceData(playlistFile.media.resource).start(next: { data in
+            if !data.complete {
+                if isOnce {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                }
+                return
+            }
+            guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return
+            }
+            guard let playlistString = String(data: data, encoding: .utf8) else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return
+            }
+            
+            var durations: [Int] = []
+            var byteRanges: [Range<Int>] = []
+            
+            let extinfRegex = try! NSRegularExpression(pattern: "EXTINF:(\\d+)", options: [])
+            let byteRangeRegex = try! NSRegularExpression(pattern: "EXT-X-BYTERANGE:(\\d+)@(\\d+)", options: [])
+            
+            let extinfResults = extinfRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
+            for result in extinfResults {
+                if let durationRange = Range(result.range(at: 1), in: playlistString) {
+                    if let duration = Int(String(playlistString[durationRange])) {
+                        durations.append(duration)
+                    }
+                }
+            }
+            
+            let byteRangeResults = byteRangeRegex.matches(in: playlistString, range: NSRange(playlistString.startIndex..., in: playlistString))
+            for result in byteRangeResults {
+                if let lengthRange = Range(result.range(at: 1), in: playlistString), let upperBoundRange = Range(result.range(at: 2), in: playlistString) {
+                    if let length = Int(String(playlistString[lengthRange])), let lowerBound = Int(String(playlistString[upperBoundRange])) {
+                        byteRanges.append(lowerBound ..< (lowerBound + length))
+                    }
+                }
+            }
+            
+            if durations.count != byteRanges.count {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+                return
+            }
+            
+            var rangeUpperBound: Int64 = 0
+            
+            for i in 0 ..< durations.count {
+                let byteRange = byteRanges[i]
+                
+                rangeUpperBound = max(rangeUpperBound, Int64(byteRange.upperBound))
+
+                if durations[i] != 0 {
+                    break
+                }
+            }
+            
+            if rangeUpperBound != 0 {
+                subscriber.putNext(0 ..< rangeUpperBound)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putNext(nil)
+                subscriber.putCompletion()
+            }
+            
+            return
+        })
+        
+        return ActionDisposable {
+            fetchDisposable?.dispose()
+            dataDisposable.dispose()
+        }
+    }
+    
+    return playlistData
+    |> map { range -> (FileMediaReference, Range<Int64>)? in
+        guard let range else {
+            return nil
+        }
+        return (videoFile, range)
+    }
+}
+
+private func minimizedHLSQuality(hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)]) -> (playlist: TelegramMediaFile, file: TelegramMediaFile)? {
+    let sortedQualities = hlsFiles
+    for (playlist, video) in sortedQualities {
+        guard let dimensions = video.dimensions else {
+            continue
+        }
+        
+        if max(dimensions.width, dimensions.height) >= 600 {
+            return (playlist, video)
+        }
+    }
+    if let (playlist, video) = hlsFiles.first {
+        return (playlist, video)
+    }
+    return nil
+}
+
+private func chatMessageVideoDatas(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, fileReference: FileMediaReference, hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)] = [], previewSourceFileReference: FileMediaReference?, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, thumbnailSize: Bool = false, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, forceThumbnail: Bool = false) -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> {
+    if !hlsFiles.isEmpty {
+        var possibleFiles: [TelegramMediaFile] = [fileReference.media]
+        
+        let filteredHlsFiles = hlsFiles.filter { hlsFile in
+            guard let dimensions = hlsFile.video.dimensions else {
+                return false
+            }
+            if !thumbnailSize && hlsFiles.count > 1 {
+                if max(dimensions.width, dimensions.height) < 200 {
+                    return false
+                }
+            }
+            return true
+        }
+        
+        for item in filteredHlsFiles {
+            possibleFiles.append(item.video)
+        }
+        var possibleReadyFiles: [Signal<MediaResourceData, NoError>] = []
+        for possibleFile in possibleFiles {
+            if possibleFile.fileId == fileReference.media.fileId {
+                possibleReadyFiles.append(
+                    postbox.mediaBox.cachedResourceRepresentation(possibleFile.resource, representation: CachedVideoFirstFrameRepresentation(), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+                    |> take(1)
+                )
+            } else {
+                possibleReadyFiles.append(
+                    postbox.mediaBox.cachedResourceRepresentation(possibleFile.resource, representation: CachedVideoPrefixFirstFrameRepresentation(prefixLength: 0), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+                    |> take(1)
+                )
+            }
+        }
+        return combineLatest(possibleReadyFiles)
+        |> mapToSignal { possibleReadyFiles -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> in
+            for possibleReadyFile in possibleReadyFiles {
+                if possibleReadyFile.complete {
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: possibleReadyFile.path), options: .mappedIfSafe) {
+                        return .single(Tuple(nil, Tuple(data, possibleReadyFile.path), true))
+                    }
+                }
+            }
+
+            let previewPrefixes: Signal<[(FileMediaReference, Range<Int64>)?], NoError> = combineLatest(hlsFiles.map { hlsFile in
+                return fileQualityPreloadData(postbox: postbox, playlistFile: fileReference.withMedia(hlsFile.playlist), videoFile: fileReference.withMedia(hlsFile.video), userLocation: userLocation, autofetchPlaylist: false, isOnce: true)
+                |> take(1)
+            })
+
+            let loadSignal = previewPrefixes
+            |> mapToSignal { previewPrefixes -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> in
+                let possibleReadyPrefixes = previewPrefixes.compactMap { possiblePrefix -> Signal<MediaResourceData, NoError>? in
+                    guard let possiblePrefix, possiblePrefix.1.lowerBound == 0 else {
+                        return nil
+                    }
+                    
+                    return postbox.mediaBox.cachedResourceRepresentation(possiblePrefix.0.media.resource, representation: CachedVideoPrefixFirstFrameRepresentation(prefixLength: Int32(possiblePrefix.1.upperBound)), complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+                    |> take(1)
+                }
+
+                return combineLatest(possibleReadyPrefixes)
+                |> mapToSignal { possibleReadyPrefixes -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> in
+                    for possibleReadyPrefix in possibleReadyPrefixes {
+                        if possibleReadyPrefix.complete {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: possibleReadyPrefix.path), options: .mappedIfSafe) {
+                                return .single(Tuple(nil, Tuple(data, possibleReadyPrefix.path), true))
+                            }
+                        }
+                    }
+
+                    guard let (playlist, video) = minimizedHLSQuality(hlsFiles: hlsFiles) else {
+                        return .single(Tuple(nil, nil, true))
+                    }
+                    
+                    return fileQualityPreloadData(postbox: postbox, playlistFile: fileReference.withMedia(playlist), videoFile: fileReference.withMedia(video), userLocation: userLocation, autofetchPlaylist: true, isOnce: false)
+                    |> mapToSignal { preloadData -> Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> in
+                        guard let preloadData else {
+                            return .never()
+                        }
+                        return Signal { subscriber in
+                            let fetchedFilePrefix = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: userLocation, userContentType: .video, reference: fileReference.withMedia(video).resourceReference(video.resource), range: (preloadData.1, .default), statsCategory: .image).start()
+                            let fetchedFrame = postbox.mediaBox.cachedResourceRepresentation(preloadData.0.media.resource, representation: CachedVideoPrefixFirstFrameRepresentation(prefixLength: Int32(preloadData.1.upperBound)), complete: true, fetch: true, attemptSynchronously: false).start(next: { resourceData in
+                                if resourceData.complete {
+                                    if resourceData.complete {
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: .mappedIfSafe) {
+                                            subscriber.putNext(Tuple(nil, Tuple(data, resourceData.path), true))
+                                            subscriber.putCompletion()
+                                        }
+                                    }
+                                }
+                            })
+                            
+                            return ActionDisposable {
+                                fetchedFilePrefix.dispose()
+                                fetchedFrame.dispose()
+                            }
+                        }
+                    }
+                }
+            }
+            
+            var resultSignal: Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError> = .complete()
+            if let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+                resultSignal = .single(Tuple(decodedThumbnailData, nil, false))
+            }
+            resultSignal = resultSignal |> then(loadSignal)
+            
+            return resultSignal
+        }
+    }
+    
     let fullSizeResource = fileReference.media.resource
     var reducedSizeResource: MediaResource?
     if let videoThumbnail = fileReference.media.videoThumbnails.first {
@@ -1620,14 +1839,14 @@ public func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaRef
     }
 }
 
-public func mediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, videoReference: videoReference, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, overlayColor: overlayColor, nilForEmptyResult: nilForEmptyResult, useMiniThumbnailIfAvailable: useMiniThumbnailIfAvailable)
+public func mediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, userContentType customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)] = [], onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return internalMediaGridMessageVideo(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, videoReference: videoReference, hlsFiles: hlsFiles, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, overlayColor: overlayColor, nilForEmptyResult: nilForEmptyResult, useMiniThumbnailIfAvailable: useMiniThumbnailIfAvailable)
     |> map {
         return $0.1
     }
 }
 
-public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, previewSourceFileReference: FileMediaReference? = nil, imageReference: ImageMediaReference? = nil, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaResourceUserLocation, customUserContentType: MediaResourceUserContentType? = nil, videoReference: FileMediaReference, hlsFiles: [(playlist: TelegramMediaFile, video: TelegramMediaFile)] = [],previewSourceFileReference: FileMediaReference? = nil, imageReference: ImageMediaReference? = nil, alternativeFileAndRange: Signal<(TelegramMediaFile, Range<Int64>), NoError>? = nil, onlyFullSize: Bool = false, useLargeThumbnail: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false, overlayColor: UIColor? = nil, nilForEmptyResult: Bool = false, useMiniThumbnailIfAvailable: Bool = false, blurred: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal: Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError>
     if let imageReference = imageReference {
         signal = chatMessagePhotoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad, forceThumbnail: blurred)
@@ -1638,7 +1857,7 @@ public func internalMediaGridMessageVideo(postbox: Postbox, userLocation: MediaR
             return Tuple(thumbnailData, fullSizeData.flatMap({ Tuple($0, "") }), fullSizeComplete)
         }
     } else {
-        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, previewSourceFileReference: previewSourceFileReference, alternativeFileAndRange: alternativeFileAndRange, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
+        signal = chatMessageVideoDatas(postbox: postbox, userLocation: userLocation, customUserContentType: customUserContentType, fileReference: videoReference, hlsFiles: hlsFiles, previewSourceFileReference: previewSourceFileReference, alternativeFileAndRange: alternativeFileAndRange, onlyFullSize: onlyFullSize, useLargeThumbnail: useLargeThumbnail, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail, forceThumbnail: blurred)
     }
     
     return signal
